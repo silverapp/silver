@@ -1,0 +1,18 @@
+=== 0.0.X (onggoing, to be released as 0.1) ===
+- Initial commit
+
+
+# Suggested file syntax:
+#
+# === (ongoing) ===
+# - this is always on top of the file
+# - when you release a new version, you rename the last `(ongoing)` to the new
+#   version and add a new `=== (ongoing) ===` to the top of the file
+#
+# === 1.0 ===
+# - a major version is created when the software reached a milestone and is 
+#   feature complete
+#
+# === 0.2 ===
+# - a minor version is created when a lot of new features have bene added or
+#   significant backwards incompatible changes have been made.

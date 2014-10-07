@@ -1,0 +1,9 @@
+include AUTHORS
+include LICENSE
+include DESCRIPTION
+include CHANGELOG.txt
+include README.md
+graft silver
+global-exclude *.orig *.pyc *.log *.swp
+prune silver/tests/coverage
+prune silver/.ropeproject
