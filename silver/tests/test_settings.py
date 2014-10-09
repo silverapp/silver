@@ -48,7 +48,6 @@ EXTERNAL_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
-    'django.contrib.sites',
     'django_nose',
 ]
 
