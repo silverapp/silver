@@ -49,6 +49,7 @@ EXTERNAL_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     'django_nose',
+    'international',
 ]
 
 INTERNAL_APPS = [

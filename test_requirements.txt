@@ -7,3 +7,4 @@ fabric
 factory_boy
 mock
 selenium
+django-international

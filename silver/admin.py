@@ -1,12 +1,11 @@
 """Admin classes for the silver app."""
 from django.contrib import admin
-from models import Plan, MeteredFeature, Subscription, Customer
+from models import Plan, MeteredFeature, Subscription, Customer, BillingDetail
 
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['interval', 'interval_count', 'amount', 'currency', 'name',
-                    'trial_period_days', 'metered_features', 'due_days',
-                    'generate_after', ]
+                    'trial_period_days', 'due_days', 'generate_after', ]
     search_fields = ['due_days', 'name', ]
 
 
@@ -25,7 +24,11 @@ class CustomerAdmin(admin.ModelAdmin):
                     'consolidated_billing', ]
 
 
+class BillingDetailAdmin(admin.ModelAdmin):
+    pass
+
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
+admin.site.register(BillingDetail, BillingDetailAdmin)
