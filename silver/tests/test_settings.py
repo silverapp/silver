@@ -50,6 +50,7 @@ EXTERNAL_APPS = [
     'django.contrib.sitemaps',
     'django_nose',
     'international',
+    'django_fsm',
 ]
 
 INTERNAL_APPS = [

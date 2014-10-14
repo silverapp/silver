@@ -1,5 +1,6 @@
 """Models for the silver app."""
 from django.db import models
+from django_fsm import FSMField, transition
 from international.models import countries, currencies
 
 INTERVALS = (
@@ -84,25 +85,38 @@ class Subscription(models.Model):
         'Customer',
         help_text='The customer who is subscribed to the plan.'
     )
-    trial_end = models.DateTimeField(
-        null=True,
+    trial_end = models.DateField(
+        blank=True, null=True,
         help_text='The date at which the trial ends. '
                   'If set, overrides the computed trial end date from the plan.'
     )
-    start_date = models.DateTimeField(
+    start_date = models.DateField(
+        blank=True, null=True,
         help_text='The starting date for the subscription.'
     )
-    ended_at = models.DateTimeField(
-        null=True,
+    ended_at = models.DateField(
+        blank=True, null=True,
         help_text='The date when the subscription ended.'
     )
-    state = models.CharField(
-        choices=STATES, max_length=12, default=STATES[1][0],
+    state = FSMField(
+        choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'
     )
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
+
+    @transition(field=state, source=['inactive', 'canceled'], target='active')
+    def activate(self):
+        pass
+
+    @transition(field=state, source='active', target='canceled')
+    def cancel(self):
+        pass
+
+    @transition(field=state, source='canceled', target='ended')
+    def end(self):
+        pass
 
 
 class BillingDetail(models.Model):
