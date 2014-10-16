@@ -110,7 +110,8 @@ class Subscription(models.Model):
     def activate(self):
         pass
 
-    @transition(field=state, source='active', target='canceled')
+    @transition(field=state, source=['active', 'past_due', 'on_trial'],
+                target='canceled')
     def cancel(self):
         pass
 
