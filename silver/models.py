@@ -1,4 +1,5 @@
 """Models for the silver app."""
+import datetime
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
@@ -108,7 +109,11 @@ class Subscription(models.Model):
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self):
-        pass
+        self.start_date = datetime.date.today()
+        if self.trial_end is None:
+            self.trial_end = self.start_date + datetime.timedelta(
+                days=self.plan.trial_period_days
+            )
 
     @transition(field=state, source=['active', 'past_due', 'on_trial'],
                 target='canceled')
@@ -117,7 +122,7 @@ class Subscription(models.Model):
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
-        pass
+        self.ended_at = datetime.date.today()
 
 
 class BillingDetail(models.Model):
