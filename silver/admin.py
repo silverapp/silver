@@ -61,7 +61,8 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ['customer_reference', 'billing_details',
                     'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing', ]
-    search_fields = ['customer_reference', 'billing_details__name', ]
+    search_fields = ['customer_reference', 'billing_details__name',
+                     'billing_details__company', ]
 
 
 class BillingDetailAdmin(admin.ModelAdmin):

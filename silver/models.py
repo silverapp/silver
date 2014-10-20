@@ -145,6 +145,12 @@ class BillingDetail(models.Model):
         help_text='Extra information to display on the invoice (markdown formatted).'
     )
 
+    def __unicode__(self):
+        display = self.name
+        if self.company:
+            display += ' (' + self.company + ')'
+        return display
+
 
 class Customer(models.Model):
     customer_reference = models.CharField(
