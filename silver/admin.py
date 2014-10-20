@@ -16,6 +16,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
+    search_fields = ['customer__billing_details__name', 'plan__name', ]
 
     def perform_action(self, request, action, queryset):
         method = None
@@ -60,6 +61,7 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ['customer_reference', 'billing_details',
                     'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing', ]
+    search_fields = ['customer_reference', 'billing_details__name', ]
 
 
 class BillingDetailAdmin(admin.ModelAdmin):
