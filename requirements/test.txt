@@ -1,0 +1,8 @@
+-r common.txt
+mock
+flake8
+coverage
+django-coverage
+
+# we need to use django-nose from git or else we get a shitload of warnings
+git+https://github.com/django-nose/django-nose.git#egg=django_nose-master

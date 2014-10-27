@@ -1,7 +1,7 @@
 develop: setup-git
 	pip install "file://`pwd`#egg=silver[dev]"
 	pip install -e .
-	pip install -r test_requirements.txt
+	pip install -r requirements/test.txt
 
 setup-git:
 	git config branch.autosetuprebase always
@@ -11,3 +11,8 @@ lint-python:
 	@echo "Linting Python files"
 	PYFLAKES_NODOCTEST=1 flake8 silver
 	@echo ""
+
+test:
+	@DJANGO_SETTINGS_MODULE=silver.tests.test_settings ./manage.py test
+
+.PHONY: develop setup-git lint-python test

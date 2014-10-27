@@ -8,6 +8,8 @@ logging.getLogger("factory").setLevel(logging.WARN)
 
 SITE_ID = 1
 
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
 APP_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..'))
 
@@ -40,6 +42,7 @@ COVERAGE_MODULE_EXCLUDES = [
 ]
 
 EXTERNAL_APPS = [
+    # Django core apps
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -47,8 +50,10 @@ EXTERNAL_APPS = [
     'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.staticfiles',
-    'django.contrib.sitemaps',
+    # Testing apps
     'django_nose',
+
+    # Required apps
     'international',
     'django_fsm',
     'rest_framework'
@@ -56,7 +61,6 @@ EXTERNAL_APPS = [
 
 INTERNAL_APPS = [
     'silver',
-    'silver.tests.test_app',
 ]
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS

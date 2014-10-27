@@ -1,4 +1,0 @@
-!_TAG_FILE_SORTED	2	/0=unsorted, 1=sorted, 2=foldcase/
-DATABASES	/Users/calin/work/silver/settings_dev.py	/^DATABASES = {$/;"	v	language:Python
-MIDDLEWARE_CLASSES	/Users/calin/work/silver/settings_dev.py	/^MIDDLEWARE_CLASSES = ($/;"	v	language:Python
-NOQA	/Users/calin/work/silver/settings_dev.py	/^from silver.tests.test_settings import *  # NOQA$/;"	i	language:Python

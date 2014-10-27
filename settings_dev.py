@@ -2,7 +2,7 @@
 These settings are used by the ``manage.py`` command.
 
 """
-# from silver.tests.test_settings import *
+from silver.tests.test_settings import *
 
 DATABASES = {
     'default': {

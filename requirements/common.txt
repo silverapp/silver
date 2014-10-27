@@ -1,0 +1,3 @@
+djangorestframework
+django-international
+django-fsm
