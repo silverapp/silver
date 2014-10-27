@@ -1,5 +1,7 @@
 """Models for the silver app."""
 import datetime
+from silver.api.dateutils import last_date_that_fits, next_date_after_period
+
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
@@ -18,6 +20,11 @@ STATES = (
     ('on_trial', 'On Trial'),
     ('canceled', 'Canceled'),
     ('ended', 'Ended')
+)
+
+UPDATE_TYPES = (
+    ('absolute', 'Absolute'),
+    ('relative', 'Relative')
 )
 
 
@@ -77,6 +84,21 @@ class MeteredFeature(models.Model):
         return self.name
 
 
+class MeteredFeatureUnitsLog(models.Model):
+    metered_feature = models.ForeignKey('MeteredFeature')
+    subscription = models.ForeignKey('Subscription')
+    consumed_units = models.FloatField()
+    start_date = models.DateField(editable=False)
+    end_date = models.DateField(editable=False)
+
+    class Meta:
+        unique_together = ('metered_feature', 'subscription', 'start_date',
+                           'end_date')
+
+    def __unicode__(self):
+        return self.metered_feature.name
+
+
 class Subscription(models.Model):
     plan = models.ForeignKey(
         'Plan',
@@ -104,8 +126,25 @@ class Subscription(models.Model):
         help_text='The state the subscription is in.'
     )
 
-    def __unicode__(self):
-        return '%s (%s)' % (self.customer, self.plan)
+    @property
+    def current_start_date(self):
+        return last_date_that_fits(
+            initial_date=self.start_date,
+            end_date=datetime.date.today(),
+            interval_type=self.plan.interval,
+            interval_count=self.plan.interval_count
+        )
+
+    @property
+    def current_end_date(self):
+        next_start_date = next_date_after_period(
+            initial_date=self.current_start_date,
+            interval_type=self.plan.interval,
+            interval_count=self.plan.interval_count
+        )
+        if next_start_date:
+            return next_start_date - datetime.timedelta(days=1)
+        return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self):
@@ -123,6 +162,9 @@ class Subscription(models.Model):
     @transition(field=state, source='canceled', target='ended')
     def end(self):
         self.ended_at = datetime.date.today()
+
+    def __unicode__(self):
+        return '%s (%s)' % (self.customer, self.plan)
 
 
 class BillingDetail(models.Model):
@@ -142,13 +184,14 @@ class BillingDetail(models.Model):
     zip_code = models.CharField(max_length=32, blank=True, null=True)
     extra = models.TextField(
         blank=True, null=True,
-        help_text='Extra information to display on the invoice (markdown formatted).'
+        help_text='Extra information to display on the invoice '
+                  '(markdown formatted).'
     )
 
     def __unicode__(self):
         display = self.name
         if self.company:
-            display += ' (' + self.company + ')'
+            display += ' (' + unicode(self.company) + ')'
         return display
 
 

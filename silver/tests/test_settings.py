@@ -51,6 +51,7 @@ EXTERNAL_APPS = [
     'django_nose',
     'international',
     'django_fsm',
+    'rest_framework'
 ]
 
 INTERNAL_APPS = [

@@ -7,17 +7,15 @@ Via ``settings.configure`` you will be able to set all necessary settings
 for your app and run the tests as if you were calling ``./manage.py test``.
 
 """
-import re
 import sys
 
+import re
 import django
 from django.conf import settings
-
 import coverage
 from fabric.api import abort, lcd, local
 from fabric.colors import green, red
-
-import test_settings
+from silver.tests import test_settings
 
 
 if not settings.configured:
