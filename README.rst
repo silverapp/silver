@@ -16,7 +16,7 @@ To get the latest commit from GitHub
 
 .. code-block:: bash
 
-    pip install -e git+git://github.com/mbrochh/django-reusable-app-template.git#egg=silver
+    pip install -e git+git://github.com/PressLabs/silver.git#egg=silver
 
 Add ``silver`` to your ``INSTALLED_APPS``
 
