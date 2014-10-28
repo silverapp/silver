@@ -1,7 +1,9 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature
-from silver.api.serializers import MeteredFeatureUnitsLogSerializer
+from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature, \
+    Customer
+from silver.api.serializers import MeteredFeatureUnitsLogSerializer, \
+    CustomerSerializer
 import datetime
 
 
@@ -69,3 +71,9 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
             else:
                 return Response({"detail": "Not found"}, status=404)
         return Response({"success": False}, status=400)
+
+
+class CustomerList(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = CustomerSerializer
+    model = Customer
