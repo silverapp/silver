@@ -1,5 +1,6 @@
 """Models for the silver app."""
 import datetime
+from django.core.validators import EmailValidator
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 
 from django.db import models
@@ -176,6 +177,7 @@ class BillingDetail(models.Model):
         max_length=128, blank=True, null=True,
         help_text='Company to issue invoices to.'
     )
+    email = models.CharField(max_length=256, validators=[EmailValidator, ])
     address1 = models.CharField(max_length=128)
     address2 = models.CharField(max_length=48, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3,
