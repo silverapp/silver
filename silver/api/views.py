@@ -1,13 +1,13 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from silver.models import MeteredFeatureUnitsLog, Subscription
-from silver.api.serializers import MeteredFeatureLogSerializer
+from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature
+from silver.api.serializers import MeteredFeatureUnitsLogSerializer
 import datetime
 
 
-class MeteredFeatureLogList(generics.ListCreateAPIView):
+class MeteredFeatureUnitsLogList(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = MeteredFeatureLogSerializer
+    serializer_class = MeteredFeatureUnitsLogSerializer
 
     def get_queryset(self):
         return MeteredFeatureUnitsLog.objects.filter(
@@ -15,23 +15,30 @@ class MeteredFeatureLogList(generics.ListCreateAPIView):
             subscription=self.kwargs['sub'],
         )
 
-    def post(self, request, *args, **kwargs):
-        metered_feature_pk = request.DATA.get('metered_feature', None)
-        subscription_pk = request.DATA.get('subscription', None)
-        timestamp = request.DATA.get('timestamp', None)
+    def patch(self, request, *args, **kwargs):
+        metered_feature_pk = self.kwargs['mf']
+        subscription_pk = self.kwargs['sub']
+        date = request.DATA.get('date', None)
         consumed_units = request.DATA.get('consumed_units', None)
         update_type = request.DATA.get('update_type', None)
 
         if subscription_pk and metered_feature_pk:
-            subscription = Subscription.objects.get(pk=subscription_pk)
-            if subscription:
+            try:
+                subscription = Subscription.objects.get(pk=subscription_pk)
+            except Subscription.DoesNotExist:
+                subscription = None
+            try:
+                metered_feature = MeteredFeature.objects.get(pk=metered_feature_pk)
+            except MeteredFeature.DoesNotExist:
+                metered_feature = None
+            if subscription and metered_feature:
                 print subscription.current_start_date
                 print subscription.current_end_date
-                if timestamp and consumed_units and update_type:
+                if date and consumed_units is not None and update_type:
                     try:
-                        date = datetime.datetime.strptime(timestamp,
+                        date = datetime.datetime.strptime(date,
                                                           '%Y-%m-%d').date()
-                        if subscription.current_start_date < date < \
+                        if subscription.current_start_date <= date <= \
                            subscription.current_end_date:
                             try:
                                 log = MeteredFeatureUnitsLog.objects.get(
@@ -48,8 +55,8 @@ class MeteredFeatureLogList(generics.ListCreateAPIView):
 
                             except MeteredFeatureUnitsLog.DoesNotExist:
                                 MeteredFeatureUnitsLog.objects.create(
-                                    metered_feature=metered_feature_pk,
-                                    subscription=subscription_pk,
+                                    metered_feature=metered_feature,
+                                    subscription=subscription,
                                     start_date=subscription.current_start_date,
                                     end_date=subscription.current_end_date,
                                     consumed_units=consumed_units

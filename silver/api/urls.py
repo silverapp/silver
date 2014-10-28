@@ -5,6 +5,6 @@ urlpatterns = patterns(
     '',
     url(
         r'^subscriptions/(?P<sub>[^/]+)/(?P<mf>[^/]+)/?',
-        views.MeteredFeatureLogList.as_view()
+        views.MeteredFeatureUnitsLogList.as_view()
     ),
 )
