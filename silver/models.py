@@ -178,8 +178,8 @@ class BillingDetail(models.Model):
         help_text='Company to issue invoices to.'
     )
     email = models.CharField(max_length=256, validators=[EmailValidator, ])
-    address1 = models.CharField(max_length=128)
-    address2 = models.CharField(max_length=48, blank=True, null=True)
+    address_1 = models.CharField(max_length=128)
+    address_2 = models.CharField(max_length=48, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3,
                                default=countries[0][0])
     city = models.CharField(max_length=128, blank=True, null=True)
