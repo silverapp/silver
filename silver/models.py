@@ -183,6 +183,7 @@ class BillingDetail(models.Model):
     country = models.CharField(choices=countries, max_length=3,
                                default=countries[0][0])
     city = models.CharField(max_length=128, blank=True, null=True)
+    state = models.CharField(max_length=128, blank=True, null=True)
     zip_code = models.CharField(max_length=32, blank=True, null=True)
     extra = models.TextField(
         blank=True, null=True,
