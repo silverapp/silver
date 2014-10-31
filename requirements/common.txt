@@ -1,3 +1,4 @@
 djangorestframework
 django-international
 django-fsm
+django-extensions

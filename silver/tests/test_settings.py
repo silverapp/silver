@@ -56,7 +56,8 @@ EXTERNAL_APPS = [
     # Required apps
     'international',
     'django_fsm',
-    'rest_framework'
+    'rest_framework',
+    'django_extensions'
 ]
 
 INTERNAL_APPS = [
