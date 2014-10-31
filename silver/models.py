@@ -29,6 +29,7 @@ UPDATE_TYPES = (
 )
 
 
+
 class Plan(models.Model):
     name = models.CharField(
         max_length=20, help_text='Display name of the plan.'
@@ -83,6 +84,17 @@ class MeteredFeature(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class AddOnFeature(models.Model):
+    name = models.CharField(
+        max_length=32,
+        help_text='The feature display name.'
+    )
+    plan = models.ForeignKey(
+        'Plan',
+        help_text="The plan to whom the feature belongs."
+    )
 
 
 class MeteredFeatureUnitsLog(models.Model):
@@ -168,6 +180,12 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
+class Offer(models.Model):
+    plans = models.ManyToManyField(
+        'Plan',
+        help_text="The plans that are included in the customer's offer"
+    )
+
 class BillingDetail(models.Model):
     name = models.CharField(
         max_length=128,
@@ -221,5 +239,13 @@ class Customer(models.Model):
         default=False, help_text='A flag indicating consolidated billing.'
     )
 
+    offer = models.OneToOneField(
+        'Offer', null=True, blank=True,
+        help_text="A custom offer consisting of a custom selection of plans."
+    )
+
     def __unicode__(self):
         return self.billing_details.name
+
+class Provider(models.Model):
+    pass
