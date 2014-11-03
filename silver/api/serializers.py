@@ -1,5 +1,26 @@
 from rest_framework import serializers
-from silver.models import MeteredFeatureUnitsLog, Customer, BillingDetail
+from silver.models import MeteredFeatureUnitsLog, Customer, BillingDetail, \
+    Subscription
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    trial_end = serializers.DateField()
+    start_date = serializers.DateField()
+    ended_at = serializers.DateField()
+    plan = serializers.HyperlinkedRelatedField(
+        source='plan',
+        view_name='silver_api:plan-detail',
+    )
+    customer = serializers.HyperlinkedRelatedField(
+        source='customer',
+        view_name='silver_api:customer-detail',
+    )
+
+    class Meta:
+        model = Subscription
+        fields = ('plan', 'customer', 'trial_end', 'start_date', 'ended_at',
+                  'state')
+        read_only_fields = ('state', )
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):

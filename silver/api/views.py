@@ -1,10 +1,21 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature, \
-    Customer
+    Customer, Plan
 from silver.api.serializers import MeteredFeatureUnitsLogSerializer, \
-    CustomerSerializer
+    CustomerSerializer, SubscriptionSerializer
 import datetime
+
+
+class SubscriptionList(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    model = Subscription
+    serializer_class = SubscriptionSerializer
+
+
+class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
+    model = Plan
+    lookup_field = 'pk'
 
 
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
