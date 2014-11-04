@@ -35,7 +35,7 @@ class SubscriptionDetailActivate(APIView):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('sub', None))
         if sub.state != 'inactive':
-            message = 'Cannot activate from %s state.' % sub.state
+            message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message}, status=400)
         else:
             if request.POST['_content']:
@@ -57,7 +57,7 @@ class SubscriptionDetailCancel(APIView):
                                 pk=self.kwargs.get('sub', None))
         when = request.DATA.get('when', None)
         if sub.state != 'active':
-            message = 'Cannot cancel from %s state.' % sub.state
+            message = 'Cannot cancel subscription from %s state.' % sub.state
             return Response({"error": message}, status=400)
         else:
             if when == 'now':
@@ -71,6 +71,21 @@ class SubscriptionDetailCancel(APIView):
                 return Response({"state: %s" % sub.state}, status=200)
             else:
                 return Response(status=400)
+
+
+class SubscriptionDetailReactivate(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+
+    def post(self, request, *args, **kwargs):
+        sub = get_object_or_404(Subscription.objects,
+                                pk=self.kwargs.get('sub', None))
+        if sub.state != 'canceled':
+            message = 'Cannot reactivate subscription from %s state.' % sub.state
+            return Response({"error": message}, status=400)
+        else:
+            sub.activate()
+            sub.save()
+            return Response({"state: %s" % sub.state}, status=200)
 
 
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
