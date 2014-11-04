@@ -1,10 +1,17 @@
 from rest_framework import generics, permissions
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature, \
     Customer, Plan
 from silver.api.serializers import MeteredFeatureUnitsLogSerializer, \
-    CustomerSerializer, SubscriptionSerializer
+    CustomerSerializer, SubscriptionSerializer, SubscriptionDetailSerializer
 import datetime
+
+
+class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
+    model = Plan
+    lookup_field = 'pk'
 
 
 class SubscriptionList(generics.ListCreateAPIView):
@@ -13,9 +20,33 @@ class SubscriptionList(generics.ListCreateAPIView):
     serializer_class = SubscriptionSerializer
 
 
-class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
-    model = Plan
+class SubscriptionDetail(generics.RetrieveAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    model = Subscription
+    serializer_class = SubscriptionDetailSerializer
+    lookup_url_kwarg = 'sub'
     lookup_field = 'pk'
+
+
+class SubscriptionDetailActivate(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+
+    def post(self, request, *args, **kwargs):
+        sub = get_object_or_404(Subscription.objects,
+                                pk=self.kwargs.get('sub', None))
+        if sub.state != 'inactive':
+            message = 'Cannot activate from %s state.' % sub.state
+            return Response({"error": message}, status=400)
+        else:
+            if request.POST['_content']:
+                start_date = request.DATA.get('start_date', None)
+                trial_end = request.DATA.get('trial_end_date', None)
+                sub.activate(start_date=start_date, trial_end_date=trial_end)
+                sub.save()
+            else:
+                sub.activate()
+                sub.save()
+            return Response({"state: %s" % sub.state}, status=200)
 
 
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
@@ -88,3 +119,10 @@ class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     model = Customer
+
+
+class CustomerDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = CustomerSerializer
+    model = Customer
+    lookup_field = 'pk'
