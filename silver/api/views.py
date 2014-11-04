@@ -49,6 +49,30 @@ class SubscriptionDetailActivate(APIView):
             return Response({"state: %s" % sub.state}, status=200)
 
 
+class SubscriptionDetailCancel(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+
+    def post(self, request, *args, **kwargs):
+        sub = get_object_or_404(Subscription.objects,
+                                pk=self.kwargs.get('sub', None))
+        when = request.DATA.get('when', None)
+        if sub.state != 'active':
+            message = 'Cannot cancel from %s state.' % sub.state
+            return Response({"error": message}, status=400)
+        else:
+            if when == 'now':
+                sub.cancel()
+                sub.end()
+                sub.save()
+                return Response({"state: %s" % sub.state}, status=200)
+            elif when == 'end_of_billing_cycle':
+                sub.cancel()
+                sub.save()
+                return Response({"state: %s" % sub.state}, status=200)
+            else:
+                return Response(status=400)
+
+
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureUnitsLogSerializer

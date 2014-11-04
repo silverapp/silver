@@ -7,6 +7,8 @@ urlpatterns = patterns(
     url(r'^subscriptions/(?P<sub>[^/]+)/?$', views.SubscriptionDetail.as_view()),
     url(r'^subscriptions/(?P<sub>[^/]+)/activate/?$',
         views.SubscriptionDetailActivate.as_view()),
+    url(r'^subscriptions/(?P<sub>[^/]+)/cancel/?$',
+        views.SubscriptionDetailCancel.as_view()),
     url(
         r'^subscriptions/(?P<sub>[^/]+)/(?P<mf>[^/]+)/?$',
         views.MeteredFeatureUnitsLogList.as_view()
