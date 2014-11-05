@@ -86,11 +86,13 @@ class SubscriptionDetailReactivate(APIView):
                                 pk=self.kwargs.get('sub', None))
         if sub.state != 'canceled':
             message = 'Cannot reactivate subscription from %s state.' % sub.state
-            return Response({"error": message}, status=400)
+            return Response({"error": message},
+                            status=status.HTTP_400_BAD_REQUEST)
         else:
             sub.activate()
             sub.save()
-            return Response({"state: %s" % sub.state}, status=200)
+            return Response({"state: %s" % sub.state},
+                            status=status.HTTP_200_OK)
 
 
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
@@ -122,7 +124,7 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
             if subscription and metered_feature:
                 if subscription.state != 'active':
                     return Response({"detail": "Subscription is not active"},
-                                    status=403)
+                                    status=status.HTTP_403_FORBIDDEN)
                 if date and consumed_units is not None and update_type:
                     try:
                         date = datetime.datetime.strptime(date,
@@ -150,7 +152,7 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                                     consumed_units=consumed_units
                                 )
                             finally:
-                                return Response({"consumed_units": log.consumed_units},
+                                return Response({"count": log.consumed_units},
                                             status=status.HTTP_200_OK)
                         else:
                             return Response({"detail": "Date is out of bounds"},
@@ -164,7 +166,8 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
             else:
                 return Response({"detail": "Not found"},
                                 status=status.HTTP_404_NOT_FOUND)
-        return Response({"detail": False}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"detail": "Wrong address"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerList(generics.ListCreateAPIView):
