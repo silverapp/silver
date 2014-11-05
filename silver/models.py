@@ -184,9 +184,13 @@ class Subscription(models.Model):
 
 
 class Offer(models.Model):
+    name = models.CharField(
+        max_length=128, blank=True, null=True,
+        help_text='The optional name of the offer.'
+    )
     plans = models.ManyToManyField(
         'Plan',
-        help_text="The plans that are included in the customer's offer"
+        help_text="The plans that are included in the customer's offer."
     )
 
 
