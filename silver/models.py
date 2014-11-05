@@ -29,7 +29,6 @@ UPDATE_TYPES = (
 )
 
 
-
 class Plan(models.Model):
     name = models.CharField(
         max_length=20, help_text='Display name of the plan.'
@@ -89,7 +88,7 @@ class MeteredFeature(models.Model):
 class AddOnFeature(models.Model):
     name = models.CharField(
         max_length=32,
-        help_text='The feature display name.'
+        help_text="The feature's display name."
     )
     plan = models.ForeignKey(
         'Plan',
@@ -186,6 +185,7 @@ class Offer(models.Model):
         help_text="The plans that are included in the customer's offer"
     )
 
+
 class BillingDetail(models.Model):
     name = models.CharField(
         max_length=128,
@@ -247,5 +247,25 @@ class Customer(models.Model):
     def __unicode__(self):
         return self.billing_details.name
 
+
 class Provider(models.Model):
-    pass
+    name = models.CharField(
+        max_length=128,
+        help_text='The name of the company which issues the bill.'
+    )
+    email = models.EmailField(max_length=254, blank=True, null=True)
+    address_1 = models.CharField(max_length=128)
+    address_2 = models.CharField(max_length=48, blank=True, null=True)
+    city = models.CharField(max_length=128)
+    state = models.CharField(max_length=128)
+    country = models.CharField(choices=countries, max_length=3)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    bank_account = models.CharField(max_length=44, blank=True, null=True)
+    extra = models.TextField(
+        blank=True, null=True,
+        help_text='Extra information to display for the provider '
+                  '(markdown formatted).'
+    )
+
+    def __unicode__(self):
+        return self.name
