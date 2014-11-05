@@ -1,6 +1,5 @@
 """Models for the silver app."""
 import datetime
-from django.core.validators import EmailValidator
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 
 from django.db import models
@@ -181,21 +180,21 @@ class Offer(models.Model):
 
 class BillingDetail(models.Model):
     name = models.CharField(
-        max_length=128,
+        max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
     )
     company = models.CharField(
-        max_length=128, blank=True, null=True,
-        help_text='Company to issue invoices to.'
+        max_length=128,
+        help_text="Company which issues the bill or the compan that the bill "
+                  "is issued to."
     )
-    email = models.CharField(max_length=256, validators=[EmailValidator, ])
+    email = models.EmailField(max_length=254, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
     address_2 = models.CharField(max_length=48, blank=True, null=True)
-    country = models.CharField(choices=countries, max_length=3,
-                               default=countries[0][0])
-    city = models.CharField(max_length=128, blank=True, null=True)
+    country = models.CharField(choices=countries, max_length=3)
+    city = models.CharField(max_length=128)
     state = models.CharField(max_length=128, blank=True, null=True)
-    zip_code = models.CharField(max_length=32, blank=True, null=True)
+    zip_code = models.CharField(max_length=32)
     extra = models.TextField(
         blank=True, null=True,
         help_text='Extra information to display on the invoice '
@@ -205,7 +204,7 @@ class BillingDetail(models.Model):
     def __unicode__(self):
         display = self.name
         if self.company:
-            display += ' (' + unicode(self.company) + ')'
+            display = '%s (%s)' % (display, self.company)
         return display
 
 
@@ -231,7 +230,6 @@ class Customer(models.Model):
     consolidated_billing = models.BooleanField(
         default=False, help_text='A flag indicating consolidated billing.'
     )
-
     offer = models.OneToOneField(
         'Offer', null=True, blank=True,
         help_text="A custom offer consisting of a custom selection of plans."
@@ -242,24 +240,4 @@ class Customer(models.Model):
 
 
 class Provider(models.Model):
-    name = models.CharField(
-        max_length=128,
-        help_text='The name of the company which issues the bill.'
-    )
-    email = models.EmailField(max_length=254, blank=True, null=True)
-    address_1 = models.CharField(max_length=128, blank=True, null=True)
-    address_2 = models.CharField(max_length=48, blank=True, null=True)
-    city = models.CharField(max_length=128, blank=True, null=True)
-    state = models.CharField(max_length=12, blank=True, null=True)
-    country = models.CharField(choices=countries, max_length=3,
-                               blank=True, null=True)
-    bank_name = models.CharField(max_length=255, blank=True, null=True)
-    bank_account = models.CharField(max_length=44, blank=True, null=True)
-    extra = models.TextField(
-        blank=True, null=True,
-        help_text='Extra information to display for the provider '
-                  '(markdown formatted).'
-    )
-
-    def __unicode__(self):
-        return self.name
+    details = models.ForeignKey('BillingDetail')
