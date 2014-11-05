@@ -1,7 +1,7 @@
 """Admin classes for the silver app."""
 from django.contrib import admin, messages
-from models import Plan, MeteredFeature, Subscription, BillingDetail, Customer,\
-    MeteredFeatureUnitsLog
+from models import (Plan, MeteredFeature, Subscription, BillingDetail, Customer,
+                    MeteredFeatureUnitsLog, Offer)
 from django_fsm import TransitionNotAllowed
 
 
@@ -15,6 +15,10 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
     model = MeteredFeatureUnitsLog
     list_display = ['metered_feature', ]
     extra = 1
+
+class OfferAdmin(admin.ModelAdmin):
+    model = Offer
+    list_display = ('name', 'plans_list')
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -88,4 +92,5 @@ admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
+admin.site.register(Offer, OfferAdmin)
 admin.site.register(BillingDetail, BillingDetailAdmin)

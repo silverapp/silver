@@ -177,6 +177,10 @@ class Offer(models.Model):
         help_text="The plans that are included in the customer's offer."
     )
 
+    def plans_list(self):
+        return ", ".join([plan.name for plan in self.plans.all()])
+    plans_list.short_description = 'Included plans'
+
 
 class BillingDetail(models.Model):
     name = models.CharField(
