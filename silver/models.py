@@ -57,10 +57,6 @@ class Plan(models.Model):
         'MeteredFeature',
         help_text="A list of the plan's metered features."
     )
-    add_on_features = models.ManyToManyField(
-        'AddOnFeature',
-        help_text="A list of the plan's add-on features."
-    )
     due_days = models.PositiveIntegerField(
         help_text='Due days for generated invoice.'
     )
@@ -87,17 +83,6 @@ class MeteredFeature(models.Model):
 
     def __unicode__(self):
         return self.name
-
-
-class AddOnFeature(models.Model):
-    name = models.CharField(
-        max_length=32,
-        help_text="The feature's display name."
-    )
-    description = models.CharField(
-        max_length=100,
-        help_text="The feature's description."
-    )
 
 
 class MeteredFeatureUnitsLog(models.Model):
