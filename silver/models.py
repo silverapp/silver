@@ -57,6 +57,10 @@ class Plan(models.Model):
         'MeteredFeature',
         help_text="A list of the plan's metered features."
     )
+    add_on_features = models.ManyToManyField(
+        'AddOnFeature',
+        help_text="A list of the plan's add-on features."
+    )
     due_days = models.PositiveIntegerField(
         help_text='Due days for generated invoice.'
     )
@@ -83,6 +87,17 @@ class MeteredFeature(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class AddOnFeature(models.Model):
+    name = models.CharField(
+        max_length=32,
+        help_text="The feature's display name."
+    )
+    description = models.CharField(
+        max_length=100,
+        help_text="The feature's description."
+    )
 
 
 class MeteredFeatureUnitsLog(models.Model):
@@ -168,6 +183,13 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
+class Offer(models.Model):
+    plans = models.ManyToManyField(
+        'Plan',
+        help_text="The plans that are included in the customer's offer"
+    )
+
+
 class BillingDetail(models.Model):
     name = models.CharField(
         max_length=128,
@@ -221,5 +243,34 @@ class Customer(models.Model):
         default=False, help_text='A flag indicating consolidated billing.'
     )
 
+    offer = models.OneToOneField(
+        'Offer', null=True, blank=True,
+        help_text="A custom offer consisting of a custom selection of plans."
+    )
+
     def __unicode__(self):
         return self.billing_details.name
+
+
+class Provider(models.Model):
+    name = models.CharField(
+        max_length=128,
+        help_text='The name of the company which issues the bill.'
+    )
+    email = models.EmailField(max_length=254, blank=True, null=True)
+    address_1 = models.CharField(max_length=128, blank=True, null=True)
+    address_2 = models.CharField(max_length=48, blank=True, null=True)
+    city = models.CharField(max_length=128, blank=True, null=True)
+    state = models.CharField(max_length=12, blank=True, null=True)
+    country = models.CharField(choices=countries, max_length=3,
+                               blank=True, null=True)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    bank_account = models.CharField(max_length=44, blank=True, null=True)
+    extra = models.TextField(
+        blank=True, null=True,
+        help_text='Extra information to display for the provider '
+                  '(markdown formatted).'
+    )
+
+    def __unicode__(self):
+        return self.name
