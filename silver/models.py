@@ -254,11 +254,12 @@ class Provider(models.Model):
         help_text='The name of the company which issues the bill.'
     )
     email = models.EmailField(max_length=254, blank=True, null=True)
-    address_1 = models.CharField(max_length=128)
+    address_1 = models.CharField(max_length=128, blank=True, null=True)
     address_2 = models.CharField(max_length=48, blank=True, null=True)
-    city = models.CharField(max_length=128)
-    state = models.CharField(max_length=128)
-    country = models.CharField(choices=countries, max_length=3)
+    city = models.CharField(max_length=128, blank=True, null=True)
+    state = models.CharField(max_length=12, blank=True, null=True)
+    country = models.CharField(choices=countries, max_length=3,
+                               blank=True, null=True)
     bank_name = models.CharField(max_length=255, blank=True, null=True)
     bank_account = models.CharField(max_length=44, blank=True, null=True)
     extra = models.TextField(
