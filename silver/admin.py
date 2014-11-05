@@ -16,6 +16,7 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
     list_display = ['metered_feature', ]
     extra = 1
 
+
 class OfferAdmin(admin.ModelAdmin):
     model = Offer
     list_display = ('name', 'plans_list')
