@@ -144,7 +144,11 @@ class Subscription(models.Model):
             interval_count=self.plan.interval_count
         )
         if next_start_date:
-            return next_start_date - datetime.timedelta(days=1)
+            ced = next_start_date - datetime.timedelta(days=1)
+            if self.ended_at < ced:
+                return self.ended_at
+            else:
+                return ced
         return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
