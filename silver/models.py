@@ -57,6 +57,10 @@ class Plan(models.Model):
         'MeteredFeature',
         help_text="A list of the plan's metered features."
     )
+    add_on_features = models.ManyToManyField(
+        'AddOnFeature',
+        help_text="A list of the plan's add-on features."
+    )
     due_days = models.PositiveIntegerField(
         help_text='Due days for generated invoice.'
     )
@@ -90,9 +94,9 @@ class AddOnFeature(models.Model):
         max_length=32,
         help_text="The feature's display name."
     )
-    plan = models.ForeignKey(
-        'Plan',
-        help_text="The plan to whom the feature belongs."
+    description = models.CharField(
+        max_length=100,
+        help_text="The feature's description."
     )
 
 
