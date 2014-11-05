@@ -3,21 +3,23 @@ from silver.api import views
 
 urlpatterns = patterns(
     '',
-    url(r'^subscriptions/?$', views.SubscriptionList.as_view()),
-    url(r'^subscriptions/(?P<sub>[^/]+)/?$', views.SubscriptionDetail.as_view()),
-    url(r'^subscriptions/(?P<sub>[^/]+)/activate/?$',
-        views.SubscriptionDetailActivate.as_view()),
-    url(r'^subscriptions/(?P<sub>[^/]+)/cancel/?$',
-        views.SubscriptionDetailCancel.as_view()),
-    url(r'^subscriptions/(?P<sub>[^/]+)/reactivate/?$',
-        views.SubscriptionDetailReactivate.as_view()),
+    url(r'^subscriptions/?$', views.SubscriptionList.as_view(),
+        name='subscription-list'),
+    url(r'^subscriptions/(?P<sub>[0-9]+)/?$', views.SubscriptionDetail.as_view(),
+        name='subscription-detail'),
+    url(r'^subscriptions/(?P<sub>[0-9]+)/activate/?$',
+        views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
+    url(r'^subscriptions/(?P<sub>[0-9]+)/cancel/?$',
+        views.SubscriptionDetailCancel.as_view(), name='sub-cancel'),
+    url(r'^subscriptions/(?P<sub>[0-9]+)/reactivate/?$',
+        views.SubscriptionDetailReactivate.as_view(), name='sub-reactivate'),
     url(
-        r'^subscriptions/(?P<sub>[^/]+)/(?P<mf>[^/]+)/?$',
-        views.MeteredFeatureUnitsLogList.as_view()
+        r'^subscriptions/(?P<sub>[0-9]+)/(?P<mf>[0-9]+)/?$',
+        views.MeteredFeatureUnitsLogList.as_view(), name='mf-log-list'
     ),
-    url(r'^customers/?$', views.CustomerList.as_view()),
-    url(r'^customers/(?P<pk>[^/]+)/?$', views.CustomerDetail.as_view(),
+    url(r'^customers/?$', views.CustomerList.as_view(), name='customer-list'),
+    url(r'^customers/(?P<pk>[0-9]+)/?$', views.CustomerDetail.as_view(),
         name='customer-detail'),
-    url(r'plans/(?P<pk>[^/]+)/?$', views.PlanDetail.as_view(),
+    url(r'plans/(?P<pk>[0-9]+)/?$', views.PlanDetail.as_view(),
         name='plan-detail'),
 )
