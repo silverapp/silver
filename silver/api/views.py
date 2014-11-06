@@ -4,11 +4,12 @@ from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature, \
-    Customer, Plan
-from silver.api.serializers import MeteredFeatureUnitsLogSerializer, \
-    CustomerSerializer, SubscriptionSerializer, SubscriptionDetailSerializer, \
-    PlanSerializer, MeteredFeatureSerializer
+from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
+                           Customer, Plan)
+from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
+                                    CustomerSerializer, SubscriptionSerializer,
+                                    SubscriptionDetailSerializer,
+                                    PlanSerializer, MeteredFeatureSerializer)
 import datetime
 
 
