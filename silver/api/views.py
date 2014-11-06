@@ -5,11 +5,12 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
-                           Customer, Plan)
+                           Customer, Plan, Provider)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
-                                    PlanSerializer, MeteredFeatureSerializer)
+                                    PlanSerializer, MeteredFeatureSerializer,
+                                    ProviderSerializer)
 import datetime
 
 
@@ -234,3 +235,9 @@ class CustomerDetail(generics.RetrieveUpdateAPIView):
     serializer_class = CustomerSerializer
     model = Customer
     lookup_field = 'pk'
+
+
+class ProviderListList(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProviderSerializer
+    model = Provider
