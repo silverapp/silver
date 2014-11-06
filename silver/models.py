@@ -53,8 +53,12 @@ class Plan(models.Model):
                   'customer to this plan.'
     )
     metered_features = models.ManyToManyField(
-        'MeteredFeature',
+        'MeteredFeature', blank=True, null=True,
         help_text="A list of the plan's metered features."
+    )
+    add_on_features = models.ManyToManyField(
+        'AddOnFeature', blank=True, null=True,
+        help_text="A list containing the plan's add-on features."
     )
     due_days = models.PositiveIntegerField(
         help_text='Due days for generated invoice.'
@@ -65,6 +69,12 @@ class Plan(models.Model):
                   'before generating the invoice. This can be used to allow '
                   'systems to finish updating feature counters.'
     )
+    enabled = models.BooleanField(default=True,
+                                  help_text='Whether to accept subscriptions.')
+    private = models.BooleanField(default=False,
+                                  help_text='Indicates if a plan is private.')
+    product_code = models.CharField(max_length=128,
+                                    help_text='The product code for this plan.')
 
     def __unicode__(self):
         return self.name
@@ -82,6 +92,17 @@ class MeteredFeature(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class AddOnFeature(models.Model):
+    name = models.CharField(
+        max_length=32,
+        help_text="The feature's display name."
+    )
+    description = models.CharField(
+        max_length=100,
+        help_text="The feature's description."
+    )
 
 
 class MeteredFeatureUnitsLog(models.Model):
@@ -143,13 +164,24 @@ class Subscription(models.Model):
             interval_count=self.plan.interval_count
         )
         if next_start_date:
-            return next_start_date - datetime.timedelta(days=1)
+            ced = next_start_date - datetime.timedelta(days=1)
+            if self.ended_at:
+                if self.ended_at < ced:
+                    return self.ended_at
+            else:
+                return ced
         return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
-    def activate(self):
-        self.start_date = datetime.date.today()
-        if self.trial_end is None:
+    def activate(self, start_date=None, trial_end_date=None):
+        if start_date:
+            self.start_date = start_date
+        elif self.start_date is None:
+            self.start_date = datetime.date.today()
+
+        if trial_end_date:
+            self.trial_end = trial_end_date
+        elif self.trial_end is None:
             self.trial_end = self.start_date + datetime.timedelta(
                 days=self.plan.trial_period_days
             )
