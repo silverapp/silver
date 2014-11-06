@@ -76,8 +76,10 @@ class CustomerSerializer(serializers.ModelSerializer):
                   'sales_tax_name')
         depth = 1
 
+
 class ProviderSerializer(serializers.ModelSerializer):
     details = BillingDetailSerializer()
+
     class Meta:
         model = Provider
         fields = ('details',)
