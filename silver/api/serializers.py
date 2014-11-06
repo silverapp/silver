@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from silver.models import (MeteredFeatureUnitsLog, Customer, BillingDetail,
-                           Subscription, MeteredFeature, Plan)
+                           Subscription, MeteredFeature, Plan, Provider)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -63,7 +63,7 @@ class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
 class BillingDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillingDetail
-        fields = ('name', 'company', 'email', 'address_1', 'address_2',
+        fields = ('id', 'name', 'company', 'email', 'address_1', 'address_2',
                   'country', 'city', 'state', 'zip_code', 'extra')
 
 
@@ -74,4 +74,11 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ('customer_reference', 'billing_details', 'sales_tax_percent',
                   'sales_tax_name')
+        depth = 1
+
+class ProviderSerializer(serializers.ModelSerializer):
+    details = BillingDetailSerializer()
+    class Meta:
+        model = Provider
+        fields = ('details',)
         depth = 1

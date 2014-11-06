@@ -237,7 +237,7 @@ class CustomerDetail(generics.RetrieveUpdateAPIView):
     lookup_field = 'pk'
 
 
-class ProviderListList(generics.ListCreateAPIView):
+class ProviderList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     model = Provider
