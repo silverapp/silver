@@ -36,6 +36,7 @@ class PlanList(generics.ListCreateAPIView):
 
 class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = PlanSerializer
     model = Plan
     lookup_field = 'pk'
 
