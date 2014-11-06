@@ -54,8 +54,12 @@ class Plan(models.Model):
                   'customer to this plan.'
     )
     metered_features = models.ManyToManyField(
-        'MeteredFeature',
+        'MeteredFeature', blank=True, null=True,
         help_text="A list of the plan's metered features."
+    )
+    add_on_features = models.ManyToManyField(
+        'AddOnFeature', blank=True, null=True,
+        help_text="A list containing the plan's add-on features."
     )
     due_days = models.PositiveIntegerField(
         help_text='Due days for generated invoice.'
@@ -66,6 +70,12 @@ class Plan(models.Model):
                   'before generating the invoice. This can be used to allow '
                   'systems to finish updating feature counters.'
     )
+    enabled = models.BooleanField(default=True,
+                                  help_text='Whether to accept subscriptions.')
+    private = models.BooleanField(default=False,
+                                  help_text='Indicates if a plan is private.')
+    product_code = models.CharField(max_length=128,
+                                    help_text='The product code for this plan.')
 
     def __unicode__(self):
         return self.name
@@ -83,6 +93,17 @@ class MeteredFeature(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class AddOnFeature(models.Model):
+    name = models.CharField(
+        max_length=32,
+        help_text="The feature's display name."
+    )
+    description = models.CharField(
+        max_length=100,
+        help_text="The feature's description."
+    )
 
 
 class MeteredFeatureUnitsLog(models.Model):

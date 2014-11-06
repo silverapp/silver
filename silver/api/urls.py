@@ -20,6 +20,7 @@ urlpatterns = patterns(
     url(r'^customers/?$', views.CustomerList.as_view(), name='customer-list'),
     url(r'^customers/(?P<pk>[0-9]+)/?$', views.CustomerDetail.as_view(),
         name='customer-detail'),
+    url(r'plans/?$', views.PlanList.as_view(), name='plan-list'),
     url(r'plans/(?P<pk>[0-9]+)/?$', views.PlanDetail.as_view(),
         name='plan-detail'),
 )

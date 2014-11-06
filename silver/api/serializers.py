@@ -1,6 +1,11 @@
 from rest_framework import serializers
 from silver.models import MeteredFeatureUnitsLog, Customer, BillingDetail, \
-    Subscription, MeteredFeature
+    Subscription, MeteredFeature, Plan
+
+
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
