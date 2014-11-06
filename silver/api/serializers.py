@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from silver.models import MeteredFeatureUnitsLog, Customer, BillingDetail, \
-    Subscription, MeteredFeature, Plan, AddOnFeature
+from silver.models import (MeteredFeatureUnitsLog, Customer, BillingDetail,
+                           Subscription, MeteredFeature, Plan)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -9,26 +9,17 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
         fields = ('name', 'price_per_unit', 'included_units')
 
 
-class AddOnFeatureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AddOnFeature
-        fields = ('name', 'description')
-
-
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(
         source='metered_features',
         many=True, read_only=True
     )
-    add_on_features = AddOnFeatureSerializer(source='add_on_features',
-                                             many=True, read_only=True)
 
     class Meta:
         model = Plan
         fields = ('name', 'interval', 'interval_count', 'amount', 'currency',
                   'trial_period_days', 'due_days', 'generate_after', 'enabled',
-                  'private', 'product_code', 'metered_features',
-                  'add_on_features')
+                  'private', 'product_code', 'metered_features')
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
