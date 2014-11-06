@@ -166,8 +166,9 @@ class Subscription(models.Model):
         )
         if next_start_date:
             ced = next_start_date - datetime.timedelta(days=1)
-            if self.ended_at < ced:
-                return self.ended_at
+            if self.ended_at:
+                if self.ended_at < ced:
+                    return self.ended_at
             else:
                 return ced
         return None
