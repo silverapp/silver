@@ -23,4 +23,6 @@ urlpatterns = patterns(
     url(r'plans/?$', views.PlanList.as_view(), name='plan-list'),
     url(r'plans/(?P<pk>[0-9]+)/?$', views.PlanDetail.as_view(),
         name='plan-detail'),
+    url(r'plans/(?P<pk>[0-9]+)/metered_features?$',
+        views.MeteredFeatures.as_view(), name='metered-features'),
 )

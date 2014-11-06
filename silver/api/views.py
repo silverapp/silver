@@ -8,7 +8,7 @@ from silver.models import MeteredFeatureUnitsLog, Subscription, MeteredFeature, 
     Customer, Plan
 from silver.api.serializers import MeteredFeatureUnitsLogSerializer, \
     CustomerSerializer, SubscriptionSerializer, SubscriptionDetailSerializer, \
-    PlanSerializer
+    PlanSerializer, MeteredFeatureSerializer
 import datetime
 
 
@@ -38,6 +38,31 @@ class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     model = Plan
     lookup_field = 'pk'
+
+    def patch(self, request, *args, **kwargs):
+        plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
+        name = request.DATA.get('name', None)
+        generate_after = request.DATA.get('generate_after', None)
+        due_days = request.DATA.get('due_days', None)
+        plan.name = name or plan.name
+        plan.generate_after = generate_after or plan.generate_after
+        plan.due_days = due_days or plan.due_days
+        plan.save()
+        return Response(PlanSerializer(plan).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, *args, **kwargs):
+        plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
+        plan.enabled = False
+        plan.save()
+        return Response({"enabled": plan.enabled}, status=status.HTTP_200_OK)
+
+
+class MeteredFeatures(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = MeteredFeatureSerializer
+    model = MeteredFeature
+    lookup_field = 'plan'
+    lookup_url_kwarg = 'pk'
 
 
 class SubscriptionList(generics.ListCreateAPIView):

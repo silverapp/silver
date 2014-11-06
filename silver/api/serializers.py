@@ -31,6 +31,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = MeteredFeature
+        fields = ('name', 'price_per_unit', 'included_units')
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
