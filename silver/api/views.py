@@ -169,14 +169,9 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
         update_type = request.DATA.get('update_type', None)
 
         if subscription_pk and metered_feature_pk:
-            try:
-                subscription = Subscription.objects.get(pk=subscription_pk)
-            except Subscription.DoesNotExist:
-                subscription = None
-            try:
-                metered_feature = MeteredFeature.objects.get(pk=metered_feature_pk)
-            except MeteredFeature.DoesNotExist:
-                metered_feature = None
+            subscription = get_object_or_None(pk=subscription_pk)
+            metered_feature = get_object_or_None(pk=metered_feature_pk)
+
             if subscription and metered_feature:
                 if subscription.state != 'active':
                     return Response({"detail": "Subscription is not active"},
