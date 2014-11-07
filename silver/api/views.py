@@ -169,8 +169,9 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
         update_type = request.DATA.get('update_type', None)
 
         if subscription_pk and metered_feature_pk:
-            subscription = get_object_or_None(pk=subscription_pk)
-            metered_feature = get_object_or_None(pk=metered_feature_pk)
+            subscription = get_object_or_None(Subscription, pk=subscription_pk)
+            metered_feature = get_object_or_None(MeteredFeature,
+                                                 pk=metered_feature_pk)
 
             if subscription and metered_feature:
                 if subscription.state != 'active':
