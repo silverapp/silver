@@ -9,13 +9,13 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
                     'trial_period_days', 'due_days', 'generate_after',
-                    'enabled', 'private', ]
-    search_fields = ['due_days', 'name', ]
+                    'enabled', 'private']
+    search_fields = ['due_days', 'name']
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):
     model = MeteredFeatureUnitsLog
-    list_display = ['metered_feature', ]
+    list_display = ['metered_feature']
     extra = 1
 
 
