@@ -13,6 +13,7 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer)
+from silver.utils import get_object_or_None
 
 
 class PlanList(generics.ListCreateAPIView):
@@ -47,12 +48,26 @@ class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response({"enabled": plan.enabled}, status=status.HTTP_200_OK)
 
 
-class MeteredFeatures(generics.ListCreateAPIView):
+class PlanMeteredFeatures(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
-    lookup_field = 'plan'
-    lookup_url_kwarg = 'pk'
+
+    def get_queryset(self):
+        plan = get_object_or_None(Plan, pk=self.kwargs['pk'])
+        return plan.metered_features.all() if plan else None
+
+
+class MeteredFeaturesList(ListBulkCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = MeteredFeatureSerializer
+    model = MeteredFeature
+
+
+class MeteredFeaturesDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = MeteredFeatureSerializer
+    model = MeteredFeature
 
 
 class SubscriptionList(generics.ListCreateAPIView):

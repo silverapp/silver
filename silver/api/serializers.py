@@ -5,9 +5,11 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='silver_api:metered-features-detail')
+
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units')
+        fields = ('id', 'name', 'price_per_unit', 'included_units', 'url')
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
