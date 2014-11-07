@@ -1,3 +1,5 @@
+import datetime
+
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -11,7 +13,6 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer)
-import datetime
 
 
 class PlanList(generics.ListCreateAPIView):

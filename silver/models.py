@@ -1,10 +1,11 @@
 """Models for the silver app."""
 import datetime
-from silver.api.dateutils import last_date_that_fits, next_date_after_period
 
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
+
+from silver.api.dateutils import last_date_that_fits, next_date_after_period
 
 INTERVALS = (
     ('day', 'Day'),

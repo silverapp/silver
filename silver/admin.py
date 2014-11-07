@@ -1,8 +1,9 @@
 """Admin classes for the silver app."""
 from django.contrib import admin, messages
+from django_fsm import TransitionNotAllowed
+
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Offer)
-from django_fsm import TransitionNotAllowed
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -81,6 +82,7 @@ class CustomerAdmin(admin.ModelAdmin):
 class MeteredFeatureAdmin(admin.ModelAdmin):
     def get_model_perms(self, request):
         return {}
+
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
