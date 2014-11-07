@@ -64,8 +64,6 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ('customer_reference', 'sales_tax_percent', 'sales_tax_name')
-        depth = 1
 
 
 class ProviderSerializer(serializers.ModelSerializer):
