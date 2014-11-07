@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from silver.models import (MeteredFeatureUnitsLog, Customer, BillingDetail,
-                           Subscription, MeteredFeature, Plan)
+
+from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
+                           MeteredFeature, Plan, Provider)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -66,22 +67,20 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
         read_only_fields = ('state', )
 
 
-class BillingDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BillingDetail
-        fields = ('name', 'company', 'email', 'address_1', 'address_2',
-                  'country', 'city', 'state', 'zip_code', 'extra')
-
-
 class CustomerSerializer(serializers.ModelSerializer):
-    billing_details = BillingDetailSerializer(source='billing_details')
-    url = serializers.HyperlinkedIdentityField(
-        source='*',
-        view_name='silver_api:customer-detail'
-    )
+    url = serializers.HyperlinkedIdentityField(view_name='silver_api:customer-detail')
 
     class Meta:
         model = Customer
-        fields = ('customer_reference', 'url', 'billing_details',
-                  'sales_tax_percent', 'sales_tax_name')
-        depth = 1
+        fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
+                  'address_1', 'address_2', 'city', 'state', 'zip_code',
+                  'country', 'extra', 'sales_tax_name', 'sales_tax_percent')
+
+
+class ProviderSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='silver_api:provider-detail')
+
+    class Meta:
+        model = Provider
+        fields = ('id', 'url', 'name', 'company', 'email', 'address_1',
+                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra')
