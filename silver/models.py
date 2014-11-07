@@ -257,7 +257,12 @@ class Customer(BillingEntity):
         company_field.help_text = "The company to which the bill is issued."
 
     def __unicode__(self):
-        return " - ".join(filter(None, [self.name, self.customer_reference]))
+        return " - ".join(filter(None, [self.name, self.company]))
+
+    def complete_address(self):
+        return ", ".join(filter(None, [self.address_1, self.city, self.state,
+                                       self.zip_code, self.country]))
+    complete_address.short_description = 'Complete address'
 
 
 class Provider(BillingEntity):

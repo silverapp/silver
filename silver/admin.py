@@ -30,7 +30,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
-    search_fields = ['name', 'plan__name', ]
+    search_fields = ['customer__name', 'customer__company', 'plan__name', ]
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
@@ -73,10 +73,12 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['customer_reference',
-                    'sales_tax_percent', 'sales_tax_name',
+    list_display = ['customer_reference', 'name', 'company', 'email',
+                    'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
-    search_fields = ['customer_reference', 'name', 'company']
+    search_fields = ['customer_reference', 'name', 'company', 'address_1',
+                     'address_2', 'city', 'zip_code', 'country', 'state',
+                     'email']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
