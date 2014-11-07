@@ -7,7 +7,8 @@ from django_fsm import TransitionNotAllowed
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'due_days', 'generate_after', ]
+                    'trial_period_days', 'due_days', 'generate_after',
+                    'enabled', 'private', ]
     search_fields = ['due_days', 'name', ]
 
 

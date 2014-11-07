@@ -1,6 +1,4 @@
-from django.core.exceptions import FieldError
-from django.http import Http404
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,23 +15,9 @@ import datetime
 class PlanList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
-
-    def get_queryset(self):
-        params = {'private': False, 'enabled': True}
-        queryset = Plan.objects.all()
-        for key, value in self.request.QUERY_PARAMS.iteritems():
-            if value == 'True' or value == 'true':
-                if key == 'private':
-                    params.pop('private')
-                elif key == 'disabled':
-                    params.pop('enabled')
-        try:
-            queryset = queryset.filter(**params)
-            if queryset:
-                return queryset
-            raise Http404
-        except FieldError:
-            raise Http404
+    queryset = Plan.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('enabled', 'private')
 
 
 class PlanDetail(generics.RetrieveUpdateDestroyAPIView):

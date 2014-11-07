@@ -69,7 +69,7 @@ class Plan(models.Model):
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
-    product_code = models.CharField(max_length=128,
+    product_code = models.CharField(max_length=128, unique=True,
                                     help_text='The product code for this plan.')
 
     def __unicode__(self):
