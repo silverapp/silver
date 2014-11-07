@@ -261,7 +261,7 @@ class Customer(BillingEntity):
 
 class Provider(BillingEntity):
     def __init__(self, *args, **kwargs):
-        super(Customer, self).__init__(*args, **kwargs)
+        super(Provider, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The issuing the bill."
 
