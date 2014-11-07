@@ -1,6 +1,6 @@
 """Admin classes for the silver app."""
 from django.contrib import admin, messages
-from models import (Plan, MeteredFeature, Subscription, BillingDetail, Customer,
+from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Offer)
 from django_fsm import TransitionNotAllowed
 
@@ -29,7 +29,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
-    search_fields = ['customer__billing_details__name', 'plan__name', ]
+    search_fields = ['name', 'plan__name', ]
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
@@ -72,27 +72,19 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['customer_reference', 'billing_details',
+    list_display = ['customer_reference',
                     'sales_tax_percent', 'sales_tax_name',
-                    'consolidated_billing', ]
-    search_fields = ['customer_reference', 'billing_details__name',
-                     'billing_details__company', ]
-
-
-class BillingDetailAdmin(admin.ModelAdmin):
-    def get_model_perms(self, request):
-        # hide this from the admin interface
-        return {}
+                    'consolidated_billing']
+    search_fields = ['customer_reference', 'name', 'company']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
     def get_model_perms(self, request):
         return {}
 
-
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Offer, OfferAdmin)
-admin.site.register(BillingDetail, BillingDetailAdmin)
+admin.site.register(Provider)

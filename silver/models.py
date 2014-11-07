@@ -199,16 +199,12 @@ class Offer(models.Model):
     plans_list.short_description = 'Included plans'
 
 
-class BillingDetail(models.Model):
+class BillingEntity(models.Model):
     name = models.CharField(
         max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
     )
-    company = models.CharField(
-        max_length=128,
-        help_text="Company which issues the bill or the compan that the bill "
-                  "is issued to."
-    )
+    company = models.CharField(max_length=128)
     email = models.EmailField(max_length=254, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
     address_2 = models.CharField(max_length=48, blank=True, null=True)
@@ -222,6 +218,9 @@ class BillingDetail(models.Model):
                   '(markdown formatted).'
     )
 
+    class Meta:
+        abstract = True
+
     def __unicode__(self):
         display = self.name
         if self.company:
@@ -229,16 +228,11 @@ class BillingDetail(models.Model):
         return display
 
 
-class Customer(models.Model):
+class Customer(BillingEntity):
     customer_reference = models.CharField(
         max_length=256, blank=True, null=True,
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
-    )
-    billing_details = models.OneToOneField(
-        'BillingDetail',
-        help_text='An hash consisting of billing information. '
-        'None are mandatory and all will show up on the invoice.'
     )
     sales_tax_percent = models.FloatField(
         null=True,
@@ -256,9 +250,20 @@ class Customer(models.Model):
         help_text="A custom offer consisting of a custom selection of plans."
     )
 
+    def __init__(self, *args, **kwargs):
+        super(Customer, self).__init__(*args, **kwargs)
+        company_field = self._meta.get_field_by_name("company")[0]
+        company_field.help_text = "The company to which the bill is issued."
+
     def __unicode__(self):
-        return self.billing_details.name
+        return " - ".join(filter(None, [self.name, self.customer_reference]))
 
 
-class Provider(models.Model):
-    details = models.ForeignKey('BillingDetail')
+class Provider(BillingEntity):
+    def __init__(self, *args, **kwargs):
+        super(Customer, self).__init__(*args, **kwargs)
+        company_field = self._meta.get_field_by_name("company")[0]
+        company_field.help_text = "The issuing the bill."
+
+    def __unicode__(self):
+        return " - ".join(filter(None, [self.company, self.name]))
