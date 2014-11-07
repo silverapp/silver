@@ -234,4 +234,3 @@ class ProviderDetail(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     model = Provider
-    lookup_field = 'pk'

@@ -68,6 +68,9 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class ProviderSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='silver_api:provider-detail')
 
     class Meta:
         model = Provider
+        fields = ('id', 'url', 'name', 'company', 'email', 'address_1',
+                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra')
