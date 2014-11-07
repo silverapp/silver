@@ -74,7 +74,7 @@ class SubscriptionDetailActivate(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('pk', None))
         if sub.state != 'inactive':
             message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message},

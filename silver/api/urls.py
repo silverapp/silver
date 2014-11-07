@@ -6,7 +6,7 @@ urlpatterns = patterns(
     '',
     url(r'^subscriptions/$', views.SubscriptionList.as_view(),
         name='subscription-list'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/$', views.SubscriptionDetail.as_view(),
+    url(r'^subscriptions/(?P<pk>[0-9]+)/$', views.SubscriptionDetail.as_view(),
         name='subscription-detail'),
     url(r'^subscriptions/(?P<sub>[0-9]+)/activate/$',
         views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
