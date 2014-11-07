@@ -266,4 +266,4 @@ class Provider(BillingEntity):
         company_field.help_text = "The issuing the bill."
 
     def __unicode__(self):
-        return " - ".join(filter(None, [self.company, self.name]))
+        return " - ".join(filter(None, [self.name, self.company]))
