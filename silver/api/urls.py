@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, url
+
 from silver.api import views
 
 urlpatterns = patterns(
@@ -25,4 +26,7 @@ urlpatterns = patterns(
         name='plan-detail'),
     url(r'plans/(?P<pk>[0-9]+)/metered_features/$',
         views.MeteredFeatures.as_view(), name='metered-features'),
+    url(r'^providers/$', views.ProviderList.as_view(), name='provider-list'),
+    url(r'^providers/(?P<pk>[0-9]+)/$', views.ProviderDetail.as_view(),
+        name='provider-detail'),
 )

@@ -1,20 +1,21 @@
 """Admin classes for the silver app."""
 from django.contrib import admin, messages
-from models import (Plan, MeteredFeature, Subscription, BillingDetail, Customer,
-                    MeteredFeatureUnitsLog, Offer)
 from django_fsm import TransitionNotAllowed
+
+from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
+                    MeteredFeatureUnitsLog, Offer)
 
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
                     'trial_period_days', 'due_days', 'generate_after',
-                    'enabled', 'private', ]
-    search_fields = ['due_days', 'name', ]
+                    'enabled', 'private']
+    search_fields = ['due_days', 'name']
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):
     model = MeteredFeatureUnitsLog
-    list_display = ['metered_feature', ]
+    list_display = ['metered_feature']
     extra = 1
 
 
@@ -29,7 +30,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
-    search_fields = ['customer__billing_details__name', 'plan__name', ]
+    search_fields = ['customer__name', 'customer__company', 'plan__name', ]
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
@@ -72,17 +73,12 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['customer_reference', 'billing_details',
-                    'sales_tax_percent', 'sales_tax_name',
-                    'consolidated_billing', ]
-    search_fields = ['customer_reference', 'billing_details__name',
-                     'billing_details__company', ]
-
-
-class BillingDetailAdmin(admin.ModelAdmin):
-    def get_model_perms(self, request):
-        # hide this from the admin interface
-        return {}
+    list_display = ['customer_reference', 'name', 'company', 'email',
+                    'complete_address', 'sales_tax_percent', 'sales_tax_name',
+                    'consolidated_billing']
+    search_fields = ['customer_reference', 'name', 'company', 'address_1',
+                     'address_2', 'city', 'zip_code', 'country', 'state',
+                     'email']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
@@ -95,4 +91,4 @@ admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Offer, OfferAdmin)
-admin.site.register(BillingDetail, BillingDetailAdmin)
+admin.site.register(Provider)
