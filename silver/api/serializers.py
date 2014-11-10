@@ -29,7 +29,8 @@ class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
 
 class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
     units_log_url = MeteredFeatureLogRelatedField(
-        view_name='silver_api:mf-log-list', source='*', read_only=True
+        view_name='silver_api:mf-log-list', source='*',
+        read_only=True, many=True
     )
 
     class Meta:

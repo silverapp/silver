@@ -154,6 +154,7 @@ class SubscriptionDetailReactivate(APIView):
 class MeteredFeatureUnitsLogList(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureUnitsLogSerializer
+    paginate_by = None
 
     def get_queryset(self):
         return MeteredFeatureUnitsLog.objects.filter(
