@@ -1,7 +1,8 @@
+from string import rfind
 from rest_framework import serializers
-
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider)
+from rest_framework.reverse import reverse
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -10,6 +11,30 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = MeteredFeature
         fields = ('id', 'name', 'price_per_unit', 'included_units', 'url')
+
+
+class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        request = self.context['request']
+        path = request._request.path
+        left = '/subscriptions/'.__len__()
+        right = rfind(path, '/', left)
+        sub_pk = path[left:right]
+        kwargs = {
+            'sub': sub_pk,
+            'mf': obj.pk
+        }
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
+class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
+    units_log_url = MeteredFeatureLogRelatedField(
+        view_name='silver_api:mf-log-list', source='*', read_only=True
+    )
+
+    class Meta:
+        model = MeteredFeature
+        fields = ('name', 'price_per_unit', 'included_units', 'units_log_url')
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
@@ -58,7 +83,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
-    metered_features = MeteredFeatureSerializer(
+    metered_features = MeteredFeatureInSubscriptionSerializer(
         source='plan.metered_features', many=True, read_only=True
     )
 
