@@ -6,11 +6,12 @@ from rest_framework.reverse import reverse
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name='silver_api:metered-features-detail')
+    url = serializers.HyperlinkedIdentityField(
+        view_name='silver_api:metered-features-detail')
 
     class Meta:
         model = MeteredFeature
-        fields = ('id', 'name', 'price_per_unit', 'included_units', 'url')
+        fields = ('name', 'price_per_unit', 'included_units', 'url')
 
 
 class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
@@ -29,8 +30,7 @@ class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
 
 class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
     units_log_url = MeteredFeatureLogRelatedField(
-        view_name='silver_api:mf-log-list', source='*',
-        read_only=True, many=True
+        view_name='silver_api:mf-log-list', source='*', read_only=True
     )
 
     class Meta:
@@ -39,6 +39,15 @@ class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
+    metered_feature = serializers.HyperlinkedRelatedField(
+        view_name='silver_api:metered-features-detail',
+        source='metered_feature', read_only=True
+    )
+    subscription = serializers.HyperlinkedRelatedField(
+        view_name='silver_api:subscription-detail', source='subscription',
+        read_only=True
+    )
+
     class Meta:
         model = MeteredFeatureUnitsLog
         fields = ('metered_feature', 'subscription', 'consumed_units',
@@ -47,8 +56,7 @@ class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
 
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(
-        source='metered_features',
-        many=True, read_only=True
+        source='metered_features', many=True, read_only=True
     )
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
