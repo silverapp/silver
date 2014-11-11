@@ -1,11 +1,12 @@
 """Models for the silver app."""
 import datetime
-
+from django.core.exceptions import ValidationError
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
+from silver.utils import get_object_or_None
 
 INTERVALS = (
     ('day', 'Day'),
@@ -101,6 +102,25 @@ class MeteredFeatureUnitsLog(models.Model):
     class Meta:
         unique_together = ('metered_feature', 'subscription', 'start_date',
                            'end_date')
+
+    def clean(self):
+        super(MeteredFeatureUnitsLog, self).clean()
+        if not self.id:
+            start_date = self.subscription.current_start_date
+            end_date = self.subscription.current_end_date
+            if get_object_or_None(MeteredFeatureUnitsLog, start_date=start_date,
+                                  end_date=end_date,
+                                  metered_feature=self.metered_feature,
+                                  subscription=self.subscription):
+                err_msg = 'A %s units log for the current date already exists.'\
+                          ' You can edit that one.' % self.metered_feature
+                raise ValidationError(err_msg)
+
+    def save(self):
+        if not self.id:
+            self.start_date = self.subscription.current_start_date
+            self.end_date = self.subscription.current_end_date
+        super(MeteredFeatureUnitsLog, self).save()
 
     def __unicode__(self):
         return self.metered_feature.name

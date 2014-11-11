@@ -16,7 +16,8 @@ class PlanAdmin(admin.ModelAdmin):
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):
     model = MeteredFeatureUnitsLog
     list_display = ['metered_feature']
-    extra = 1
+    readonly_fields = ('start_date', 'end_date', )
+    extra = 0
 
 
 class OfferAdmin(admin.ModelAdmin):
