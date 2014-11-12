@@ -184,6 +184,14 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                                                           '%Y-%m-%d').date()
                         if subscription.current_start_date <= date <= \
                            subscription.current_end_date:
+                            if metered_feature not in \
+                                    subscription.plan.metered_features.all():
+                                err = "The metered feature does not belong to "\
+                                      "the subscription's plan."
+                                return Response(
+                                    {"detail": err},
+                                    status=status.HTTP_400_BAD_REQUEST
+                                )
                             try:
                                 log = MeteredFeatureUnitsLog.objects.get(
                                     start_date__lte=date,
