@@ -34,6 +34,9 @@ TEMPLATE_DIRS = (
     os.path.join(APP_ROOT, 'tests/test_app/templates'),
 )
 
+USE_TZ = True
+TIME_ZONE = 'UTC'
+
 COVERAGE_REPORT_HTML_OUTPUT_DIR = os.path.join(
     os.path.join(APP_ROOT, 'tests/coverage'))
 COVERAGE_MODULE_EXCLUDES = [
