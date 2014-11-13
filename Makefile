@@ -13,6 +13,6 @@ lint-python:
 	@echo ""
 
 test:
-	@DJANGO_SETTINGS_MODULE=silver.tests.test_settings ./manage.py test
+	@DJANGO_SETTINGS_MODULE=silver.tests.test_settings py.test
 
 .PHONY: develop setup-git lint-python test
