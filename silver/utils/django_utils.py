@@ -1,6 +1,8 @@
+from django.shortcuts import _get_queryset
 
-def get_object_or_None(model, **kwargs):
+def get_object_or_None(model, *args, **kwargs):
+    queryset = _get_queryset(model)
     try:
-        return model.objects.get(**kwargs)
-    except model.DoesNotExist:
+        return queryset.get(*args, **kwargs)
+    except queryset.model.DoesNotExist:
         return None
