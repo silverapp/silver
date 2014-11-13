@@ -1,4 +1,8 @@
-"""Factories for the silver app."""
-# import factory
+import factory
 
-# from .. import models
+from silver.models import Provider
+
+
+class ProviderFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Provider
