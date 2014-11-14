@@ -9,19 +9,14 @@ from rest_framework.test import APITestCase, APIRequestFactory, APILiveServerTes
 from rest_framework import status, HTTP_HEADER_ENCODING
 
 from silver.models import Provider
-from silver.tests.factories import ProviderFactory
+from silver.tests.factories import ProviderFactory, AdminUserFactory
 
 
 class TestProviderEndpoint(APITestCase):
 
     def setUp(self):
-        # TODO: Use factories
-        username = 'admin'
-        email = 'admin@admin.com'
-        password = 'admin'
-        self.user = User.objects.create_superuser(username, email, password)
-
-        self.client.force_authenticate(user=self.user)
+        admin_user = AdminUserFactory.create()
+        self.client.force_authenticate(user=admin_user)
 
     def _filter_providers(self, *args, **kwargs):
         return Provider.objects.filter(*args, **kwargs)
