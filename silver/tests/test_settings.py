@@ -21,7 +21,7 @@ DATABASES = {
     }
 }
 
-ROOT_URLCONF = 'silver.tests.urls'
+ROOT_URLCONF = 'silver.urls'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(APP_ROOT, '../app_static')
