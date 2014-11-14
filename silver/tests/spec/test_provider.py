@@ -5,7 +5,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.core import serializers
-from rest_framework.test import APITestCase, APIRequestFactory, force_authenticate
+from rest_framework.test import APITestCase, APIRequestFactory, APILiveServerTestCase
 from rest_framework import status, HTTP_HEADER_ENCODING
 
 from silver.models import Provider
@@ -99,6 +99,23 @@ class TestProviderEndpoint(APITestCase):
         all_ids = [item['id'] for item in response.data['results']]
         assert all_ids == range(1, 26)
 
+    def test_create_bulk_providers(self):
+        ProviderFactory.reset_sequence(1)
+        providers = ProviderFactory.create_batch(5)
+
+        raw_providers = json.loads(serializers.serialize('json', providers))
+
+        serialized_providers = []
+        for item in raw_providers:
+            serialized_providers.append(item['fields'])
+
+        url = reverse('silver_api:provider-list')
+        response = self.client.post(url, data=json.dumps(serialized_providers),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert len(response.data) == 5
+
     def test_retrieve_provider(self):
         ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
@@ -188,41 +205,3 @@ class TestProviderEndpoint(APITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'company': ['This field is required.']}
-
-    def test_create_bulk_providers(self):
-        #ProviderFactory.reset_sequence(1)
-        #providers = ProviderFactory.create_batch(5)
-
-        #raw_providers = json.loads(serializers.serialize('json', providers))
-
-        #serialized_providers = []
-        #for item in raw_providers:
-            #serialized_providers.append(item['fields'])
-
-        #url = reverse('silver_api:provider-list')
-        #response = self.client.post(url, data=serialized_providers,
-                                    #content_type='application/json')
-
-        #assert response.status_code == status.HTTP_201_CREATED
-        providers = [{
-            "name": "Provider1",
-            "city": "City1",
-            "country": "RO",
-            "company": "Company1",
-            "address_1": "Address_11",
-            "zip_code": "1"
-        }, {
-            "name": "Provider2",
-            "city": "City2",
-            "country": "RO",
-            "company": "Company2",
-            "address_1": "Address_12",
-            "zip_code": "1"
-        }]
-
-        url = reverse('silver_api:provider-list')
-        response = self.client.post(url, providers,
-                                    content_type='application/json')
-        print response.data
-        #assert response.status_code == status.HTTP_201_CREATED
-        assert True
