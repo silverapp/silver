@@ -54,6 +54,15 @@ class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
                   'start_date', 'end_date')
 
 
+class ProviderSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='silver_api:provider-detail')
+
+    class Meta:
+        model = Provider
+        fields = ('id', 'url', 'name', 'company', 'email', 'address_1',
+                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra')
+
+
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(
         source='metered_features', many=True, read_only=True
@@ -61,12 +70,14 @@ class PlanSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
     )
+    provider = ProviderSerializer(many=False, read_only=True)
 
     class Meta:
         model = Plan
         fields = ('name', 'url', 'interval', 'interval_count', 'amount',
                   'currency', 'trial_period_days', 'due_days', 'generate_after',
-                  'enabled', 'private', 'product_code', 'metered_features')
+                  'enabled', 'private', 'product_code', 'metered_features',
+                  'provider')
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -111,12 +122,3 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_name', 'sales_tax_percent')
-
-
-class ProviderSerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name='silver_api:provider-detail')
-
-    class Meta:
-        model = Provider
-        fields = ('id', 'url', 'name', 'company', 'email', 'address_1',
-                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra')
