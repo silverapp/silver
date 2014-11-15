@@ -41,6 +41,7 @@ INTERNAL_APPS = [
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 
 ROOT_URLCONF = 'silver.urls'
+STATIC_URL = '/static/'
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
