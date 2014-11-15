@@ -100,9 +100,16 @@ class MeteredFeatureAdmin(admin.ModelAdmin):
         return {}
 
 
+class ProviderAdmin(admin.ModelAdmin):
+    exclude = ('is_active', )
+    list_display = ['name', 'company', 'email', 'address_1', 'address_2',
+                    'city', 'state', 'zip_code', 'country']
+    search_fields = list_display
+
+
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Offer, OfferAdmin)
-admin.site.register(Provider)
+admin.site.register(Provider, ProviderAdmin)
