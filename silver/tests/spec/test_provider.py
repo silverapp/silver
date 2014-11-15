@@ -1,12 +1,10 @@
-import base64
 import simplejson as json
 
 import pytest
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.core import serializers
-from rest_framework.test import APITestCase, APIRequestFactory, APILiveServerTestCase
-from rest_framework import status, HTTP_HEADER_ENCODING
+from rest_framework.test import APITestCase
+from rest_framework import status
 
 from silver.models import Provider
 from silver.tests.factories import ProviderFactory, AdminUserFactory
@@ -200,3 +198,12 @@ class TestProviderEndpoint(APITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'company': ['This field is required.']}
+
+    def test_delete_provider(self):
+        ProviderFactory.reset_sequence(1)
+        ProviderFactory.create()
+
+        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        response = self.client.delete(url)
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
