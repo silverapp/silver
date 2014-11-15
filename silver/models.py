@@ -238,6 +238,7 @@ class BillingEntity(models.Model):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
