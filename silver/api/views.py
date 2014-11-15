@@ -243,13 +243,13 @@ class CustomerDetail(generics.RetrieveUpdateAPIView):
     model = Customer
 
 
-class ProviderList(ListBulkCreateAPIView):
+class ProviderListBulkCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
-    model = Provider
+    queryset = Provider.objects.all()
 
 
-class ProviderDetail(generics.RetrieveUpdateAPIView):
+class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
-    model = Provider
+    queryset = Provider.objects.all()
