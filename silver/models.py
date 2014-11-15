@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
+from livefield import LiveField, LiveManager
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
@@ -73,6 +74,10 @@ class Plan(models.Model):
                                   help_text='Indicates if a plan is private.')
     product_code = models.CharField(max_length=128, unique=True,
                                     help_text='The product code for this plan.')
+    provider = models.ForeignKey(
+        'Provider', related_name='plans',
+        help_text='The provider which provides the plan.'
+    )
 
     def __unicode__(self):
         return self.name
@@ -238,10 +243,18 @@ class BillingEntity(models.Model):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    is_active = models.BooleanField(default=True)
+    # is_active = models.BooleanField(default=True)
+    live = LiveField()
+
+    objects = LiveManager()
+    all_objects = LiveManager(include_soft_deleted=True)
 
     class Meta:
         abstract = True
+
+    def delete(self):
+        self.live = False
+        self.save()
 
     def __unicode__(self):
         display = self.name
