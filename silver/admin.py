@@ -93,6 +93,7 @@ class CustomerAdmin(admin.ModelAdmin):
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
+    exclude = ['is_active']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
@@ -101,10 +102,10 @@ class MeteredFeatureAdmin(admin.ModelAdmin):
 
 
 class ProviderAdmin(admin.ModelAdmin):
-    exclude = ('is_active', )
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
     search_fields = list_display
+    exclude = ['is_active']
 
 
 admin.site.register(Plan, PlanAdmin)
