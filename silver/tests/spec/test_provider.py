@@ -79,7 +79,6 @@ class TestProviderEndpoint(APITestCase):
             assert qs.count() == 0
 
     def test_list_providers(self):
-        ProviderFactory.reset_sequence(1)
         ProviderFactory.create_batch(25)
 
         url = reverse('silver_api:provider-list')
@@ -93,7 +92,6 @@ class TestProviderEndpoint(APITestCase):
         assert all_ids == range(1, 26)
 
     def test_create_bulk_providers(self):
-        ProviderFactory.reset_sequence(1)
         providers = ProviderFactory.create_batch(5)
 
         raw_providers = json.loads(serializers.serialize('json', providers))
@@ -133,8 +131,13 @@ class TestProviderEndpoint(APITestCase):
             'extra': None
         }
 
+    def test_retrieve_unexisting_provider(self):
+        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_update_provider_correctly(self):
-        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
@@ -179,7 +182,6 @@ class TestProviderEndpoint(APITestCase):
          what's supposed to do for at least one field.
          """
 
-        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
@@ -200,10 +202,15 @@ class TestProviderEndpoint(APITestCase):
         assert response.data == {'company': ['This field is required.']}
 
     def test_delete_provider(self):
-        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_delete_unexisting_provider(self):
+        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        response = self.client.delete(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
