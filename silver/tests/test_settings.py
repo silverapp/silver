@@ -1,7 +1,7 @@
 """Settings that need to be set in order to run the tests."""
 import os
 import logging
-
+from silver.settings_dev import *  # NOQA
 
 logging.getLogger("factory").setLevel(logging.WARN)
 
@@ -25,5 +25,5 @@ COVERAGE_MODULE_EXCLUDES = [
     'tests$', 'settings$', 'urls$', 'locale$',
     'migrations', 'fixtures', 'admin$', 'django_extensions',
 ]
-SECRET_KEY = 'secret'
+
 # COVERAGE_MODULE_EXCLUDES += EXTERNAL_APPS
