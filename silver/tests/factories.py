@@ -1,8 +1,29 @@
 import factory
 
 from django.contrib.auth import get_user_model
+from international.models import countries
 
-from silver.models import Provider, Plan, INTERVALS, MeteredFeature
+from silver.models import Provider, Plan, INTERVALS, MeteredFeature, Customer
+
+
+class CustomerFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Customer
+
+    factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
+    sales_tax_percent = factory.Sequence(lambda n: n)
+    sales_tax_name = factory.Sequence(lambda n: 'Tax{cnt}'.format(cnt=n))
+    consolidated_billing = factory.Sequence(lambda n: n % 2 == 1)
+    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
+    company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
+    email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
+    address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
+    address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
+    country = factory.Sequence(lambda n: countries[n])
+    city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
+    state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
+    zip_code = factory.Sequence(lambda n: n)
+    extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
