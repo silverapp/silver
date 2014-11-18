@@ -64,7 +64,7 @@ class MeteredFeaturesList(ListBulkCreateAPIView):
     model = MeteredFeature
 
 
-class MeteredFeaturesDetail(generics.RetrieveUpdateAPIView):
+class MeteredFeaturesDetail(generics.RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
