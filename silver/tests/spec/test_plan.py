@@ -4,12 +4,11 @@ from django.core import serializers
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
-from silver.tests.factories import AdminUserFactory, ProviderFactory, \
-    PlanFactory
+from silver.tests.factories import (AdminUserFactory, ProviderFactory,
+                                    PlanFactory)
 
 
 class TestPlanEndpoint(APITestCase):
-
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
