@@ -7,7 +7,7 @@ from rest_framework.reverse import reverse
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='silver_api:metered-features-detail')
+        view_name='silver_api:metered-feature-detail')
 
     class Meta:
         model = MeteredFeature
@@ -40,7 +40,7 @@ class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
     metered_feature = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:metered-features-detail',
+        view_name='silver_api:metered-feature-detail',
         source='metered_feature', read_only=True
     )
     subscription = serializers.HyperlinkedRelatedField(
