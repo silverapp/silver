@@ -1,0 +1,116 @@
+import json
+import pytest
+
+from rest_framework import status
+from rest_framework.reverse import reverse
+from rest_framework.test import APITestCase
+from silver.tests.factories import AdminUserFactory, CustomerFactory
+
+
+class TestCustomerEndpoint(APITestCase):
+    def setUp(self):
+        admin_user = AdminUserFactory.create()
+        self.client.force_authenticate(user=admin_user)
+
+    complete_data = {
+        "customer_reference": "123456",
+        "name": "Batman",
+        "company": "Wayne Enterprises",
+        "email": "bruce@wayneenterprises.com",
+        "address_1": "Batcave St.",
+        "address_2": "Some other address info",
+        "city": "Gotham",
+        "state": "SomeState",
+        "zip_code": "1111",
+        "country": "US",
+        "extra": "What is there more to say?",
+        "sales_tax_name": "VAT",
+        "sales_tax_percent": 3
+    }
+
+    def test_create_post_customer(self):
+        url = reverse('silver_api:customer-list')
+
+        response = self.client.post(url, json.dumps(self.complete_data),
+                                    content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_post_customer_without_required_field(self):
+        url = reverse('silver_api:customer-list')
+
+        required_fields = ['address_1', 'city', 'zip_code', 'country',
+                           'sales_tax_name', 'sales_tax_percent']
+
+        for field in required_fields:
+            temp_data = self.complete_data.copy()
+            try:
+                temp_data.pop(field)
+            except KeyError:
+                pytest.xfail('Customer required field %s not provided in the'
+                             'complete test data.' % field)
+
+            response = self.client.post(url, json.dumps(temp_data),
+                                        content_type='application/json')
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            if field != 'sales_tax_percent':
+                self.assertEqual(response.data,
+                                 {field: [u'This field is required.']})
+            else:
+                self.assertEqual(response.data,
+                                 {field: [u'This field cannot be blank.']})
+
+    def test_delete_customer(self):
+        CustomerFactory.create()
+
+        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code,
+                         status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.data,
+                         {u'detail': u"Method 'DELETE' not allowed."})
+
+    def test_edit_put_customer(self):
+        CustomerFactory.create()
+
+        changed_data = self.complete_data.copy()
+        unchanged_fields = ['email', 'address_2', 'name']
+        for field in unchanged_fields:
+            changed_data.pop(field)
+
+        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
+
+        response = self.client.put(url, data=changed_data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response.data.pop('id')
+        response.data.pop('url')
+        for field in response.data:
+            if field not in unchanged_fields:
+                self.assertEqual(response.data[field],
+                                 self.complete_data[field])
+
+    def test_edit_patch_customer(self):
+        CustomerFactory.create()
+
+        changed_data = self.complete_data.copy()
+        unchanged_fields = ['email', 'zip_code', 'company']
+        for field in unchanged_fields:
+            changed_data.pop(field)
+
+        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
+
+        response = self.client.patch(url, data=changed_data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response.data.pop('id')
+        response.data.pop('url')
+        for field in response.data:
+            if field not in unchanged_fields:
+                self.assertEqual(response.data[field],
+                                 self.complete_data[field])
