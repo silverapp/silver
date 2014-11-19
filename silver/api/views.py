@@ -95,7 +95,7 @@ class SubscriptionDetailActivate(APIView):
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
-            if request.POST['_content']:
+            if request.POST.get('_content', None):
                 start_date = request.DATA.get('start_date', None)
                 trial_end = request.DATA.get('trial_end_date', None)
                 sub.activate(start_date=start_date, trial_end_date=trial_end)
