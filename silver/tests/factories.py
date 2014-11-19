@@ -1,9 +1,11 @@
 import factory
+import datetime
 
 from django.contrib.auth import get_user_model
 from international.models import countries
 
-from silver.models import Provider, Plan, INTERVALS, MeteredFeature, Customer
+from silver.models import (Provider, Plan, INTERVALS, MeteredFeature, Customer,
+                           Subscription)
 
 
 class CustomerFactory(factory.django.DjangoModelFactory):
@@ -73,6 +75,17 @@ class PlanFactory(factory.django.DjangoModelFactory):
             # A list of groups were passed in, use them
             for metered_feature in extracted:
                 self.metered_features.add(metered_feature)
+
+
+class SubscriptionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Subscription
+
+    plan = factory.SubFactory(PlanFactory)
+    customer = factory.SubFactory(CustomerFactory)
+    trial_end = factory.Sequence(lambda n: datetime.date.today() +
+                                 datetime.timedelta(days=n))
+    start_date = datetime.date.today()
 
 
 class AdminUserFactory(factory.django.DjangoModelFactory):
