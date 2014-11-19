@@ -103,7 +103,7 @@ class SubscriptionDetailActivate(APIView):
             else:
                 sub.activate()
                 sub.save()
-            return Response({"state: %s" % sub.state},
+            return Response({"state": sub.state},
                             status=status.HTTP_200_OK)
 
 
@@ -123,12 +123,12 @@ class SubscriptionDetailCancel(APIView):
                 sub.cancel()
                 sub.end()
                 sub.save()
-                return Response({"state: %s" % sub.state},
+                return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
                 sub.cancel()
                 sub.save()
-                return Response({"state: %s" % sub.state},
+                return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -147,7 +147,7 @@ class SubscriptionDetailReactivate(APIView):
         else:
             sub.activate()
             sub.save()
-            return Response({"state: %s" % sub.state},
+            return Response({"state": sub.state},
                             status=status.HTTP_200_OK)
 
 
