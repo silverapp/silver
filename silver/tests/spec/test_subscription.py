@@ -187,3 +187,12 @@ class TestCustomerEndpoint(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotEqual(response.data, [])
+
+    def test_get_subscription_detail_unexisting(self):
+        url = reverse('silver_api:subscription-detail',
+                      kwargs={'pk': 42})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {u'detail': u'Not found'})

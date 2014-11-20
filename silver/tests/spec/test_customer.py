@@ -61,6 +61,26 @@ class TestCustomerEndpoint(APITestCase):
                 self.assertEqual(response.data,
                                  {field: [u'This field cannot be blank.']})
 
+    def test_get_customer_detail(self):
+        customer = CustomerFactory.create()
+
+        url = reverse('silver_api:customer-detail',
+                      kwargs={'pk': customer.pk})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(response.data, [])
+
+    def test_get_customer_detail_unexisting(self):
+        url = reverse('silver_api:customer-detail',
+                      kwargs={'pk': 42})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {u'detail': u'Not found'})
+
     def test_delete_customer(self):
         customer = CustomerFactory.create()
 

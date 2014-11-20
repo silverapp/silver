@@ -70,6 +70,26 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(response.data), 7)
 
+    def test_get_metered_feature_detail(self):
+        metered_feature = MeteredFeatureFactory.create()
+
+        url = reverse('silver_api:metered-feature-detail',
+                      kwargs={'pk': metered_feature.pk})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(response.data, [])
+
+    def test_get_metered_feature_unexisting(self):
+        url = reverse('silver_api:metered-feature-detail',
+                      kwargs={'pk': 42})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {u'detail': u'Not found'})
+
     def test_delete_metered_feature(self):
         MeteredFeatureFactory.create()
 
