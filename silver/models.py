@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
-from livefield import LiveField, LiveManager
+from livefield.models import LiveModel
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
@@ -233,7 +233,7 @@ class Offer(models.Model):
     plans_list.short_description = 'Included plans'
 
 
-class BillingEntity(models.Model):
+class BillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
@@ -252,17 +252,9 @@ class BillingEntity(models.Model):
                   '(markdown formatted).'
     )
     # is_active = models.BooleanField(default=True)
-    live = LiveField()
-
-    objects = LiveManager()
-    all_objects = LiveManager(include_soft_deleted=True)
 
     class Meta:
         abstract = True
-
-    def delete(self):
-        self.live = False
-        self.save()
 
     def __unicode__(self):
         display = self.name
