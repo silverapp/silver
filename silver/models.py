@@ -158,6 +158,14 @@ class Subscription(models.Model):
         help_text='The state the subscription is in.'
     )
 
+    def clean(self):
+        if self.start_date and self.trial_end:
+            if self.trial_end < self.start_date:
+                raise ValidationError(
+                    {'trial_end': 'The trial end date cannot be older than '
+                                  'the subscription start date.'}
+                )
+
     @property
     def current_start_date(self):
         return last_date_that_fits(
