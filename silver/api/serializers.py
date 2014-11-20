@@ -70,7 +70,10 @@ class PlanSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
     )
-    provider = ProviderSerializer(many=False, read_only=True)
+    provider = serializers.HyperlinkedRelatedField(
+        source='provider',
+        view_name='silver_api:provider-detail',
+    )
 
     class Meta:
         model = Plan
