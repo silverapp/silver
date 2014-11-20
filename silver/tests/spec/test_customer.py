@@ -62,16 +62,18 @@ class TestCustomerEndpoint(APITestCase):
                                  {field: [u'This field cannot be blank.']})
 
     def test_delete_customer(self):
-        CustomerFactory.create()
+        customer = CustomerFactory.create()
 
-        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
-
+        url = reverse('silver_api:customer-detail', kwargs={'pk': customer.pk})
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code,
-                         status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(response.data,
-                         {u'detail': u"Method 'DELETE' not allowed."})
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_delete_unexisting_customer(self):
+        url = reverse('silver_api:customer-detail', kwargs={'pk': 42})
+        response = self.client.delete(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_edit_put_customer(self):
         CustomerFactory.create()

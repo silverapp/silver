@@ -237,7 +237,7 @@ class CustomerList(generics.ListCreateAPIView):
     model = Customer
 
 
-class CustomerDetail(generics.RetrieveUpdateAPIView):
+class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     model = Customer
