@@ -39,16 +39,18 @@ class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
         plan.generate_after = generate_after or plan.generate_after
         plan.due_days = due_days or plan.due_days
         plan.save()
-        return Response(PlanSerializer(plan).data, status=status.HTTP_200_OK)
+        return Response(PlanSerializer(plan, context={'request': request}).data,
+                        status=status.HTTP_200_OK)
 
     def delete(self, request, *args, **kwargs):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
         plan.enabled = False
         plan.save()
-        return Response({"enabled": plan.enabled}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"enabled": plan.enabled},
+                        status=status.HTTP_204_NO_CONTENT)
 
 
-class PlanMeteredFeatures(ListBulkCreateAPIView):
+class PlanMeteredFeatures(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
