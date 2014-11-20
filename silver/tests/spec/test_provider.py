@@ -10,7 +10,7 @@ from silver.models import Provider
 from silver.tests.factories import ProviderFactory, AdminUserFactory
 
 
-class TestProviderEndpoint(APITestCase):
+class TestProviderEndpoints(APITestCase):
 
     def setUp(self):
         admin_user = AdminUserFactory.create()
