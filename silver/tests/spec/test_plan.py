@@ -1,11 +1,10 @@
 import json
-from django.core import serializers
 
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from silver.tests.factories import (AdminUserFactory, ProviderFactory,
-                                    PlanFactory)
+                                    PlanFactory, MeteredFeatureFactory)
 
 
 class TestPlanEndpoint(APITestCase):
@@ -15,9 +14,16 @@ class TestPlanEndpoint(APITestCase):
 
     def test_create_plan(self):
         url = reverse('silver_api:plan-list')
+
+        metered_features = MeteredFeatureFactory.create_batch(3)
+        mf_urls = []
+        for mf in metered_features:
+            mf_urls.append(reverse('silver_api:metered-feature-detail',
+                                  kwargs={'pk': mf.pk}))
+
         provider = ProviderFactory.create()
-        raw_provider = serializers.serialize('json', [provider])
-        raw_provider = raw_provider[10:-1]
+        provider_url = reverse('silver_api:provider-detail',
+                               kwargs={'pk': provider.pk})
         response = self.client.post(url, json.dumps({
             "name": "Hydrogen",
             "interval": "month",
@@ -30,15 +36,10 @@ class TestPlanEndpoint(APITestCase):
             "enabled": True,
             "private": False,
             "product_code": "1234",
-            'metered_features': [
-                {
-                    'name': '100k PageViews',
-                    'price_per_unit': 10,
-                    'included_units': 5
-                }
-            ],
-            'provider': raw_provider
+            'metered_features': mf_urls,
+            'provider': provider_url
         }), content_type='application/json')
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_plan_without_required_fields(self):
@@ -97,7 +98,7 @@ class TestPlanEndpoint(APITestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"enabled": False})
+        self.assertEqual(response.data, {"deleted": False})
 
     def test_delete_plan_unexisting(self):
         url = reverse('silver_api:plan-detail', kwargs={'pk': 1})
