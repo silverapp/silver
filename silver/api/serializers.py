@@ -28,6 +28,16 @@ class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
         return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
+class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'pk': obj.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def to_native(self, obj):
+        request = self.context.get('request', None)
+        return MeteredFeatureSerializer(obj, context={'request': request}).data
+
+
 class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
     units_log_url = MeteredFeatureLogRelatedField(
         view_name='silver_api:mf-log-list', source='*', read_only=True
@@ -64,8 +74,9 @@ class ProviderSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
-    metered_features = MeteredFeatureSerializer(
-        source='metered_features', many=True, read_only=True
+    metered_features = MeteredFeatureRelatedField(
+        source='metered_features', many=True,
+        view_name='silver_api:metered-feature-detail',
     )
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
