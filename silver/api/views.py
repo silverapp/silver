@@ -24,7 +24,7 @@ class PlanList(generics.ListCreateAPIView):
     filter_fields = ('enabled', 'private')
 
 
-class PlanDetail(generics.RetrieveUpdateDestroyAPIView):
+class PlanDetail(generics.RetrieveDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     model = Plan
