@@ -44,6 +44,7 @@ class TestPlanEndpoint(APITestCase):
 
     def test_create_plan_without_required_fields(self):
         url = reverse('silver_api:plan-list')
+
         response = self.client.post(url, json.dumps({
             "name": "Hydrogen",
             "interval_count": 1,
@@ -54,18 +55,51 @@ class TestPlanEndpoint(APITestCase):
             "generate_after": 86400,
             "enabled": True,
             "private": False,
-            'metered_features': [
-                {
-                    'name': '100k PageViews',
-                    'price_per_unit': 10,
-                    'included_units': 5
-                }
-            ]
+            'metered_features': []
         }), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_patch_plan(self):
+        plan = PlanFactory.create()
+
+        url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
+
+        response = self.client.patch(url, json.dumps({
+            "name": "Hydrogen",
+            "due_days": 10,
+            "generate_after": 86400
+        }), content_type='application/json')
+        self.assertEqual(response.data['name'], 'Hydrogen')
+        self.assertEqual(response.data['due_days'], 10)
+        self.assertEqual(response.data['generate_after'], 86400)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_patch_plan_non_editable_field(self):
+        plan = PlanFactory.create()
+
+        url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
+
+        response = self.client.patch(url, json.dumps({
+            "currency": "DollaDolla"
+        }), content_type='application/json')
+        self.assertNotEqual(response.data['currency'], 'DollaDolla')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_put_plan(self):
+        plan = PlanFactory.create()
+
+        url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
+
+        response = self.client.put(url)
+
+        self.assertEqual(response.status_code,
+                         status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.data,
+                         {u'detail': u"Method 'PUT' not allowed."})
+
     def test_get_plan_list(self):
         PlanFactory.create()
+
         url = reverse('silver_api:plan-list')
 
         response = self.client.get(url)
@@ -74,8 +108,9 @@ class TestPlanEndpoint(APITestCase):
         self.assertNotEqual(response.data, [])
 
     def test_get_plan_detail(self):
-        PlanFactory.create()
-        url = reverse('silver_api:plan-detail', kwargs={'pk': 1})
+        plan = PlanFactory.create()
+
+        url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
 
         response = self.client.get(url)
 
@@ -84,6 +119,7 @@ class TestPlanEndpoint(APITestCase):
 
     def test_get_plan_detail_unexisting(self):
         url = reverse('silver_api:plan-detail', kwargs={'pk': 1})
+
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
