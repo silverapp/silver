@@ -46,7 +46,7 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
         plan.enabled = False
         plan.save()
-        return Response({"deleted": plan.enabled},
+        return Response({"deleted": not plan.enabled},
                         status=status.HTTP_200_OK)
 
 

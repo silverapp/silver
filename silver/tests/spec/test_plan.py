@@ -134,7 +134,7 @@ class TestPlanEndpoint(APITestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"deleted": False})
+        self.assertEqual(response.data, {"deleted": True})
 
     def test_delete_plan_unexisting(self):
         url = reverse('silver_api:plan-detail', kwargs={'pk': 1})
