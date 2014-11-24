@@ -1,5 +1,6 @@
 """Models for the silver app."""
 import datetime
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django_fsm import FSMField, transition
@@ -316,3 +317,37 @@ class Provider(BillingEntity):
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
+
+
+class Invoice(models.Model):
+    class State:
+        DRAFT = 'draft'
+        ISSUED = 'issued'
+        PAID = 'paid'
+        CANCELED = 'canceled'
+        PAST_DUE = 'past due'
+    STATE_CHOICES = (
+        (state, state.title())
+        for state in dir(State())
+        if not callable(getattr(State(), state)) and not state.startswith("__")
+    )
+
+    due_date = models.DateField(null=True, blank=True)
+    issued_date = models.DateField(null=True, blank=True)
+    paid_date = models.DateField(null=True, blank=True)
+    cancel_date = models.DateField(null=True, blank=True)
+    customer = models.ForeignKey('Customer', related_name='invoices')
+    provider = models.ForeignKey('Provider', related_name='invoices')
+    # entries =
+    # billing_details for customer and provider
+    sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
+    currency = models.CharField(
+        choices=currencies, max_length=4, null=False, blank=False,
+        help_text='The currency used for billing.'
+    )
+    state = FSMField(
+        choices=STATE_CHOICES, max_length=10, default=State.DRAFT,
+        protected=True, verbose_name='The invoice`s state.',
+        help_text='The state the invoice is in.'
+    )
