@@ -9,21 +9,6 @@ from livefield.models import LiveModel
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
 
-INTERVALS = (
-    ('day', 'Day'),
-    ('week', 'Week'),
-    ('month', 'Month'),
-    ('year', 'Year')
-)
-
-STATES = (
-    ('active', 'Active'),
-    ('inactive', 'Inactive'),
-    ('past_due', 'Past Due'),
-    ('on_trial', 'On Trial'),
-    ('canceled', 'Canceled'),
-    ('ended', 'Ended')
-)
 
 UPDATE_TYPES = (
     ('absolute', 'Absolute'),
@@ -32,6 +17,13 @@ UPDATE_TYPES = (
 
 
 class Plan(models.Model):
+    INTERVALS = (
+        ('day', 'Day'),
+        ('week', 'Week'),
+        ('month', 'Month'),
+        ('year', 'Year')
+    )
+
     name = models.CharField(
         max_length=20, help_text='Display name of the plan.'
     )
@@ -140,6 +132,15 @@ class MeteredFeatureUnitsLog(models.Model):
 
 
 class Subscription(models.Model):
+    STATES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('past_due', 'Past Due'),
+        ('on_trial', 'On Trial'),
+        ('canceled', 'Canceled'),
+        ('ended', 'Ended')
+    )
+
     plan = models.ForeignKey(
         'Plan',
         help_text='The plan the customer is subscribed to.'
@@ -259,7 +260,7 @@ class BillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    # is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True

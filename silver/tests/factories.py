@@ -1,10 +1,10 @@
-import factory
 import datetime
 
+import factory
 from django.contrib.auth import get_user_model
 from international.models import countries
 
-from silver.models import (Provider, Plan, INTERVALS, MeteredFeature, Customer,
+from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription)
 
 
@@ -54,7 +54,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = factory.Sequence(lambda n: INTERVALS[n % 4])
+    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4])
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'

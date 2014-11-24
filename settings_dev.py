@@ -55,7 +55,7 @@ MIDDLEWARE_CLASSES = (
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
-    'PAGINATE_BY': 25,
-    'PAGINATE_BY_PARAM': 'page_size',
+    'PAGINATE_BY': 30,
+    'PAGINATE_BY_PARAM': 'per_page',
     'MAX_PAGINATE_BY': 100,
 }
