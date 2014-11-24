@@ -121,11 +121,19 @@ class MeteredFeatureUnitsLog(models.Model):
                           ' You can edit that one.' % self.metered_feature
                 raise ValidationError(err_msg)
 
-    def save(self):
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
         if not self.id:
             self.start_date = self.subscription.current_start_date
             self.end_date = self.subscription.current_end_date
-        super(MeteredFeatureUnitsLog, self).save()
+            super(MeteredFeatureUnitsLog, self).save()
+        else:
+            update_fields = []
+            for field in self._meta.fields:
+                if field.name != 'metered_feature' and field.name != 'id':
+                    update_fields.append(field.name)
+            super(MeteredFeatureUnitsLog, self).save(
+                update_fields=update_fields)
 
     def __unicode__(self):
         return self.metered_feature.name
