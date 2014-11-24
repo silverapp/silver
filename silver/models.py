@@ -333,14 +333,17 @@ class Invoice(models.Model):
     cancel_date = models.DateField(null=True, blank=True)
     customer = models.ForeignKey('Customer', related_name='invoices')
     provider = models.ForeignKey('Provider', related_name='invoices')
-    # entries =
+
     # billing_details for customer and provider
+    # Freeze the details of the Provider and Customer before issuing the invoice.
+
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2)
     sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
     currency = models.CharField(
         choices=currencies, max_length=4, null=False, blank=False,
         help_text='The currency used for billing.'
     )
+    # XXX: concurrency?
     state = FSMField(
         choices=STATE_CHOICES, max_length=10, default=states[0],
         protected=True, verbose_name='The invoice`s state.',
