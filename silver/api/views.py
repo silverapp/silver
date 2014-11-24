@@ -143,8 +143,8 @@ class SubscriptionDetailReactivate(APIView):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('sub', None))
         if sub.state != 'canceled':
-            message = 'Cannot reactivate subscription from %s state.' % sub.state
-            return Response({"error": message},
+            msg = 'Cannot reactivate subscription from %s state.' % sub.state
+            return Response({"error": msg},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             sub.activate()
@@ -216,7 +216,7 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                                 )
                             finally:
                                 return Response({"count": log.consumed_units},
-                                            status=status.HTTP_200_OK)
+                                                status=status.HTTP_200_OK)
                         else:
                             return Response({"detail": "Date is out of bounds"},
                                             status=status.HTTP_400_BAD_REQUEST)
