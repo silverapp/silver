@@ -1,7 +1,7 @@
 """Settings that need to be set in order to run the tests."""
 import os
 import logging
-from silver.settings_dev import *  # NOQA
+from settings_dev import *  # NOQA
 
 logging.getLogger("factory").setLevel(logging.WARN)
 
