@@ -357,3 +357,4 @@ class InvoiceEntry(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
+    invoice = models.ForeignKey('Invoice', related_name='entries')
