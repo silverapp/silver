@@ -319,18 +319,13 @@ class Provider(BillingEntity):
         return " - ".join(filter(None, [self.name, self.company]))
 
 
+class ProductCode(models.Model):
+    value = models.CharField(max_length=128, unique=True)
+
+
 class Invoice(models.Model):
-    class State:
-        DRAFT = 'draft'
-        ISSUED = 'issued'
-        PAID = 'paid'
-        CANCELED = 'canceled'
-        PAST_DUE = 'past due'
-    STATE_CHOICES = (
-        (state, state.title())
-        for state in dir(State())
-        if not callable(getattr(State(), state)) and not state.startswith("__")
-    )
+    states = ['draft', 'issued', 'paid', 'canceled', 'past due']
+    STATE_CHOICES = tuple((state, state.title()) for state in states)
 
     due_date = models.DateField(null=True, blank=True)
     issued_date = models.DateField(null=True, blank=True)
@@ -347,7 +342,18 @@ class Invoice(models.Model):
         help_text='The currency used for billing.'
     )
     state = FSMField(
-        choices=STATE_CHOICES, max_length=10, default=State.DRAFT,
+        choices=STATE_CHOICES, max_length=10, default=states[0],
         protected=True, verbose_name='The invoice`s state.',
         help_text='The state the invoice is in.'
     )
+
+
+class InvoiceEntry(models.Model):
+    description = models.CharField(max_length=255)
+    unit = models.CharField(max_length=20)
+    quantity = models.DecimalField(max_digits=28, decimal_places=10)
+    unit_price = models.DecimalField(max_digits=28, decimal_places=10)
+    product_code = models.ForeignKey('ProductCode')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    prorated = models.BooleanField(default=False)
