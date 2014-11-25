@@ -5,6 +5,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
+from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider)
@@ -184,8 +185,23 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                     try:
                         date = datetime.datetime.strptime(date,
                                                           '%Y-%m-%d').date()
-                        if subscription.current_start_date <= date <= \
-                           subscription.current_end_date:
+                        csd = subscription.current_start_date
+                        ced = subscription.current_end_date
+
+                        if date <= csd:
+                            csdt = datetime.datetime.combine(csd, datetime.time())
+                            allowed_time = datetime.timedelta(
+                                seconds=subscription.plan.generate_after)
+                            if datetime.datetime.now() < csdt + allowed_time:
+                                ced = csd - datetime.timedelta(days=1)
+                                csd = last_date_that_fits(
+                                    initial_date=subscription.start_date,
+                                    end_date=ced,
+                                    interval_type=subscription.plan.interval,
+                                    interval_count=subscription.plan.interval_count
+                                )
+
+                        if csd <= date <= ced:
                             if metered_feature not in \
                                     subscription.plan.metered_features.all():
                                 err = "The metered feature does not belong to "\
@@ -196,8 +212,8 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                                 )
                             try:
                                 log = MeteredFeatureUnitsLog.objects.get(
-                                    start_date__lte=date,
-                                    end_date__gte=date,
+                                    start_date=csd,
+                                    end_date=ced,
                                     metered_feature=metered_feature_pk,
                                     subscription=subscription_pk
                                 )
