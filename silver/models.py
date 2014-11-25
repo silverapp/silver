@@ -313,7 +313,7 @@ class Provider(BillingEntity):
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
-        company_field.help_text = "The issuing the bill."
+        company_field.help_text = "The provider issuing the invoice."
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
@@ -321,6 +321,10 @@ class Provider(BillingEntity):
 
 class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
+
+
+class BillingDetailsHistory(BillingEntity):
+    pass
 
 
 class Invoice(models.Model):
@@ -333,6 +337,10 @@ class Invoice(models.Model):
     cancel_date = models.DateField(null=True, blank=True)
     customer = models.ForeignKey('Customer', related_name='invoices')
     provider = models.ForeignKey('Provider', related_name='invoices')
+    final_customer = models.ForeignKey('BillingDetailsHistory',
+                                       null=True, blank=True)
+    final_provider = models.ForeignKey('BillingDetailsHistory',
+                                       null=True, blank=True)
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2)
     sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
     currency = models.CharField(
