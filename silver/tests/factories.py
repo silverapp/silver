@@ -54,7 +54,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4])
+    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4][0])
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
