@@ -33,4 +33,8 @@ urlpatterns = patterns('',
         views.ProviderListBulkCreate.as_view(), name='provider-list'),
     url(r'^providers/(?P<pk>[0-9]+)/$',
         views.ProviderRetrieveUpdateDestroy.as_view(), name='provider-detail'),
+    url(r'^invoices/$',
+        views.InvoiceListBulkCreate.as_view(), name='invoice-list'),
+    url(r'^invoices/(?P<pk>[0-9]+)/$',
+        views.InvoiceRetrieveUpdateDestroy.as_view(), name='invoice-detail'),
 )

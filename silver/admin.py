@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Offer)
+                    MeteredFeatureUnitsLog, Offer, Invoice, InvoiceEntry)
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -93,6 +93,7 @@ class CustomerAdmin(admin.ModelAdmin):
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
+    exclude = ['is_active', 'live']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
@@ -104,6 +105,15 @@ class ProviderAdmin(admin.ModelAdmin):
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
     search_fields = list_display
+    exclude = ['is_active', 'live']
+
+
+class InvoiceEntryInline(admin.TabularInline):
+    model = InvoiceEntry
+
+
+class InvoiceAdmin(admin.ModelAdmin):
+    inlines = [InvoiceEntryInline]
 
 
 admin.site.register(Plan, PlanAdmin)
@@ -112,3 +122,4 @@ admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Offer, OfferAdmin)
 admin.site.register(Provider, ProviderAdmin)
+admin.site.register(Invoice, InvoiceAdmin)

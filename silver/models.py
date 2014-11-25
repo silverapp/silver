@@ -328,7 +328,7 @@ class Invoice(models.Model):
     STATE_CHOICES = tuple((state, state.title()) for state in states)
 
     due_date = models.DateField(null=True, blank=True)
-    issued_date = models.DateField(null=True, blank=True)
+    issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
     customer = models.ForeignKey('Customer', related_name='invoices')

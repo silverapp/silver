@@ -7,12 +7,12 @@ from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
-                           Customer, Plan, Provider)
+                           Customer, Plan, Provider, Invoice)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
-                                    ProviderSerializer)
+                                    ProviderSerializer, InvoiceSerializer)
 from silver.utils import get_object_or_None
 
 
@@ -255,3 +255,15 @@ class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
+
+
+class InvoiceListBulkCreate(ListBulkCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
+
+
+class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
