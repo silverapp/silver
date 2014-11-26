@@ -313,7 +313,7 @@ class ProviderHistory(BillingEntity):
 
 class Invoice(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled', 'past_due']
-    STATE_CHOICES = tuple((state, ' '.join(state.split('_')).title())
+    STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
 
     due_date = models.DateField(null=True, blank=True)
