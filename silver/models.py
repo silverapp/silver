@@ -303,24 +303,33 @@ class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
 
-class BillingDetailsHistory(BillingEntity):
-    pass
+class CustomerHistory(BillingEntity):
+    customer = models.ForeignKey('Customer', related_name='archived_entries')
+
+
+class ProviderHistory(BillingEntity):
+    provider = models.ForeignKey('Provider', related_name='archived_entries')
 
 
 class Invoice(models.Model):
-    states = ['draft', 'issued', 'paid', 'canceled', 'past due']
-    STATE_CHOICES = tuple((state, state.title()) for state in states)
+    states = ['draft', 'issued', 'paid', 'canceled', 'past_due']
+    STATE_CHOICES = tuple((state, ' '.join(state.split('_')).title())
+                          for state in states)
 
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
+    customer = models.ForeignKey('CustomerHistory', related_name='invoices')
+    provider = models.ForeignKey('Provider', related_name='invoices')
+    """
     customer = models.ForeignKey('Customer', related_name='invoices')
     provider = models.ForeignKey('Provider', related_name='invoices')
     final_customer = models.ForeignKey('BillingDetailsHistory',
                                        null=True, blank=True, related_name='fc')
     final_provider = models.ForeignKey('BillingDetailsHistory',
                                        null=True, blank=True, related_name='fp')
+    """
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
@@ -333,6 +342,10 @@ class Invoice(models.Model):
         verbose_name='Invoice state',
         help_text='The state the invoice is in.'
     )
+
+    @transition(field=state, source='draft', target='issued')
+    def issue_invoice():
+        pass
 
     def customer_display(self):
         if self.final_customer:

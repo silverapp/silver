@@ -120,6 +120,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = customer_search_fields + provider_search_fields
     inlines = [InvoiceEntryInline]
 
+    def save_model(self, request, obj, form, change):
+        # Do the magic
+        obj.save()
+
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
