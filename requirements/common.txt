@@ -1,7 +1,6 @@
 djangorestframework
 django-international
 django-fsm
-django-extensions
 django-filter
 djangorestframework-bulk
 django-livefield
