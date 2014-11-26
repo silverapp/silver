@@ -1,4 +1,5 @@
 import datetime
+from django_filters import FilterSet, CharFilter
 
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
@@ -73,10 +74,22 @@ class MeteredFeaturesDetail(generics.RetrieveAPIView):
     model = MeteredFeature
 
 
+class SubscriptionFilter(FilterSet):
+    plan = CharFilter(name='plan__name', lookup_type='icontains')
+    customer = CharFilter(name='customer__name', lookup_type='icontains')
+    company = CharFilter(name='customer__company', lookup_type='icontains')
+
+    class Meta:
+        model = Subscription
+        fields = ['plan', 'customer', 'company']
+
+
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     model = Subscription
     serializer_class = SubscriptionSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = SubscriptionFilter
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
