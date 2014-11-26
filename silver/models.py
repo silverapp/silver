@@ -2,6 +2,7 @@
 import datetime
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.db import models
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
@@ -263,13 +264,14 @@ class Customer(BillingEntity):
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
     )
-    sales_tax_percent = models.FloatField(
-        null=True,
+    sales_tax_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
         help_text="Whenever to add sales tax. "
                   "If null, it won't show up on the invoice."
     )
     sales_tax_name = models.CharField(
-        max_length=64, help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
+        max_length=64, null=True, blank=True,
+        help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
     )
     consolidated_billing = models.BooleanField(
         default=False, help_text='A flag indicating consolidated billing.'
@@ -304,11 +306,15 @@ class ProductCode(models.Model):
 
 
 class CustomerHistory(BillingEntity):
-    customer = models.ForeignKey('Customer', related_name='archived_entries')
+    customer_ref = models.ForeignKey('Customer', related_name='archived_entries')
+    updated_from_invoice = models.BooleanField(default=False)
+    archived = models.BooleanField(default=False)
 
 
 class ProviderHistory(BillingEntity):
-    provider = models.ForeignKey('Provider', related_name='archived_entries')
+    provider_ref = models.ForeignKey('Provider', related_name='archived_entries')
+    updated_from_invoice = models.BooleanField(default=False)
+    archived = models.BooleanField(default=False)
 
 
 class Invoice(models.Model):
@@ -321,18 +327,10 @@ class Invoice(models.Model):
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
     customer = models.ForeignKey('CustomerHistory', related_name='invoices')
-    provider = models.ForeignKey('Provider', related_name='invoices')
-    """
-    customer = models.ForeignKey('Customer', related_name='invoices')
-    provider = models.ForeignKey('Provider', related_name='invoices')
-    final_customer = models.ForeignKey('BillingDetailsHistory',
-                                       null=True, blank=True, related_name='fc')
-    final_provider = models.ForeignKey('BillingDetailsHistory',
-                                       null=True, blank=True, related_name='fp')
-    """
+    provider = models.ForeignKey('ProviderHistory', related_name='invoices')
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
-    sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
+    sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
         choices=currencies, max_length=4, null=False, blank=False,
         help_text='The currency used for billing.'
@@ -344,14 +342,32 @@ class Invoice(models.Model):
     )
 
     @transition(field=state, source='draft', target='issued')
-    def issue_invoice():
-        pass
+    def issue_invoice(self, issue_date=None, due_date=None):
+        if issue_date:
+            self.issue_date = issue_date
+        if not self.issue_date and not issue_date:
+            self.issue_date = timezone.now().date()
+        if due_date:
+            self.due_date = due_date
+
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.customer_ref.sales_tax_name
+
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.customer_ref.sales_tax_percent
+
+        self.customer.archived = True
+        self.customer.save(update_fields=['archived'])
+
+        self.provider.archived = True
+        self.provider.save(update_fields=['archived'])
+
 
     def customer_display(self):
-        if self.final_customer:
+        if self.customer:
             list_display_fields = ['company', 'email', 'address_1', 'city',
                                    'country', 'zip_code']
-            fields = [getattr(self.final_customer, field)
+            fields = [getattr(self.customer, field)
                       for field in list_display_fields]
             return ', '.join(fields)
         return ''
@@ -359,10 +375,10 @@ class Invoice(models.Model):
     customer_display.short_description = 'Customer'
 
     def provider_display(self):
-        if self.final_provider:
+        if self.provider:
             list_display_fields = ['company', 'email', 'address_1', 'city',
                                    'country', 'zip_code']
-            fields = [getattr(self.final_provider, field)
+            fields = [getattr(self.provider, field)
                       for field in list_display_fields]
             return ', '.join(fields)
         return ''

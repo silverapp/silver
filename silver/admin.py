@@ -1,4 +1,4 @@
-"""Admin classes for the silver app."""
+from django import forms
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -107,15 +107,27 @@ class InvoiceEntryInline(admin.TabularInline):
     model = InvoiceEntry
 
 
+class InvoiceForm(forms.ModelForm):
+    customer = forms.ModelChoiceField(queryset=Customer.objects.all())
+    provider = forms.ModelChoiceField(queryset=Provider.objects.all())
+
+    class Meta:
+        model = Invoice
+
+    def save(self, commit=True):
+        pass
+
+
 class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
     list_display = ['customer_display', 'provider_display', 'state', 'due_date',
                     'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
-    customer_search_fields = ['final_customer__{field}'.format(field=field)
+    customer_search_fields = ['customer__{field}'.format(field=field)
                               for field in common_fields]
-    provider_search_fields = ['final_provider__{field}'.format(field=field)
+    provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
     inlines = [InvoiceEntryInline]
