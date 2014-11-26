@@ -113,6 +113,16 @@ class InvoiceEntryInline(admin.TabularInline):
 
 
 class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ['customer_display', 'provider_display', 'state', 'due_date',
+                    'paid_date', 'cancel_date', 'sales_tax_name',
+                    'sales_tax_percent', 'currency']
+    common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
+                     'country', 'zip_code', 'name', 'state']
+    customer_search_fields = ['final_customer__{field_name}'.format(field_name=field)
+                              for field in common_fields]
+    provider_search_fields = ['final_provider__{field_name}'.format(field_name=field)
+                              for field in common_fields]
+    search_fields = customer_search_fields + provider_search_fields
     inlines = [InvoiceEntryInline]
 
 

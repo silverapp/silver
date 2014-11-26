@@ -338,10 +338,11 @@ class Invoice(models.Model):
     customer = models.ForeignKey('Customer', related_name='invoices')
     provider = models.ForeignKey('Provider', related_name='invoices')
     final_customer = models.ForeignKey('BillingDetailsHistory',
-                                       null=True, blank=True)
+                                       null=True, blank=True, related_name='fc')
     final_provider = models.ForeignKey('BillingDetailsHistory',
-                                       null=True, blank=True)
-    sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2)
+                                       null=True, blank=True, related_name='fp')
+    sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
+                                            null=True, blank=True)
     sales_tax_name = models.CharField(max_length=10, blank=True, null=True)
     currency = models.CharField(
         choices=currencies, max_length=4, null=False, blank=False,
@@ -349,9 +350,31 @@ class Invoice(models.Model):
     )
     state = FSMField(
         choices=STATE_CHOICES, max_length=10, default=states[0],
-        protected=True, verbose_name='The invoice`s state.',
+        verbose_name='Invoice state',
         help_text='The state the invoice is in.'
     )
+
+    def customer_display(self):
+        if self.final_customer:
+            list_display_fields = ['company', 'email', 'address_1', 'city',
+                                   'country', 'zip_code']
+            fields = [getattr(self.final_customer, field)
+                      for field in list_display_fields]
+            return ', '.join(fields)
+        return ''
+
+    customer_display.short_description = 'Customer'
+
+    def provider_display(self):
+        if self.final_provider:
+            list_display_fields = ['company', 'email', 'address_1', 'city',
+                                   'country', 'zip_code']
+            fields = [getattr(self.final_provider, field)
+                      for field in list_display_fields]
+            return ', '.join(fields)
+        return ''
+
+    provider_display.short_description = 'Provider'
 
 
 class InvoiceEntry(models.Model):
