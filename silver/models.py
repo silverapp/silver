@@ -228,21 +228,6 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
-class Offer(models.Model):
-    name = models.CharField(
-        max_length=128, blank=True, null=True,
-        help_text='The optional name of the offer.'
-    )
-    plans = models.ManyToManyField(
-        'Plan',
-        help_text="The plans that are included in the customer's offer."
-    )
-
-    def plans_list(self):
-        return ", ".join([plan.name for plan in self.plans.all()])
-    plans_list.short_description = 'Included plans'
-
-
 class BillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
@@ -261,7 +246,6 @@ class BillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    is_active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
@@ -289,10 +273,6 @@ class Customer(BillingEntity):
     )
     consolidated_billing = models.BooleanField(
         default=False, help_text='A flag indicating consolidated billing.'
-    )
-    offer = models.OneToOneField(
-        'Offer', null=True, blank=True,
-        help_text="A custom offer consisting of a custom selection of plans."
     )
 
     def __init__(self, *args, **kwargs):

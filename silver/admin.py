@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Offer, Invoice, InvoiceEntry)
+                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry)
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -31,11 +31,6 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
             })
         return super(MeteredFeatureUnitsLogInLine,
                      self).formfield_for_foreignkey(db_field, request, **kwargs)
-
-
-class OfferAdmin(admin.ModelAdmin):
-    model = Offer
-    list_display = ('name', 'plans_list')
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -118,9 +113,9 @@ class InvoiceAdmin(admin.ModelAdmin):
                     'sales_tax_percent', 'currency']
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
-    customer_search_fields = ['final_customer__{field_name}'.format(field_name=field)
+    customer_search_fields = ['final_customer__{field}'.format(field=field)
                               for field in common_fields]
-    provider_search_fields = ['final_provider__{field_name}'.format(field_name=field)
+    provider_search_fields = ['final_provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
     inlines = [InvoiceEntryInline]
@@ -130,6 +125,5 @@ admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
-admin.site.register(Offer, OfferAdmin)
 admin.site.register(Provider, ProviderAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
