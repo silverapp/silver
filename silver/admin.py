@@ -3,8 +3,7 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry,
-                    CustomerHistory, ProviderHistory)
+                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry)
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -89,7 +88,7 @@ class CustomerAdmin(admin.ModelAdmin):
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
-    exclude = ['is_active', 'live']
+    exclude = ['live']
 
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
@@ -101,7 +100,7 @@ class ProviderAdmin(admin.ModelAdmin):
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
     search_fields = list_display
-    exclude = ['is_active', 'live']
+    exclude = ['live']
 
 
 class InvoiceEntryInline(admin.TabularInline):
@@ -148,34 +147,8 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceEntryInline]
 
     def save_model(self, request, obj, form, change):
-        customer_id = request.POST.get('invoice_customer')
-        provider_id = request.POST.get('invoice_provider')
-
-        customer = provider = None
-        # TODO: replace with something more elegant
-        if customer_id:
-            customer = Customer.objects.get(id=customer_id)
-            customer_hist = CustomerHistory.objects.create(
-                customer_ref=customer, name=customer.name,
-                company=customer.company, email=customer.email,
-                address_1=customer.address_1, address_2=customer.address_2,
-                country=customer.country, city=customer.city,
-                state=customer.state, zip_code=customer.zip_code,
-                extra=customer.extra)
-
-        if provider_id:
-            provider = Provider.objects.get(id=provider_id)
-            provider_hist = ProviderHistory.objects.create(
-                provider_ref=provider, name=provider.name,
-                company=provider.company, email=provider.email,
-                address_1=provider.address_1, address_2=provider.address_2,
-                country=provider.country, city=provider.city,
-                state=provider.state, zip_code=provider.zip_code,
-                extra=provider.extra)
-
-        obj.customer = customer_hist
-        obj.provider = provider_hist
-        obj.save()
+        obj.save(invoice_customer_id=request.POST.get('invoice_customer'),
+                 invoice_provider_id=request.POST.get('invoice_provider'))
 
 
 admin.site.register(Plan, PlanAdmin)
