@@ -3,7 +3,8 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry)
+                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry,
+                    CustomerHistory, ProviderHistory)
 
 
 class PlanAdmin(admin.ModelAdmin):
@@ -108,14 +109,19 @@ class InvoiceEntryInline(admin.TabularInline):
 
 
 class InvoiceForm(forms.ModelForm):
-    customer = forms.ModelChoiceField(queryset=Customer.objects.all())
-    provider = forms.ModelChoiceField(queryset=Provider.objects.all())
+    # TODO: update the queryset to display :
+    # all -> if the customer/provider was not selected yet
+    # the selected customer/provider otherwise
+    invoice_customer = forms.ModelChoiceField(queryset=Customer.objects.all(),
+                                              label='Customer')
+    invoice_provider = forms.ModelChoiceField(queryset=Provider.objects.all(),
+                                              label='Provider')
 
     class Meta:
         model = Invoice
-
-    def save(self, commit=True):
-        pass
+        fields = ('invoice_provider', 'invoice_customer', 'due_date',
+                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+                  'sales_tax_percent', 'currency', 'state')
 
 
 class InvoiceAdmin(admin.ModelAdmin):
@@ -133,7 +139,32 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceEntryInline]
 
     def save_model(self, request, obj, form, change):
-        # Do the magic
+        customer_id = request.POST.get('invoice_customer')
+        provider_id = request.POST.get('invoice_provider')
+
+        customer = provider = None
+        if customer_id:
+            customer = Customer.objects.get(id=customer_id)
+            customer_hist = CustomerHistory.objects.create(
+                customer_ref=customer, name=customer.name,
+                company=customer.company, email=customer.email,
+                address_1=customer.address_1, address_2=customer.address_2,
+                country=customer.country, city=customer.city,
+                state=customer.state, zip_code=customer.zip_code,
+                extra=customer.extra)
+
+        if provider_id:
+            provider = Provider.objects.get(id=provider_id)
+            provider_hist = ProviderHistory.objects.create(
+                provider_ref=provider, name=provider.name,
+                company=provider.company, email=provider.email,
+                address_1=provider.address_1, address_2=provider.address_2,
+                country=provider.country, city=provider.city,
+                state=provider.state, zip_code=provider.zip_code,
+                extra=provider.extra)
+
+        obj.customer = customer_hist
+        obj.provider = provider_hist
         obj.save()
 
 

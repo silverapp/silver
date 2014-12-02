@@ -310,11 +310,17 @@ class CustomerHistory(BillingEntity):
     updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
 
+    def __unicode__(self):
+        return '%s - %s' % (self.name, self.company)
+
 
 class ProviderHistory(BillingEntity):
     provider_ref = models.ForeignKey('Provider', related_name='archived_entries')
     updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
+
+    def __unicode__(self):
+        return '%s - %s' % (self.name, self.company)
 
 
 class Invoice(models.Model):
@@ -326,8 +332,10 @@ class Invoice(models.Model):
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
-    customer = models.ForeignKey('CustomerHistory', related_name='invoices')
-    provider = models.ForeignKey('ProviderHistory', related_name='invoices')
+    customer = models.ForeignKey('CustomerHistory', related_name='invoices',
+                                 null=True, blank=True)
+    provider = models.ForeignKey('ProviderHistory', related_name='invoices',
+                                 null=True, blank=True)
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
