@@ -370,7 +370,6 @@ class Invoice(models.Model):
         self.provider.archived = True
         self.provider.save(update_fields=['archived'])
 
-
     def customer_display(self):
         if self.customer:
             list_display_fields = ['company', 'email', 'address_1', 'city',
