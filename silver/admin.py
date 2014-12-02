@@ -109,9 +109,6 @@ class InvoiceEntryInline(admin.TabularInline):
 
 
 class InvoiceForm(forms.ModelForm):
-    # TODO: update the queryset to display :
-    # all -> if the customer/provider was not selected yet
-    # the selected customer/provider otherwise
     invoice_customer = forms.ModelChoiceField(queryset=Customer.objects.all(),
                                               label='Customer')
     invoice_provider = forms.ModelChoiceField(queryset=Provider.objects.all(),
@@ -122,6 +119,18 @@ class InvoiceForm(forms.ModelForm):
         fields = ('invoice_provider', 'invoice_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state')
+
+    def __init__(self, *args, **kwargs):
+        super(InvoiceForm, self).__init__(*args, **kwargs)
+        instance = kwargs.pop('instance', None)
+        if instance:
+            customer_id = instance.customer.customer_ref.id
+            if customer_id:
+                self.fields['invoice_customer'].initial = customer_id
+
+            provider_id = instance.provider.provider_ref.id
+            if provider_id:
+                self.fields['invoice_provider'].initial = provider_id
 
 
 class InvoiceAdmin(admin.ModelAdmin):
@@ -143,6 +152,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         provider_id = request.POST.get('invoice_provider')
 
         customer = provider = None
+        # TODO: replace with something more elegant
         if customer_id:
             customer = Customer.objects.get(id=customer_id)
             customer_hist = CustomerHistory.objects.create(
