@@ -310,16 +310,6 @@ class CustomerHistory(BillingEntity):
     updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
-        self_fields = self._meta.fields
-        changed_fields = [(field.attname, kwargs[field.attname])
-                          for field in self_fields if field.attname in kwargs]
-        for field_name, field_value in changed_fields:
-            setattr(self, field_name, field_value)
-            kwargs.pop(field_name)
-
-        super(CustomerHistory, self).save(*args, **kwargs)
-
     def __unicode__(self):
         return '%s - %s' % (self.name, self.company)
 
@@ -328,16 +318,6 @@ class ProviderHistory(BillingEntity):
     provider_ref = models.ForeignKey('Provider', related_name='archived_entries')
     updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
-
-    def save(self, *args, **kwargs):
-        self_fields = self._meta.fields
-        changed_fields = [(field.attname, kwargs[field.attname])
-                          for field in self_fields if field.attname in kwargs]
-        for field_name, field_value in changed_fields:
-            setattr(self, field_name, field_value)
-            kwargs.pop(field_name)
-
-        super(ProviderHistory, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return '%s - %s' % (self.name, self.company)
@@ -425,7 +405,7 @@ class Invoice(models.Model):
            or self.customer.customer_ref != invoice_customer\
            and invoice_customer:
 
-            customer_fields = {}
+            customer_fields = {'customer_ref': invoice_customer}
             for field in set(CustomerHistory._meta.get_all_field_names()) - set(['id']):
                 try:
                     customer_fields[field] = getattr(invoice_customer, field)
@@ -433,18 +413,16 @@ class Invoice(models.Model):
                     pass
 
             if not self.customer:
-                customer_fields['customer_ref'] = invoice_customer
                 self.customer = CustomerHistory.objects.create(**customer_fields)
             elif self.customer.customer_ref != invoice_customer:
-                customer_fields['customer_ref_id'] = invoice_customer.id
-                self.customer.save(**customer_fields)
+                CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
 
         # Handle the invoice's provider
         if not self.provider\
            or self.provider.provider_ref != invoice_provider\
            and invoice_provider:
 
-            provider_fields = {}
+            provider_fields = {'provider_ref': invoice_provider}
             for field in set(ProviderHistory._meta.get_all_field_names()) - set(['id']):
                 try:
                     provider_fields[field] = getattr(invoice_provider, field)
@@ -452,11 +430,9 @@ class Invoice(models.Model):
                     pass
 
             if not self.provider:
-                provider_fields['provider_ref'] = invoice_provider
                 self.provider = ProviderHistory.objects.create(**provider_fields)
             elif self.provider.provider_ref != invoice_provider:
-                provider_fields['provider_ref_id'] = invoice_provider.id
-                self.provider.save(**provider_fields)
+                ProviderHistory.objects.filter(id=self.provider.id).update(**provider_fields)
 
         super(Invoice, self).save(*args, **kwargs)
 
