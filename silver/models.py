@@ -307,7 +307,6 @@ class ProductCode(models.Model):
 
 class CustomerHistory(BillingEntity):
     customer_ref = models.ForeignKey('Customer', related_name='archived_entries')
-    updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
 
     def __unicode__(self):
@@ -316,7 +315,6 @@ class CustomerHistory(BillingEntity):
 
 class ProviderHistory(BillingEntity):
     provider_ref = models.ForeignKey('Provider', related_name='archived_entries')
-    updated_from_invoice = models.BooleanField(default=False)
     archived = models.BooleanField(default=False)
 
     def __unicode__(self):
@@ -394,7 +392,6 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         # TODO: handle properly the AttributeError
-
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
         invoice_provider_id = kwargs.pop('invoice_provider_id', None)
         invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
