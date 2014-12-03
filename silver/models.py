@@ -420,15 +420,15 @@ class Invoice(models.Model):
 
     provider_display.short_description = 'Provider'
 
-    def save(self, *args, **kwargs):
-        invoice_customer_id = kwargs.pop('invoice_customer_id', None)
-        invoice_provider_id = kwargs.pop('invoice_provider_id', None)
+    def _create_or_update_customer_and_provider(self, invoice_customer_id,
+                                              invoice_provider_id):
         invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
         invoice_provider = get_object_or_None(Provider, id=invoice_provider_id)
 
         # Handle the invoice's customer
         if invoice_customer and\
            (not self.customer or self.customer.customer_ref != invoice_customer):
+
             customer_fields = {'customer_ref': invoice_customer}
             for field in set(CustomerHistory._meta.get_all_field_names()) - set(['id']):
                 try:
@@ -444,6 +444,7 @@ class Invoice(models.Model):
         # Handle the invoice's provider
         if invoice_provider and\
            (not self.provider or self.provider.provider_ref != invoice_provider):
+
             provider_fields = {'provider_ref': invoice_provider}
             for field in set(ProviderHistory._meta.get_all_field_names()) - set(['id']):
                 try:
@@ -456,6 +457,11 @@ class Invoice(models.Model):
             elif self.provider.provider_ref != invoice_provider:
                 ProviderHistory.objects.filter(id=self.provider.id).update(**provider_fields)
 
+    def save(self, *args, **kwargs):
+        invoice_customer_id = kwargs.pop('invoice_customer_id', None)
+        invoice_provider_id = kwargs.pop('invoice_provider_id', None)
+        self._create_or_update_customer_and_provider(invoice_customer_id,
+                                                   invoice_provider_id)
         super(Invoice, self).save(*args, **kwargs)
 
 
