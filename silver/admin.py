@@ -121,7 +121,7 @@ class InvoiceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(InvoiceForm, self).__init__(*args, **kwargs)
-        instance = kwargs.pop('instance', None)
+        instance = kwargs.get('instance')
         if instance:
             customer_id = instance.customer.customer_ref.id
             if customer_id:
