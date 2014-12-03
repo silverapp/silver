@@ -460,6 +460,12 @@ class Invoice(models.Model):
         invoice_provider_id = kwargs.pop('invoice_provider_id', None)
         self._create_or_update_customer_and_provider(invoice_customer_id,
                                                    invoice_provider_id)
+
+        if not self.sales_tax_name and self.customer:
+            self.sales_tax_name = self.customer.customer_ref.sales_tax_name
+        if not self.sales_tax_percent and self.customer:
+            self.sales_tax_percent = self.customer.customer_ref.sales_tax_percent
+
         super(Invoice, self).save(*args, **kwargs)
 
 
