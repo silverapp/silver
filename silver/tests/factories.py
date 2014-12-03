@@ -12,7 +12,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
+    customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = factory.Sequence(lambda n: n)
     sales_tax_name = factory.Sequence(lambda n: 'Tax{cnt}'.format(cnt=n))
     consolidated_billing = factory.Sequence(lambda n: n % 2 == 1)
