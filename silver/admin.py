@@ -82,7 +82,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['customer_reference', 'name', 'company', 'email',
+    list_display = ['name', 'company', 'customer_reference', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
     list_display_links = list_display
@@ -100,6 +100,7 @@ class MeteredFeatureAdmin(admin.ModelAdmin):
 class ProviderAdmin(admin.ModelAdmin):
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
+    list_display_links = list_display
     search_fields = list_display
     exclude = ['live']
 
@@ -139,6 +140,7 @@ class InvoiceAdmin(admin.ModelAdmin):
                     'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']
     list_display_links = list_display
+
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
