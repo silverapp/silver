@@ -327,7 +327,6 @@ class Provider(BillingEntity):
         super(Provider, self).save(*args, **kwargs)
         self._update_historical_entries()
 
-
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
 
