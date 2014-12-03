@@ -290,6 +290,7 @@ class Customer(BillingEntity):
         customer_fields_values = {}
         for field in common_fields:
             customer_fields_values[field] = getattr(self, field)
+
         self.archive_entries.filter(archived=False).update(
             **customer_fields_values)
 
@@ -320,6 +321,7 @@ class Provider(BillingEntity):
         provider_fields_values = {}
         for field in common_fields:
             provider_fields_values[field] = getattr(self, field)
+
         self.archive_entries.filter(archived=False).update(
             **provider_fields_values)
 
@@ -404,7 +406,6 @@ class Invoice(models.Model):
                       for field in list_display_fields]
             return ', '.join(fields)
         return ''
-
     customer_display.short_description = 'Customer'
 
     def provider_display(self):
@@ -415,7 +416,6 @@ class Invoice(models.Model):
                       for field in list_display_fields]
             return ', '.join(fields)
         return ''
-
     provider_display.short_description = 'Provider'
 
     def _create_or_update_customer_and_provider(self, invoice_customer_id,
