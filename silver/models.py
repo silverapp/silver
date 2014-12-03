@@ -360,15 +360,13 @@ class Invoice(models.Model):
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
-    customer = models.ForeignKey('CustomerHistory', related_name='invoices',
-                                 null=True, blank=True)
-    provider = models.ForeignKey('ProviderHistory', related_name='invoices',
-                                 null=True, blank=True)
+    customer = models.ForeignKey('CustomerHistory', related_name='invoices')
+    provider = models.ForeignKey('ProviderHistory', related_name='invoices')
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
-        choices=currencies, max_length=4, null=False, blank=False,
+        choices=currencies, max_length=4,
         help_text='The currency used for billing.'
     )
     state = FSMField(
