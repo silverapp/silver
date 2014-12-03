@@ -85,6 +85,7 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
+    list_display_links = list_display
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
@@ -137,6 +138,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_display = ['customer_display', 'provider_display', 'state', 'due_date',
                     'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']
+    list_display_links = list_display
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
