@@ -421,17 +421,14 @@ class Invoice(models.Model):
     provider_display.short_description = 'Provider'
 
     def save(self, *args, **kwargs):
-        # TODO: handle properly the AttributeError
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
         invoice_provider_id = kwargs.pop('invoice_provider_id', None)
         invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
         invoice_provider = get_object_or_None(Provider, id=invoice_provider_id)
 
         # Handle the invoice's customer
-        if not self.customer\
-           or self.customer.customer_ref != invoice_customer\
-           and invoice_customer:
-
+        if invoice_customer and\
+           (not self.customer or self.customer.customer_ref != invoice_customer):
             customer_fields = {'customer_ref': invoice_customer}
             for field in set(CustomerHistory._meta.get_all_field_names()) - set(['id']):
                 try:
@@ -445,10 +442,8 @@ class Invoice(models.Model):
                 CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
 
         # Handle the invoice's provider
-        if not self.provider\
-           or self.provider.provider_ref != invoice_provider\
-           and invoice_provider:
-
+        if invoice_provider and\
+           (not self.provider or self.provider.provider_ref != invoice_provider):
             provider_fields = {'provider_ref': invoice_provider}
             for field in set(ProviderHistory._meta.get_all_field_names()) - set(['id']):
                 try:
