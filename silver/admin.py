@@ -115,8 +115,8 @@ class InvoiceForm(forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ('invoice_provider', 'invoice_customer', 'due_date',
-                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+        fields = ('invoice_provider', 'invoice_customer', 'issue_date',
+                  'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state')
 
     def __init__(self, *args, **kwargs):
@@ -147,8 +147,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceEntryInline]
 
     def save_model(self, request, obj, form, change):
-        obj.save(invoice_customer_id=request.POST.get('invoice_customer'),
-                 invoice_provider_id=request.POST.get('invoice_provider'))
+        customer_id = request.POST.get('invoice_customer') or -1
+        provider_id = request.POST.get('invoice_provider') or -1
+        obj.save(invoice_customer_id=customer_id,
+                 invoice_provider_id=provider_id)
 
 
 admin.site.register(Plan, PlanAdmin)
