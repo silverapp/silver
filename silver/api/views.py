@@ -85,15 +85,19 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeaturesList(ListBulkCreateAPIView):
+class MeteredFeatureList(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
-    model = MeteredFeature
+    queryset = MeteredFeature.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = MeteredFeaturesFilter
 
 
-class MeteredFeaturesDetail(generics.RetrieveAPIView):
+class MeteredFeatureDetail(generics.RetrieveAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(Plan, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
@@ -111,18 +115,20 @@ class SubscriptionFilter(FilterSet):
 
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    model = Subscription
+    queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('sub', None)
+        return get_object_or_404(Subscription, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     model = Subscription
     serializer_class = SubscriptionDetailSerializer
-    lookup_url_kwarg = 'sub'
-    lookup_field = 'pk'
 
 
 class SubscriptionDetailActivate(APIView):
@@ -303,12 +309,16 @@ class CustomerFilter(FilterSet):
 class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
-    model = Customer
+    queryset = Customer.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CustomerFilter
 
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('sub', None)
+        return get_object_or_404(Customer, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     model = Customer

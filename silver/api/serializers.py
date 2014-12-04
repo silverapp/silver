@@ -74,15 +74,13 @@ class ProviderSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
-    metered_features = MeteredFeatureRelatedField(
-        source='metered_features', many=True,
-        view_name='silver_api:metered-feature-detail',
-    )
+    metered_features = MeteredFeatureSerializer()
+
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
     )
     provider = serializers.HyperlinkedRelatedField(
-        source='provider',
+        queryset=Provider.objects.all(),
         view_name='silver_api:provider-detail',
     )
 
@@ -93,17 +91,34 @@ class PlanSerializer(serializers.ModelSerializer):
                   'enabled', 'private', 'product_code', 'metered_features',
                   'provider')
 
+    def create(self, validated_data):
+        metered_features_data = validated_data.pop('metered_features')
+        metered_features = MeteredFeature.objects.create(**metered_features_data)
+
+        plan = Plan.objects.create(metered_features=metered_features,
+                                   **validated_data)
+        return plan
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.generate_after = validated_data.get('generate_after', instance.generate_after)
+        instance.due_days = validated_data.get('due_days', instance.due_days)
+        instance.save()
+
+        return instance
+
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
     plan = serializers.HyperlinkedRelatedField(
-        source='plan',
+        queryset=Plan.objects.all(),
         view_name='silver_api:plan-detail',
     )
     customer = serializers.HyperlinkedRelatedField(
-        source='customer', view_name='silver_api:customer-detail',
+        view_name='silver_api:customer-detail',
+        queryset=Customer.objects.all()
     )
     url = serializers.HyperlinkedIdentityField(
         source='pk', view_name='silver_api:subscription-detail'
