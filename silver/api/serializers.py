@@ -74,7 +74,9 @@ class ProviderSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
-    metered_features = MeteredFeatureSerializer()
+    metered_features = MeteredFeatureSerializer(
+        required=False, many=True
+    )
 
     url = serializers.HyperlinkedIdentityField(
         source='*', view_name='silver_api:plan-detail'
