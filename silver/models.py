@@ -443,7 +443,6 @@ class Invoice(models.Model):
                 if self.customer and self.customer.customer_ref != invoice_customer:
                     CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
             except CustomerHistory.DoesNotExist:
-                print customer_fields
                 self.customer = CustomerHistory.objects.create(**customer_fields)
 
         # Handle the invoice's provider
