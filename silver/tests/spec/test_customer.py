@@ -57,6 +57,16 @@ class TestCustomerEndpoint(APITestCase):
             assert (response.data == {field: ['This field may not be blank.']}
                     or response.data == {field: ['This field is required.']})
 
+    def test_get_customer_list(self):
+        CustomerFactory.create()
+
+        url = reverse('silver_api:customer-list')
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(response.data, [])
+
     def test_get_customer_detail(self):
         customer = CustomerFactory.create()
 
