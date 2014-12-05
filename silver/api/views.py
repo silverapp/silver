@@ -45,7 +45,10 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     model = Plan
-    lookup_field = 'pk'
+
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(Plan, pk=pk)
 
     def patch(self, request, *args, **kwargs):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
@@ -96,7 +99,7 @@ class MeteredFeatureList(ListBulkCreateAPIView):
 class MeteredFeatureDetail(generics.RetrieveAPIView):
     def get_object(self):
         pk = self.kwargs.get('pk', None)
-        return get_object_or_404(Plan, pk=pk)
+        return get_object_or_404(MeteredFeature, pk=pk)
 
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
@@ -123,7 +126,7 @@ class SubscriptionList(generics.ListCreateAPIView):
 
 class SubscriptionDetail(generics.RetrieveAPIView):
     def get_object(self):
-        pk = self.kwargs.get('sub', None)
+        pk = self.kwargs.get('pk', None)
         return get_object_or_404(Subscription, pk=pk)
 
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
@@ -316,7 +319,7 @@ class CustomerList(generics.ListCreateAPIView):
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
-        pk = self.kwargs.get('sub', None)
+        pk = self.kwargs.get('pk', None)
         return get_object_or_404(Customer, pk=pk)
 
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)

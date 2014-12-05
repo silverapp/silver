@@ -40,7 +40,7 @@ class TestCustomerEndpoint(APITestCase):
         url = reverse('silver_api:customer-list')
 
         required_fields = ['address_1', 'city', 'zip_code', 'country',
-                           'sales_tax_name', 'sales_tax_percent']
+                           'sales_tax_name']
 
         for field in required_fields:
             temp_data = self.complete_data.copy()
@@ -54,12 +54,8 @@ class TestCustomerEndpoint(APITestCase):
                                         content_type='application/json')
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            if field != 'sales_tax_percent':
-                self.assertEqual(response.data,
-                                 {field: [u'This field is required.']})
-            else:
-                self.assertEqual(response.data,
-                                 {field: [u'This field cannot be blank.']})
+            assert (response.data == {field: ['This field may not be blank.']}
+                    or response.data == {field: ['This field is required.']})
 
     def test_get_customer_detail(self):
         customer = CustomerFactory.create()

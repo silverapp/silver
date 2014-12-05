@@ -95,10 +95,13 @@ class PlanSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         metered_features_data = validated_data.pop('metered_features')
-        metered_features = MeteredFeature.objects.create(**metered_features_data)
+        metered_features = []
+        for mf_data in metered_features_data:
+            metered_features.append(MeteredFeature.objects.create(**mf_data))
 
-        plan = Plan.objects.create(metered_features=metered_features,
-                                   **validated_data)
+        plan = Plan.objects.create(**validated_data)
+        plan.metered_features.add(*metered_features)
+
         return plan
 
     def update(self, instance, validated_data):
@@ -126,6 +129,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         source='pk', view_name='silver_api:subscription-detail'
     )
 
+    def validate(self, attrs):
+        instance = Subscription(**attrs)
+        instance.clean()
+        return attrs
+
     class Meta:
         model = Subscription
         fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
@@ -138,6 +146,11 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
         source='plan.metered_features', many=True, read_only=True
     )
 
+    def validate(self, attrs):
+        instance = Subscription(**attrs)
+        instance.clean()
+        return attrs
+
     class Meta:
         model = Subscription
         fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
@@ -147,6 +160,11 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='silver_api:customer-detail')
+
+    def to_representation(self, instance):
+        rep = super(CustomerSerializer, self).to_representation(instance)
+        print rep['country']
+        return rep
 
     class Meta:
         model = Customer

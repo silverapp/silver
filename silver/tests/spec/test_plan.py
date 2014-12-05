@@ -19,7 +19,7 @@ class TestPlanEndpoint(APITestCase):
         mf_urls = []
         for mf in metered_features:
             mf_urls.append(reverse('silver_api:metered-feature-detail',
-                                  kwargs={'pk': mf.pk}))
+                                   kwargs={'pk': mf.pk}))
 
         provider = ProviderFactory.create()
         provider_url = reverse('silver_api:provider-detail',
@@ -36,7 +36,14 @@ class TestPlanEndpoint(APITestCase):
             "enabled": True,
             "private": False,
             "product_code": "1234",
-            'metered_features': mf_urls,
+            'metered_features': [
+                {'name': 'Page Views',
+                 'price_per_unit': 0.01,
+                 'included_units': 0},
+                {'name': 'VIP Support',
+                 'price_per_unit': 49.99,
+                 'included_units': 1}
+            ],
             'provider': provider_url
         }), content_type='application/json')
 
