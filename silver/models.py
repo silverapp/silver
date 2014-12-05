@@ -418,42 +418,45 @@ class Invoice(models.Model):
         return ''
     provider_display.short_description = 'Provider'
 
+    def _get_values_for_common_fields(self, model, obj):
+        fields = {}
+        for field in set(model._meta.get_all_field_names()) - set(['id']):
+            try:
+                fields[field] = getattr(obj, field)
+            except AttributeError:
+                pass
+
+        return fields
+
     def _create_or_update_customer_and_provider(self, invoice_customer_id,
                                               invoice_provider_id):
         invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
         invoice_provider = get_object_or_None(Provider, id=invoice_provider_id)
 
         # Handle the invoice's customer
-        if invoice_customer and\
-           (not self.customer or self.customer.customer_ref != invoice_customer):
-
+        if invoice_customer:
             customer_fields = {'customer_ref': invoice_customer}
-            for field in set(CustomerHistory._meta.get_all_field_names()) - set(['id']):
-                try:
-                    customer_fields[field] = getattr(invoice_customer, field)
-                except AttributeError:
-                    pass
-
-            if not self.customer:
+            common_fields = self._get_values_for_common_fields(CustomerHistory,
+                                                               invoice_customer)
+            customer_fields.update(common_fields)
+            try:
+                if self.customer and self.customer.customer_ref != invoice_customer:
+                    CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
+            except CustomerHistory.DoesNotExist:
+                print customer_fields
                 self.customer = CustomerHistory.objects.create(**customer_fields)
-            elif self.customer.customer_ref != invoice_customer:
-                CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
 
         # Handle the invoice's provider
-        if invoice_provider and\
-           (not self.provider or self.provider.provider_ref != invoice_provider):
-
+        if invoice_provider:
             provider_fields = {'provider_ref': invoice_provider}
-            for field in set(ProviderHistory._meta.get_all_field_names()) - set(['id']):
-                try:
-                    provider_fields[field] = getattr(invoice_provider, field)
-                except AttributeError:
-                    pass
-
-            if not self.provider:
+            common_fields = self._get_values_for_common_fields(ProviderHistory,
+                                                               invoice_provider)
+            provider_fields.update(common_fields)
+            try:
+                if self.provider and self.provider.provider_ref != invoice_provider:
+                    ProviderHistory.objects.filter(id=self.provider.id).update(**provider_fields)
+            except ProviderHistory.DoesNotExist:
                 self.provider = ProviderHistory.objects.create(**provider_fields)
-            elif self.provider.provider_ref != invoice_provider:
-                ProviderHistory.objects.filter(id=self.provider.id).update(**provider_fields)
 
     def save(self, *args, **kwargs):
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
