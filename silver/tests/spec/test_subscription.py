@@ -1,10 +1,12 @@
+import datetime
 import json
 
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    PlanFactory, SubscriptionFactory)
+                                    PlanFactory, SubscriptionFactory,
+                                    MeteredFeatureFactory)
 
 
 class TestCustomerEndpoint(APITestCase):
@@ -196,3 +198,88 @@ class TestCustomerEndpoint(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data, {u'detail': u'Not found'})
+
+    def test_create_subscription_mf_units_log(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('silver_api:mf-log-list',
+                      kwargs={'sub': subscription.pk,
+                              'mf': metered_feature.pk})
+
+        date = str(datetime.date.today() + datetime.timedelta(days=3))
+
+        response = self.client.patch(url, json.dumps({
+            "count": 150,
+            "date": date,
+            "update_type": "absolute"
+        }), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'count': 150})
+
+        response = self.client.patch(url, json.dumps({
+            "count": 29,
+            "date": date,
+            "update_type": "relative"
+        }), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'count': 179})
+
+    def test_create_subscription_mf_units_log_with_unexisting_mf(self):
+        subscription = SubscriptionFactory.create()
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('silver_api:mf-log-list',
+                      kwargs={'sub': subscription.pk,
+                              'mf': 42})
+
+        response = self.client.patch(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {'detail': 'Not found'})
+
+    def test_create_subscription_mf_units_log_with_unactivated_sub(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+        subscription.plan.metered_features.add(metered_feature)
+
+        url = reverse('silver_api:mf-log-list',
+                      kwargs={'sub': subscription.pk,
+                              'mf': metered_feature.pk})
+
+        response = self.client.patch(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data,
+                         {'detail': 'Subscription is not active'})
+
+    def test_create_subscription_mf_units_log_with_invalid_date(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('silver_api:mf-log-list',
+                      kwargs={'sub': subscription.pk,
+                              'mf': metered_feature.pk})
+
+        response = self.client.patch(url, json.dumps({
+            "count": 150,
+            "date": "2008-12-24",
+            "update_type": "absolute"
+        }), content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'detail': 'Date is out of bounds'})

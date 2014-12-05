@@ -1,10 +1,12 @@
 import datetime
+from django_filters import FilterSet, CharFilter, BooleanFilter
 
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
+from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice)
@@ -16,12 +18,27 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
 from silver.utils import get_object_or_None
 
 
+class PlanFilter(FilterSet):
+    name = CharFilter(name='name', lookup_type='icontains')
+    currency = CharFilter(name='currency', lookup_type='icontains')
+    enabled = BooleanFilter(name='enabled', lookup_type='iexact')
+    private = BooleanFilter(name='private', lookup_type='iexact')
+    interval = CharFilter(name='interval', lookup_type='icontains')
+    product_code = CharFilter(name='product_code', lookup_type='icontains')
+    provider = CharFilter(name='provider__company', lookup_type='icontains')
+
+    class Meta:
+        model = Plan
+        fields = ['name', 'currency', 'enabled', 'private', 'product_code',
+                  'currency', 'provider', 'interval']
+
+
 class PlanList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('enabled', 'private')
+    filter_class = PlanFilter
 
 
 class PlanDetail(generics.RetrieveDestroyAPIView):
@@ -60,10 +77,20 @@ class PlanMeteredFeatures(generics.ListAPIView):
         return plan.metered_features.all() if plan else None
 
 
+class MeteredFeaturesFilter(FilterSet):
+    name = CharFilter(name='name', lookup_type='icontains')
+
+    class Meta:
+        model = MeteredFeature
+        fields = ('name', )
+
+
 class MeteredFeaturesList(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = MeteredFeaturesFilter
 
 
 class MeteredFeaturesDetail(generics.RetrieveAPIView):
@@ -72,10 +99,22 @@ class MeteredFeaturesDetail(generics.RetrieveAPIView):
     model = MeteredFeature
 
 
+class SubscriptionFilter(FilterSet):
+    plan = CharFilter(name='plan__name', lookup_type='icontains')
+    customer = CharFilter(name='customer__name', lookup_type='icontains')
+    company = CharFilter(name='customer__company', lookup_type='icontains')
+
+    class Meta:
+        model = Subscription
+        fields = ['plan', 'customer', 'company']
+
+
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     model = Subscription
     serializer_class = SubscriptionSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = SubscriptionFilter
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
@@ -184,8 +223,23 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                     try:
                         date = datetime.datetime.strptime(date,
                                                           '%Y-%m-%d').date()
-                        if subscription.current_start_date <= date <= \
-                           subscription.current_end_date:
+                        csd = subscription.current_start_date
+                        ced = subscription.current_end_date
+
+                        if date <= csd:
+                            csdt = datetime.datetime.combine(csd, datetime.time())
+                            allowed_time = datetime.timedelta(
+                                seconds=subscription.plan.generate_after)
+                            if datetime.datetime.now() < csdt + allowed_time:
+                                ced = csd - datetime.timedelta(days=1)
+                                csd = last_date_that_fits(
+                                    initial_date=subscription.start_date,
+                                    end_date=ced,
+                                    interval_type=subscription.plan.interval,
+                                    interval_count=subscription.plan.interval_count
+                                )
+
+                        if csd <= date <= ced:
                             if metered_feature not in \
                                     subscription.plan.metered_features.all():
                                 err = "The metered feature does not belong to "\
@@ -196,8 +250,8 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                                 )
                             try:
                                 log = MeteredFeatureUnitsLog.objects.get(
-                                    start_date__lte=date,
-                                    end_date__gte=date,
+                                    start_date=csd,
+                                    end_date=ced,
                                     metered_feature=metered_feature_pk,
                                     subscription=subscription_pk
                                 )
@@ -233,10 +287,25 @@ class MeteredFeatureUnitsLogList(generics.ListAPIView):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class CustomerFilter(FilterSet):
+    active = BooleanFilter(name='is_active', lookup_type='iexact')
+    email = CharFilter(name='email', lookup_type='icontains')
+    company = CharFilter(name='company', lookup_type='icontains')
+    name = CharFilter(name='name', lookup_type='icontains')
+    country = CharFilter(name='country', lookup_type='icontains')
+    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+
+    class Meta:
+        model = Customer
+        fields = ['email', 'name', 'company', 'active', 'country', 'sales_tax_name']
+
+
 class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     model = Customer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CustomerFilter
 
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -245,10 +314,21 @@ class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     model = Customer
 
 
+class ProviderFilter(FilterSet):
+    email = CharFilter(name='email', lookup_type='icontains')
+    company = CharFilter(name='company', lookup_type='icontains')
+
+    class Meta:
+        model = Provider
+        fields = ['email', 'company']
+
+
 class ProviderListBulkCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = ProviderFilter
 
 
 class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
