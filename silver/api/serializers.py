@@ -161,11 +161,6 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='silver_api:customer-detail')
 
-    def to_representation(self, instance):
-        rep = super(CustomerSerializer, self).to_representation(instance)
-        print rep['country']
-        return rep
-
     class Meta:
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
