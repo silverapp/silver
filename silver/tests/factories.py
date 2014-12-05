@@ -21,10 +21,10 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
     address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
     address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
-    country = factory.Sequence(lambda n: countries[n])
+    country = factory.Sequence(lambda n: countries[n][0])
     city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: n)
+    zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
 
 
@@ -54,7 +54,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4])
+    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4][0])
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
