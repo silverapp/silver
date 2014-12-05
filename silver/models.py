@@ -257,6 +257,9 @@ class BillingEntity(LiveModel):
             display = '%s (%s)' % (display, self.company)
         return display
 
+    def get_list_display_fields(self):
+        return ['company', 'email', 'address_1', 'city', 'country', 'zip_code']
+
 
 class Customer(BillingEntity):
     customer_reference = models.CharField(
@@ -400,20 +403,16 @@ class Invoice(models.Model):
 
     def customer_display(self):
         if self.customer:
-            list_display_fields = ['company', 'email', 'address_1', 'city',
-                                   'country', 'zip_code']
             fields = [getattr(self.customer, field)
-                      for field in list_display_fields]
+                      for field in self.customer.get_list_display_fields()]
             return ', '.join(fields)
         return ''
     customer_display.short_description = 'Customer'
 
     def provider_display(self):
         if self.provider:
-            list_display_fields = ['company', 'email', 'address_1', 'city',
-                                   'country', 'zip_code']
             fields = [getattr(self.provider, field)
-                      for field in list_display_fields]
+                      for field in self.provider.get_list_display_fields()]
             return ', '.join(fields)
         return ''
     provider_display.short_description = 'Provider'
