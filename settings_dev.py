@@ -17,7 +17,6 @@ DATABASES = {
 }
 
 EXTERNAL_APPS = [
-    'bootstrap_admin',
     # Django core apps
     'django.contrib.admin',
     'django.contrib.admindocs',
@@ -60,9 +59,3 @@ REST_FRAMEWORK = {
     'PAGINATE_BY_PARAM': 'per_page',
     'MAX_PAGINATE_BY': 100,
 }
-
-from django.conf import global_settings
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
-    'django.core.context_processors.request',
-)
-BOOTSTRAP_ADMIN_SIDEBAR_MENU = True
