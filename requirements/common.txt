@@ -4,3 +4,4 @@ django-fsm
 django-filter
 djangorestframework-bulk
 django-livefield
+bootstrap-admin
