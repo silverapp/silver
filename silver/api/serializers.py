@@ -51,12 +51,15 @@ class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
     metered_feature = serializers.HyperlinkedRelatedField(
         view_name='silver_api:metered-feature-detail',
-        source='metered_feature', read_only=True
+        read_only=True,
     )
     subscription = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:subscription-detail', source='subscription',
+        view_name='silver_api:subscription-detail',
         read_only=True
     )
+    # The 2 lines below are needed because of a DRF3 bug
+    start_date = serializers.DateField(read_only=True)
+    end_date = serializers.DateField(read_only=True)
 
     class Meta:
         model = MeteredFeatureUnitsLog
