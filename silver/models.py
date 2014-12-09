@@ -286,6 +286,7 @@ class Customer(BillingEntity):
         company_field.help_text = "The company to which the bill is issued."
 
     def _update_historical_entries(self):
+        # TODO: refactor (use signals, LoD)
         self_fields = set([field for field in self._meta.get_all_field_names()])
         customer_history_fields = set(CustomerHistory._meta.get_all_field_names()) - set(['id'])
         common_fields = self_fields.intersection(customer_history_fields)
@@ -463,6 +464,7 @@ class Invoice(models.Model):
                                                      invoice_provider_id)
 
         if not self.sales_tax_name and self.customer:
+            # TODO: refactor (LoD)
             self.sales_tax_name = self.customer.customer_ref.sales_tax_name
         if not self.sales_tax_percent and self.customer:
             self.sales_tax_percent = self.customer.customer_ref.sales_tax_percent
