@@ -188,7 +188,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         queryset=Customer.objects.all()
     )
     provider = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:customer-detail',
+        view_name='silver_api:provider-detail',
         queryset=Provider.objects.all()
     )
     entries = InvoiceEntrySerializer(many=True)
