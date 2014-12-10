@@ -1,7 +1,7 @@
 import datetime
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
-from rest_framework import generics, permissions, status, filters, mixins
+from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -358,8 +358,7 @@ class InvoiceListBulkCreate(ListBulkCreateAPIView):
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
-
-class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = InvoiceSerializer
-    queryset = Invoice.objects.all()
+#class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    #permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    #serializer_class = InvoiceSerializer
+    #queryset = Invoice.objects.all()
