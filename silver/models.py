@@ -4,6 +4,8 @@ import datetime
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
 from livefield.models import LiveModel
@@ -287,23 +289,6 @@ class Customer(BillingEntity):
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The company to which the bill is issued."
 
-    def _update_historical_entries(self):
-        # TODO: refactor (use signals, LoD)
-        self_fields = set([field for field in self._meta.get_all_field_names()])
-        customer_history_fields = set(CustomerHistory._meta.get_all_field_names()) - set(['id'])
-        common_fields = self_fields.intersection(customer_history_fields)
-
-        customer_fields_values = {}
-        for field in common_fields:
-            customer_fields_values[field] = getattr(self, field)
-
-        self.archive_entries.filter(archived=False).update(
-            **customer_fields_values)
-
-    def save(self, *args, **kwargs):
-        super(Customer, self).save(*args, **kwargs)
-        self._update_historical_entries()
-
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
 
@@ -319,24 +304,31 @@ class Provider(BillingEntity):
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The provider issuing the invoice."
 
-    def _update_historical_entries(self):
-        self_fields = set([field for field in self._meta.get_all_field_names()])
-        provider_history_fields = set(ProviderHistory._meta.get_all_field_names()) - set(['id'])
-        common_fields = self_fields.intersection(provider_history_fields)
-
-        provider_fields_values = {}
-        for field in common_fields:
-            provider_fields_values[field] = getattr(self, field)
-
-        self.archive_entries.filter(archived=False).update(
-            **provider_fields_values)
-
-    def save(self, *args, **kwargs):
-        super(Provider, self).save(*args, **kwargs)
-        self._update_historical_entries()
-
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
+
+def _update_historical_fields(instance, history_model):
+    main_fields = set([field for field in instance._meta.get_all_field_names()])
+    history_model_fields = set(history_model._meta.get_all_field_names()) -\
+                           set(['id', 'live'])
+    common_fields = main_fields.intersection(history_model_fields)
+
+    common_fields_values = {}
+    for field in common_fields:
+        common_fields_values[field] = getattr(instance, field)
+
+    instance.archive_entries.filter(archived=False).update(
+        **common_fields_values)
+
+@receiver(post_save, sender=Provider)
+def _update_provider_historical_data(sender, instance, created, **kwargs):
+    if not created:
+        _update_historical_fields(instance, ProviderHistory)
+
+@receiver(post_save, sender=Customer)
+def _update_customer_historical_data(sender, instance, created, **kwargs):
+    if not created:
+        _update_historical_fields(instance, CustomerHistory)
 
 
 class ProductCode(models.Model):
