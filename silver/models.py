@@ -358,6 +358,10 @@ class CustomerHistory(BillingEntity):
     def sales_tax_percent(self):
         return self.customer_ref.sales_tax_percent
 
+    def archive(self):
+        self.archived = True
+        self.save(update_fields=['archived'])
+
 
 class ProviderHistory(BillingEntity):
     provider_ref = models.ForeignKey('Provider', related_name='archive_entries')
@@ -365,6 +369,10 @@ class ProviderHistory(BillingEntity):
 
     def __unicode__(self):
         return '%s - %s' % (self.name, self.company)
+
+    def archive(self):
+        self.archived = True
+        self.save(update_fields=['archived'])
 
 
 class Invoice(models.Model):
@@ -406,11 +414,8 @@ class Invoice(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        self.customer.archived = True
-        self.customer.save(update_fields=['archived'])
-
-        self.provider.archived = True
-        self.provider.save(update_fields=['archived'])
+        self.customer.archive()
+        self.provider.archive()
 
     def customer_display(self):
         try:
