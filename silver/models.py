@@ -400,6 +400,10 @@ class Invoice(models.Model):
         help_text='The state the invoice is in.'
     )
 
+    class Meta:
+        ordering = ('issue_date', 'number')
+        unique_together = ('invoice_type', 'number')
+
     @transition(field=state, source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
         if issue_date:
