@@ -348,6 +348,14 @@ class CustomerHistory(BillingEntity):
     def __unicode__(self):
         return '%s - %s' % (self.name, self.company)
 
+    @property
+    def sales_tax_name(self):
+        return self.customer_ref.sales_tax_name
+
+    @property
+    def sales_tax_percent(self):
+        return self.customer_ref.sales_tax_percent
+
 
 class ProviderHistory(BillingEntity):
     provider_ref = models.ForeignKey('Provider', related_name='archive_entries')
@@ -391,10 +399,10 @@ class Invoice(models.Model):
             self.due_date = due_date
 
         if not self.sales_tax_name:
-            self.sales_tax_name = self.customer.customer_ref.sales_tax_name
+            self.sales_tax_name = self.customer.sales_tax_name
 
         if not self.sales_tax_percent:
-            self.sales_tax_percent = self.customer.customer_ref.sales_tax_percent
+            self.sales_tax_percent = self.customer.sales_tax_percent
 
         self.customer.archived = True
         self.customer.save(update_fields=['archived'])
@@ -463,11 +471,10 @@ class Invoice(models.Model):
         self._create_or_update_customer_and_provider(invoice_customer_id,
                                                      invoice_provider_id)
 
-        if not self.sales_tax_name and self.customer:
-            # TODO: refactor (LoD)
-            self.sales_tax_name = self.customer.customer_ref.sales_tax_name
-        if not self.sales_tax_percent and self.customer:
-            self.sales_tax_percent = self.customer.customer_ref.sales_tax_percent
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
 
         super(Invoice, self).save(*args, **kwargs)
 
