@@ -18,6 +18,7 @@ DATABASES = {
 
 EXTERNAL_APPS = [
     # Django core apps
+    'django_admin_bootstrapped',
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -60,4 +61,12 @@ REST_FRAMEWORK = {
     'PAGINATE_BY': 30,
     'PAGINATE_BY_PARAM': 'per_page',
     'MAX_PAGINATE_BY': 100,
+}
+
+from django.contrib import messages
+
+MESSAGE_TAGS = {
+    messages.SUCCESS: 'alert-success success',
+    messages.WARNING: 'alert-warning warning',
+    messages.ERROR: 'alert-danger error'
 }
