@@ -181,6 +181,14 @@ class InvoiceEntrySerializer(serializers.ModelSerializer):
                   'start_date', 'end_date', 'prorated', 'product_code')
 
 class InvoiceSerializer(serializers.ModelSerializer):
+    customer = serializers.HyperlinkedRelatedField(
+        view_name='silver_api:customer-detail',
+        queryset=Customer.objects.all()
+    )
+    provider = serializers.HyperlinkedRelatedField(
+        view_name='silver_api:customer-detail',
+        queryset=Provider.objects.all()
+    )
     entries = InvoiceEntrySerializer(many=True)
 
     class Meta:
