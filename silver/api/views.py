@@ -358,7 +358,7 @@ class InvoiceListBulkCreate(ListBulkCreateAPIView):
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
-#class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    #permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    #serializer_class = InvoiceSerializer
-    #queryset = Invoice.objects.all()
+class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
