@@ -38,6 +38,3 @@ urlpatterns = patterns('',
     url(r'^invoices/(?P<pk>[0-9]+)/$',
         views.InvoiceRetrieveUpdateDestroy.as_view(), name='invoice-detail'),
 )
-
-def f():
-    pass
