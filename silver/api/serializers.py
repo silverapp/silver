@@ -1,8 +1,11 @@
 from string import rfind
+
 from rest_framework import serializers
-from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
-                           MeteredFeature, Plan, Provider, Invoice)
 from rest_framework.reverse import reverse
+
+from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
+                           MeteredFeature, Plan, Provider, Invoice,
+                           InvoiceEntry)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -171,11 +174,17 @@ class CustomerSerializer(serializers.ModelSerializer):
                   'country', 'extra', 'sales_tax_name', 'sales_tax_percent')
 
 
+class InvoiceEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceEntry
+        fields = ('id', 'description', 'unit', 'quantity', 'unit_price',
+                  'start_date', 'end_date', 'prorated', 'product_code')
+
 class InvoiceSerializer(serializers.ModelSerializer):
-    # entries = serializers.HyperlinkedRelatedField(many=True)
+    entries = InvoiceEntrySerializer(many=True)
 
     class Meta:
         model = Invoice
         fields = ('due_date', 'issue_date', 'paid_date', 'cancel_date',
                  'customer', 'provider', 'sales_tax_name', 'sales_tax_percent',
-                 'currency', 'state')
+                 'currency', 'state', 'entries')
