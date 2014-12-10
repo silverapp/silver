@@ -379,6 +379,8 @@ class Invoice(models.Model):
     invoice_type = models.CharField(max_length=64, choices=INVOICE_TYPES,
                                     default=INVOICE_TYPES[0][1],
                                     verbose_name='Type')
+    # TODO: add logic for generating the number
+    number = models.IntegerField()
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
@@ -416,19 +418,6 @@ class Invoice(models.Model):
         self.customer.archive()
         self.provider.archive()
 
-    def customer_display(self):
-        try:
-            return ', '.join(self.customer.get_list_display_fields())
-        except CustomerHistory.DoesNotExist:
-            return ''
-    customer_display.short_description = 'Customer'
-
-    def provider_display(self):
-        try:
-            return ', '.join(self.provider.get_list_display_fields())
-        except CustomerHistory.DoesNotExist:
-            return ''
-    provider_display.short_description = 'Provider'
 
     def _get_values_for_common_fields(self, model, obj):
         fields = {}
@@ -481,6 +470,20 @@ class Invoice(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         super(Invoice, self).save(*args, **kwargs)
+
+    def customer_display(self):
+        try:
+            return ', '.join(self.customer.get_list_display_fields())
+        except CustomerHistory.DoesNotExist:
+            return ''
+    customer_display.short_description = 'Customer'
+
+    def provider_display(self):
+        try:
+            return ', '.join(self.provider.get_list_display_fields())
+        except CustomerHistory.DoesNotExist:
+            return ''
+    provider_display.short_description = 'Provider'
 
 
 class InvoiceEntry(models.Model):
