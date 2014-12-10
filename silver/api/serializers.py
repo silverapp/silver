@@ -180,6 +180,7 @@ class InvoiceEntrySerializer(serializers.ModelSerializer):
         fields = ('id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
 
+
 class InvoiceSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='silver_api:invoice-detail')
     customer = serializers.HyperlinkedRelatedField(
