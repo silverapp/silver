@@ -118,9 +118,9 @@ class InvoiceForm(forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ('invoice_provider', 'invoice_customer', 'issue_date',
-                  'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                  'sales_tax_percent', 'currency', 'state')
+        fields = ('invoice_type', 'invoice_provider', 'invoice_customer',
+                  'issue_date', 'due_date', 'paid_date', 'cancel_date',
+                  'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
 
     def __init__(self, *args, **kwargs):
         super(InvoiceForm, self).__init__(*args, **kwargs)

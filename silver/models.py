@@ -371,7 +371,14 @@ class Invoice(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled', 'past_due']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
+    INVOICE_TYPES = (
+        ('invoice', 'Invoice'),
+        ('proforma', 'Proforma'),
+    )
 
+    invoice_type = models.CharField(max_length=64, choices=INVOICE_TYPES,
+                                    default=INVOICE_TYPES[0][1],
+                                    verbose_name='Type')
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
