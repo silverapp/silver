@@ -258,7 +258,9 @@ class BillingEntity(LiveModel):
         return display
 
     def get_list_display_fields(self):
-        return ['company', 'email', 'address_1', 'city', 'country', 'zip_code']
+        field_names = ['company', 'email', 'address_1', 'city', 'country',
+                       'zip_code']
+        return [getattr(self, field, '') for field in field_names]
 
 
 class Customer(BillingEntity):
@@ -411,19 +413,17 @@ class Invoice(models.Model):
         self.provider.save(update_fields=['archived'])
 
     def customer_display(self):
-        if self.customer:
-            fields = [getattr(self.customer, field)
-                      for field in self.customer.get_list_display_fields()]
-            return ', '.join(fields)
-        return ''
+        try:
+            return ', '.join(self.customer.get_list_display_fields())
+        except CustomerHistory.DoesNotExist:
+            return ''
     customer_display.short_description = 'Customer'
 
     def provider_display(self):
-        if self.provider:
-            fields = [getattr(self.provider, field)
-                      for field in self.provider.get_list_display_fields()]
-            return ', '.join(fields)
-        return ''
+        try:
+            return ', '.join(self.provider.get_list_display_fields())
+        except CustomerHistory.DoesNotExist:
+            return ''
     provider_display.short_description = 'Provider'
 
     def _get_values_for_common_fields(self, model, obj):
