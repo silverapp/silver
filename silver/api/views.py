@@ -1,7 +1,7 @@
 import datetime
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
-from rest_framework import generics, permissions, status, filters
+from rest_framework import generics, permissions, status, filters, mixins
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -45,13 +45,16 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     model = Plan
-    lookup_field = 'pk'
+
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(Plan, pk=pk)
 
     def patch(self, request, *args, **kwargs):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
-        name = request.DATA.get('name', None)
-        generate_after = request.DATA.get('generate_after', None)
-        due_days = request.DATA.get('due_days', None)
+        name = request.data.get('name', None)
+        generate_after = request.data.get('generate_after', None)
+        due_days = request.data.get('due_days', None)
         plan.name = name or plan.name
         plan.generate_after = generate_after or plan.generate_after
         plan.due_days = due_days or plan.due_days
@@ -85,15 +88,19 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeaturesList(ListBulkCreateAPIView):
+class MeteredFeatureList(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
-    model = MeteredFeature
+    queryset = MeteredFeature.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = MeteredFeaturesFilter
 
 
-class MeteredFeaturesDetail(generics.RetrieveAPIView):
+class MeteredFeatureDetail(generics.RetrieveAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(MeteredFeature, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
@@ -111,18 +118,20 @@ class SubscriptionFilter(FilterSet):
 
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    model = Subscription
+    queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(Subscription, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     model = Subscription
     serializer_class = SubscriptionDetailSerializer
-    lookup_url_kwarg = 'sub'
-    lookup_field = 'pk'
 
 
 class SubscriptionDetailActivate(APIView):
@@ -137,8 +146,8 @@ class SubscriptionDetailActivate(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             if request.POST.get('_content', None):
-                start_date = request.DATA.get('start_date', None)
-                trial_end = request.DATA.get('trial_end_date', None)
+                start_date = request.data.get('start_date', None)
+                trial_end = request.data.get('trial_end_date', None)
                 sub.activate(start_date=start_date, trial_end_date=trial_end)
                 sub.save()
             else:
@@ -154,7 +163,7 @@ class SubscriptionDetailCancel(APIView):
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('sub', None))
-        when = request.DATA.get('when', None)
+        when = request.data.get('when', None)
         if sub.state != 'active':
             message = 'Cannot cancel subscription from %s state.' % sub.state
             return Response({"error": message},
@@ -192,24 +201,27 @@ class SubscriptionDetailReactivate(APIView):
                             status=status.HTTP_200_OK)
 
 
-class MeteredFeatureUnitsLogList(generics.ListAPIView):
+class MeteredFeatureUnitsLogList(APIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = MeteredFeatureUnitsLogSerializer
     paginate_by = None
 
-    def get_queryset(self):
-        return MeteredFeatureUnitsLog.objects.filter(
-            metered_feature=self.kwargs['mf'],
-            subscription=self.kwargs['sub'],
+    def get(self, request, format=None, **kwargs):
+        metered_feature_pk = kwargs.get('mf', None)
+        subscription_pk = kwargs.get('sub', None)
+        logs = MeteredFeatureUnitsLog.objects.filter(
+            metered_feature=metered_feature_pk,
+            subscription=subscription_pk)
+        serializer = MeteredFeatureUnitsLogSerializer(
+            logs, many=True, context={'request': request}
         )
+        return Response(serializer.data)
 
     def patch(self, request, *args, **kwargs):
         metered_feature_pk = self.kwargs['mf']
         subscription_pk = self.kwargs['sub']
-        date = request.DATA.get('date', None)
-        consumed_units = request.DATA.get('count', None)
-        update_type = request.DATA.get('update_type', None)
-
+        date = request.data.get('date', None)
+        consumed_units = request.data.get('count', None)
+        update_type = request.data.get('update_type', None)
         if subscription_pk and metered_feature_pk:
             subscription = get_object_or_None(Subscription, pk=subscription_pk)
             metered_feature = get_object_or_None(MeteredFeature,
@@ -303,12 +315,16 @@ class CustomerFilter(FilterSet):
 class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
-    model = Customer
+    queryset = Customer.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CustomerFilter
 
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(Customer, pk=pk)
+
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     model = Customer

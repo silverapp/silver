@@ -38,14 +38,14 @@ class TestProviderEndpoints(APITestCase):
             'http://testserver/providers/1/',
             'name': u'TestProvider',
             'company': u'S.C. Timisoara S.R.L',
-            'email': None,
+            'email': '',
             'address_1': u'Address',
-            'address_2': None,
+            'address_2': '',
             'city': u'Timisoara',
-            'state': None,
+            'state': '',
             'zip_code': u'300300',
             'country': u'RO',
-            'extra': None
+            'extra': ''
         }
         qs = self._filter_providers()
         assert qs.count() == 1
@@ -73,7 +73,8 @@ class TestProviderEndpoints(APITestCase):
             response = self.client.post(url, temp_data)
 
             assert response.status_code == 400
-            assert response.data == {field: [u'This field is required.']}
+            assert (response.data == {field: ['This field may not be blank.']}
+                    or response.data == {field: ['This field is required.']})
 
             qs = self._filter_providers()
             assert qs.count() == 0
@@ -162,12 +163,12 @@ class TestProviderEndpoints(APITestCase):
             'company': 'TheNewCompany',
             'email': 'a@a.com',
             'address_1': 'address',
-            'address_2': None,
+            'address_2': '',
             'city': 'City',
-            'state': None,
+            'state': '',
             'zip_code': '1',
             'country': 'RO',
-            'extra': None
+            'extra': ''
         }
 
     def test_PUT_provider_without_required_field(self):
@@ -198,7 +199,7 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.put(url, data=new_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'company': ['This field is required.']}
+        assert response.data == {'company': ['This field may not be blank.']}
 
     def test_DELETE_provider(self):
         ProviderFactory.create()
