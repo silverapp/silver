@@ -30,8 +30,10 @@ EXTERNAL_APPS = [
     'international',
     'django_fsm',
     'rest_framework',
-    'django_extensions',
     'django_filters'
+
+    # Dev tools
+    'django_extensions',
 ]
 
 INTERNAL_APPS = [
