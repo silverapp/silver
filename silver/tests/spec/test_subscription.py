@@ -9,7 +9,7 @@ from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     MeteredFeatureFactory)
 
 
-class TestCustomerEndpoint(APITestCase):
+class TestSubscriptionEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
