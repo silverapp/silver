@@ -47,6 +47,8 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     country = 'RO'
     city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: '{cnt}'.format(cnt=n))
+    invoice_series = 'TestSeries'
+    flow = 'proforma'
 
 
 class PlanFactory(factory.django.DjangoModelFactory):
