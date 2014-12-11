@@ -99,6 +99,9 @@ class MeteredFeatureAdmin(admin.ModelAdmin):
 
 
 class ProviderAdmin(admin.ModelAdmin):
+    fields = ('name', 'company', 'invoice_series', 'flow', 'email',
+              'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
+              'extra')
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
     list_display_links = list_display

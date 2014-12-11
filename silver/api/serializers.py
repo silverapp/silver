@@ -75,8 +75,9 @@ class ProviderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Provider
-        fields = ('id', 'url', 'name', 'company', 'email', 'address_1',
-                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra')
+        fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
+                  'email', 'address_1', 'address_2', 'city', 'state',
+                  'zip_code', 'country', 'extra')
 
 
 class PlanSerializer(serializers.ModelSerializer):
