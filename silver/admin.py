@@ -118,7 +118,7 @@ class InvoiceForm(forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ('invoice_type', 'number', 'invoice_provider', 'invoice_customer',
+        fields = ('number', 'invoice_provider', 'invoice_customer',
                   'issue_date', 'due_date', 'paid_date', 'cancel_date',
                   'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
 
@@ -137,7 +137,7 @@ class InvoiceForm(forms.ModelForm):
 
 class InvoiceAdmin(admin.ModelAdmin):
     form = InvoiceForm
-    list_display = ['number', 'invoice_type', 'customer_display',
+    list_display = ['number', 'customer_display',
                     'provider_display', 'state', 'due_date',
                     'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']

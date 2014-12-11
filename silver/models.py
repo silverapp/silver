@@ -394,7 +394,7 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ('issue_date', 'number')
-        unique_together = ('invoice_type', 'number')
+        unique_together = ('number',)
 
     @transition(field=state, source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
