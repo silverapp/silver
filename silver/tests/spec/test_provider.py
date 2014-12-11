@@ -2,7 +2,6 @@ import simplejson as json
 
 import pytest
 from django.core.urlresolvers import reverse
-from django.core import serializers
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -27,7 +26,8 @@ class TestProviderEndpoints(APITestCase):
             "address_1": "Address",
             "country": "RO",
             "city": "Timisoara",
-            "zip_code": "300300"
+            "zip_code": "300300",
+            "invoice_series": "TestSeries"
         }
         response = self.client.post(url, data)
 
@@ -38,6 +38,8 @@ class TestProviderEndpoints(APITestCase):
             'http://testserver/providers/1/',
             'name': u'TestProvider',
             'company': u'S.C. Timisoara S.R.L',
+            'invoice_series': 'TestSeries',
+            'flow': 'proforma',
             'email': '',
             'address_1': u'Address',
             'address_2': '',
@@ -61,7 +63,7 @@ class TestProviderEndpoints(APITestCase):
             "zip_code": "300300"
         }
         required_fields = ['company', 'address_1', 'country', 'city',
-                           'zip_code']
+                           'zip_code', 'proforma', 'invoice_series']
 
         for field in required_fields:
             temp_data = complete_data.copy()
@@ -121,6 +123,8 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'Provider1',
             'company': 'Company1',
+            'invoice_series': 'TestSeries',
+            'flow': 'proforma',
             'email': None,
             'address_1': 'Address_11',
             'address_2': None,
@@ -190,6 +194,8 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'TestProvider',
             'email': 'a@a.com',
+            'invoice_series': 'NSeries',
+            'flow': 'Proforma',
             'address_1': 'address',
             'city': 'City',
             'zip_code': '1',
