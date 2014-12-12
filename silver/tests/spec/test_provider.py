@@ -60,10 +60,11 @@ class TestProviderEndpoints(APITestCase):
             "address_1": "Address",
             "country": "RO",
             "city": "Timisoara",
-            "zip_code": "300300"
+            "zip_code": "300300",
+            "invoice_series": "TheSeries",
         }
         required_fields = ['company', 'address_1', 'country', 'city',
-                           'zip_code', 'proforma', 'invoice_series']
+                           'zip_code', 'invoice_series']
 
         for field in required_fields:
             temp_data = complete_data.copy()
@@ -75,8 +76,10 @@ class TestProviderEndpoints(APITestCase):
             response = self.client.post(url, temp_data)
 
             assert response.status_code == 400
-            assert (response.data == {field: ['This field may not be blank.']}
-                    or response.data == {field: ['This field is required.']})
+            valid_responses = [(field, ['This field may not be blank.']),
+                               (field, ['This field is required.'])]
+            for response_item in response.data.iteritems():
+                assert response_item in valid_responses
 
             qs = self._filter_providers()
             assert qs.count() == 0
@@ -150,6 +153,7 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'TestProvider',
             'company': 'TheNewCompany',
+            'invoice_series': 'NewSeries',
             'email': 'a@a.com',
             'address_1': 'address',
             'city': 'City',
@@ -165,6 +169,8 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'TestProvider',
             'company': 'TheNewCompany',
+            'invoice_series': 'NewSeries',
+            'flow': 'proforma',
             'email': 'a@a.com',
             'address_1': 'address',
             'address_2': '',
@@ -195,7 +201,6 @@ class TestProviderEndpoints(APITestCase):
             'name': 'TestProvider',
             'email': 'a@a.com',
             'invoice_series': 'NSeries',
-            'flow': 'Proforma',
             'address_1': 'address',
             'city': 'City',
             'zip_code': '1',
