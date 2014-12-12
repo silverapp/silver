@@ -1,5 +1,3 @@
-import simplejson as json
-
 import pytest
 from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
