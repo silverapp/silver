@@ -380,7 +380,10 @@ class ProviderHistory(BillingEntity):
         max_length=10, choices=Provider.FLOW_CHOICES,
         default=Provider.FLOW_CHOICES[0][0],
     )
-    invoice_series = models.CharField(max_length=10, null=True)
+    invoice_series = models.CharField(
+        max_length=10, null=True,
+        verbose_name='Invoice series'
+    )
 
     def __unicode__(self):
         return '%s - %s' % (self.name, self.company)
