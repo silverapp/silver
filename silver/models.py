@@ -326,11 +326,17 @@ class Provider(BillingEntity):
         return " - ".join(filter(None, [self.name, self.company]))
 
 def _update_historical_fields(instance, history_model):
-    main_fields = set([field for field in instance._meta.get_all_field_names()])
-    history_model_fields = set(history_model._meta.get_all_field_names()) -\
-                           set(['id', 'live'])
+    # get all the fields from the Provider/Customer instance
+    main_fields = set([field.name
+                       for field in instance._meta.fields if field != 'id'])
+    # get all the fields from the corresponding ProviderHistory/CustomerHistory
+    # model
+    history_model_fields = set([field.name
+                                for field in history_model._meta.fields])
+    # get all the common fields
     common_fields = main_fields.intersection(history_model_fields)
 
+    # obtain the values for the common fields
     common_fields_values = {}
     for field in common_fields:
         common_fields_values[field] = getattr(instance, field)
@@ -423,7 +429,9 @@ class InvoicingEntity(models.Model):
 
     def _get_values_for_common_fields(self, model, obj):
         fields = {}
-        for field in set(model._meta.get_all_field_names()) - set(['id']):
+        model_fields = [field.name
+                        for field in model._meta.fields if field != 'id']
+        for field in model_fields:
             try:
                 fields[field] = getattr(obj, field)
             except AttributeError:
