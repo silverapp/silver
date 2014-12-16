@@ -8,7 +8,8 @@ from silver.tests.factories import CustomerFactory, ProviderFactory
 class TestInvoice(TestCase):
 
     def _assert_common_fields_equality(self, obj1, obj2):
-        for field in set(obj1._meta.get_all_field_names()) - set(['id']):
+        obj1_fields = [field.name for field in obj1._meta.fields]
+        for field in obj1_fields:
             obj1_field_value = getattr(obj1, field)
             try:
                 obj2_field_value = getattr(obj2, field)
