@@ -394,7 +394,7 @@ class ProviderHistory(BillingEntity):
 
 
 class Invoice(models.Model):
-    states = ['draft', 'issued', 'paid', 'canceled', 'past_due']
+    states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
     # TODO: add logic for generating the number
