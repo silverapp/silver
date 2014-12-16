@@ -393,18 +393,17 @@ class ProviderHistory(BillingEntity):
         self.save(update_fields=['archived'])
 
 
-class Invoice(models.Model):
+class InvoicingEntity(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
-    # TODO: add logic for generating the number
-    number = models.IntegerField()
+    number = models.IntegerField(default=200)
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
-    customer = models.ForeignKey('CustomerHistory', related_name='invoices')
-    provider = models.ForeignKey('ProviderHistory', related_name='invoices')
+    customer = models.ForeignKey('CustomerHistory')
+    provider = models.ForeignKey('ProviderHistory')
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
@@ -419,27 +418,8 @@ class Invoice(models.Model):
     )
 
     class Meta:
+        abstract = True
         ordering = ('issue_date', 'number')
-        unique_together = ('number',)
-
-    @transition(field=state, source='draft', target='issued')
-    def issue_invoice(self, issue_date=None, due_date=None):
-        if issue_date:
-            self.issue_date = issue_date
-        if not self.issue_date and not issue_date:
-            self.issue_date = timezone.now().date()
-        if due_date:
-            self.due_date = due_date
-
-        if not self.sales_tax_name:
-            self.sales_tax_name = self.customer.sales_tax_name
-
-        if not self.sales_tax_percent:
-            self.sales_tax_percent = self.customer.sales_tax_percent
-
-        self.customer.archive()
-        self.provider.archive()
-
 
     def _get_values_for_common_fields(self, model, obj):
         fields = {}
@@ -491,7 +471,7 @@ class Invoice(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        super(Invoice, self).save(*args, **kwargs)
+        super(InvoicingEntity, self).save(*args, **kwargs)
 
     def customer_display(self):
         try:
@@ -506,6 +486,48 @@ class Invoice(models.Model):
         except CustomerHistory.DoesNotExist:
             return ''
     provider_display.short_description = 'Provider'
+
+
+class Invoice(InvoicingEntity):
+
+    @transition(field='state', source='draft', target='issued')
+    def issue_invoice(self, issue_date=None, due_date=None):
+        if issue_date:
+            self.issue_date = issue_date
+        if not self.issue_date and not issue_date:
+            self.issue_date = timezone.now().date()
+        if due_date:
+            self.due_date = due_date
+
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.customer.archive()
+        self.provider.archive()
+
+    def __init__(self, *args, **kwargs):
+        super(Invoice, self).__init__(*args, **kwargs)
+
+        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field.related_name = "invoices"
+
+        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field.related_name = "invoices"
+
+
+class Proforma(InvoicingEntity):
+
+    def __init__(self, *args, **kwargs):
+        super(Proforma, self).__init__(*args, **kwargs)
+
+        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field.related_name = "proformas"
+
+        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field.related_name = "proformas"
 
 
 class InvoiceEntry(models.Model):
