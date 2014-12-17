@@ -136,9 +136,8 @@ class InvoiceForm(forms.ModelForm):
 
 
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ['number', 'customer_display',
-                    'provider_display', 'state', 'due_date',
-                    'paid_date', 'cancel_date', 'sales_tax_name',
+    list_display = ['number', 'customer_display', 'provider_display', 'state',
+                    'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']
     list_display_links = list_display
 
