@@ -10,6 +10,7 @@ from django_fsm import FSMField, transition
 from international.models import countries, currencies
 from livefield.models import LiveModel
 
+
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
 
@@ -425,12 +426,12 @@ class InvoicingEntity(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('issue_date', 'number')
+        ordering = ('-issue_date', 'number')
 
     def _get_values_for_common_fields(self, model, obj):
         fields = {}
         model_fields = [field.name
-                        for field in model._meta.fields if field != 'id']
+                        for field in model._meta.fields if field.name != 'id']
         for field in model_fields:
             try:
                 fields[field] = getattr(obj, field)
@@ -451,8 +452,10 @@ class InvoicingEntity(models.Model):
                                                                invoice_customer)
             customer_fields.update(common_fields)
             try:
-                if self.customer and self.customer.customer_ref != invoice_customer:
-                    CustomerHistory.objects.filter(id=self.customer.id).update(**customer_fields)
+                if (self.customer and
+                    self.customer.customer_ref != invoice_customer):
+                    CustomerHistory.objects.filter(id=self.customer.id)\
+                                           .update(**customer_fields)
             except CustomerHistory.DoesNotExist:
                 self.customer = CustomerHistory.objects.create(**customer_fields)
 
@@ -463,8 +466,10 @@ class InvoicingEntity(models.Model):
                                                                invoice_provider)
             provider_fields.update(common_fields)
             try:
-                if self.provider and self.provider.provider_ref != invoice_provider:
-                    ProviderHistory.objects.filter(id=self.provider.id).update(**provider_fields)
+                if (self.provider and
+                    self.provider.provider_ref != invoice_provider):
+                    ProviderHistory.objects.filter(id=self.provider.id)\
+                                           .update(**provider_fields)
             except ProviderHistory.DoesNotExist:
                 self.provider = ProviderHistory.objects.create(**provider_fields)
 
@@ -495,6 +500,7 @@ class InvoicingEntity(models.Model):
             return ''
     provider_display.short_description = 'Provider'
 
+    @property
     def invoice_series(self):
         try:
             return self.provider.invoice_series
