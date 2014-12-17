@@ -121,9 +121,6 @@ class InvoiceForm(forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ('number', 'invoice_provider', 'invoice_customer',
-                  'issue_date', 'due_date', 'paid_date', 'cancel_date',
-                  'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
 
     def __init__(self, *args, **kwargs):
         super(InvoiceForm, self).__init__(*args, **kwargs)
@@ -139,7 +136,6 @@ class InvoiceForm(forms.ModelForm):
 
 
 class InvoiceAdmin(admin.ModelAdmin):
-    form = InvoiceForm
     list_display = ['number', 'customer_display',
                     'provider_display', 'state', 'due_date',
                     'paid_date', 'cancel_date', 'sales_tax_name',
@@ -153,7 +149,15 @@ class InvoiceAdmin(admin.ModelAdmin):
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
+    form = InvoiceForm
+    fields = (('series', 'number'), 'invoice_provider', 'invoice_customer',
+              'issue_date', 'due_date', 'paid_date', 'cancel_date',
+              'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
+    readonly_fields = ('series', )
     inlines = [InvoiceEntryInline]
+
+    def series(self, obj):
+        return obj.invoice_series
 
     def save_model(self, request, obj, form, change):
         customer_id = request.POST.get('invoice_customer') or -1
