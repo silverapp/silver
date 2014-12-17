@@ -1,7 +1,7 @@
 """Models for the silver app."""
 import datetime
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
 from django.db.models.signals import post_save
@@ -485,6 +485,27 @@ class InvoicingEntity(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         super(InvoicingEntity, self).save(*args, **kwargs)
+
+    def validate_unique(self, *args, **kwargs):
+        # TODO: this won't work bc it is called from the form's validate_unique
+        # method and the provider and customer will only be added later, when
+        # calling the model's save() method.
+        # Workarounds:
+        #   * move the creation of the CustomerHistory and ProviderHistory to
+        #   the form => this validate_unique method will work
+        #   * make a custom _validate_unique method and call that from
+        #   model's save()
+
+        super(InvoicingEntity, self).validate_unique(*args, **kwargs)
+
+        if not self.id:
+            if not self.__class__._default_manager.filter(
+                provider=self.provider,
+                provider__invoice_series=self.provider.invoice_series,
+                number=self.number
+            ).exists():
+                raise ValidationError({NON_FIELD_ERRORS: 'SILVER_ERROR'})
+
 
     def customer_display(self):
         try:
