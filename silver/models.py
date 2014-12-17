@@ -495,6 +495,12 @@ class InvoicingEntity(models.Model):
             return ''
     provider_display.short_description = 'Provider'
 
+    def invoice_series(self):
+        try:
+            return self.provider.invoice_series
+        except ProviderHistory.DoesNotExist:
+            return ''
+
 
 class Invoice(InvoicingEntity):
 
