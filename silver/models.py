@@ -497,6 +497,7 @@ class InvoicingEntity(models.Model):
         #   model's save()
 
         super(InvoicingEntity, self).validate_unique(*args, **kwargs)
+        pass
 
         if not self.id:
             if not self.__class__._default_manager.filter(
