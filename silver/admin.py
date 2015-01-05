@@ -71,7 +71,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                                   level=messages.ERROR)
             else:
                 self.message_user(request, '%d state(s) changed (%d failed).' %
-                                 (queryset_count - failed_count, failed_count),
+                                  (queryset_count - failed_count, failed_count),
                                   level=messages.WARNING)
         else:
             self.message_user(request, 'Successfully changed %d state(s).' %
@@ -95,6 +95,13 @@ class CustomerAdmin(admin.ModelAdmin):
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
 
+    def get_queryset(self, request):
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
     def get_model_perms(self, request):
@@ -106,6 +113,12 @@ class ProviderAdmin(admin.ModelAdmin):
                     'city', 'state', 'zip_code', 'country']
     search_fields = list_display
 
+    def get_queryset(self, request):
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
