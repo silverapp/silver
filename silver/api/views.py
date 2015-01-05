@@ -1,4 +1,5 @@
 import datetime
+from django.http.response import Http404
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
 from rest_framework import generics, permissions, status, filters, mixins
@@ -323,7 +324,10 @@ class CustomerList(generics.ListCreateAPIView):
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         pk = self.kwargs.get('pk', None)
-        return get_object_or_404(Customer, pk=pk)
+        try:
+            return Customer.objects.get(pk=pk)
+        except (TypeError, ValueError, Customer.DoesNotExist):
+            raise Http404
 
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer

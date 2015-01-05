@@ -2,7 +2,7 @@
 import datetime
 from django.core.exceptions import ValidationError
 from django.db import models
-from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
 
@@ -306,6 +306,16 @@ class Customer(BillingEntity):
         return ", ".join(filter(None, [self.address_1, self.city, self.state,
                                        self.zip_code, self.country]))
     complete_address.short_description = 'Complete address'
+
+    def delete(self):
+        subscriptions = Subscription.objects.filter(customer=self)
+        for sub in subscriptions:
+            try:
+                sub.cancel()
+                sub.save()
+            except TransitionNotAllowed:
+                pass
+        super(Customer, self).delete()
 
 
 class Provider(BillingEntity):
