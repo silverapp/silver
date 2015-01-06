@@ -5,6 +5,35 @@ from django_fsm import TransitionNotAllowed
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Offer)
 
+from django.contrib.admin.actions import delete_selected as delete_selected_
+
+from django.utils.translation import ugettext_lazy
+
+
+class LiveModelAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
+    def delete_model(self, request, obj):
+        if 'hard_delete' in dir(obj):
+            obj.hard_delete()
+        else:
+            super(LiveModelAdmin, self).delete_model(request, obj)
+
+    def delete_selected(self, request, queryset):
+        if 'hard_delete' in dir(queryset):
+            queryset.delete = queryset.hard_delete
+        return delete_selected_(self, request, queryset)
+
+    delete_selected.short_description = ugettext_lazy("Delete selected "
+                                                      "%(verbose_name_plural)s")
+
+    actions = ['delete_selected']
+
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
@@ -87,7 +116,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'end', queryset)
 
 
-class CustomerAdmin(admin.ModelAdmin):
+class CustomerAdmin(LiveModelAdmin):
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
@@ -95,30 +124,17 @@ class CustomerAdmin(admin.ModelAdmin):
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
 
-    def get_queryset(self, request):
-        qs = self.model.all_objects.get_queryset()
-        ordering = self.get_ordering(request)
-        if ordering:
-            qs = qs.order_by(*ordering)
-        return qs
-
 
 class MeteredFeatureAdmin(admin.ModelAdmin):
     def get_model_perms(self, request):
         return {}
 
 
-class ProviderAdmin(admin.ModelAdmin):
+class ProviderAdmin(LiveModelAdmin):
     list_display = ['name', 'company', 'email', 'address_1', 'address_2',
                     'city', 'state', 'zip_code', 'country']
     search_fields = list_display
 
-    def get_queryset(self, request):
-        qs = self.model.all_objects.get_queryset()
-        ordering = self.get_ordering(request)
-        if ordering:
-            qs = qs.order_by(*ordering)
-        return qs
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
