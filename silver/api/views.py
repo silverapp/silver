@@ -111,10 +111,11 @@ class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
     customer = CharFilter(name='customer__name', lookup_type='icontains')
     company = CharFilter(name='customer__company', lookup_type='icontains')
+    state = CharFilter(name='state', lookup_type='icontains')
 
     class Meta:
         model = Subscription
-        fields = ['plan', 'customer', 'company']
+        fields = ['plan', 'customer', 'company', 'state']
 
 
 class SubscriptionList(generics.ListCreateAPIView):
