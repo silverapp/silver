@@ -1,9 +1,10 @@
 """Models for the silver app."""
 import datetime
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
+from django.db.models import Max
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_fsm import FSMField, transition
@@ -476,6 +477,7 @@ class InvoicingDocument(models.Model):
             except ProviderHistory.DoesNotExist:
                 self.provider = ProviderHistory.objects.create(**provider_fields)
 
+
     def save(self, *args, **kwargs):
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
         invoice_provider_id = kwargs.pop('invoice_provider_id', None)
@@ -488,26 +490,6 @@ class InvoicingDocument(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         super(InvoicingDocument, self).save(*args, **kwargs)
-
-    def validate_unique(self, *args, **kwargs):
-        # TODO: this won't work bc it is called from the form's validate_unique
-        # method and the provider and customer will only be added later, when
-        # calling the model's save() method.
-        # Workarounds:
-        #   * move the creation of the CustomerHistory and ProviderHistory to
-        #   the form => this validate_unique method will work
-        #   * make a custom _validate_unique method and call that from
-        #   model's save()
-
-        super(InvoicingDocument, self).validate_unique(*args, **kwargs)
-
-        # if not self.id:
-        #    if not self.__class__._default_manager.filter(
-        #        provider=self.provider,
-        #        provider__invoice_series=self.provider.invoice_series,
-        #        number=self.number
-        #    ).exists():
-        #        raise ValidationError({NON_FIELD_ERRORS: 'SILVER_ERROR'})
 
 
     def customer_display(self):
@@ -531,8 +513,42 @@ class InvoicingDocument(models.Model):
         except ProviderHistory.DoesNotExist:
             return ''
 
+    def validate_unique(self, *args, **kwargs):
+        # TODO: this won't work bc it is called from the form's validate_unique
+        # method and the provider and customer will only be added later, when
+        # calling the model's save() method.
+        # Workarounds:
+        #   * move the creation of the CustomerHistory and ProviderHistory to
+        #   the form => this validate_unique method will work
+        #   * make a custom _validate_unique method and call that from
+        #   model's save()
+
+        super(InvoicingDocument, self).validate_unique(*args, **kwargs)
+
+        # if not self.id:
+        #    if not self.__class__._default_manager.filter(
+        #        provider=self.provider,
+        #        provider__invoice_series=self.provider.invoice_series,
+        #        number=self.number
+        #    ).exists():
+        #        raise ValidationError({NON_FIELD_ERRORS: 'SILVER_ERROR'})
+
 
 class Invoice(InvoicingDocument):
+
+    def _generate_number(self):
+         if not self.id:
+            # new invoice (create)
+            if not self.__class__._default_manager.filter(
+                provider=self.provider,
+                provider__invoice_series=self.provider.invoice_series,
+            ).exists():
+                # a combination of (provider, invoice_series) does not exist
+                return self.provider.invoice_series
+            else:
+                # a combination of (provider, invoice_series) does exists
+                return 200
+
 
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
