@@ -403,7 +403,7 @@ class ProviderHistory(ProviderBase):
         self.save(update_fields=['archived'])
 
 
-class InvoicingEntity(models.Model):
+class InvoicingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
@@ -487,7 +487,7 @@ class InvoicingEntity(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        super(InvoicingEntity, self).save(*args, **kwargs)
+        super(InvoicingDocument, self).save(*args, **kwargs)
 
     def validate_unique(self, *args, **kwargs):
         # TODO: this won't work bc it is called from the form's validate_unique
@@ -499,7 +499,7 @@ class InvoicingEntity(models.Model):
         #   * make a custom _validate_unique method and call that from
         #   model's save()
 
-        super(InvoicingEntity, self).validate_unique(*args, **kwargs)
+        super(InvoicingDocument, self).validate_unique(*args, **kwargs)
 
         # if not self.id:
         #    if not self.__class__._default_manager.filter(
@@ -532,7 +532,7 @@ class InvoicingEntity(models.Model):
             return ''
 
 
-class Invoice(InvoicingEntity):
+class Invoice(InvoicingDocument):
 
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
@@ -562,7 +562,7 @@ class Invoice(InvoicingEntity):
         customer_field.related_name = "invoices"
 
 
-class Proforma(InvoicingEntity):
+class Proforma(InvoicingDocument):
 
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
