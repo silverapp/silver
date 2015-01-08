@@ -1,7 +1,7 @@
 """Models for the silver app."""
 import datetime
 
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db import models
 from django.db.models.signals import post_save
