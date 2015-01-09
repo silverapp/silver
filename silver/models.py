@@ -374,7 +374,18 @@ class AbstractInvoicingDocument(models.Model):
         """Generates the number for a proforma/invoice. To be implemented
         in the corresponding subclass."""
 
-        raise NotImplementedError
+        if not self.__class__._default_manager.filter(
+            provider=self.provider,
+        ).exists():
+            # An invoice with this provider does not exist
+            return self.provider.invoice_starting_number
+        else:
+            # An invoice with this provider already exists
+            max_existing_number = self.__class__._default_manager.filter(
+                provider=self.provider,
+            ).aggregate(Max('number'))['number__max']
+
+            return max_existing_number + 1
 
     def save(self, *args, **kwargs):
         # Generate the number
@@ -421,22 +432,6 @@ class Invoice(AbstractInvoicingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
 
-    def _generate_number(self):
-        return 1
-        #if not self.__class__._default_manager.filter(
-            #provider__provider_ref=self.provider.provider_ref,
-            #provider__invoice_series=self.provider.invoice_series,
-        #).exists():
-            ## a combination of (provider, invoice_series) does not exist
-            #return self.provider.invoice_starting_number
-        #else:
-            ## a combination of (provider, invoice_series) does exists
-            #max_existing_number = self.__class__._default_manager.filter(
-                #provider__provider_ref=self.provider.provider_ref,
-                #provider__invoice_series=self.provider.invoice_series,
-            #).aggregate(Max('number'))['number__max']
-            #return max_existing_number + 1
-
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
         if issue_date:
@@ -465,22 +460,6 @@ class Proforma(AbstractInvoicingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
-
-    def _generate_number(self):
-        return 1
-        #if not self.__class__._default_manager.filter(
-            #provider__provider_ref=self.provider.provider_ref,
-            #provider__proforma_series=self.provider.proforma_series,
-        #).exists():
-            ## a combination of (provider, invoice_series) does not exist
-            #return self.provider.proforma_starting_number
-        #else:
-            ## a combination of (provider, invoice_series) does exists
-            #max_existing_number = self.__class__._default_manager.filter(
-                #provider__provider_ref=self.provider.provider_ref,
-                #provider__proforma_series=self.provider.proforma_series,
-            #).aggregate(Max('number'))['number__max']
-            #return max_existing_number + 1
 
 class InvoiceEntry(models.Model):
     description = models.CharField(max_length=255)
