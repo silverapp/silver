@@ -10,6 +10,7 @@ from django.dispatch import receiver
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
 from livefield.models import LiveModel
+import jsonfield
 
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
@@ -233,7 +234,7 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
-class AbastractBillingEntity(LiveModel):
+class AbstractBillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
@@ -267,7 +268,7 @@ class AbastractBillingEntity(LiveModel):
         return [getattr(self, field, '') for field in field_names]
 
 
-class Customer(AbastractBillingEntity):
+class Customer(AbstractBillingEntity):
     customer_reference = models.CharField(
         max_length=256, blank=True, null=True,
         help_text="It's a reference to be passed between silver and clients. "
@@ -300,7 +301,7 @@ class Customer(AbastractBillingEntity):
     complete_address.short_description = 'Complete address'
 
 
-class AbastractProvider(AbastractBillingEntity):
+class Provider(AbstractBillingEntity):
     FLOW_CHOICES = (
         ('proforma', 'Proforma'),
         ('invoice', 'Invoice'),
@@ -325,12 +326,6 @@ class AbastractProvider(AbastractBillingEntity):
     )
     proforma_starting_number = models.PositiveIntegerField()
 
-    class Meta:
-        abstract = True
-
-
-class Provider(AbastractProvider):
-
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
@@ -340,79 +335,8 @@ class Provider(AbastractProvider):
         return " - ".join(filter(None, [self.name, self.company]))
 
 
-def _update_historical_fields(instance, history_model):
-    """
-    It updates the common fields of `instance` and `history_model` for all the
-    `history_model` instances that are related to `instance`.
-    """
-
-    # get all the fields from the Provider/Customer instance
-    main_fields = set([field.name
-                       for field in instance._meta.fields
-                       if field.name != 'id'])
-    # get all the fields from the corresponding ProviderHistory/CustomerHistory
-    # model
-    history_model_fields = set([field.name
-                                for field in history_model._meta.fields])
-    # get all the common fields
-    common_fields = main_fields.intersection(history_model_fields)
-
-    # obtain the values for the common fields
-    common_fields_values = {}
-    for field in common_fields:
-        common_fields_values[field] = getattr(instance, field)
-
-    print common_fields_values
-    instance.archive_entries.filter(archived=False).update(
-        **common_fields_values)
-
-
-@receiver(post_save, sender=Provider)
-def _update_provider_historical_data(sender, instance, created, **kwargs):
-    if not created:
-        _update_historical_fields(instance, ProviderHistory)
-
-
-@receiver(post_save, sender=Customer)
-def _update_customer_historical_data(sender, instance, created, **kwargs):
-    if not created:
-        _update_historical_fields(instance, CustomerHistory)
-
-
 class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
-
-
-class CustomerHistory(AbastractBillingEntity):
-    customer_ref = models.ForeignKey('Customer', related_name='archive_entries')
-    archived = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return '%s - %s' % (self.name, self.company)
-
-    @property
-    def sales_tax_name(self):
-        return self.customer_ref.sales_tax_name
-
-    @property
-    def sales_tax_percent(self):
-        return self.customer_ref.sales_tax_percent
-
-    def archive(self):
-        self.archived = True
-        self.save(update_fields=['archived'])
-
-
-class ProviderHistory(AbastractProvider):
-    provider_ref = models.ForeignKey('Provider', related_name='archive_entries')
-    archived = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return '%s - %s' % (self.name, self.company)
-
-    def archive(self):
-        self.archived = True
-        self.save(update_fields=['archived'])
 
 
 class AbstractInvoicingDocument(models.Model):
@@ -420,12 +344,14 @@ class AbstractInvoicingDocument(models.Model):
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
     number = models.IntegerField(blank=True)
+    customer = models.ForeignKey('Customer')
+    provider = models.ForeignKey('Provider')
+    customer_history = jsonfield.JSONField()
+    provider_history = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
-    customer = models.ForeignKey('CustomerHistory')
-    provider = models.ForeignKey('ProviderHistory')
     sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
@@ -441,61 +367,8 @@ class AbstractInvoicingDocument(models.Model):
 
     class Meta:
         abstract = True
+        unique_together = ('provider', 'number')
         ordering = ('-issue_date', 'number')
-
-    def _get_values_for_common_fields(self, model, obj):
-        fields = {}
-        model_fields = [field.name
-                        for field in model._meta.fields if field.name != 'id']
-        for field in model_fields:
-            try:
-                fields[field] = getattr(obj, field)
-            except AttributeError:
-                pass
-
-        return fields
-
-    def _create_or_update_customer_and_provider(self, invoice_customer_id,
-                                                invoice_provider_id):
-        """
-        Does one of the following:
-            * If the document already exists and either the Provider or the
-            Customer were changed, it updates the corresponding entry from the
-            {Provider, Customer}History model.
-            * If the document is being created a new entry is created it the
-            corresponding {Provider, Customer}History table and then linked
-            to the document.
-        """
-        invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
-        invoice_provider = get_object_or_None(Provider, id=invoice_provider_id)
-
-        # Handle the invoice's customer
-        if invoice_customer:
-            customer_fields = {'customer_ref': invoice_customer}
-            common_fields = self._get_values_for_common_fields(CustomerHistory,
-                                                               invoice_customer)
-            customer_fields.update(common_fields)
-            try:
-                if (self.customer and
-                    self.customer.customer_ref != invoice_customer):
-                    CustomerHistory.objects.filter(id=self.customer.id)\
-                                           .update(**customer_fields)
-            except CustomerHistory.DoesNotExist:
-                self.customer = CustomerHistory.objects.create(**customer_fields)
-
-        # Handle the invoice's provider
-        if invoice_provider:
-            provider_fields = {'provider_ref': invoice_provider}
-            common_fields = self._get_values_for_common_fields(AbastractProvider,
-                                                               invoice_provider)
-            provider_fields.update(common_fields)
-            try:
-                if (self.provider and
-                    self.provider.provider_ref != invoice_provider):
-                    ProviderHistory.objects.filter(id=self.provider.id)\
-                                           .update(**provider_fields)
-            except ProviderHistory.DoesNotExist:
-                self.provider = ProviderHistory.objects.create(**provider_fields)
 
     def _generate_number(self):
         """Generates the number for a proforma/invoice. To be implemented
@@ -504,12 +377,6 @@ class AbstractInvoicingDocument(models.Model):
         raise NotImplementedError
 
     def save(self, *args, **kwargs):
-        # Create the {Customer, Provider}History models.
-        invoice_customer_id = kwargs.pop('invoice_customer_id', None)
-        invoice_provider_id = kwargs.pop('invoice_provider_id', None)
-        self._create_or_update_customer_and_provider(invoice_customer_id,
-                                                     invoice_provider_id)
-
         # Generate the number
         if not self.number:
             self.number = self._generate_number()
@@ -525,14 +392,14 @@ class AbstractInvoicingDocument(models.Model):
     def customer_display(self):
         try:
             return ', '.join(self.customer.get_list_display_fields())
-        except CustomerHistory.DoesNotExist:
+        except Customer.DoesNotExist:
             return ''
     customer_display.short_description = 'Customer'
 
     def provider_display(self):
         try:
             return ', '.join(self.provider.get_list_display_fields())
-        except CustomerHistory.DoesNotExist:
+        except Customer.DoesNotExist:
             return ''
     provider_display.short_description = 'Provider'
 
@@ -540,29 +407,8 @@ class AbstractInvoicingDocument(models.Model):
     def invoice_series(self):
         try:
             return self.provider.invoice_series
-        except ProviderHistory.DoesNotExist:
+        except Provider.DoesNotExist:
             return ''
-
-    def validate_unique(self, *args, **kwargs):
-        # TODO: this won't work bc it is called from the form's validate_unique
-        # method and the provider and customer will only be added later, when
-        # calling the model's save() method.
-        # Workarounds:
-        #   * move the creation of the CustomerHistory and ProviderHistory to
-        #   the form => this validate_unique method will work
-        #   * make a custom _validate_unique method and call that from
-        #   model's save()
-
-        super(AbstractInvoicingDocument, self).validate_unique(*args, **kwargs)
-
-        # if not self.id:
-        #    if not self.__class__._default_manager.filter(
-        #        provider=self.provider,
-        #        provider__invoice_series=self.provider.invoice_series,
-        #        number=self.number
-        #    ).exists():
-        #        raise ValidationError({NON_FIELD_ERRORS: 'SILVER_ERROR'})
-
 
 class Invoice(AbstractInvoicingDocument):
 
@@ -576,19 +422,20 @@ class Invoice(AbstractInvoicingDocument):
         customer_field.related_name = "invoices"
 
     def _generate_number(self):
-        if not self.__class__._default_manager.filter(
-            provider__provider_ref=self.provider.provider_ref,
-            provider__invoice_series=self.provider.invoice_series,
-        ).exists():
-            # a combination of (provider, invoice_series) does not exist
-            return self.provider.invoice_starting_number
-        else:
-            # a combination of (provider, invoice_series) does exists
-            max_existing_number = self.__class__._default_manager.filter(
-                provider__provider_ref=self.provider.provider_ref,
-                provider__invoice_series=self.provider.invoice_series,
-            ).aggregate(Max('number'))['number__max']
-            return max_existing_number + 1
+        return 1
+        #if not self.__class__._default_manager.filter(
+            #provider__provider_ref=self.provider.provider_ref,
+            #provider__invoice_series=self.provider.invoice_series,
+        #).exists():
+            ## a combination of (provider, invoice_series) does not exist
+            #return self.provider.invoice_starting_number
+        #else:
+            ## a combination of (provider, invoice_series) does exists
+            #max_existing_number = self.__class__._default_manager.filter(
+                #provider__provider_ref=self.provider.provider_ref,
+                #provider__invoice_series=self.provider.invoice_series,
+            #).aggregate(Max('number'))['number__max']
+            #return max_existing_number + 1
 
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
@@ -620,19 +467,20 @@ class Proforma(AbstractInvoicingDocument):
         customer_field.related_name = "proformas"
 
     def _generate_number(self):
-        if not self.__class__._default_manager.filter(
-            provider__provider_ref=self.provider.provider_ref,
-            provider__proforma_series=self.provider.proforma_series,
-        ).exists():
-            # a combination of (provider, invoice_series) does not exist
-            return self.provider.proforma_starting_number
-        else:
-            # a combination of (provider, invoice_series) does exists
-            max_existing_number = self.__class__._default_manager.filter(
-                provider__provider_ref=self.provider.provider_ref,
-                provider__proforma_series=self.provider.proforma_series,
-            ).aggregate(Max('number'))['number__max']
-            return max_existing_number + 1
+        return 1
+        #if not self.__class__._default_manager.filter(
+            #provider__provider_ref=self.provider.provider_ref,
+            #provider__proforma_series=self.provider.proforma_series,
+        #).exists():
+            ## a combination of (provider, invoice_series) does not exist
+            #return self.provider.proforma_starting_number
+        #else:
+            ## a combination of (provider, invoice_series) does exists
+            #max_existing_number = self.__class__._default_manager.filter(
+                #provider__provider_ref=self.provider.provider_ref,
+                #provider__proforma_series=self.provider.proforma_series,
+            #).aggregate(Max('number'))['number__max']
+            #return max_existing_number + 1
 
 class InvoiceEntry(models.Model):
     description = models.CharField(max_length=255)

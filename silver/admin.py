@@ -1,4 +1,3 @@
-from django import forms
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -113,29 +112,6 @@ class ProviderAdmin(admin.ModelAdmin):
 class InvoiceEntryInline(admin.TabularInline):
     model = InvoiceEntry
 
-
-class InvoiceForm(forms.ModelForm):
-    invoice_customer = forms.ModelChoiceField(queryset=Customer.objects.all(),
-                                              label='Customer')
-    invoice_provider = forms.ModelChoiceField(queryset=Provider.objects.all(),
-                                              label='Provider')
-
-    class Meta:
-        model = Invoice
-
-    def __init__(self, *args, **kwargs):
-        super(InvoiceForm, self).__init__(*args, **kwargs)
-        instance = kwargs.get('instance')
-        if instance:
-            customer_id = instance.customer.customer_ref.id
-            if customer_id:
-                self.fields['invoice_customer'].initial = customer_id
-
-            provider_id = instance.provider.provider_ref.id
-            if provider_id:
-                self.fields['invoice_provider'].initial = provider_id
-
-
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ['number', 'customer_display', 'provider_display', 'state',
                     'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
@@ -149,8 +125,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
-    form = InvoiceForm
-    fields = (('series', 'number'), 'invoice_provider', 'invoice_customer',
+    fields = (('series', 'number'), 'provider', 'customer',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
     readonly_fields = ('series', )
@@ -158,13 +133,6 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     def series(self, obj):
         return obj.invoice_series
-
-    def save_model(self, request, obj, form, change):
-        customer_id = request.POST.get('invoice_customer') or -1
-        provider_id = request.POST.get('invoice_provider') or -1
-        obj.save(invoice_customer_id=customer_id,
-                 invoice_provider_id=provider_id)
-
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
