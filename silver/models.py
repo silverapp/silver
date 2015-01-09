@@ -233,7 +233,7 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
-class BillingEntity(LiveModel):
+class AbastractBillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
@@ -267,7 +267,7 @@ class BillingEntity(LiveModel):
         return [getattr(self, field, '') for field in field_names]
 
 
-class Customer(BillingEntity):
+class Customer(AbastractBillingEntity):
     customer_reference = models.CharField(
         max_length=256, blank=True, null=True,
         help_text="It's a reference to be passed between silver and clients. "
@@ -300,7 +300,7 @@ class Customer(BillingEntity):
     complete_address.short_description = 'Complete address'
 
 
-class ProviderBase(BillingEntity):
+class AbastractProvider(AbastractBillingEntity):
     FLOW_CHOICES = (
         ('proforma', 'Proforma'),
         ('invoice', 'Invoice'),
@@ -328,7 +328,8 @@ class ProviderBase(BillingEntity):
     class Meta:
         abstract = True
 
-class Provider(ProviderBase):
+
+class Provider(AbastractProvider):
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
@@ -337,6 +338,7 @@ class Provider(ProviderBase):
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
+
 
 def _update_historical_fields(instance, history_model):
     # get all the fields from the Provider/Customer instance
@@ -357,10 +359,12 @@ def _update_historical_fields(instance, history_model):
     instance.archive_entries.filter(archived=False).update(
         **common_fields_values)
 
+
 @receiver(post_save, sender=Provider)
 def _update_provider_historical_data(sender, instance, created, **kwargs):
     if not created:
         _update_historical_fields(instance, ProviderHistory)
+
 
 @receiver(post_save, sender=Customer)
 def _update_customer_historical_data(sender, instance, created, **kwargs):
@@ -372,7 +376,7 @@ class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
 
-class CustomerHistory(BillingEntity):
+class CustomerHistory(AbastractBillingEntity):
     customer_ref = models.ForeignKey('Customer', related_name='archive_entries')
     archived = models.BooleanField(default=False)
 
@@ -392,7 +396,7 @@ class CustomerHistory(BillingEntity):
         self.save(update_fields=['archived'])
 
 
-class ProviderHistory(ProviderBase):
+class ProviderHistory(AbastractProvider):
     provider_ref = models.ForeignKey('Provider', related_name='archive_entries')
     archived = models.BooleanField(default=False)
 
@@ -404,7 +408,7 @@ class ProviderHistory(ProviderBase):
         self.save(update_fields=['archived'])
 
 
-class InvoicingDocument(models.Model):
+class AbstractInvoicingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
@@ -466,7 +470,7 @@ class InvoicingDocument(models.Model):
         # Handle the invoice's provider
         if invoice_provider:
             provider_fields = {'provider_ref': invoice_provider}
-            common_fields = self._get_values_for_common_fields(ProviderBase,
+            common_fields = self._get_values_for_common_fields(AbastractProvider,
                                                                invoice_provider)
             provider_fields.update(common_fields)
             try:
@@ -477,6 +481,11 @@ class InvoicingDocument(models.Model):
             except ProviderHistory.DoesNotExist:
                 self.provider = ProviderHistory.objects.create(**provider_fields)
 
+    def _generate_number(self):
+        """Generates the number for a proforma/invoice. To be implemented
+        in the corresponding subclass."""
+
+        raise NotImplementedError
 
     def save(self, *args, **kwargs):
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
@@ -489,8 +498,9 @@ class InvoicingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        super(InvoicingDocument, self).save(*args, **kwargs)
+        self.number = self._generate_number()
 
+        super(AbstractInvoicingDocument, self).save(*args, **kwargs)
 
     def customer_display(self):
         try:
@@ -523,7 +533,7 @@ class InvoicingDocument(models.Model):
         #   * make a custom _validate_unique method and call that from
         #   model's save()
 
-        super(InvoicingDocument, self).validate_unique(*args, **kwargs)
+        super(AbstractInvoicingDocument, self).validate_unique(*args, **kwargs)
 
         # if not self.id:
         #    if not self.__class__._default_manager.filter(
@@ -534,20 +544,20 @@ class InvoicingDocument(models.Model):
         #        raise ValidationError({NON_FIELD_ERRORS: 'SILVER_ERROR'})
 
 
-class Invoice(InvoicingDocument):
+class Invoice(AbstractInvoicingDocument):
 
     def _generate_number(self):
-         if not self.id:
-            # new invoice (create)
-            if not self.__class__._default_manager.filter(
-                provider=self.provider,
-                provider__invoice_series=self.provider.invoice_series,
-            ).exists():
-                # a combination of (provider, invoice_series) does not exist
-                return self.provider.invoice_series
-            else:
-                # a combination of (provider, invoice_series) does exists
-                return 200
+         #if not self.id:
+            ## new invoice (create)
+            #if not self.__class__._default_manager.filter(
+                #provider=self.provider,
+                #provider__invoice_series=self.provider.invoice_series,
+            #).exists():
+                ## a combination of (provider, invoice_series) does not exist
+                #return self.provider.invoice_series
+            #else:
+                ## a combination of (provider, invoice_series) does exists
+                #return 200
 
 
     @transition(field='state', source='draft', target='issued')
@@ -578,7 +588,7 @@ class Invoice(InvoicingDocument):
         customer_field.related_name = "invoices"
 
 
-class Proforma(InvoicingDocument):
+class Proforma(AbstractInvoicingDocument):
 
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
