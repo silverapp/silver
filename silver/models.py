@@ -5,8 +5,6 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
 from django.db.models import Max
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django_fsm import FSMField, transition
 from international.models import countries, currencies
 from livefield.models import LiveModel
@@ -414,12 +412,6 @@ class AbstractInvoicingDocument(models.Model):
             return ''
     provider_display.short_description = 'Provider'
 
-    @property
-    def invoice_series(self):
-        try:
-            return self.provider.invoice_series
-        except Provider.DoesNotExist:
-            return ''
 
 class Invoice(AbstractInvoicingDocument):
 
@@ -447,8 +439,12 @@ class Invoice(AbstractInvoicingDocument):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        self.customer.archive()
-        self.provider.archive()
+    @property
+    def invoice_series(self):
+        try:
+            return self.provider.invoice_series
+        except Provider.DoesNotExist:
+            return ''
 
 class Proforma(AbstractInvoicingDocument):
 
