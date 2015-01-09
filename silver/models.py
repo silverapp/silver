@@ -341,9 +341,15 @@ class Provider(AbastractProvider):
 
 
 def _update_historical_fields(instance, history_model):
+    """
+    It updates the common fields of `instance` and `history_model` for all the
+    `history_model` instances that are related to `instance`.
+    """
+
     # get all the fields from the Provider/Customer instance
     main_fields = set([field.name
-                       for field in instance._meta.fields if field != 'id'])
+                       for field in instance._meta.fields
+                       if field.name != 'id'])
     # get all the fields from the corresponding ProviderHistory/CustomerHistory
     # model
     history_model_fields = set([field.name
@@ -356,6 +362,7 @@ def _update_historical_fields(instance, history_model):
     for field in common_fields:
         common_fields_values[field] = getattr(instance, field)
 
+    print common_fields_values
     instance.archive_entries.filter(archived=False).update(
         **common_fields_values)
 
@@ -412,7 +419,7 @@ class AbstractInvoicingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
-    number = models.IntegerField(default=200)
+    number = models.IntegerField(blank=True)
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
@@ -449,7 +456,16 @@ class AbstractInvoicingDocument(models.Model):
         return fields
 
     def _create_or_update_customer_and_provider(self, invoice_customer_id,
-                                              invoice_provider_id):
+                                                invoice_provider_id):
+        """
+        Does one of the following:
+            * If the document already exists and either the Provider or the
+            Customer were changed, it updates the corresponding entry from the
+            {Provider, Customer}History model.
+            * If the document is being created a new entry is created it the
+            corresponding {Provider, Customer}History table and then linked
+            to the document.
+        """
         invoice_customer = get_object_or_None(Customer, id=invoice_customer_id)
         invoice_provider = get_object_or_None(Provider, id=invoice_provider_id)
 
@@ -488,17 +504,21 @@ class AbstractInvoicingDocument(models.Model):
         raise NotImplementedError
 
     def save(self, *args, **kwargs):
+        # Create the {Customer, Provider}History models.
         invoice_customer_id = kwargs.pop('invoice_customer_id', None)
         invoice_provider_id = kwargs.pop('invoice_provider_id', None)
         self._create_or_update_customer_and_provider(invoice_customer_id,
                                                      invoice_provider_id)
 
+        # Generate the number
+        if not self.number:
+            self.number = self._generate_number()
+
+        # Add tax info
         if not self.sales_tax_name:
             self.sales_tax_name = self.customer.sales_tax_name
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
-
-        self.number = self._generate_number()
 
         super(AbstractInvoicingDocument, self).save(*args, **kwargs)
 
@@ -546,19 +566,29 @@ class AbstractInvoicingDocument(models.Model):
 
 class Invoice(AbstractInvoicingDocument):
 
-    def _generate_number(self):
-         #if not self.id:
-            ## new invoice (create)
-            #if not self.__class__._default_manager.filter(
-                #provider=self.provider,
-                #provider__invoice_series=self.provider.invoice_series,
-            #).exists():
-                ## a combination of (provider, invoice_series) does not exist
-                #return self.provider.invoice_series
-            #else:
-                ## a combination of (provider, invoice_series) does exists
-                #return 200
+    def __init__(self, *args, **kwargs):
+        super(Invoice, self).__init__(*args, **kwargs)
 
+        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field.related_name = "invoices"
+
+        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field.related_name = "invoices"
+
+    def _generate_number(self):
+        if not self.__class__._default_manager.filter(
+            provider__provider_ref=self.provider.provider_ref,
+            provider__invoice_series=self.provider.invoice_series,
+        ).exists():
+            # a combination of (provider, invoice_series) does not exist
+            return self.provider.invoice_starting_number
+        else:
+            # a combination of (provider, invoice_series) does exists
+            max_existing_number = self.__class__._default_manager.filter(
+                provider__provider_ref=self.provider.provider_ref,
+                provider__invoice_series=self.provider.invoice_series,
+            ).aggregate(Max('number'))['number__max']
+            return max_existing_number + 1
 
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):
@@ -578,16 +608,6 @@ class Invoice(AbstractInvoicingDocument):
         self.customer.archive()
         self.provider.archive()
 
-    def __init__(self, *args, **kwargs):
-        super(Invoice, self).__init__(*args, **kwargs)
-
-        provider_field = self._meta.get_field_by_name("provider")[0]
-        provider_field.related_name = "invoices"
-
-        customer_field = self._meta.get_field_by_name("customer")[0]
-        customer_field.related_name = "invoices"
-
-
 class Proforma(AbstractInvoicingDocument):
 
     def __init__(self, *args, **kwargs):
@@ -599,6 +619,20 @@ class Proforma(AbstractInvoicingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
 
+    def _generate_number(self):
+        if not self.__class__._default_manager.filter(
+            provider__provider_ref=self.provider.provider_ref,
+            provider__proforma_series=self.provider.proforma_series,
+        ).exists():
+            # a combination of (provider, invoice_series) does not exist
+            return self.provider.proforma_starting_number
+        else:
+            # a combination of (provider, invoice_series) does exists
+            max_existing_number = self.__class__._default_manager.filter(
+                provider__provider_ref=self.provider.provider_ref,
+                provider__proforma_series=self.provider.proforma_series,
+            ).aggregate(Max('number'))['number__max']
+            return max_existing_number + 1
 
 class InvoiceEntry(models.Model):
     description = models.CharField(max_length=255)
