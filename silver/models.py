@@ -265,6 +265,11 @@ class AbstractBillingEntity(LiveModel):
                        'zip_code']
         return [getattr(self, field, '') for field in field_names]
 
+    def get_archivable_fields(self):
+        field_names = ['name', 'company', 'email', 'address_1', 'address_1',
+                       'city', 'country', 'city', 'zip_code', 'zip_code']
+        return {field: getattr(self, field, '') for field in field_names}
+
 
 class Customer(AbstractBillingEntity):
     customer_reference = models.CharField(
@@ -298,6 +303,12 @@ class Customer(AbstractBillingEntity):
                                        self.zip_code, self.country]))
     complete_address.short_description = 'Complete address'
 
+    def get_archivable_fields(self):
+        base_fields = super(Customer, self).get_archivable_fields()
+        customer_fields = ['customer_reference', 'consolidated_billing']
+        fields_dict = {field: getattr(self, field, '') for field in customer_fields}
+        return base_fields.update(fields_dict)
+
 
 class Provider(AbstractBillingEntity):
     FLOW_CHOICES = (
@@ -329,6 +340,14 @@ class Provider(AbstractBillingEntity):
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The provider issuing the invoice."
 
+    def get_invoice_archivable_fields(self):
+        base_fields = super(Provider, self).get_archivable_fields()
+        return base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
+
+    def get_proforma_archivable_fields(self):
+        base_fields = super(Provider, self).get_archivable_fields()
+        return base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
+
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
 
@@ -344,8 +363,8 @@ class AbstractInvoicingDocument(models.Model):
     number = models.IntegerField(blank=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
-    customer_history = jsonfield.JSONField()
-    provider_history = jsonfield.JSONField()
+    archived_customer = jsonfield.JSONField()
+    archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
@@ -438,6 +457,11 @@ class Invoice(AbstractInvoicingDocument):
 
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.archived_provider = self.provider.get_invoice_archivable_fields()
+        self.archived_customer = self.customer.get_archivable_fields()
+
+        self.save()
 
     @property
     def invoice_series(self):
