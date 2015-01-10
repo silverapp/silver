@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -112,7 +113,26 @@ class ProviderAdmin(admin.ModelAdmin):
 class InvoiceEntryInline(admin.TabularInline):
     model = InvoiceEntry
 
+class InvoiceForm(forms.ModelForm):
+    class Meta:
+        model = Invoice
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance')
+        self.initial_number = instance.number if instance else None
+        super(InvoiceForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        obj = super(InvoiceForm, self).save(commit=False)
+        if self.initial_number and not obj.number:
+            obj.number = self.initial_number
+        if commit:
+            obj.save()
+        return obj
+
+
 class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
     list_display = ['number', 'customer_display', 'provider_display', 'state',
                     'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                     'sales_tax_percent', 'currency']
@@ -133,6 +153,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     def series(self, obj):
         return obj.invoice_series
+
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
