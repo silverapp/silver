@@ -184,7 +184,7 @@ class InvoiceEntrySerializer(serializers.ModelSerializer):
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    entries = InvoiceEntrySerializer(many=True)
+    entries = InvoiceEntrySerializer(many=True, required=False)
 
     class Meta:
         model = Invoice
@@ -197,5 +197,5 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'url': {'view_name': 'silver_api:invoice-detail'},
             'provider': {'view_name': 'silver_api:provider-detail'},
-            'customer': {'view_name': 'silver_api:customer-detail'}
+            'customer': {'view_name': 'silver_api:customer-detail'},
         }
