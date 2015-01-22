@@ -385,7 +385,7 @@ class InvoiceEntryCreate(generics.CreateAPIView):
     queryset = InvoiceEntry.objects.all()
 
     def post(self, request, *args, **kwargs):
-        invoice_pk = kwargs.get('pk')
+        invoice_pk = kwargs.get('invoice_pk')
         try:
             invoice = Invoice.objects.get(pk=invoice_pk)
         except Invoice.DoesNotExist:
@@ -400,3 +400,36 @@ class InvoiceEntryCreate(generics.CreateAPIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save(invoice=invoice)
             return Response(serializer.data)
+
+class InvoiceEntryUpdateDestroy(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceEntrySerializer
+    queryset = InvoiceEntry.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        invoice_pk = kwargs.get('invoice_pk')
+        entry_id = kwargs.get('entry_id')
+
+        try:
+            invoice = Invoice.objects.get(pk=invoice_pk)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            entry = InvoiceEntry.objects.get(invoice=invoice,
+                                             entry_id=entry_id)
+        except InvoiceEntry.DoesNotExist:
+            return Response({"detail": "Invoice Entry Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if invoice.state != 'draft':
+            msg = "Invoice entries can be modified only when the invoice is in draft state."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = InvoiceEntrySerializer(entry, data=request.DATA,
+                                            context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+

@@ -508,7 +508,8 @@ class InvoiceEntry(models.Model):
 
 
     def save(self, *args, **kwargs):
-        self.entry_id = self._get_next_entry_id(self.invoice)
+        if not self.entry_id:
+            self.entry_id = self._get_next_entry_id(self.invoice)
 
         super(InvoiceEntry, self).save(*args, **kwargs)
 
