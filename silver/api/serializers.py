@@ -188,7 +188,7 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
 class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = InvoiceEntry
-        fields = ('id', 'description', 'unit', 'quantity', 'unit_price',
+        fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
         extra_kwargs = {
             'product_code': {'view_name': 'silver_api:productcode-detail'}

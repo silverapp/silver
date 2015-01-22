@@ -488,6 +488,7 @@ class Proforma(AbstractInvoicingDocument):
         customer_field.related_name = "proformas"
 
 class InvoiceEntry(models.Model):
+    entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20)
     quantity = models.DecimalField(max_digits=28, decimal_places=10)
@@ -498,3 +499,17 @@ class InvoiceEntry(models.Model):
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
     invoice = models.ForeignKey('Invoice', related_name='entries')
+
+    def _get_next_entry_id(self, invoice):
+        max_id = self.__class__._default_manager.filter(
+            invoice=self.invoice,
+        ).aggregate(Max('entry_id'))['entry_id__max']
+        return max_id + 1 if max_id else 1
+
+
+    def save(self, *args, **kwargs):
+        self.entry_id = self._get_next_entry_id(self.invoice)
+
+        super(InvoiceEntry, self).save(*args, **kwargs)
+
+
