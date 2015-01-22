@@ -391,6 +391,7 @@ class InvoiceEntryCreate(generics.CreateAPIView):
         except Invoice.DoesNotExist:
             return Response({"detail": "Invoice Not found"},
                             status=status.HTTP_404_NOT_FOUND)
+
         if invoice.state != 'draft':
             msg = "Invoice entries can be added only when the invoice is in draft state."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
@@ -415,16 +416,16 @@ class InvoiceEntryUpdateDestroy(APIView):
         except Invoice.DoesNotExist:
             return Response({"detail": "Invoice Not found"},
                             status=status.HTTP_404_NOT_FOUND)
-        try:
-            entry = InvoiceEntry.objects.get(invoice=invoice,
-                                             entry_id=entry_id)
-        except InvoiceEntry.DoesNotExist:
-            return Response({"detail": "Invoice Entry Not found"},
-                            status=status.HTTP_404_NOT_FOUND)
 
         if invoice.state != 'draft':
             msg = "Invoice entries can be modified only when the invoice is in draft state."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            entry = InvoiceEntry.objects.get(invoice=invoice, entry_id=entry_id)
+        except InvoiceEntry.DoesNotExist:
+            return Response({"detail": "Invoice Entry Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = InvoiceEntrySerializer(entry, data=request.DATA,
                                             context={'request': request})
