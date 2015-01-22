@@ -148,7 +148,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     fields = (('series', 'number'), 'provider', 'customer',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
-    readonly_fields = ('series', )
+    readonly_fields = ('series', 'state')
     inlines = [InvoiceEntryInline]
 
     def series(self, obj):
