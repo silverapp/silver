@@ -5,7 +5,7 @@ from rest_framework.reverse import reverse
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
-                           InvoiceEntry)
+                           InvoiceEntry, ProductCode)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -184,7 +184,7 @@ class InvoiceEntrySerializer(serializers.ModelSerializer):
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    entries = InvoiceEntrySerializer(many=True, required=False)
+    entries = InvoiceEntrySerializer(many=True, required=False, read_only=True)
 
     class Meta:
         model = Invoice
@@ -198,4 +198,14 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             'url': {'view_name': 'silver_api:invoice-detail'},
             'provider': {'view_name': 'silver_api:provider-detail'},
             'customer': {'view_name': 'silver_api:customer-detail'},
+        }
+
+
+class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
+
+    class Meta:
+        model = ProductCode
+        fields = ('url', 'value')
+        extra_kwargs = {
+            'url': {'view_name': 'silver_api:productcode-detail'}
         }

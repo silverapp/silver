@@ -9,12 +9,13 @@ from rest_framework_bulk import ListBulkCreateAPIView
 from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
-                           Customer, Plan, Provider, Invoice)
+                           Customer, Plan, Provider, Invoice, ProductCode)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
-                                    ProviderSerializer, InvoiceSerializer)
+                                    ProviderSerializer, InvoiceSerializer,
+                                    ProductCodeSerializer)
 from silver.utils import get_object_or_None
 
 
@@ -339,6 +340,18 @@ class ProviderFilter(FilterSet):
         fields = ['email', 'company']
 
 
+class ProductCodeListCreate(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProductCodeSerializer
+    queryset = ProductCode.objects.all()
+
+
+class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProductCodeSerializer
+    queryset = ProductCode.objects.all()
+
+
 class ProviderListBulkCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
@@ -357,6 +370,7 @@ class InvoiceListBulkCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
+
 
 class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)

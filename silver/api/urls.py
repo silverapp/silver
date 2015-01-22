@@ -37,4 +37,8 @@ urlpatterns = patterns('',
         views.InvoiceListBulkCreate.as_view(), name='invoice-list'),
     url(r'^invoices/(?P<pk>[0-9]+)/$',
         views.InvoiceRetrieveUpdateDestroy.as_view(), name='invoice-detail'),
+    url(r'^product-codes/$',
+        views.ProductCodeListCreate.as_view(), name='productcode-list'),
+    url(r'^product-codes/(?P<pk>[0-9]+)/$',
+        views.ProductCodeRetrieveUpdate.as_view(), name='productcode-detail'),
 )
