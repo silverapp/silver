@@ -473,6 +473,7 @@ class InvoiceStateHandler(APIView):
             if invoice.state != 'draft':
                 msg = "An invoice can be issued only if it is in `draft` state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
             issue_date = request.DATA.get('issue_date', None)
             due_date = request.DATA.get('due_date', None)
             invoice.issue(issue_date, due_date)
@@ -481,6 +482,7 @@ class InvoiceStateHandler(APIView):
             if invoice.state != 'issued':
                 msg = "An invoice can be paid only if it is in `issued` state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
             paid_date = request.DATA.get('paid_date', None)
             invoice.pay(paid_date)
             invoice.save()
@@ -488,6 +490,7 @@ class InvoiceStateHandler(APIView):
             if invoice.state != 'issued':
                 msg = "An invoice can be canceled only if it is in `issued` state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
             cancel_date = request.DATA.get('cancel_date', None)
             invoice.cancel(cancel_date)
             invoice.save()
