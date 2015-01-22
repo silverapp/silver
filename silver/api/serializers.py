@@ -195,6 +195,7 @@ class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
         }
 
 
+
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     entries = InvoiceEntrySerializer(many=True)
 
@@ -230,7 +231,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         updateable_fields = instance.updateable_fields
         for field_name in updateable_fields:
             field_value = validated_data.get(field_name,
-                                            getattr(instance, field_name))
+                                             getattr(instance, field_name))
             setattr(instance, field_name, field_value)
         instance.save()
 

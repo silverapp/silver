@@ -1,21 +1,25 @@
 import datetime
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
+from django.core.urlresolvers import reverse
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
+from rest_framework import mixins
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
+
 from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
-                           Customer, Plan, Provider, Invoice, ProductCode)
+                           Customer, Plan, Provider, Invoice, ProductCode,
+                           InvoiceEntry)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
-                                    ProductCodeSerializer)
+                                    ProductCodeSerializer, InvoiceEntrySerializer)
 from silver.utils import get_object_or_None
 
 
@@ -376,3 +380,25 @@ class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
+
+class InvoiceEntryCreate(generics.CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceEntrySerializer
+    queryset = InvoiceEntry.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        invoice_pk = kwargs.get('pk')
+        try:
+            invoice = Invoice.objects.get(pk=invoice_pk)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        serializer = InvoiceEntrySerializer(data=request.DATA,
+                                            context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(invoice=invoice)
+            return Response(serializer.data)
+
+        return Response({"detail": "Invoice Not found"},
+                        status=status.HTTP_404_NOT_FOUND)
+
