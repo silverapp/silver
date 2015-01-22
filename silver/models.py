@@ -1,5 +1,6 @@
 """Models for the silver app."""
 import datetime
+from datetime import datetime
 
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
@@ -307,7 +308,8 @@ class Customer(AbstractBillingEntity):
         base_fields = super(Customer, self).get_archivable_fields()
         customer_fields = ['customer_reference', 'consolidated_billing']
         fields_dict = {field: getattr(self, field, '') for field in customer_fields}
-        return base_fields.update(fields_dict)
+        base_fields.update(fields_dict)
+        return base_fields
 
 
 class Provider(AbstractBillingEntity):
@@ -342,11 +344,13 @@ class Provider(AbstractBillingEntity):
 
     def get_invoice_archivable_fields(self):
         base_fields = super(Provider, self).get_archivable_fields()
-        return base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
+        base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
+        return base_fields
 
     def get_proforma_archivable_fields(self):
         base_fields = super(Provider, self).get_archivable_fields()
-        return base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
+        base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
+        return base_fields
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
@@ -448,26 +452,36 @@ class Invoice(AbstractInvoicingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
 
-
     @transition(field='state', source='draft', target='issued')
-    def issue_invoice(self, issue_date=None, due_date=None):
+    def issue(self, issue_date=None, due_date=None):
         if issue_date:
-            self.issue_date = issue_date
+            self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
         if not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
         if due_date:
-            self.due_date = due_date
+            self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
 
         if not self.sales_tax_name:
             self.sales_tax_name = self.customer.sales_tax_name
-
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self.archived_provider = self.provider.get_invoice_archivable_fields()
         self.archived_customer = self.customer.get_archivable_fields()
 
-        self.save()
+    @transition(field='state', source='issued', target='paid')
+    def pay(self, paid_date=None):
+        if paid_date:
+            self.paid_date = datetime.strptime(paid_date, '%Y-%m-%d').date()
+        if not self.paid_date and not paid_date:
+            self.paid_date = timezone.now().date()
+
+    @transition(field='state', source='issued', target='canceled')
+    def cancel(self, cancel_date=None):
+        if cancel_date:
+            self.cancel_date = datetime.strptime(cancel_date, '%Y-%m-%d').date()
+        if not self.cancel_date and not cancel_date:
+            self.cancel_date = timezone.now().date()
 
     @property
     def invoice_series(self):

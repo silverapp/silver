@@ -456,4 +456,42 @@ class InvoiceEntryUpdateDestroy(APIView):
             return Response({"detail": "Invoice entry not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
+class InvoiceStateHandler(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+
+    def patch(self, request, *args, **kwargs):
+        invoice_pk = kwargs.get('pk')
+        try:
+            invoice = Invoice.objects.get(pk=invoice_pk)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        state = request.DATA.get('state', None)
+        if state == 'issued':
+            if invoice.state != 'draft':
+                msg = "An invoice can be issued only if it is in `draft` state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+            issue_date = request.DATA.get('issue_date', None)
+            due_date = request.DATA.get('due_date', None)
+            invoice.issue(issue_date, due_date)
+            invoice.save()
+        elif state == 'paid':
+            if invoice.state != 'issued':
+                msg = "An invoice can be paid only if it is in `issued` state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+            paid_date = request.DATA.get('paid_date', None)
+            invoice.pay(paid_date)
+            invoice.save()
+        elif state == 'canceled':
+            if invoice.state != 'issued':
+                msg = "An invoice can be canceled only if it is in `issued` state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+            cancel_date = request.DATA.get('cancel_date', None)
+            invoice.cancel(cancel_date)
+            invoice.save()
+
+        serializer = InvoiceSerializer(invoice, context={'request': request})
+        return Response(serializer.data)
 
