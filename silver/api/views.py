@@ -414,7 +414,7 @@ class InvoiceEntryUpdateDestroy(APIView):
         try:
             invoice = Invoice.objects.get(pk=invoice_pk)
         except Invoice.DoesNotExist:
-            return Response({"detail": "Invoice Not found"},
+            return Response({"detail": "Invoice not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
         if invoice.state != 'draft':
@@ -424,7 +424,7 @@ class InvoiceEntryUpdateDestroy(APIView):
         try:
             entry = InvoiceEntry.objects.get(invoice=invoice, entry_id=entry_id)
         except InvoiceEntry.DoesNotExist:
-            return Response({"detail": "Invoice Entry Not found"},
+            return Response({"detail": "Invoice Entry not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
         serializer = InvoiceEntrySerializer(entry, data=request.DATA,
@@ -433,4 +433,27 @@ class InvoiceEntryUpdateDestroy(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        invoice_pk = kwargs.get('invoice_pk')
+        entry_id = kwargs.get('entry_id')
+
+        try:
+            invoice = Invoice.objects.get(pk=invoice_pk)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if invoice.state != 'draft':
+            msg = "Invoice entries can be deleted only when the invoice is in draft state."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            entry = InvoiceEntry.objects.get(invoice=invoice, entry_id=entry_id)
+            entry.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except InvoiceEntry.DoesNotExist:
+            return Response({"detail": "Invoice entry not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
 
