@@ -431,6 +431,12 @@ class AbstractInvoicingDocument(models.Model):
             return ''
     provider_display.short_description = 'Provider'
 
+    @property
+    def updateable_fields(self):
+        return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
+                'cancel_date', 'sales_tax_percent', 'sales_tax_name',
+                'currency']
+
 
 class Invoice(AbstractInvoicingDocument):
 
@@ -442,6 +448,7 @@ class Invoice(AbstractInvoicingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
+
 
     @transition(field='state', source='draft', target='issued')
     def issue_invoice(self, issue_date=None, due_date=None):

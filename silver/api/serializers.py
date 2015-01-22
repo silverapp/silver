@@ -225,3 +225,13 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             InvoiceEntry.objects.create(**entry_dict)
 
         return invoice
+
+    def update(self, instance, validated_data):
+        updateable_fields = instance.updateable_fields
+        for field_name in updateable_fields:
+            field_value = validated_data.get(field_name,
+                                             getattr(instance, field_name))
+            setattr(instance, field_name, field_value)
+        instance.save()
+
+        return instance
