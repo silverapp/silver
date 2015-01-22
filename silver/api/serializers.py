@@ -176,15 +176,27 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {'url': {'view_name': 'silver_api:customer-detail'}}
 
 
-class InvoiceEntrySerializer(serializers.ModelSerializer):
+class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = ProductCode
+        fields = ('url', 'value')
+        extra_kwargs = {
+            'url': {'view_name': 'silver_api:productcode-detail'}
+        }
+
+
+class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = InvoiceEntry
         fields = ('id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
+        extra_kwargs = {
+            'product_code': {'view_name': 'silver_api:productcode-detail'}
+        }
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    entries = InvoiceEntrySerializer(many=True, required=False, read_only=True)
+    entries = InvoiceEntrySerializer(many=True)
 
     class Meta:
         model = Invoice
@@ -200,12 +212,16 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             'customer': {'view_name': 'silver_api:customer-detail'},
         }
 
+    def create(self, validated_data):
+        entries = validated_data.pop('entries')
+        invoice = Invoice.objects.create(**validated_data)
 
-class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
+        for entry in entries:
+            entry_dict = {}
+            entry_dict['invoice'] = invoice
+            for field in entry.items():
+                entry_dict[field[0]] = field[1]
 
-    class Meta:
-        model = ProductCode
-        fields = ('url', 'value')
-        extra_kwargs = {
-            'url': {'view_name': 'silver_api:productcode-detail'}
-        }
+            InvoiceEntry.objects.create(**entry_dict)
+
+        return invoice
