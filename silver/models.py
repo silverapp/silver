@@ -486,7 +486,8 @@ class InvoiceEntry(models.Model):
     unit = models.CharField(max_length=20)
     quantity = models.DecimalField(max_digits=28, decimal_places=10)
     unit_price = models.DecimalField(max_digits=28, decimal_places=10)
-    product_code = models.ForeignKey('ProductCode', null=True, blank=True)
+    product_code = models.ForeignKey('ProductCode', null=True, blank=True,
+                                     related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
