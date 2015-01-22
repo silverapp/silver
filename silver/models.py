@@ -377,9 +377,8 @@ class AbstractInvoicingDocument(models.Model):
         help_text='The currency used for billing.'
     )
     state = FSMField(
-        choices=STATE_CHOICES, max_length=10, default=states[0],
-        verbose_name='Invoice state',
-        help_text='The state the invoice is in.'
+        choices=STATE_CHOICES, max_length=10, default=states[0], protected=True,
+        verbose_name='Invoice state', help_text='The state the invoice is in.'
     )
 
     class Meta:

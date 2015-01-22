@@ -230,8 +230,14 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         updateable_fields = instance.updateable_fields
         for field_name in updateable_fields:
             field_value = validated_data.get(field_name,
-                                             getattr(instance, field_name))
+                                            getattr(instance, field_name))
             setattr(instance, field_name, field_value)
         instance.save()
 
         return instance
+
+    def validate(self, data):
+        if data['state'] != 'draft':
+            msg = 'Direct state modification is not allowed.'
+            raise serializers.ValidationError(msg)
+        return data
