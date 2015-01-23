@@ -2,11 +2,10 @@ import datetime
 from django.http.response import Http404
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
-from rest_framework import generics, permissions, status, filters, mixins
+from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_bulk import ListBulkCreateAPIView
 from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
@@ -16,6 +15,8 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer)
+from silver.api.generics import (HPListAPIView, HPListBulkCreateAPIView,
+                                 HPListCreateAPIView)
 from silver.utils import get_object_or_None
 
 
@@ -34,7 +35,7 @@ class PlanFilter(FilterSet):
                   'currency', 'provider', 'interval']
 
 
-class PlanList(generics.ListCreateAPIView):
+class PlanList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
@@ -71,7 +72,7 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
                         status=status.HTTP_200_OK)
 
 
-class PlanMeteredFeatures(generics.ListAPIView):
+class PlanMeteredFeatures(HPListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
@@ -89,7 +90,7 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeatureList(ListBulkCreateAPIView):
+class MeteredFeatureList(HPListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
@@ -118,7 +119,7 @@ class SubscriptionFilter(FilterSet):
         fields = ['plan', 'customer', 'company', 'state']
 
 
-class SubscriptionList(generics.ListCreateAPIView):
+class SubscriptionList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
@@ -314,7 +315,7 @@ class CustomerFilter(FilterSet):
         fields = ['email', 'name', 'company', 'active', 'country', 'sales_tax_name']
 
 
-class CustomerList(generics.ListCreateAPIView):
+class CustomerList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
@@ -344,7 +345,7 @@ class ProviderFilter(FilterSet):
         fields = ['email', 'company']
 
 
-class ProviderListBulkCreate(ListBulkCreateAPIView):
+class ProviderListBulkCreate(HPListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
