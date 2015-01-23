@@ -501,6 +501,12 @@ class InvoiceStateHandler(APIView):
             cancel_date = request.DATA.get('cancel_date', None)
             invoice.cancel(cancel_date)
             invoice.save()
+        elif not state:
+            msg = "You have to provide a value for the `state` field."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            msg = "Illegal state value."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = InvoiceSerializer(invoice, context={'request': request})
         return Response(serializer.data)
