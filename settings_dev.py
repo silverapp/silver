@@ -32,7 +32,7 @@ EXTERNAL_APPS = [
     'django_fsm',
     'rest_framework',
     'django_filters',
-    'rest_hooks'
+    'rest_hooks',
 
     # Dev tools
     'django_extensions',

@@ -19,7 +19,6 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, InvoiceEntrySerializer)
-                                    ProviderSerializer)
 from silver.api.generics import (HPListAPIView, HPListBulkCreateAPIView,
                                  HPListCreateAPIView)
 from silver.utils import get_object_or_None
