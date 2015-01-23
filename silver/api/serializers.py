@@ -81,7 +81,6 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'proforma_starting_number')
 
 
-
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(
         required=False, many=True
@@ -187,7 +186,6 @@ class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
         model = InvoiceEntry
         fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
-
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):

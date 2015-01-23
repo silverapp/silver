@@ -94,6 +94,7 @@ class TestProviderEndpoints(APITestCase):
         all_ids = [item['id'] for item in response.data['results']]
         assert all_ids == range(1, 26)
 
+    """
     #def test_POST_bulk_providers(self):
         #providers = ProviderFactory.create_batch(5)
 
@@ -109,6 +110,7 @@ class TestProviderEndpoints(APITestCase):
 
         #assert response.status_code == status.HTTP_201_CREATED
         #assert len(response.data) == 5
+    """
 
     def test_GET_provider(self):
         ProviderFactory.reset_sequence(1)

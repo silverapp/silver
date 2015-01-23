@@ -1,5 +1,5 @@
 import json
-from django.core import serializers
+# from django.core import serializers
 import pytest
 
 from rest_framework import status
@@ -52,7 +52,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             assert (response.data == {field: ['This field may not be blank.']}
                     or response.data == {field: ['This field is required.']})
-
+    """
     #def test_create_post_metered_feature_bulk(self):
         #mfs = MeteredFeatureFactory.create_batch(7)
 
@@ -69,7 +69,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
 
         #self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         #self.assertEqual(len(response.data), 7)
-
+    """
     def test_get_metered_feature_detail(self):
         metered_feature = MeteredFeatureFactory.create()
 
