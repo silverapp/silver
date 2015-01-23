@@ -70,7 +70,7 @@ class Plan(models.Model):
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
-    product_code = models.CharField(max_length=128, unique=True,
+    product_code = models.ForeignKey('ProductCode', unique=True,
                                     help_text='The product code for this plan.')
     provider = models.ForeignKey(
         'Provider', related_name='plans',
@@ -90,6 +90,8 @@ class MeteredFeature(models.Model):
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
+    product_code = models.ForeignKey('ProductCode', unique=True,
+                                    help_text='The product code for this plan.')
 
     def __unicode__(self):
         return self.name
@@ -190,7 +192,7 @@ class Subscription(models.Model):
     def current_start_date(self):
         return last_date_that_fits(
             initial_date=self.start_date,
-            end_date=datetime.date.today(),
+            end_date=timezone.now().date(),
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
         )
@@ -363,6 +365,9 @@ class Provider(AbstractBillingEntity):
 
 class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
+
+    def __unicode__(self):
+        return self.value
 
 
 class AbstractInvoicingDocument(models.Model):

@@ -11,10 +11,15 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='metered-feature-detail')
+    product_code = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='value'
+    )
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units', 'url')
+        fields = ('name', 'price_per_unit', 'included_units', 'url',
+                  'product_code')
 
 
 class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
@@ -92,6 +97,10 @@ class PlanSerializer(serializers.ModelSerializer):
     provider = serializers.HyperlinkedRelatedField(
         queryset=Provider.objects.all(),
         view_name='provider-detail',
+    )
+    product_code = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='value'
     )
 
     class Meta:
