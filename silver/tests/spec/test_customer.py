@@ -57,14 +57,36 @@ class TestCustomerEndpoint(APITestCase):
                     or response.data == {field: ['This field is required.']})
 
     def test_get_customer_list(self):
-        CustomerFactory.create()
+        CustomerFactory.create_batch(40)
 
         url = reverse('customer-list')
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNotEqual(response.data, [])
+        full_url = None
+        for field in response.data:
+            full_url = field.get('url', None)
+            if full_url:
+                break
+        if full_url:
+            domain = full_url.split('/')[2]
+            full_url = full_url.split(domain)[0] + domain + url
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['link'] == \
+            ('Link', '<' + full_url + '?page=2>; rel="next", ' +
+             '<' + full_url + '?page=2>; rel="last", ' +
+             '<' + full_url + '?page=1>; rel="first"')
+
+        response = self.client.get(url + '?page=2')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['link'] == \
+            ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
+             '<' + full_url + '?page=2>; rel="last", ' +
+             '<' + full_url + '?page=1>; rel="first"')
 
     def test_get_customer_detail(self):
         customer = CustomerFactory.create()

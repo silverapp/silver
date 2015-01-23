@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
 from django.db.models import Max
-from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
 import jsonfield
@@ -303,13 +303,18 @@ class Customer(AbstractBillingEntity):
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The company to which the bill is issued."
 
+    def delete(self):
+        subscriptions = Subscription.objects.filter(customer=self)
+        for sub in subscriptions:
+            try:
+                sub.cancel()
+                sub.save()
+            except TransitionNotAllowed:
+                pass
+        super(Customer, self).delete()
+
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
-
-    def complete_address(self):
-        return ", ".join(filter(None, [self.address_1, self.city, self.state,
-                                       self.zip_code, self.country]))
-    complete_address.short_description = 'Complete address'
 
     def get_archivable_fields(self):
         base_fields = super(Customer, self).get_archivable_fields()
@@ -317,6 +322,12 @@ class Customer(AbstractBillingEntity):
         fields_dict = {field: getattr(self, field, '') for field in customer_fields}
         base_fields.update(fields_dict)
         return base_fields
+
+    def complete_address(self):
+        return ", ".join(filter(None, [self.address_1, self.city, self.state,
+                                       self.zip_code, self.country]))
+    complete_address.short_description = 'Complete address'
+
 
 
 class Provider(AbstractBillingEntity):
@@ -343,6 +354,7 @@ class Provider(AbstractBillingEntity):
                    this provider."
     )
     proforma_starting_number = models.PositiveIntegerField()
+
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
@@ -391,7 +403,7 @@ class AbstractInvoicingDocument(models.Model):
         help_text='The currency used for billing.'
     )
     state = FSMField(
-        choices=STATE_CHOICES, max_length=10, default=states[0], # protected=True,
+        choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name='Invoice state', help_text='The state the invoice is in.'
     )
 
@@ -536,5 +548,3 @@ class InvoiceEntry(models.Model):
             self.entry_id = self._get_next_entry_id(self.invoice)
 
         super(InvoiceEntry, self).save(*args, **kwargs)
-
-

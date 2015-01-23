@@ -4,5 +4,4 @@ django-fsm
 django-filter
 djangorestframework-bulk
 django-livefield
-#django-admin-bootstrapped
-
+git+git://github.com/PressLabs/django-rest-hooks.git

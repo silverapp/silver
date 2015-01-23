@@ -5,6 +5,35 @@ from django_fsm import TransitionNotAllowed
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, InvoiceEntry)
 
+from django.contrib.admin.actions import delete_selected as delete_selected_
+
+from django.utils.translation import ugettext_lazy
+
+
+class LiveModelAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
+    def delete_model(self, request, obj):
+        if 'hard_delete' in dir(obj):
+            obj.hard_delete()
+        else:
+            super(LiveModelAdmin, self).delete_model(request, obj)
+
+    def delete_selected(self, request, queryset):
+        if 'hard_delete' in dir(queryset):
+            queryset.delete = queryset.hard_delete
+        return delete_selected_(self, request, queryset)
+
+    delete_selected.short_description = ugettext_lazy("Delete selected "
+                                                      "%(verbose_name_plural)s")
+
+    actions = ['delete_selected']
+
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
@@ -66,7 +95,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                                   level=messages.ERROR)
             else:
                 self.message_user(request, '%d state(s) changed (%d failed).' %
-                                 (queryset_count - failed_count, failed_count),
+                                  (queryset_count - failed_count, failed_count),
                                   level=messages.WARNING)
         else:
             self.message_user(request, 'Successfully changed %d state(s).' %
@@ -82,8 +111,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'end', queryset)
 
 
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['name', 'company', 'customer_reference', 'email',
+class CustomerAdmin(LiveModelAdmin):
+    list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
     list_display_links = list_display
@@ -98,7 +127,7 @@ class MeteredFeatureAdmin(admin.ModelAdmin):
         return {}
 
 
-class ProviderAdmin(admin.ModelAdmin):
+class ProviderAdmin(LiveModelAdmin):
     fields = ('name', 'company', 'flow', 'invoice_series', 'invoice_starting_number',
               'proforma_series', 'proforma_starting_number', 'email',
               'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',

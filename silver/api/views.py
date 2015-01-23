@@ -1,4 +1,5 @@
 import datetime
+from django.http.response import Http404
 from django_filters import FilterSet, CharFilter, BooleanFilter
 
 from rest_framework import generics, permissions, status, filters
@@ -18,6 +19,9 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, InvoiceEntrySerializer)
+                                    ProviderSerializer)
+from silver.api.generics import (HPListAPIView, HPListBulkCreateAPIView,
+                                 HPListCreateAPIView)
 from silver.utils import get_object_or_None
 
 
@@ -36,7 +40,7 @@ class PlanFilter(FilterSet):
                   'currency', 'provider', 'interval']
 
 
-class PlanList(generics.ListCreateAPIView):
+class PlanList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
@@ -73,7 +77,7 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
                         status=status.HTTP_200_OK)
 
 
-class PlanMeteredFeatures(generics.ListAPIView):
+class PlanMeteredFeatures(HPListAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
@@ -91,7 +95,7 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeatureList(ListBulkCreateAPIView):
+class MeteredFeatureList(HPListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
@@ -113,13 +117,14 @@ class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
     customer = CharFilter(name='customer__name', lookup_type='icontains')
     company = CharFilter(name='customer__company', lookup_type='icontains')
+    state = CharFilter(name='state', lookup_type='icontains')
 
     class Meta:
         model = Subscription
-        fields = ['plan', 'customer', 'company']
+        fields = ['plan', 'customer', 'company', 'state']
 
 
-class SubscriptionList(generics.ListCreateAPIView):
+class SubscriptionList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
@@ -315,7 +320,7 @@ class CustomerFilter(FilterSet):
         fields = ['email', 'name', 'company', 'active', 'country', 'sales_tax_name']
 
 
-class CustomerList(generics.ListCreateAPIView):
+class CustomerList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
@@ -326,7 +331,10 @@ class CustomerList(generics.ListCreateAPIView):
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         pk = self.kwargs.get('pk', None)
-        return get_object_or_404(Customer, pk=pk)
+        try:
+            return Customer.objects.get(pk=pk)
+        except (TypeError, ValueError, Customer.DoesNotExist):
+            raise Http404
 
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = CustomerSerializer
@@ -354,7 +362,7 @@ class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
     queryset = ProductCode.objects.all()
 
 
-class ProviderListBulkCreate(ListBulkCreateAPIView):
+class ProviderListBulkCreate(HPListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
