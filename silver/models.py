@@ -168,6 +168,11 @@ class Subscription(models.Model):
         blank=True, null=True,
         help_text='The date when the subscription ended.'
     )
+    reference = models.CharField(
+        max_length=128, blank=True, null=True,
+        help_text="The subscription's reference in an external system."
+    )
+
     state = FSMField(
         choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'

@@ -145,7 +145,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state')
+                  'ended_at', 'state', 'reference')
         read_only_fields = ('state', )
 
 
@@ -162,7 +162,7 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
     class Meta:
         model = Subscription
         fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'metered_features')
+                  'ended_at', 'state', 'metered_features', 'reference')
         read_only_fields = ('state', )
 
 
