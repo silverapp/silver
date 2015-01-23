@@ -86,6 +86,7 @@ class MeteredFeature(models.Model):
         max_length=32,
         help_text='The feature display name.'
     )
+    unit = models.CharField(max_length=20)
     price_per_unit = models.FloatField(help_text='The price per unit.')
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'

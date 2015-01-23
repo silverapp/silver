@@ -18,7 +18,7 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units', 'url',
+        fields = ('name', 'unit', 'price_per_unit', 'included_units', 'url',
                   'product_code')
 
 
