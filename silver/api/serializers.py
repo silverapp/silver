@@ -10,7 +10,7 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
-        view_name='silver_api:metered-feature-detail')
+        view_name='metered-feature-detail')
 
     class Meta:
         model = MeteredFeature
@@ -43,7 +43,7 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
 
 class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
     units_log_url = MeteredFeatureLogRelatedField(
-        view_name='silver_api:mf-log-list', source='*', read_only=True
+        view_name='mf-log-list', source='*', read_only=True
     )
 
     class Meta:
@@ -53,11 +53,11 @@ class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
 
 class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
     metered_feature = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:metered-feature-detail',
+        view_name='metered-feature-detail',
         read_only=True,
     )
     subscription = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:subscription-detail',
+        view_name='subscription-detail',
         read_only=True
     )
     # The 2 lines below are needed because of a DRF3 bug
@@ -76,8 +76,9 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
                   'email', 'address_1', 'address_2', 'city', 'state',
-                  'zip_code', 'country', 'extra')
-        extra_kwargs = {'url': {'view_name': 'silver_api:provider-detail'}}
+                  'zip_code', 'country', 'extra', 'invoice_starting_number',
+                  'invoice_series', 'proforma_series',
+                  'proforma_starting_number')
 
 
 
@@ -87,11 +88,11 @@ class PlanSerializer(serializers.ModelSerializer):
     )
 
     url = serializers.HyperlinkedIdentityField(
-        source='*', view_name='silver_api:plan-detail'
+        source='*', view_name='plan-detail'
     )
     provider = serializers.HyperlinkedRelatedField(
         queryset=Provider.objects.all(),
-        view_name='silver_api:provider-detail',
+        view_name='provider-detail',
     )
 
     class Meta:
@@ -127,14 +128,14 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     ended_at = serializers.DateField(read_only=True)
     plan = serializers.HyperlinkedRelatedField(
         queryset=Plan.objects.all(),
-        view_name='silver_api:plan-detail',
+        view_name='plan-detail',
     )
     customer = serializers.HyperlinkedRelatedField(
-        view_name='silver_api:customer-detail',
+        view_name='customer-detail',
         queryset=Customer.objects.all()
     )
     url = serializers.HyperlinkedIdentityField(
-        source='pk', view_name='silver_api:subscription-detail'
+        source='pk', view_name='subscription-detail'
     )
 
     def validate(self, attrs):
@@ -173,16 +174,12 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_name', 'sales_tax_percent')
-        extra_kwargs = {'url': {'view_name': 'silver_api:customer-detail'}}
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = ProductCode
         fields = ('url', 'value')
-        extra_kwargs = {
-            'url': {'view_name': 'silver_api:productcode-detail'}
-        }
 
 
 class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
@@ -190,9 +187,6 @@ class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
         model = InvoiceEntry
         fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
-        extra_kwargs = {
-            'product_code': {'view_name': 'silver_api:productcode-detail'}
-        }
 
 
 
@@ -207,11 +201,6 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'sales_tax_name', 'sales_tax_percent', 'currency',
                   'state', 'entries')
         read_only_fields = ('archived_provider', 'archived_customer')
-        extra_kwargs = {
-            'url': {'view_name': 'silver_api:invoice-detail'},
-            'provider': {'view_name': 'silver_api:provider-detail'},
-            'customer': {'view_name': 'silver_api:customer-detail'},
-        }
 
     def create(self, validated_data):
         entries = validated_data.pop('entries')

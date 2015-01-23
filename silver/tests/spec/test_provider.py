@@ -17,7 +17,7 @@ class TestProviderEndpoints(APITestCase):
         return Provider.objects.filter(*args, **kwargs)
 
     def test_POST_valid_provider(self):
-        url = reverse('silver_api:provider-list')
+        url = reverse('provider-list')
         data = {
             "name": "TestProvider",
             "company": "S.C. Timisoara S.R.L",
@@ -51,7 +51,7 @@ class TestProviderEndpoints(APITestCase):
         assert qs.count() == 1
 
     def test_POST_provider_without_required_fields(self):
-        url = reverse('silver_api:provider-list')
+        url = reverse('provider-list')
         complete_data = {
             "name": "TestProvider",
             'company': u'S.C. Timisoara S.R.L',
@@ -84,7 +84,7 @@ class TestProviderEndpoints(APITestCase):
 
     def test_GET_providers(self):
         ProviderFactory.create_batch(25)
-        url = reverse('silver_api:provider-list')
+        url = reverse('provider-list')
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
@@ -103,7 +103,7 @@ class TestProviderEndpoints(APITestCase):
         #for item in raw_providers:
             #serialized_providers.append(item['fields'])
 
-        #url = reverse('silver_api:provider-list')
+        #url = reverse('provider-list')
         #response = self.client.post(url, data=json.dumps(serialized_providers),
                                     #content_type='application/json')
 
@@ -114,7 +114,7 @@ class TestProviderEndpoints(APITestCase):
         ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
 
         response = self.client.get(url)
 
@@ -137,7 +137,7 @@ class TestProviderEndpoints(APITestCase):
         }
 
     def test_GET_unexisting_provider(self):
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -145,7 +145,7 @@ class TestProviderEndpoints(APITestCase):
     def test_PUT_provider_correctly(self):
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
@@ -192,7 +192,7 @@ class TestProviderEndpoints(APITestCase):
 
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
@@ -213,13 +213,13 @@ class TestProviderEndpoints(APITestCase):
     def test_DELETE_provider(self):
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     def test_DELETE_unexisting_provider(self):
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -14,7 +14,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def test_create_post_metered_feature(self):
-        url = reverse('silver_api:metered-feature-list')
+        url = reverse('metered-feature-list')
 
         response = self.client.post(url, json.dumps({
             "name": "Page Views",
@@ -30,7 +30,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
                          response.data)
 
     def test_create_post_metered_feature_without_required_field(self):
-        url = reverse('silver_api:metered-feature-list')
+        url = reverse('metered-feature-list')
 
         complete_data = {
             "name": "Page Views",
@@ -62,7 +62,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
         #for item in raw_mfs:
             #serialized_mfs.append(item['fields'])
 
-        #url = reverse('silver_api:metered-feature-list')
+        #url = reverse('metered-feature-list')
 
         #response = self.client.post(url, data=json.dumps(serialized_mfs),
                                     #content_type='application/json')
@@ -73,7 +73,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_get_metered_feature_detail(self):
         metered_feature = MeteredFeatureFactory.create()
 
-        url = reverse('silver_api:metered-feature-detail',
+        url = reverse('metered-feature-detail',
                       kwargs={'pk': metered_feature.pk})
 
         response = self.client.get(url)
@@ -82,7 +82,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.assertNotEqual(response.data, [])
 
     def test_get_metered_feature_unexisting(self):
-        url = reverse('silver_api:metered-feature-detail',
+        url = reverse('metered-feature-detail',
                       kwargs={'pk': 42})
 
         response = self.client.get(url)
@@ -93,7 +93,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_delete_metered_feature(self):
         MeteredFeatureFactory.create()
 
-        url = reverse('silver_api:metered-feature-detail', kwargs={'pk': 1})
+        url = reverse('metered-feature-detail', kwargs={'pk': 1})
 
         response = self.client.delete(url)
 
@@ -105,7 +105,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_edit_put_metered_feature(self):
         MeteredFeatureFactory.create()
 
-        url = reverse('silver_api:metered-feature-detail', kwargs={'pk': 1})
+        url = reverse('metered-feature-detail', kwargs={'pk': 1})
 
         response = self.client.put(url)
 
@@ -117,7 +117,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_edit_patch_metered_feature(self):
         MeteredFeatureFactory.create()
 
-        url = reverse('silver_api:metered-feature-detail', kwargs={'pk': 1})
+        url = reverse('metered-feature-detail', kwargs={'pk': 1})
 
         response = self.client.patch(url)
 

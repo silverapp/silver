@@ -29,7 +29,7 @@ class TestCustomerEndpoint(APITestCase):
     }
 
     def test_create_post_customer(self):
-        url = reverse('silver_api:customer-list')
+        url = reverse('customer-list')
 
         response = self.client.post(url, json.dumps(self.complete_data),
                                     content_type='application/json')
@@ -37,7 +37,7 @@ class TestCustomerEndpoint(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_post_customer_without_required_field(self):
-        url = reverse('silver_api:customer-list')
+        url = reverse('customer-list')
 
         required_fields = ['address_1', 'city', 'zip_code', 'country']
 
@@ -59,7 +59,7 @@ class TestCustomerEndpoint(APITestCase):
     def test_get_customer_list(self):
         CustomerFactory.create()
 
-        url = reverse('silver_api:customer-list')
+        url = reverse('customer-list')
 
         response = self.client.get(url)
 
@@ -69,7 +69,7 @@ class TestCustomerEndpoint(APITestCase):
     def test_get_customer_detail(self):
         customer = CustomerFactory.create()
 
-        url = reverse('silver_api:customer-detail',
+        url = reverse('customer-detail',
                       kwargs={'pk': customer.pk})
 
         response = self.client.get(url)
@@ -78,7 +78,7 @@ class TestCustomerEndpoint(APITestCase):
         self.assertNotEqual(response.data, [])
 
     def test_get_customer_detail_unexisting(self):
-        url = reverse('silver_api:customer-detail',
+        url = reverse('customer-detail',
                       kwargs={'pk': 42})
 
         response = self.client.get(url)
@@ -89,13 +89,13 @@ class TestCustomerEndpoint(APITestCase):
     def test_delete_customer(self):
         customer = CustomerFactory.create()
 
-        url = reverse('silver_api:customer-detail', kwargs={'pk': customer.pk})
+        url = reverse('customer-detail', kwargs={'pk': customer.pk})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     def test_delete_unexisting_customer(self):
-        url = reverse('silver_api:customer-detail', kwargs={'pk': 42})
+        url = reverse('customer-detail', kwargs={'pk': 42})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -108,7 +108,7 @@ class TestCustomerEndpoint(APITestCase):
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
+        url = reverse('customer-detail', kwargs={'pk': 1})
 
         response = self.client.put(url, data=changed_data)
 
@@ -129,7 +129,7 @@ class TestCustomerEndpoint(APITestCase):
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('silver_api:customer-detail', kwargs={'pk': 1})
+        url = reverse('customer-detail', kwargs={'pk': 1})
 
         response = self.client.patch(url, data=changed_data)
 
