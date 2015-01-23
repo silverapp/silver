@@ -143,7 +143,6 @@ class Subscription(models.Model):
     STATES = (
         ('active', 'Active'),
         ('inactive', 'Inactive'),
-        ('past_due', 'Past Due'),
         ('on_trial', 'On Trial'),
         ('canceled', 'Canceled'),
         ('ended', 'Ended')
