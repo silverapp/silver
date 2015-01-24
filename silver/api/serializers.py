@@ -5,7 +5,7 @@ from rest_framework.reverse import reverse
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
-                           InvoiceEntry, ProductCode)
+                           BillingDocumentEntry, ProductCode)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -190,15 +190,15 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'value')
 
 
-class InvoiceEntrySerializer(serializers.HyperlinkedModelSerializer):
+class BillingDocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = InvoiceEntry
+        model = BillingDocumentEntry
         fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    entries = InvoiceEntrySerializer(many=True)
+    invoice_entries = BillingDocumentEntrySerializer(many=True)
 
     class Meta:
         model = Invoice
@@ -206,7 +206,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'customer', 'archived_provider', 'archived_customer',
                   'due_date', 'issue_date', 'paid_date', 'cancel_date',
                   'sales_tax_name', 'sales_tax_percent', 'currency',
-                  'state', 'entries')
+                  'state', 'invoice_entries')
         read_only_fields = ('archived_provider', 'archived_customer')
 
     def create(self, validated_data):
@@ -219,7 +219,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             for field in entry.items():
                 entry_dict[field[0]] = field[1]
 
-            InvoiceEntry.objects.create(**entry_dict)
+            BillingDocumentEntry.objects.create(**entry_dict)
 
         return invoice
 

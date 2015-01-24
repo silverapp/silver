@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, InvoiceEntry)
+                    MeteredFeatureUnitsLog, Invoice, BillingDocumentEntry)
 
 from django.contrib.admin.actions import delete_selected as delete_selected_
 
@@ -139,8 +139,10 @@ class ProviderAdmin(LiveModelAdmin):
     exclude = ['live']
 
 
-class InvoiceEntryInline(admin.TabularInline):
-    model = InvoiceEntry
+class BillingDocumentEntryInline(admin.TabularInline):
+    model = BillingDocumentEntry
+    fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
+             'product_code', 'start_date', 'end_date')
 
 class InvoiceForm(forms.ModelForm):
     class Meta:
@@ -178,7 +180,7 @@ class InvoiceAdmin(admin.ModelAdmin):
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
     readonly_fields = ('series', 'state')
-    inlines = [InvoiceEntryInline]
+    inlines = [BillingDocumentEntryInline]
 
     def series(self, obj):
         return obj.invoice_series

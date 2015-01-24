@@ -11,13 +11,14 @@ from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           InvoiceEntry)
+                           BillingDocumentEntry)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
-                                    ProductCodeSerializer, InvoiceEntrySerializer)
+                                    ProductCodeSerializer,
+                                    BillingDocumentEntrySerializer)
 from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
 from silver.utils import get_object_or_None
 
@@ -384,10 +385,10 @@ class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
-class InvoiceEntryCreate(generics.CreateAPIView):
+class BillingDocumentEntryCreate(generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = InvoiceEntrySerializer
-    queryset = InvoiceEntry.objects.all()
+    serializer_class = BillingDocumentEntrySerializer
+    queryset = BillingDocumentEntry.objects.all()
 
     def post(self, request, *args, **kwargs):
         invoice_pk = kwargs.get('invoice_pk')
@@ -401,16 +402,16 @@ class InvoiceEntryCreate(generics.CreateAPIView):
             msg = "Invoice entries can be added only when the invoice is in draft state."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = InvoiceEntrySerializer(data=request.DATA,
+        serializer = BillingDocumentEntrySerializer(data=request.DATA,
                                             context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save(invoice=invoice)
             return Response(serializer.data)
 
-class InvoiceEntryUpdateDestroy(APIView):
+class BillingDocumentEntryUpdateDestroy(APIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = InvoiceEntrySerializer
-    queryset = InvoiceEntry.objects.all()
+    serializer_class = BillingDocumentEntrySerializer
+    queryset = BillingDocumentEntry.objects.all()
 
     def put(self, request, *args, **kwargs):
         invoice_pk = kwargs.get('invoice_pk')
@@ -427,12 +428,13 @@ class InvoiceEntryUpdateDestroy(APIView):
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            entry = InvoiceEntry.objects.get(invoice=invoice, entry_id=entry_id)
-        except InvoiceEntry.DoesNotExist:
+            entry = BillingDocumentEntry.objects.get(invoice=invoice,
+                                                     entry_id=entry_id)
+        except BillingDocumentEntry.DoesNotExist:
             return Response({"detail": "Invoice Entry not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        serializer = InvoiceEntrySerializer(entry, data=request.DATA,
+        serializer = BillingDocumentEntrySerializer(entry, data=request.DATA,
                                             context={'request': request})
 
         if serializer.is_valid(raise_exception=True):
@@ -454,10 +456,11 @@ class InvoiceEntryUpdateDestroy(APIView):
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            entry = InvoiceEntry.objects.get(invoice=invoice, entry_id=entry_id)
+            entry = BillingDocumentEntry.objects.get(invoice=invoice,
+                                                     entry_id=entry_id)
             entry.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except InvoiceEntry.DoesNotExist:
+        except BillingDocumentEntry.DoesNotExist:
             return Response({"detail": "Invoice entry not found"},
                             status=status.HTTP_404_NOT_FOUND)
 

@@ -523,7 +523,7 @@ class Proforma(AbstractInvoicingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
 
-class InvoiceEntry(models.Model):
+class BillingDocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20)
@@ -534,7 +534,14 @@ class InvoiceEntry(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
-    invoice = models.ForeignKey('Invoice', related_name='entries')
+    invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
+                               blank=True, null=True)
+    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
+                                blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Entry'
+        verbose_name_plural = 'Entries'
 
     def _get_next_entry_id(self, invoice):
         max_id = self.__class__._default_manager.filter(
@@ -547,4 +554,4 @@ class InvoiceEntry(models.Model):
         if not self.entry_id:
             self.entry_id = self._get_next_entry_id(self.invoice)
 
-        super(InvoiceEntry, self).save(*args, **kwargs)
+        super(BillingDocumentEntry, self).save(*args, **kwargs)
