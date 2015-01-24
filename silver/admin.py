@@ -147,17 +147,35 @@ class BillingDocumentEntryInline(admin.TabularInline):
 
 class BillingDocumentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        # If it's an edit action, save the provider and the number. Check the
+        # save() method to see their usefulness.
         instance = kwargs.get('instance')
         self.initial_number = instance.number if instance else None
+        self.provider = instance.provider if instance else None
+
         super(BillingDocumentForm, self).__init__(*args, **kwargs)
 
-    def save(self, commit=True):
+    def clean(self):
+        print self.cleaned_data
+
+    def save(self, commit=True, *args, **kwargs):
         obj = super(BillingDocumentForm, self).save(commit=False)
-        if self.initial_number and not obj.number:
-            obj.number = self.initial_number
+        # The provider has changed => generate a new number which corresponding
+        # to new provider's count
+        if self.provider != obj.provider:
+            obj.number = None
+        else:
+            # If the number input box was just cleaned => place back the
+            # old number.
+            if self.initial_number and not obj.number:
+                obj.number = self.initial_number
+
+        # The number did not change (the input box is empty) => do not
+        # generate a new number, but keep the old one.
         if commit:
             obj.save()
         return obj
+
 
 class InvoiceForm(BillingDocumentForm):
     class Meta:
@@ -167,6 +185,7 @@ class InvoiceForm(BillingDocumentForm):
 class ProformaForm(BillingDocumentForm):
     class Meta:
         model = Proforma
+
 
 class BillingDocumentAdmin(admin.ModelAdmin):
     list_display = ['number', 'customer_display', 'provider_display', 'state',
