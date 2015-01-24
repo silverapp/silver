@@ -155,9 +155,6 @@ class BillingDocumentForm(forms.ModelForm):
 
         super(BillingDocumentForm, self).__init__(*args, **kwargs)
 
-    def clean(self):
-        print self.cleaned_data
-
     def save(self, commit=True, *args, **kwargs):
         obj = super(BillingDocumentForm, self).save(commit=False)
         # The provider has changed => generate a new number which corresponding
@@ -241,13 +238,13 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         raise NotImplementedError
 
 
-class InvoiceAdmin(admin.ModelAdmin):
+class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
     list_display = BillingDocumentAdmin.list_display
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields
-    readonly_fields = BillingDocumentAdmin.readonly_fields
+    fields = BillingDocumentAdmin.fields + ('proforma',)
+    readonly_fields = BillingDocumentAdmin.readonly_fields + ('proforma', )
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
 
@@ -271,7 +268,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         return Invoice
 
 
-class ProformaAdmin(admin.ModelAdmin):
+class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
 
     list_display = BillingDocumentAdmin.list_display
@@ -299,7 +296,7 @@ class ProformaAdmin(admin.ModelAdmin):
 
     @property
     def model_to_call(self):
-        return Invoice
+        return Proforma
 
 
 admin.site.register(Plan, PlanAdmin)
