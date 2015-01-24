@@ -145,27 +145,30 @@ class BillingDocumentEntryInline(admin.TabularInline):
     fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
              'product_code', 'start_date', 'end_date')
 
-
-class InvoiceForm(forms.ModelForm):
-    class Meta:
-        model = Invoice
-
+class BillingDocumentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
         self.initial_number = instance.number if instance else None
-        super(InvoiceForm, self).__init__(*args, **kwargs)
+        super(BillingDocumentForm, self).__init__(*args, **kwargs)
 
     def save(self, commit=True):
-        obj = super(InvoiceForm, self).save(commit=False)
+        obj = super(BillingDocumentForm, self).save(commit=False)
         if self.initial_number and not obj.number:
             obj.number = self.initial_number
         if commit:
             obj.save()
         return obj
 
+class InvoiceForm(BillingDocumentForm):
+    class Meta:
+        model = Invoice
 
-class InvoiceAdmin(admin.ModelAdmin):
-    form = InvoiceForm
+
+class ProformaForm(BillingDocumentForm):
+    class Meta:
+        model = Proforma
+
+class BillingDocumentAdmin(admin.ModelAdmin):
     list_display = ['number', 'customer_display', 'provider_display', 'state',
                     'issue_date', 'due_date', 'paid_date', 'cancel_date',
                     'sales_tax_name', 'sales_tax_percent', 'currency']
@@ -184,6 +187,50 @@ class InvoiceAdmin(admin.ModelAdmin):
     readonly_fields = ('series', 'state')
     inlines = [BillingDocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
+
+    @property
+    def model_to_call(self):
+        raise NotImplementedError
+
+    def perform_action(self, request, queryset, action):
+        method = getattr(self.model_to_call, action, None)
+        if not method:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
+
+        exist_failed_changes = False
+        failed_changes = []
+        for entry in queryset:
+            try:
+                method(entry)
+                entry.save()
+            except TransitionNotAllowed:
+                exist_failed_changes = True
+                failed_changes.append(entry.number)
+
+        if exist_failed_changes:
+            failed_ids = ' '.join(map(str, failed_changes))
+            msg = "The state change failed for invoice(s) with "\
+                  "numbers: %s" % failed_ids
+            self.message_user(request, msg, level=messages.ERROR)
+        else:
+            qs_count = queryset.count()
+            msg = 'Successfully changed %d invoice(s).' % qs_count
+            self.message_user(request, msg)
+
+    def series(self, obj):
+        raise NotImplementedError
+
+
+class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
+    list_display = BillingDocumentAdmin.list_display
+    list_display_links = BillingDocumentAdmin.list_display_links
+    search_fields = BillingDocumentAdmin.search_fields
+    fields = BillingDocumentAdmin.fields
+    readonly_fields = BillingDocumentAdmin.readonly_fields
+    inlines = BillingDocumentAdmin.inlines
+    actions = BillingDocumentAdmin.actions
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
@@ -197,74 +244,24 @@ class InvoiceAdmin(admin.ModelAdmin):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoices'
 
-    def perform_action(self, request, queryset, action):
-        method = getattr(Invoice, action, None)
-        if not method:
-            self.message_user(request, 'Illegal action.', level=messages.ERROR)
-            return
-
-        exist_failed_changes = False
-        failed_changes = []
-        for entry in queryset:
-            try:
-                method(entry)
-                entry.save()
-            except TransitionNotAllowed:
-                exist_failed_changes = True
-                failed_changes.append(entry.number)
-
-        if exist_failed_changes:
-            failed_ids = ' '.join(map(str, failed_changes))
-            msg = "The state change failed for invoice(s) with "\
-                  "numbers: %s" % failed_ids
-            self.message_user(request, msg, level=messages.ERROR)
-        else:
-            qs_count = queryset.count()
-            msg = 'Successfully changed %d invoice(s).' % qs_count
-            self.message_user(request, msg)
-
     def series(self, obj):
         return obj.invoice_series
 
-
-class ProformaForm(forms.ModelForm):
-    class Meta:
-        model = Proforma
-
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.get('instance')
-        self.initial_number = instance.number if instance else None
-        super(ProformaForm, self).__init__(*args, **kwargs)
-
-    def save(self, commit=True):
-        obj = super(ProformaForm, self).save(commit=False)
-        if self.initial_number and not obj.number:
-            obj.number = self.initial_number
-        if commit:
-            obj.save()
-        return obj
+    @property
+    def model_to_call(self):
+        return Invoice
 
 
 class ProformaAdmin(admin.ModelAdmin):
     form = ProformaForm
-    list_display = ['number', 'customer_display', 'provider_display', 'state',
-                    'issue_date', 'due_date', 'paid_date', 'cancel_date',
-                    'sales_tax_name', 'sales_tax_percent', 'currency']
-    list_display_links = list_display
 
-    common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
-                     'country', 'zip_code', 'name', 'state']
-    customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields]
-    provider_search_fields = ['provider__{field}'.format(field=field)
-                              for field in common_fields]
-    search_fields = customer_search_fields + provider_search_fields
-    fields = (('series', 'number'), 'provider', 'customer',
-              'issue_date', 'due_date', 'paid_date', 'cancel_date',
-              'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
-    readonly_fields = ('series', 'state')
-    inlines = [BillingDocumentEntryInline]
-    actions = ['issue', 'pay', 'cancel']
+    list_display = BillingDocumentAdmin.list_display
+    list_display_links = BillingDocumentAdmin.list_display_links
+    search_fields = BillingDocumentAdmin.search_fields
+    fields = BillingDocumentAdmin.fields
+    readonly_fields = BillingDocumentAdmin.readonly_fields
+    inlines = BillingDocumentAdmin.inlines
+    actions = BillingDocumentAdmin.actions
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
@@ -278,34 +275,13 @@ class ProformaAdmin(admin.ModelAdmin):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected proformas'
 
-    def perform_action(self, request, queryset, action):
-        method = getattr(Proforma, action, None)
-        if not method:
-            self.message_user(request, 'Illegal action.', level=messages.ERROR)
-            return
-
-        exist_failed_changes = False
-        failed_changes = []
-        for entry in queryset:
-            try:
-                method(entry)
-                entry.save()
-            except TransitionNotAllowed:
-                exist_failed_changes = True
-                failed_changes.append(entry.number)
-
-        if exist_failed_changes:
-            failed_ids = ' '.join(map(str, failed_changes))
-            msg = "The state change failed for invoice(s) with "\
-                  "numbers: %s" % failed_ids
-            self.message_user(request, msg, level=messages.ERROR)
-        else:
-            qs_count = queryset.count()
-            msg = 'Successfully changed %d invoice(s).' % qs_count
-            self.message_user(request, msg)
-
     def series(self, obj):
         return obj.proforma_series
+
+    @property
+    def model_to_call(self):
+        return Invoice
+
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
