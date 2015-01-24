@@ -201,17 +201,17 @@ class InvoiceAdmin(admin.ModelAdmin):
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
-        failed_count = 0
+        exist_failed_changes = False
         failed_changes = []
         for entry in queryset:
             try:
                 method(entry)
                 entry.save()
             except TransitionNotAllowed:
-                failed_count += 1
+                exist_failed_changes = True
                 failed_changes.append(entry.number)
 
-        if failed_count:
+        if exist_failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
             msg = "The state change failed for invoice(s) with "\
                   "numbers: %s" % failed_ids
