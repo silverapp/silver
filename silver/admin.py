@@ -183,6 +183,18 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [BillingDocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
+    def issue(self, request, queryset):
+        self.perform_action(request, queryset, 'issue')
+    issue.short_description = 'Issue the selected invoices'
+
+    def pay(self, request, queryset):
+        self.perform_action(request, queryset, 'pay')
+    pay.short_description = 'Pay the selected invoices'
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, queryset, 'cancel')
+    cancel.short_description = 'Cancel the selected invoices'
+
     def perform_action(self, request, queryset, action):
         method = getattr(Invoice, action, None)
         if not method:
@@ -208,18 +220,6 @@ class InvoiceAdmin(admin.ModelAdmin):
             qs_count = queryset.count()
             msg = 'Successfully changed %d invoice(s).' % qs_count
             self.message_user(request, msg)
-
-    def issue(self, request, queryset):
-        self.perform_action(request, queryset, 'issue')
-    issue.short_description = 'Issue the selected invoices'
-
-    def pay(self, request, queryset):
-        self.perform_action(request, queryset, 'pay')
-    pay.short_description = 'Pay the selected invoices'
-
-    def cancel(self, request, queryset):
-        self.perform_action(request, queryset, 'cancel')
-    cancel.short_description = 'Cancel the selected invoices'
 
     def series(self, obj):
         return obj.invoice_series
