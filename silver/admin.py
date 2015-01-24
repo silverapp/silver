@@ -181,6 +181,45 @@ class InvoiceAdmin(admin.ModelAdmin):
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
     readonly_fields = ('series', 'state')
     inlines = [BillingDocumentEntryInline]
+    actions = ['issue', 'pay', 'cancel']
+
+    def perform_action(self, request, queryset, action):
+        method = getattr(Invoice, action, None)
+        if not method:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
+
+        failed_count = 0
+        failed_changes = []
+        for entry in queryset:
+            try:
+                method(entry)
+                entry.save()
+            except TransitionNotAllowed:
+                failed_count += 1
+                failed_changes.append(entry.number)
+
+        if failed_count:
+            failed_ids = ' '.join(map(str, failed_changes))
+            msg = "The state change failed for invoice(s) with "\
+                  "numbers: %s" % failed_ids
+            self.message_user(request, msg, level=messages.ERROR)
+        else:
+            qs_count = queryset.count()
+            msg = 'Successfully changed %d invoice(s).' % qs_count
+            self.message_user(request, msg)
+
+    def issue(self, request, queryset):
+        self.perform_action(request, queryset, 'issue')
+    issue.short_description = 'Issue the selected invoices'
+
+    def pay(self, request, queryset):
+        self.perform_action(request, queryset, 'pay')
+    pay.short_description = 'Pay the selected invoices'
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, queryset, 'cancel')
+    cancel.short_description = 'Cancel the selected invoices'
 
     def series(self, obj):
         return obj.invoice_series
