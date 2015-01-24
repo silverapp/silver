@@ -1,7 +1,4 @@
-import warnings
-
 from django.core.paginator import EmptyPage
-from django.http.response import Http404
 
 from rest_framework.response import Response
 from rest_framework.templatetags.rest_framework import replace_query_param
@@ -39,7 +36,8 @@ class HPListModelMixin(object):
 
         for rel, get_page_number in siblings.items():
             try:
-                page_url = replace_query_param(url, self.page_field, get_page_number(page))
+                page_url = replace_query_param(url, self.page_field,
+                                               get_page_number(page))
                 links.append('<%s>; rel="%s"' % (page_url, rel))
             except EmptyPage:
                 pass
