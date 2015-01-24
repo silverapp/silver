@@ -38,6 +38,5 @@ REQUIRED_APPS = [
     'rest_hooks',
     'international',
     'django_fsm',
-    'django_extensions',
     'django_filters',
 ]
