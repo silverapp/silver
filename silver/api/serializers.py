@@ -1,5 +1,6 @@
 from string import rfind
 
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -210,7 +211,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('archived_provider', 'archived_customer')
 
     def create(self, validated_data):
-        entries = validated_data.pop('entries')
+        entries = validated_data.pop('invoice_entries', None)
         invoice = Invoice.objects.create(**validated_data)
 
         for entry in entries:
@@ -241,8 +242,12 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def validate(self, data):
-        if data['state'] != 'draft':
-            msg = 'Direct state modification is not allowed.'
+        if self.instance:
+            self.instance.clean()
+
+        if self.instance and data['state'] != self.instance.state:
+            msg = "Direct state modification is not allowed."\
+                  " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)
         return data
 

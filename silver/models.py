@@ -329,7 +329,6 @@ class Customer(AbstractBillingEntity):
     complete_address.short_description = 'Complete address'
 
 
-
 class Provider(AbstractBillingEntity):
     FLOW_CHOICES = (
         ('proforma', 'Proforma'),
@@ -354,7 +353,6 @@ class Provider(AbstractBillingEntity):
                    this provider."
     )
     proforma_starting_number = models.PositiveIntegerField()
-
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
@@ -407,10 +405,16 @@ class AbstractInvoicingDocument(models.Model):
         verbose_name='Invoice state', help_text='The state the invoice is in.'
     )
 
+    __last_state = None
+
     class Meta:
         abstract = True
         unique_together = ('provider', 'number')
         ordering = ('-issue_date', 'number')
+
+    def __init__(self, *args, **kwargs):
+        super(AbstractInvoicingDocument, self).__init__(*args, **kwargs)
+        self.__last_state = self.state
 
     @transition(field=state, source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -442,6 +446,18 @@ class AbstractInvoicingDocument(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
+    def clean(self):
+        # The only change that is allowed if the document is in issued state
+        # is the state chage from issued to paid
+        if self.__last_state == 'issued' and self.state != 'paid':
+            msg = 'You cannot edit the document once it is in issued state.'
+            raise ValidationError({NON_FIELD_ERRORS: msg})
+
+        # If it's in paid state => don't allow any changes
+        if self.__last_state == 'paid' or self.state == 'paid':
+            msg = 'You cannot edit the document once it is in paid state.'
+            raise ValidationError({NON_FIELD_ERRORS: msg})
+
     def _generate_number(self):
         """Generates the number for a proforma/invoice. To be implemented
         in the corresponding subclass."""
@@ -470,6 +486,8 @@ class AbstractInvoicingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
+        self.__last_state = self.state
+
         super(AbstractInvoicingDocument, self).save(*args, **kwargs)
 
     def customer_display(self):
@@ -492,8 +510,13 @@ class AbstractInvoicingDocument(models.Model):
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
                 'currency']
 
+    def __unicode__(self):
+        return '%s-%s-%s' % (self.number, self.customer, self.provider)
+
 
 class Invoice(AbstractInvoicingDocument):
+
+    proforma = models.ForeignKey('Proforma', blank=True, null=True)
 
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
@@ -516,6 +539,7 @@ class Invoice(AbstractInvoicingDocument):
         except Provider.DoesNotExist:
             return ''
 
+
 class Proforma(AbstractInvoicingDocument):
 
     def __init__(self, *args, **kwargs):
@@ -532,6 +556,22 @@ class Proforma(AbstractInvoicingDocument):
         super(Proforma, self).issue(issue_date, due_date)
         self.archived_provider = self.provider.get_proforma_archivable_fields()
 
+    @transition(field='state', source='issued', target='paid')
+    def pay(self, paid_date=None):
+        super(Proforma, self).pay(paid_date)
+
+        # Generate the new invoice based this proforma
+        invoice_fields = self.fields_for_automatic_invoice_generation
+        invoice_fields.update({'proforma': self})
+        invoice = Invoice.objects.create(**invoice_fields)
+        invoice.issue()
+        invoice.pay()
+        invoice.save()
+
+        # For all the entries in the proforma => add the link to the new
+        # invoice
+        BillingDocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
+
     @property
     def proforma_series(self):
         try:
@@ -539,6 +579,12 @@ class Proforma(AbstractInvoicingDocument):
         except Provider.DoesNotExist:
             return ''
 
+    @property
+    def fields_for_automatic_invoice_generation(self):
+        fields = ['customer', 'provider', 'archived_customer', 'archived_provider',
+                  'due_date', 'issue_date', 'paid_date', 'cancel_date',
+                  'sales_tax_percent', 'sales_tax_name', 'currency']
+        return {field: getattr(self, field, None) for field in fields}
 
 class BillingDocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
