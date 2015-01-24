@@ -6,7 +6,6 @@ from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.api.dateutils import last_date_that_fits
 
@@ -19,8 +18,7 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, InvoiceEntrySerializer)
-from silver.api.generics import (HPListAPIView, HPListBulkCreateAPIView,
-                                 HPListCreateAPIView)
+from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
 from silver.utils import get_object_or_None
 
 
@@ -94,7 +92,7 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeatureList(HPListBulkCreateAPIView):
+class MeteredFeatureList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
@@ -361,7 +359,7 @@ class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
     queryset = ProductCode.objects.all()
 
 
-class ProviderListBulkCreate(HPListBulkCreateAPIView):
+class ProviderListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
@@ -375,7 +373,7 @@ class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Provider.objects.all()
 
 
-class InvoiceListBulkCreate(ListBulkCreateAPIView):
+class InvoiceListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
@@ -478,7 +476,7 @@ class InvoiceStateHandler(APIView):
         state = request.DATA.get('state', None)
         if state == 'issued':
             if invoice.state != 'draft':
-                msg = "An invoice can be issued only if it is in `draft` state."
+                msg = "An invoice can be issued only if it is in draft state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
             issue_date = request.DATA.get('issue_date', None)
@@ -487,7 +485,7 @@ class InvoiceStateHandler(APIView):
             invoice.save()
         elif state == 'paid':
             if invoice.state != 'issued':
-                msg = "An invoice can be paid only if it is in `issued` state."
+                msg = "An invoice can be paid only if it is in issued state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
             paid_date = request.DATA.get('paid_date', None)
@@ -495,14 +493,14 @@ class InvoiceStateHandler(APIView):
             invoice.save()
         elif state == 'canceled':
             if invoice.state != 'issued':
-                msg = "An invoice can be canceled only if it is in `issued` state."
+                msg = "An invoice can be canceled only if it is in issued state."
                 return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
             cancel_date = request.DATA.get('cancel_date', None)
             invoice.cancel(cancel_date)
             invoice.save()
         elif not state:
-            msg = "You have to provide a value for the `state` field."
+            msg = "You have to provide a value for the state field."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
         else:
             msg = "Illegal state value."
