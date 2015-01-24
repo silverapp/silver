@@ -4,7 +4,7 @@ from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, BillingDocumentEntry,
-                    ProductCode)
+                    ProductCode, Proforma)
 
 from django.contrib.admin.actions import delete_selected as delete_selected_
 
@@ -167,8 +167,8 @@ class InvoiceForm(forms.ModelForm):
 class InvoiceAdmin(admin.ModelAdmin):
     form = InvoiceForm
     list_display = ['number', 'customer_display', 'provider_display', 'state',
-                    'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                    'sales_tax_percent', 'currency']
+                    'issue_date', 'due_date', 'paid_date', 'cancel_date',
+                    'sales_tax_name', 'sales_tax_percent', 'currency']
     list_display_links = list_display
 
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
@@ -227,10 +227,91 @@ class InvoiceAdmin(admin.ModelAdmin):
         return obj.invoice_series
 
 
+class ProformaForm(forms.ModelForm):
+    class Meta:
+        model = Proforma
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance')
+        self.initial_number = instance.number if instance else None
+        super(ProformaForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        obj = super(ProformaForm, self).save(commit=False)
+        if self.initial_number and not obj.number:
+            obj.number = self.initial_number
+        if commit:
+            obj.save()
+        return obj
+
+
+class ProformaAdmin(admin.ModelAdmin):
+    form = ProformaForm
+    list_display = ['number', 'customer_display', 'provider_display', 'state',
+                    'issue_date', 'due_date', 'paid_date', 'cancel_date',
+                    'sales_tax_name', 'sales_tax_percent', 'currency']
+    list_display_links = list_display
+
+    common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
+                     'country', 'zip_code', 'name', 'state']
+    customer_search_fields = ['customer__{field}'.format(field=field)
+                              for field in common_fields]
+    provider_search_fields = ['provider__{field}'.format(field=field)
+                              for field in common_fields]
+    search_fields = customer_search_fields + provider_search_fields
+    fields = (('series', 'number'), 'provider', 'customer',
+              'issue_date', 'due_date', 'paid_date', 'cancel_date',
+              'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
+    readonly_fields = ('series', 'state')
+    inlines = [BillingDocumentEntryInline]
+    actions = ['issue', 'pay', 'cancel']
+
+    def issue(self, request, queryset):
+        self.perform_action(request, queryset, 'issue')
+    issue.short_description = 'Issue the selected proformas'
+
+    def pay(self, request, queryset):
+        self.perform_action(request, queryset, 'pay')
+    pay.short_description = 'Pay the selected proformas'
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, queryset, 'cancel')
+    cancel.short_description = 'Cancel the selected proformas'
+
+    def perform_action(self, request, queryset, action):
+        method = getattr(Proforma, action, None)
+        if not method:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
+
+        exist_failed_changes = False
+        failed_changes = []
+        for entry in queryset:
+            try:
+                method(entry)
+                entry.save()
+            except TransitionNotAllowed:
+                exist_failed_changes = True
+                failed_changes.append(entry.number)
+
+        if exist_failed_changes:
+            failed_ids = ' '.join(map(str, failed_changes))
+            msg = "The state change failed for invoice(s) with "\
+                  "numbers: %s" % failed_ids
+            self.message_user(request, msg, level=messages.ERROR)
+        else:
+            qs_count = queryset.count()
+            msg = 'Successfully changed %d invoice(s).' % qs_count
+            self.message_user(request, msg)
+
+    def series(self, obj):
+        return obj.proforma_series
+
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Provider, ProviderAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
+admin.site.register(Proforma, ProformaAdmin)
 admin.site.register(ProductCode)

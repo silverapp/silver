@@ -412,6 +412,36 @@ class AbstractInvoicingDocument(models.Model):
         unique_together = ('provider', 'number')
         ordering = ('-issue_date', 'number')
 
+    @transition(field=state, source='draft', target='issued')
+    def issue(self, issue_date=None, due_date=None):
+        if issue_date:
+            self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+        if not self.issue_date and not issue_date:
+            self.issue_date = timezone.now().date()
+        if due_date:
+            self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.archived_customer = self.customer.get_archivable_fields()
+
+    @transition(field=state, source='issued', target='paid')
+    def pay(self, paid_date=None):
+        if paid_date:
+            self.paid_date = datetime.strptime(paid_date, '%Y-%m-%d').date()
+        if not self.paid_date and not paid_date:
+            self.paid_date = timezone.now().date()
+
+    @transition(field=state, source='issued', target='canceled')
+    def cancel(self, cancel_date=None):
+        if cancel_date:
+            self.cancel_date = datetime.strptime(cancel_date, '%Y-%m-%d').date()
+        if not self.cancel_date and not cancel_date:
+            self.cancel_date = timezone.now().date()
+
     def _generate_number(self):
         """Generates the number for a proforma/invoice. To be implemented
         in the corresponding subclass."""
@@ -476,34 +506,8 @@ class Invoice(AbstractInvoicingDocument):
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
-        if issue_date:
-            self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
-        if not self.issue_date and not issue_date:
-            self.issue_date = timezone.now().date()
-        if due_date:
-            self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
-
-        if not self.sales_tax_name:
-            self.sales_tax_name = self.customer.sales_tax_name
-        if not self.sales_tax_percent:
-            self.sales_tax_percent = self.customer.sales_tax_percent
-
+        super(Invoice, self).issue(issue_date, due_date)
         self.archived_provider = self.provider.get_invoice_archivable_fields()
-        self.archived_customer = self.customer.get_archivable_fields()
-
-    @transition(field='state', source='issued', target='paid')
-    def pay(self, paid_date=None):
-        if paid_date:
-            self.paid_date = datetime.strptime(paid_date, '%Y-%m-%d').date()
-        if not self.paid_date and not paid_date:
-            self.paid_date = timezone.now().date()
-
-    @transition(field='state', source='issued', target='canceled')
-    def cancel(self, cancel_date=None):
-        if cancel_date:
-            self.cancel_date = datetime.strptime(cancel_date, '%Y-%m-%d').date()
-        if not self.cancel_date and not cancel_date:
-            self.cancel_date = timezone.now().date()
 
     @property
     def invoice_series(self):
@@ -522,6 +526,19 @@ class Proforma(AbstractInvoicingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
+
+    @transition(field='state', source='draft', target='issued')
+    def issue(self, issue_date=None, due_date=None):
+        super(Proforma, self).issue(issue_date, due_date)
+        self.archived_provider = self.provider.get_proforma_archivable_fields()
+
+    @property
+    def proforma_series(self):
+        try:
+            return self.provider.proforma_series
+        except Provider.DoesNotExist:
+            return ''
+
 
 class BillingDocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
