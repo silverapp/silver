@@ -188,7 +188,7 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['number', 'customer_display', 'provider_display', 'state',
+    list_display = ['id', 'number', 'customer_display', 'provider_display', 'state',
                     'issue_date', 'due_date', 'paid_date', 'cancel_date',
                     'sales_tax_name', 'sales_tax_percent', 'currency']
     list_display_links = list_display
