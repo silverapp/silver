@@ -3,7 +3,8 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, BillingDocumentEntry)
+                    MeteredFeatureUnitsLog, Invoice, BillingDocumentEntry,
+                    ProductCode)
 
 from django.contrib.admin.actions import delete_selected as delete_selected_
 
@@ -111,6 +112,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'end', queryset)
 
 
+class MeteredFeatureAdmin(admin.ModelAdmin):
+    def get_model_perms(self, request):
+        return {}
+
+
 class CustomerAdmin(LiveModelAdmin):
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
@@ -120,11 +126,6 @@ class CustomerAdmin(LiveModelAdmin):
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
     exclude = ['live']
-
-
-class MeteredFeatureAdmin(admin.ModelAdmin):
-    def get_model_perms(self, request):
-        return {}
 
 
 class ProviderAdmin(LiveModelAdmin):
@@ -143,6 +144,7 @@ class BillingDocumentEntryInline(admin.TabularInline):
     model = BillingDocumentEntry
     fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
              'product_code', 'start_date', 'end_date')
+
 
 class InvoiceForm(forms.ModelForm):
     class Meta:
@@ -231,3 +233,4 @@ admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Provider, ProviderAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
+admin.site.register(ProductCode)
