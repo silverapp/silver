@@ -236,7 +236,6 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             field_value = validated_data.get(field_name,
                                              getattr(instance, field_name))
             setattr(instance, field_name, field_value)
-
         instance.save()
 
         return instance
