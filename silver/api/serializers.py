@@ -224,11 +224,19 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return invoice
 
     def update(self, instance, validated_data):
+        # The provider has changed => force the generation of the correct number
+        # corresponding to the count of the new provider
+        current_provider = instance.provider
+        new_provider = validated_data.get('provider')
+        if new_provider and new_provider != current_provider:
+            instance.number = None
+
         updateable_fields = instance.updateable_fields
         for field_name in updateable_fields:
             field_value = validated_data.get(field_name,
                                              getattr(instance, field_name))
             setattr(instance, field_name, field_value)
+
         instance.save()
 
         return instance
@@ -238,3 +246,4 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             msg = 'Direct state modification is not allowed.'
             raise serializers.ValidationError(msg)
         return data
+
