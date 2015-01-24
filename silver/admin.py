@@ -145,6 +145,7 @@ class BillingDocumentEntryInline(admin.TabularInline):
     fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
              'product_code', 'start_date', 'end_date')
 
+
 class BillingDocumentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         # If it's an edit action, save the provider and the number. Check the
@@ -197,6 +198,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
+
     fields = (('series', 'number'), 'provider', 'customer',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
@@ -205,11 +207,11 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     actions = ['issue', 'pay', 'cancel']
 
     @property
-    def model_to_call(self):
+    def _model(self):
         raise NotImplementedError
 
     def perform_action(self, request, queryset, action):
-        method = getattr(self.model_to_call, action, None)
+        method = getattr(self._model, action, None)
         if not method:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
@@ -264,13 +266,12 @@ class InvoiceAdmin(BillingDocumentAdmin):
         return obj.invoice_series
 
     @property
-    def model_to_call(self):
+    def _model(self):
         return Invoice
 
 
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
-
     list_display = BillingDocumentAdmin.list_display
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
@@ -295,7 +296,7 @@ class ProformaAdmin(BillingDocumentAdmin):
         return obj.proforma_series
 
     @property
-    def model_to_call(self):
+    def _model(self):
         return Proforma
 
 
