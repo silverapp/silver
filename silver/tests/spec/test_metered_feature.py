@@ -12,15 +12,17 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
+        self.complete_data = {
+            "name": "Page Views",
+            "price_per_unit": 0.05,
+            "included_units": 0
+        }
 
     def test_create_post_metered_feature(self):
         url = reverse('metered-feature-list')
 
-        response = self.client.post(url, json.dumps({
-            "name": "Page Views",
-            "price_per_unit": 0.05,
-            "included_units": 0
-        }), content_type='application/json')
+        response = self.client.post(url, json.dumps(self.complete_data),
+                                    content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual({'name': u'Page Views',
@@ -32,14 +34,9 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_create_post_metered_feature_without_required_field(self):
         url = reverse('metered-feature-list')
 
-        complete_data = {
-            "name": "Page Views",
-            "price_per_unit": 0.05,
-            "included_units": 0
-        }
         required_fields = ['name', 'price_per_unit', 'included_units']
         for field in required_fields:
-            temp_data = complete_data.copy()
+            temp_data = self.complete_data.copy()
             try:
                 temp_data.pop(field)
             except KeyError:

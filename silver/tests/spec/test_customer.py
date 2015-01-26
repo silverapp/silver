@@ -4,6 +4,8 @@ import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
+
+from silver.models import Customer
 from silver.tests.factories import AdminUserFactory, CustomerFactory
 
 
@@ -11,29 +13,28 @@ class TestCustomerEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
+        self.complete_data = {
+            "customer_reference": "123456",
+            "name": "Batman",
+            "company": "Wayne Enterprises",
+            "email": "bruce@wayneenterprises.com",
+            "address_1": "Batcave St.",
+            "address_2": "Some other address info",
+            "city": "Gotham",
+            "state": "SomeState",
+            "zip_code": "1111",
+            "country": "US",
+            "extra": "What is there more to say?",
+            "sales_tax_name": "VAT",
+            "sales_tax_percent": '3.00'
+        }
 
-    complete_data = {
-        "customer_reference": "123456",
-        "name": "Batman",
-        "company": "Wayne Enterprises",
-        "email": "bruce@wayneenterprises.com",
-        "address_1": "Batcave St.",
-        "address_2": "Some other address info",
-        "city": "Gotham",
-        "state": "SomeState",
-        "zip_code": "1111",
-        "country": "US",
-        "extra": "What is there more to say?",
-        "sales_tax_name": "VAT",
-        "sales_tax_percent": '3.00'
-    }
 
     def test_create_post_customer(self):
         url = reverse('customer-list')
 
         response = self.client.post(url, json.dumps(self.complete_data),
                                     content_type='application/json')
-
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_post_customer_without_required_field(self):
@@ -115,6 +116,8 @@ class TestCustomerEndpoint(APITestCase):
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert Customer.objects.all().count() == 0
+
 
     def test_delete_unexisting_customer(self):
         url = reverse('customer-detail', kwargs={'pk': 42})

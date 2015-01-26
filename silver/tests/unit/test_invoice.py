@@ -1,7 +1,6 @@
 from django.test import TestCase
 
-from silver.models import (Invoice, Customer, CustomerHistory, Provider,
-                           ProviderHistory)
+from silver.models import (Invoice)
 from silver.tests.factories import CustomerFactory, ProviderFactory
 
 
@@ -25,13 +24,6 @@ class TestInvoice(TestCase):
         invoice.save(invoice_customer_id=customer.id,
                      invoice_provider_id=provider.id)
 
-        customer_hist = CustomerHistory.objects.get(id=1)
-        assert customer_hist.customer_ref == customer
-        self._assert_common_fields_equality(customer_hist, customer)
-
-        provider_hist = ProviderHistory.objects.get(id=1)
-        assert provider_hist.provider_ref == provider
-        self._assert_common_fields_equality(provider_hist, provider)
 
     def test_customer_hist_and_provider_hist_proper_update(self):
         customer = CustomerFactory.create()

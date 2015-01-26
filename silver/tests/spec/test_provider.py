@@ -83,14 +83,8 @@ class TestProviderEndpoints(APITestCase):
             assert qs.count() == 0
 
     def test_GET_providers(self):
-<<<<<<< HEAD
         ProviderFactory.create_batch(25)
         url = reverse('provider-list')
-=======
-        ProviderFactory.create_batch(40)
-        url = reverse('silver_api:provider-list')
-
->>>>>>> master
         response = self.client.get(url)
 
         full_url = None
