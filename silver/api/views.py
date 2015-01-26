@@ -438,31 +438,24 @@ class InvoiceEntryCreate(DocEntryCreate):
         return "Invoice"
 
 
-class InvoiceEntryUpdateDestroy(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
-    serializer_class = DocumentEntrySerializer
-    queryset = DocumentEntry.objects.all()
+class DocEntryUpdateDestroy(APIView):
 
     def put(self, request, *args, **kwargs):
-        invoice_pk = kwargs.get('invoice_pk')
+        doc_pk = kwargs.get('document_pk')
         entry_id = kwargs.get('entry_id')
 
-        try:
-            invoice = Invoice.objects.get(pk=invoice_pk)
-        except Invoice.DoesNotExist:
-            return Response({"detail": "Invoice not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        Model = self.get_model()
+        model_name = self.get_model_name()
 
-        if invoice.state != 'draft':
-            msg = "Invoice entries can be modified only when the invoice is in draft state."
+        document = get_object_or_404(Model, pk=doc_pk)
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            entry = DocumentEntry.objects.get(invoice=invoice,
-                                              entry_id=entry_id)
-        except DocumentEntry.DoesNotExist:
-            return Response({"detail": "Invoice entry not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        entry = get_object_or_404(DocumentEntry, **searched_fields)
 
         serializer = DocumentEntrySerializer(entry, data=request.DATA,
                                              context={'request': request})
@@ -472,27 +465,49 @@ class InvoiceEntryUpdateDestroy(APIView):
             return Response(serializer.data)
 
     def delete(self, request, *args, **kwargs):
-        invoice_pk = kwargs.get('invoice_pk')
+        doc_pk = kwargs.get('document_pk')
         entry_id = kwargs.get('entry_id')
 
-        try:
-            invoice = Invoice.objects.get(pk=invoice_pk)
-        except Invoice.DoesNotExist:
-            return Response({"detail": "Invoice not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        Model = self.get_model()
+        model_name = self.get_model_name()
 
-        if invoice.state != 'draft':
-            msg = "Invoice entries can be deleted only when the invoice is in draft state."
+        document = get_object_or_404(Model, pk=doc_pk)
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            entry = DocumentEntry.objects.get(invoice=invoice,
-                                              entry_id=entry_id)
-            entry.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except DocumentEntry.DoesNotExist:
-            return Response({"detail": "Invoice entry not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        entry = get_object_or_404(DocumentEntry, **searched_fields)
+        entry.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_model(self):
+        raise NotImplementedError
+
+    def get_model_name(self):
+        raise NotImplementedError
+
+class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        return super(InvoiceEntryUpdateDestroy, self).put(request, *args,
+                                                          **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return super(InvoiceEntryUpdateDestroy, self).delete(request, *args,
+                                                             **kwargs)
+
+    def get_model(self):
+        return Invoice
+
+    def get_model_name(self):
+        return "Invoice"
 
 
 class InvoiceStateHandler(APIView):
@@ -571,61 +586,24 @@ class ProformaEntryCreate(DocEntryCreate):
         return "Proforma"
 
 
-class ProformaEntryUpdateDestroy(APIView):
+class ProformaEntryUpdateDestroy(DocEntryUpdateDestroy):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
     def put(self, request, *args, **kwargs):
-        proforma_pk = kwargs.get('proforma_pk')
-        entry_id = kwargs.get('entry_id')
-
-        try:
-            proforma = Proforma.objects.get(pk=proforma_pk)
-        except Proforma.DoesNotExist:
-            return Response({"detail": "Proforma not found"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        if proforma.state != 'draft':
-            msg = "Proforma entries can be modified only when the invoice is in draft state."
-            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
-
-        try:
-            entry = DocumentEntry.objects.get(proforma=proforma,
-                                              entry_id=entry_id)
-        except DocumentEntry.DoesNotExist:
-            return Response({"detail": "Proforma entry not found"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        serializer = DocumentEntrySerializer(entry, data=request.DATA,
-                                             context={'request': request})
-
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
+        return super(ProformaEntryUpdateDestroy, self).put(request, *args,
+                                                           **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        proforma_pk = kwargs.get('proforma_pk')
-        entry_id = kwargs.get('entry_id')
+        return super(ProformaEntryUpdateDestroy, self).delete(request, *args,
+                                                              **kwargs)
 
-        try:
-            proforma = Proforma.objects.get(pk=proforma_pk)
-        except Proforma.DoesNotExist:
-            return Response({"detail": "Proforma not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+    def get_model(self):
+        return Proforma
 
-        if proforma.state != 'draft':
-            msg = "Proforma entries can be modified only when the invoice is in draft state."
-            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
-
-        try:
-            entry = DocumentEntry.objects.get(proforma=proforma,
-                                              entry_id=entry_id)
-            entry.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except DocumentEntry.DoesNotExist:
-            return Response({"detail": "Proforma entry not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+    def get_model_name(self):
+        return "Proforma"
 
 
 class ProformaStateHandler(APIView):
