@@ -36,7 +36,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def test_create_post_metered_feature_without_required_field(self):
         url = reverse('metered-feature-list')
 
-        required_fields = ['name', 'price_per_unit', 'included_units']
+        required_fields = ['name', 'price_per_unit', 'included_units', 'unit']
         for field in required_fields:
             temp_data = self.complete_data.copy()
             try:
