@@ -5,6 +5,7 @@ import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
+
 from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
                                     ProductCodeFactory)
 
@@ -14,12 +15,13 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
+        self.product_code = ProductCodeFactory.create()
         self.complete_data = {
             "name": "Page Views",
             "unit": "100k",
             "price_per_unit": 0.05,
             "included_units": 0,
-            "product_code": ProductCodeFactory.create().value
+            "product_code": self.product_code.value
         }
 
     def test_create_post_metered_feature(self):
@@ -69,16 +71,24 @@ class TestMeteredFeatureEndpoint(APITestCase):
         #self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         #self.assertEqual(len(response.data), 7)
     """
+
     def test_get_metered_feature_detail(self):
-        metered_feature = MeteredFeatureFactory.create()
+        metered_feature = MeteredFeatureFactory.create(product_code=self.product_code)
 
         url = reverse('metered-feature-detail',
                       kwargs={'pk': metered_feature.pk})
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNotEqual(response.data, [])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {
+            "name": metered_feature.name,
+            "unit": metered_feature.unit,
+            "included_units": metered_feature.included_units,
+            "price_per_unit": metered_feature.price_per_unit,
+            "product_code": self.product_code.value,
+            'url': 'http://testserver/metered-features/1/'
+        }
 
     def test_get_metered_feature_list(self):
         MeteredFeatureFactory.create_batch(40)
