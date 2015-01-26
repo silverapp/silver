@@ -1,6 +1,7 @@
 import datetime
 
 import factory
+import factory.fuzzy
 from django.contrib.auth import get_user_model
 from international.models import countries
 
@@ -12,10 +13,6 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
-    sales_tax_percent = factory.Sequence(lambda n: n)
-    sales_tax_name = factory.Sequence(lambda n: 'Tax{cnt}'.format(cnt=n))
-    consolidated_billing = factory.Sequence(lambda n: n % 2 == 1)
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
     email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
@@ -26,6 +23,10 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+
+    customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
+    sales_tax_percent = factory.fuzzy.FuzzyDecimal(1.0, 19.0)
+    sales_tax_name = factory.Sequence(lambda n: 'VTA'.format(cnt=n))
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
@@ -41,14 +42,22 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Provider
 
-    name = factory.Sequence(lambda n: 'Provider{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
-    address_1 = factory.Sequence(lambda n: 'Address_1{cnt}'.format(cnt=n))
-    country = 'RO'
+    email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
+    address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
+    address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
+    country = factory.Sequence(lambda n: countries[n][0])
     city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: '{cnt}'.format(cnt=n))
-    invoice_series = 'TestSeries'
+    state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
+    zip_code = factory.Sequence(lambda n: str(n))
+    extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+
     flow = 'proforma'
+    invoice_series = 'InvoiceSeries'
+    invoice_starting_number = 1
+    proforma_series = 'ProformaSeries'
+    proforma_starting_number = 1
 
 
 class PlanFactory(factory.django.DjangoModelFactory):
