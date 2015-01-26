@@ -386,28 +386,56 @@ class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Invoice.objects.all()
 
 
-class InvoiceEntryCreate(generics.CreateAPIView):
+class DocEntryCreate(generics.CreateAPIView):
+    def get_model(self):
+        raise NotImplementedError
+
+    def get_model_name(self):
+        raise NotImplementedError
+
+    def post(self, request, *args, **kwargs):
+        doc_pk = kwargs.get('document_pk')
+        Model = self.get_model()
+        model_name = self.get_model_name()
+
+        try:
+            document = Model.objects.get(pk=doc_pk)
+        except Model.DoesNotExist:
+            msg = "{model} not found".format(model=model_name)
+            return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
+
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = DocumentEntrySerializer(data=request.DATA,
+                                             context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            # This will be eiter {invoice: <invoice_object>} or
+            # {proforma: <proforma_object>} as a DocumentEntry can have a
+            # foreign key to either an invoice or a proforma
+            extra_context = {model_name.lower(): document}
+            serializer.save(**extra_context)
+
+            return Response(serializer.data)
+
+
+class InvoiceEntryCreate(DocEntryCreate):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
     def post(self, request, *args, **kwargs):
-        invoice_pk = kwargs.get('invoice_pk')
-        try:
-            invoice = Invoice.objects.get(pk=invoice_pk)
-        except Invoice.DoesNotExist:
-            return Response({"detail": "Invoice Not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        return super(InvoiceEntryCreate, self).post(request, *args, **kwargs)
 
-        if invoice.state != 'draft':
-            msg = "Invoice entries can be added only when the invoice is in draft state."
-            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+    def get_model(self):
+        return Invoice
 
-        serializer = DocumentEntrySerializer(data=request.DATA,
-                                             context={'request': request})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(invoice=invoice)
-            return Response(serializer.data)
+    def get_model_name(self):
+        return "Invoice"
 
 
 class InvoiceEntryUpdateDestroy(APIView):
@@ -528,28 +556,19 @@ class ProformaRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Proforma.objects.all()
 
 
-class ProformaEntryCreate(generics.CreateAPIView):
+class ProformaEntryCreate(DocEntryCreate):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
     def post(self, request, *args, **kwargs):
-        proforma_pk = kwargs.get('proforma_pk')
-        try:
-            proforma = Proforma.objects.get(pk=proforma_pk)
-        except Proforma.DoesNotExist:
-            return Response({"detail": "Proforma Not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+        return super(ProformaEntryCreate, self).post(request, *args, **kwargs)
 
-        if proforma.state != 'draft':
-            msg = "Proforma entries can be added only when the invoice is in draft state."
-            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+    def get_model(self):
+        return Proforma
 
-        serializer = DocumentEntrySerializer(data=request.DATA,
-                                             context={'request': request})
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(proforma=proforma)
-            return Response(serializer.data)
+    def get_model_name(self):
+        return "Proforma"
 
 
 class ProformaEntryUpdateDestroy(APIView):
