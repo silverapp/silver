@@ -518,7 +518,6 @@ class AbstractInvoicingDocument(models.Model):
 
 
 class Invoice(AbstractInvoicingDocument):
-
     proforma = models.ForeignKey('Proforma', blank=True, null=True,
                                  related_name='related_proforma')
 
@@ -545,7 +544,6 @@ class Invoice(AbstractInvoicingDocument):
 
 
 class Proforma(AbstractInvoicingDocument):
-
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_invoice')
 

@@ -158,7 +158,7 @@ class BillingDocumentForm(forms.ModelForm):
 
     def save(self, commit=True, *args, **kwargs):
         obj = super(BillingDocumentForm, self).save(commit=False)
-        # The provider has changed => generate a new number which corresponding
+        # The provider has changed => generate a new number which corresponds
         # to new provider's count
         if self.provider != obj.provider:
             obj.number = None
@@ -168,8 +168,6 @@ class BillingDocumentForm(forms.ModelForm):
             if self.initial_number and not obj.number:
                 obj.number = self.initial_number
 
-        # The number did not change (the input box is empty) => do not
-        # generate a new number, but keep the old one.
         if commit:
             obj.save()
         return obj
