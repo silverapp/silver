@@ -420,10 +420,13 @@ class AbstractInvoicingDocument(models.Model):
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
             self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
-        if not self.issue_date and not issue_date:
+        elif not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
+
         if due_date:
             self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+        elif not self.due_date and not due_date:
+            self.due_date = timezone.now().date()
 
         if not self.sales_tax_name:
             self.sales_tax_name = self.customer.sales_tax_name
@@ -454,7 +457,7 @@ class AbstractInvoicingDocument(models.Model):
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
         # If it's in paid state => don't allow any changes
-        if self.__last_state == 'paid' or self.state == 'paid':
+        if self.__last_state == 'paid':
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
