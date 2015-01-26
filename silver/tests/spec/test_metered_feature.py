@@ -5,7 +5,9 @@ import pytest
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
-from silver.tests.factories import AdminUserFactory, MeteredFeatureFactory
+from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
+                                    ProductCodeFactory)
+
 
 
 class TestMeteredFeatureEndpoint(APITestCase):
@@ -15,21 +17,18 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.complete_data = {
             "name": "Page Views",
             "price_per_unit": 0.05,
-            "included_units": 0
+            "included_units": 0,
+            "product_code": ProductCodeFactory.create().value
         }
 
     def test_create_post_metered_feature(self):
         url = reverse('metered-feature-list')
-
         response = self.client.post(url, json.dumps(self.complete_data),
                                     content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual({'name': u'Page Views',
-                          'price_per_unit': 0.05,
-                          'included_units': 0.0,
-                          'url': 'http://testserver/metered-features/1/'},
-                         response.data)
+        url = {'url': 'http://testserver/metered-features/1/'}
+        self.assertEqual(self.complete_data.update(url), response.data)
 
     def test_create_post_metered_feature_without_required_field(self):
         url = reverse('metered-feature-list')
