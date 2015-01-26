@@ -8,16 +8,15 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
                            DocumentEntry, ProductCode, Proforma)
 
-class CreateableSlugRelatedField(serializers.SlugRelatedField):
-    def to_internal_value(self, data):
-        try:
-            ctx = {self.slug_field: data}
-            return self.get_queryset().get_or_create(**ctx)[0]
-        except ProductCode.DoesNotExist:
-            self.fail('does_not_exist', slug_name=self.slug_field,
-                      value=smart_text(data))
-        except (TypeError, ValueError):
-            self.fail('invalid')
+#class CreateableSlugRelatedField(serializers.SlugRelatedField):
+    #def to_internal_value(self, data):
+        #try:
+            #return self.get_queryset().get(**{self.slug_field: data})
+        #except ProductCode.DoesNotExist:
+            #self.fail('does_not_exist', slug_name=self.slug_field,
+                      #value=smart_text(data))
+        #except (TypeError, ValueError):
+            #self.fail('invalid')
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
