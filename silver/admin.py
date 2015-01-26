@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, BillingDocumentEntry,
+                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma)
 
 from django.contrib.admin.actions import delete_selected as delete_selected_
@@ -140,10 +140,10 @@ class ProviderAdmin(LiveModelAdmin):
     exclude = ['live']
 
 
-class BillingDocumentEntryInline(admin.TabularInline):
-    model = BillingDocumentEntry
+class DocumentEntryInline(admin.TabularInline):
+    model = DocumentEntry
     fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
-             'product_code', 'start_date', 'end_date')
+              'product_code', 'start_date', 'end_date')
 
 
 class BillingDocumentForm(forms.ModelForm):
@@ -203,7 +203,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
     readonly_fields = ('series', 'state')
-    inlines = [BillingDocumentEntryInline]
+    inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
     @property
@@ -236,9 +236,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
             msg = 'Successfully changed %d invoice(s).' % qs_count
             self.message_user(request, msg)
 
-    def series(self, obj):
-        raise NotImplementedError
-
 
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
@@ -261,9 +258,6 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoices'
-
-    def series(self, obj):
-        return obj.invoice_series
 
     @property
     def _model(self):
@@ -291,9 +285,6 @@ class ProformaAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected proformas'
-
-    def series(self, obj):
-        return obj.proforma_series
 
     @property
     def _model(self):

@@ -1,12 +1,11 @@
 from string import rfind
 
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
-                           BillingDocumentEntry, ProductCode)
+                           DocumentEntry, ProductCode, Proforma)
 
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
@@ -191,23 +190,23 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'value')
 
 
-class BillingDocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
+class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = BillingDocumentEntry
+        model = DocumentEntry
         fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
                   'start_date', 'end_date', 'prorated', 'product_code')
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    invoice_entries = BillingDocumentEntrySerializer(many=True)
+    invoice_entries = DocumentEntrySerializer(many=True)
 
     class Meta:
         model = Invoice
-        fields = ('id', 'invoice_series', 'number', 'provider',
-                  'customer', 'archived_provider', 'archived_customer',
-                  'due_date', 'issue_date', 'paid_date', 'cancel_date',
-                  'sales_tax_name', 'sales_tax_percent', 'currency',
-                  'state', 'invoice_entries')
+        fields = ('id', 'series', 'number', 'provider', 'customer',
+                  'archived_provider', 'archived_customer', 'due_date',
+                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+                  'sales_tax_percent', 'currency', 'state', 'proforma',
+                  'invoice_entries')
         read_only_fields = ('archived_provider', 'archived_customer')
 
     def create(self, validated_data):
@@ -220,9 +219,63 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
             for field in entry.items():
                 entry_dict[field[0]] = field[1]
 
-            BillingDocumentEntry.objects.create(**entry_dict)
+            DocumentEntrySerializer.objects.create(**entry_dict)
 
         return invoice
+
+    def update(self, instance, validated_data):
+        # The provider has changed => force the generation of the correct number
+        # corresponding to the count of the new provider
+        current_provider = instance.provider
+        new_provider = validated_data.get('provider')
+        if new_provider and new_provider != current_provider:
+            instance.number = None
+
+        updateable_fields = instance.updateable_fields
+        for field_name in updateable_fields:
+            field_value = validated_data.get(field_name,
+                                             getattr(instance, field_name))
+            setattr(instance, field_name, field_value)
+        instance.save()
+
+        return instance
+
+    def validate(self, data):
+        if self.instance:
+            self.instance.clean()
+
+        if self.instance and data['state'] != self.instance.state:
+            msg = "Direct state modification is not allowed."\
+                  " Use the corresponding endpoint to update the state."
+            raise serializers.ValidationError(msg)
+        return data
+
+
+class ProformaSerializer(serializers.HyperlinkedModelSerializer):
+    proforma_entries = DocumentEntrySerializer(many=True)
+
+    class Meta:
+        model = Proforma
+        fields = ('id', 'series', 'number', 'provider', 'customer',
+                  'archived_provider', 'archived_customer', 'due_date',
+                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+                  'sales_tax_percent', 'currency', 'state', 'invoice',
+                  'proforma_entries')
+        read_only_fields = ('archived_provider', 'archived_customer')
+
+    def create(self, validated_data):
+        entries = validated_data.pop('proforma_entries', None)
+        proforma = Proforma.objects.create(**validated_data)
+
+        for entry in entries:
+            entry_dict = {}
+            entry_dict['proforma'] = proforma
+            for field in entry.items():
+                entry_dict[field[0]] = field[1]
+
+            DocumentEntrySerializer.objects.create(**entry_dict)
+
+        return proforma
 
     def update(self, instance, validated_data):
         # The provider has changed => force the generation of the correct number

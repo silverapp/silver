@@ -537,7 +537,7 @@ class Invoice(AbstractInvoicingDocument):
         self.archived_provider = self.provider.get_invoice_archivable_fields()
 
     @property
-    def invoice_series(self):
+    def series(self):
         try:
             return self.provider.invoice_series
         except Provider.DoesNotExist:
@@ -579,10 +579,10 @@ class Proforma(AbstractInvoicingDocument):
 
         # For all the entries in the proforma => add the link to the new
         # invoice
-        BillingDocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
+        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
 
     @property
-    def proforma_series(self):
+    def series(self):
         try:
             return self.provider.proforma_series
         except Provider.DoesNotExist:
@@ -595,7 +595,7 @@ class Proforma(AbstractInvoicingDocument):
                   'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
-class BillingDocumentEntry(models.Model):
+class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20)
@@ -626,4 +626,4 @@ class BillingDocumentEntry(models.Model):
         if not self.entry_id:
             self.entry_id = self._get_next_entry_id(self.invoice)
 
-        super(BillingDocumentEntry, self).save(*args, **kwargs)
+        super(DocumentEntry, self).save(*args, **kwargs)
