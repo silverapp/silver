@@ -16,6 +16,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.client.force_authenticate(user=admin_user)
         self.complete_data = {
             "name": "Page Views",
+            "unit": "100k",
             "price_per_unit": 0.05,
             "included_units": 0,
             "product_code": ProductCodeFactory.create().value
@@ -27,8 +28,10 @@ class TestMeteredFeatureEndpoint(APITestCase):
                                     content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        url = {'url': 'http://testserver/metered-features/1/'}
-        self.assertEqual(self.complete_data.update(url), response.data)
+        expected = self.complete_data
+        expected.update({'url': 'http://testserver/metered-features/1/'})
+
+        assert expected == response.data
 
     def test_create_post_metered_feature_without_required_field(self):
         url = reverse('metered-feature-list')
