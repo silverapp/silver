@@ -386,7 +386,7 @@ class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Invoice.objects.all()
 
 
-class DocumentEntryCreate(generics.CreateAPIView):
+class InvoiceEntryCreate(generics.CreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
@@ -403,14 +403,14 @@ class DocumentEntryCreate(generics.CreateAPIView):
             msg = "Invoice entries can be added only when the invoice is in draft state."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = DocumentEntry(data=request.DATA,
-                                   context={'request': request})
+        serializer = DocumentEntrySerializer(data=request.DATA,
+                                             context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save(invoice=invoice)
             return Response(serializer.data)
 
 
-class DocumentEntryUpdateDestroy(APIView):
+class InvoiceEntryUpdateDestroy(APIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
@@ -436,8 +436,8 @@ class DocumentEntryUpdateDestroy(APIView):
             return Response({"detail": "Invoice entry not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        serializer = DocumentEntry(entry, data=request.DATA,
-                                   context={'request': request})
+        serializer = DocumentEntrySerializer(entry, data=request.DATA,
+                                             context={'request': request})
 
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -526,3 +526,133 @@ class ProformaRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
+
+
+class ProformaEntryCreate(generics.CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('proforma_pk')
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if proforma.state != 'draft':
+            msg = "Proforma entries can be added only when the invoice is in draft state."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = DocumentEntrySerializer(data=request.DATA,
+                                             context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(proforma=proforma)
+            return Response(serializer.data)
+
+
+class ProformaEntryUpdateDestroy(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('proforma_pk')
+        entry_id = kwargs.get('entry_id')
+
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if proforma.state != 'draft':
+            msg = "Proforma entries can be modified only when the invoice is in draft state."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            entry = DocumentEntry.objects.get(proforma=proforma,
+                                              entry_id=entry_id)
+        except DocumentEntry.DoesNotExist:
+            return Response({"detail": "Proforma entry not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DocumentEntrySerializer(entry, data=request.DATA,
+                                             context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('proforma_pk')
+        entry_id = kwargs.get('entry_id')
+
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if proforma.state != 'draft':
+            msg = "Proforma entries can be modified only when the invoice is in draft state."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            entry = DocumentEntry.objects.get(proforma=proforma,
+                                              entry_id=entry_id)
+            entry.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except DocumentEntry.DoesNotExist:
+            return Response({"detail": "Proforma entry not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+
+class ProformaStateHandler(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProformaSerializer
+
+    def patch(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('pk')
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        state = request.DATA.get('state', None)
+        if state == 'issued':
+            if proforma.state != 'draft':
+                msg = "A proforma can be issued only if it is in draft state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            issue_date = request.DATA.get('issue_date', None)
+            due_date = request.DATA.get('due_date', None)
+            proforma.issue(issue_date, due_date)
+            proforma.save()
+        elif state == 'paid':
+            if proforma.state != 'issued':
+                msg = "A proforma can be paid only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            paid_date = request.DATA.get('paid_date', None)
+            proforma.pay(paid_date)
+            proforma.save()
+        elif state == 'canceled':
+            if proforma.state != 'issued':
+                msg = "A proforma can be canceled only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            cancel_date = request.DATA.get('cancel_date', None)
+            proforma.cancel(cancel_date)
+            proforma.save()
+        elif not state:
+            msg = "You have to provide a value for the state field."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            msg = "Illegal state value."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProformaSerializer(proforma, context={'request': request})
+        return Response(serializer.data)
