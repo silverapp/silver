@@ -1,6 +1,6 @@
 """Models for the silver app."""
 import datetime
-from datetime import datetime
+from datetime import datetime as dt
 
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
@@ -419,12 +419,12 @@ class AbstractInvoicingDocument(models.Model):
     @transition(field=state, source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
-            self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+            self.issue_date = dt.strptime(issue_date, '%Y-%m-%d').date()
         elif not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
 
         if due_date:
-            self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            self.due_date = dt.strptime(due_date, '%Y-%m-%d').date()
         elif not self.due_date and not due_date:
             self.due_date = timezone.now().date()
 
@@ -438,14 +438,14 @@ class AbstractInvoicingDocument(models.Model):
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
         if paid_date:
-            self.paid_date = datetime.strptime(paid_date, '%Y-%m-%d').date()
+            self.paid_date = dt.strptime(paid_date, '%Y-%m-%d').date()
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
     @transition(field=state, source='issued', target='canceled')
     def cancel(self, cancel_date=None):
         if cancel_date:
-            self.cancel_date = datetime.strptime(cancel_date, '%Y-%m-%d').date()
+            self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
