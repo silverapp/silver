@@ -6,8 +6,13 @@ from django.contrib.auth import get_user_model
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription)
+                           Subscription, ProductCode)
 
+class ProductCodeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProductCode
+
+    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
 
 class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -26,7 +31,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
 
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = factory.fuzzy.FuzzyDecimal(1.0, 19.0)
-    sales_tax_name = factory.Sequence(lambda n: 'VTA'.format(cnt=n))
+    sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
