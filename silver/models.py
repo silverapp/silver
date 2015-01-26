@@ -91,7 +91,7 @@ class MeteredFeature(models.Model):
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
-    product_code = models.ForeignKey('ProductCode', unique=True,
+    product_code = models.ForeignKey('ProductCode',
                                     help_text='The product code for this plan.')
 
     def __unicode__(self):
