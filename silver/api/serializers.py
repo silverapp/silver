@@ -1,6 +1,5 @@
 from string import rfind
 
-from django.utils.encoding import smart_text
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -8,21 +7,11 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
                            DocumentEntry, ProductCode, Proforma)
 
-#class CreateableSlugRelatedField(serializers.SlugRelatedField):
-    #def to_internal_value(self, data):
-        #try:
-            #return self.get_queryset().get(**{self.slug_field: data})
-        #except ProductCode.DoesNotExist:
-            #self.fail('does_not_exist', slug_name=self.slug_field,
-                      #value=smart_text(data))
-        #except (TypeError, ValueError):
-            #self.fail('invalid')
-
 
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='metered-feature-detail')
-    product_code = CreateableSlugRelatedField(
+    product_code = serializers.SlugRelatedField(
         slug_field='value',
         queryset=ProductCode.objects.all()
     )
