@@ -519,7 +519,8 @@ class AbstractInvoicingDocument(models.Model):
 
 class Invoice(AbstractInvoicingDocument):
 
-    proforma = models.ForeignKey('Proforma', blank=True, null=True)
+    proforma = models.ForeignKey('Proforma', blank=True, null=True,
+                                 related_name='related_proforma')
 
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
@@ -544,6 +545,9 @@ class Invoice(AbstractInvoicingDocument):
 
 
 class Proforma(AbstractInvoicingDocument):
+
+    invoice = models.ForeignKey('Invoice', blank=True, null=True,
+                                related_name='related_invoice')
 
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
@@ -570,6 +574,8 @@ class Proforma(AbstractInvoicingDocument):
         invoice.issue()
         invoice.pay()
         invoice.save()
+
+        self.invoice = invoice
 
         # For all the entries in the proforma => add the link to the new
         # invoice

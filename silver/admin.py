@@ -275,8 +275,8 @@ class ProformaAdmin(BillingDocumentAdmin):
     list_display = BillingDocumentAdmin.list_display
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields
-    readonly_fields = BillingDocumentAdmin.readonly_fields
+    fields = BillingDocumentAdmin.fields + ('invoice', )
+    readonly_fields = BillingDocumentAdmin.readonly_fields + ('invoice',)
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
 
