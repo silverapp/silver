@@ -1,5 +1,6 @@
 import json
 
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
@@ -257,3 +258,25 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
+
+    def test_issue_invoice_with_defaul_dates(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        InvoiceFactory.create(provider=provider, customer=customer)
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'issued'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'issued'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+        assert response.data.get('archived_provider', {}) != {}
+        assert response.data.get('archived_customer', {}) != {}
