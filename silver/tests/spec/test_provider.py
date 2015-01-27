@@ -92,8 +92,9 @@ class TestProviderEndpoints(APITestCase):
             qs = self._filter_providers()
             assert qs.count() == 0
 
-    def test_GET_providers(self):
-        ProviderFactory.create_batch(25)
+    def test_get_providers(self):
+        batch_size = 40
+        ProviderFactory.create_batch(batch_size)
         url = reverse('provider-list')
         response = self.client.get(url)
 
@@ -107,7 +108,8 @@ class TestProviderEndpoints(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
         assert response._headers['link'] == \
             ('Link', '<' + full_url + '?page=2>; rel="next", ' +
              '<' + full_url + '?page=2>; rel="last", ' +
@@ -116,7 +118,8 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
         assert response._headers['link'] == \
             ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
              '<' + full_url + '?page=2>; rel="last", ' +
