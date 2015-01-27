@@ -122,7 +122,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
-    def test_add_single_invoice_entries(self):
+    def test_add_single_invoice_entry(self):
         InvoiceFactory.create_batch(10)
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
         entry_data = {"description": "Page views",
