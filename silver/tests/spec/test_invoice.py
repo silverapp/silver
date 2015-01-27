@@ -3,7 +3,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory)
+                                    ProviderFactory, InvoiceFactory)
 
 
 class TestInvoiceEndpoints(APITestCase):
@@ -45,3 +45,20 @@ class TestInvoiceEndpoints(APITestCase):
             "proforma": None,
             "invoice_entries": []
         }
+
+    def test_get_invoices(self):
+        batch_size = 50
+        InvoiceFactory.create_batch(batch_size)
+        url = reverse('invoice-list')
+
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
+
+        response = self.client.get(url + '?page=2')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
