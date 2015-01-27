@@ -122,3 +122,41 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
+    def test_add_single_invoice_entries(self):
+        InvoiceFactory.create_batch(10)
+        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        entry_data = {"description": "Page views",
+                      "unit_price": 10.0,
+                      "quantity": 20}
+        response = self.client.post(url, data=json.dumps(entry_data),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data == {
+            'entry_id': 1,
+            'description': 'Page views',
+            'unit': None,
+            'quantity': '20.0000000000',
+            'unit_price': '10.0000000000',
+            'start_date': None,
+            'end_date': None,
+            'prorated': False,
+            'product_code': None
+        }
+
+        url = reverse('invoice-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+
+        invoice_entries = response.data.get('invoice_entries', None)
+        assert len(invoice_entries) == 1
+        assert invoice_entries[0] == {
+            'entry_id': 1,
+            'description': 'Page views',
+            'unit': None,
+            'quantity': '20.0000000000',
+            'unit_price': '10.0000000000',
+            'start_date': None,
+            'end_date': None,
+            'prorated': False,
+            'product_code': None
+        }
