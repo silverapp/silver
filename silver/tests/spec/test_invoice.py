@@ -259,7 +259,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
 
-    def test_issue_invoice_with_defaul_dates(self):
+    def test_issue_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         InvoiceFactory.create(provider=provider, customer=customer)
@@ -280,3 +280,26 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+    def test_issue_invoice_with_custom_issue_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        InvoiceFactory.create(provider=provider, customer=customer)
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = { 'state': 'issued', 'issue_date': '2014-01-01', }
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': '2014-01-01',
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'issued'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+        assert response.data.get('archived_provider', {}) != {}
+        assert response.data.get('archived_customer', {}) != {}
+
