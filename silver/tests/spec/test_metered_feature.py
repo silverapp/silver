@@ -1,5 +1,5 @@
 import json
-# from django.core import serializers
+import urlparse
 import pytest
 
 from rest_framework import status
@@ -8,7 +8,6 @@ from rest_framework.test import APITestCase
 
 from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
                                     ProductCodeFactory)
-
 
 
 class TestMeteredFeatureEndpoint(APITestCase):
@@ -24,15 +23,19 @@ class TestMeteredFeatureEndpoint(APITestCase):
             "product_code": self.product_code.value
         }
 
+    def _full_url(self, pk=None):
+        base_url = "http://testserver"
+        relative_url = reverse('metered-feature-detail', kwargs={'pk': pk})
+        return urlparse.urljoin(base_url, relative_url)
+
     def test_create_post_metered_feature(self):
         url = reverse('metered-feature-list')
         response = self.client.post(url, json.dumps(self.complete_data),
                                     content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert response.status_code == status.HTTP_201_CREATED
         expected = self.complete_data
-        expected.update({'url': 'http://testserver/metered-features/1/'})
-
+        expected.update({'url': self._full_url(1)})
         assert expected == response.data
 
     def test_create_post_metered_feature_without_required_field(self):
@@ -87,7 +90,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
             "included_units": metered_feature.included_units,
             "price_per_unit": metered_feature.price_per_unit,
             "product_code": self.product_code.value,
-            'url': 'http://testserver/metered-features/1/'
+            'url': self._full_url(1)
         }
 
     def test_get_metered_feature_list(self):
