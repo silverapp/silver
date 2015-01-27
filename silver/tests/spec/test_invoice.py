@@ -359,7 +359,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
 
-    def test_pay_invoice(self):
+    def test_pay_invoice_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
@@ -381,6 +381,33 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
+
+    def test_pay_invoice_provided_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {
+            'state': 'paid',
+            'paid_date': '2014-05-05'
+        }
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'paid_date': '2014-05-05',
+            'state': 'paid'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
