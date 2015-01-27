@@ -39,8 +39,10 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
         model = MeteredFeature
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
+    unit = 'Unit'
     price_per_unit = factory.Sequence(lambda n: n)
     included_units = factory.Sequence(lambda n: n)
+    product_code = factory.SubFactory(ProductCodeFactory)
 
 
 class ProviderFactory(factory.django.DjangoModelFactory):
