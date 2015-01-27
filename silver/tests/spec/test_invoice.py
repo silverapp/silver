@@ -115,3 +115,10 @@ class TestInvoiceEndpoints(APITestCase):
             "proforma": None,
             "invoice_entries": []
         }
+
+    def test_delete_invoice(self):
+        url = reverse('invoice-detail', kwargs={'pk': 1})
+        response = self.client.delete(url)
+
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
