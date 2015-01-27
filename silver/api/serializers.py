@@ -85,6 +85,29 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'invoice_series', 'proforma_series',
                   'proforma_starting_number')
 
+    def validate(self, data):
+        if data['flow'] == 'proforma':
+            if not data.get('proforma_starting_number', None) and\
+               not data.get('proforma_series', None):
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma.",
+                          'proforma_starting_number': "This field is required "\
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise serializers.ValidationError(errors)
+            elif not data.get('proforma_series'):
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma."}
+                raise serializers.ValidationError(errors)
+            elif not data.get('proforma_starting_number', None):
+                errors = {'proforma_starting_number': "This field is required "
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise serializers.ValidationError(errors)
+
+        return data
+
+
 
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(

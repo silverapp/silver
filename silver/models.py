@@ -361,6 +361,26 @@ class Provider(AbstractBillingEntity):
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The provider issuing the invoice."
 
+    def clean(self):
+        if self.flow == 'proforma':
+            if not self.proforma_starting_number and\
+               not self.proforma_series:
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma.",
+                          'proforma_starting_number': "This field is required "\
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise ValidationError(errors)
+            elif not self.proforma_series:
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma."}
+                raise ValidationError(errors)
+            elif not self.proforma_starting_number:
+                errors = {'proforma_starting_number': "This field is required "
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise ValidationError(errors)
+
     def get_invoice_archivable_fields(self):
         base_fields = super(Provider, self).get_archivable_fields()
         base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
