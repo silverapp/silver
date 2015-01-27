@@ -329,3 +329,40 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+    def test_issue_invoice_after_in_issued_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'issued'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
+
+    def test_pay_invoice(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'paid'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'paid'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
