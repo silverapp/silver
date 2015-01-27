@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import ProductCode
 from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
                                     ProductCodeFactory)
 
@@ -14,6 +15,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
+        ProductCodeFactory.reset_sequence(1)
         self.product_code = ProductCodeFactory.create()
         self.complete_data = {
             "name": "Page Views",
