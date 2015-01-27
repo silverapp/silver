@@ -2,12 +2,12 @@ from decimal import *
 import datetime
 
 import factory
-import factory.fuzzy
 from django.contrib.auth import get_user_model
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription, ProductCode)
+                           Subscription, ProductCode, Invoice)
+
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -105,6 +105,16 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     trial_end = factory.Sequence(lambda n: datetime.date.today() +
                                  datetime.timedelta(days=n))
     start_date = datetime.date.today()
+
+
+class InvoiceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Invoice
+
+    number = factory.Sequence(lambda n: n)
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    currency = 'RON'
 
 
 class AdminUserFactory(factory.django.DjangoModelFactory):
