@@ -297,7 +297,7 @@ class TestProviderEndpoints(APITestCase):
             'extra': 'Extra1'
         }
 
-    def test_DELETE_provider(self):
+    def test_delete_provider(self):
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
@@ -305,7 +305,7 @@ class TestProviderEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_DELETE_unexisting_provider(self):
+    def test_delete_unexisting_provider(self):
         url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
