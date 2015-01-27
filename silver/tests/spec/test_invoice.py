@@ -458,3 +458,31 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
+
+    def test_cancel_invoice_with_provider_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {
+            'state': 'canceled',
+            'cancel_date': '2014-10-10'
+        }
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'cancel_date': '2014-10-10',
+            'state': 'canceled'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+
