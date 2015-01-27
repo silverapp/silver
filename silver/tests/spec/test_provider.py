@@ -56,7 +56,7 @@ class TestProviderEndpoints(APITestCase):
         qs = self._filter_providers()
         assert qs.count() == 1
 
-    def test_POST_provider_without_required_fields(self):
+    def test_post_provider_without_required_fields(self):
         url = reverse('provider-list')
         complete_data = {
             "name": "TestProvider",
@@ -68,21 +68,25 @@ class TestProviderEndpoints(APITestCase):
             "invoice_series": "TheSeries",
         }
         required_fields = ['company', 'address_1', 'country', 'city',
-                           'zip_code', 'invoice_series']
+                           'zip_code', 'flow', 'invoice_series',
+                           'invoice_starting_number']
 
         for field in required_fields:
             temp_data = complete_data.copy()
             try:
                 temp_data.pop(field)
             except KeyError:
-                pytest.xfail('Required field %s for Provider not provided in the test data.' % field)
+                pytest.xfail("Required field %s for Provider not provided"
+                             " in the test data." % field)
 
             response = self.client.post(url, temp_data)
 
             assert response.status_code == 400
-            valid_responses = [(field, ['This field may not be blank.']),
-                               (field, ['This field is required.'])]
             for response_item in response.data.iteritems():
+                field_name = response_item[0]
+                valid_responses = [
+                    (field_name, ['This field may not be blank.']),
+                    (field_name, ['This field is required.'])]
                 assert response_item in valid_responses
 
             qs = self._filter_providers()
