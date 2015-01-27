@@ -167,9 +167,11 @@ class TestInvoiceEndpoints(APITestCase):
         InvoiceFactory.create_batch(10)
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
-        entry_data = {"description": "Page views",
-                      "unit_price": 10.0,
-                      "quantity": 20}
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
 
         entries_count = 10
         for cnt in range(entries_count):
@@ -198,9 +200,11 @@ class TestInvoiceEndpoints(APITestCase):
         InvoiceFactory.create()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
-        entry_data = {"description": "Page views",
-                      "unit_price": 10.0,
-                      "quantity": 20}
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
         entries_count = 10
         for cnt in range(entries_count):
             self.client.post(url, data=json.dumps(entry_data),
@@ -222,9 +226,11 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.save()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
-        entry_data = {"description": "Page views",
-                      "unit_price": 10.0,
-                      "quantity": 20}
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
@@ -244,9 +250,11 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.save()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
-        entry_data = {"description": "Page views",
-                      "unit_price": 10.0,
-                      "quantity": 20}
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
