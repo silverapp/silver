@@ -143,7 +143,7 @@ class TestProviderEndpoints(APITestCase):
         #assert len(response.data) == 5
     """
 
-    def test_GET_provider(self):
+    def test_get_provider(self):
         ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
@@ -155,18 +155,21 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'Provider1',
+            'name': 'Name1',
             'company': 'Company1',
-            'invoice_series': 'TestSeries',
             'flow': 'proforma',
-            'email': None,
-            'address_1': 'Address_11',
-            'address_2': None,
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'email': 'some1@email.com',
+            'address_1': 'Address11',
+            'address_2': 'Address21',
             'city': 'City1',
-            'state': None,
+            'state': 'State1',
             'zip_code': '1',
-            'country': u'RO',
-            'extra': None
+            'country': u'AL',
+            'extra': 'Extra1'
         }
 
     def test_GET_unexisting_provider(self):
