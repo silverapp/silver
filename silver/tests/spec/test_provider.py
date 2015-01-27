@@ -258,6 +258,7 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {'company': ['This field may not be blank.']}
 
     def test_patch_provider(self):
+        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
