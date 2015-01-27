@@ -344,6 +344,21 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
 
+    def test_issue_invoice_after_in_paid_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.pay()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'issued'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
+
     def test_pay_invoice(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
