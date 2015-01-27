@@ -257,6 +257,46 @@ class TestProviderEndpoints(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'company': ['This field may not be blank.']}
 
+    def test_patch_provider(self):
+        ProviderFactory.create()
+
+        url = reverse('provider-detail', kwargs={'pk': 1})
+        new_data = {
+            'company': 'TheNewCompany', # The changed field
+            'address_1': 'Address11',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'city': 'City1',
+            'zip_code': '1',
+            'country': u'AL',
+        }
+
+        response = self.client.patch(url, data=new_data)
+
+        assert response.status_code == 200
+        assert response.data == {
+            'id': 1,
+            'url': 'http://testserver/providers/1/',
+            'name': 'Name1',
+            'company': 'TheNewCompany',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'email': 'some1@email.com',
+            'address_1': 'Address11',
+            'address_2': 'Address21',
+            'city': 'City1',
+            'state': 'State1',
+            'zip_code': '1',
+            'country': u'AL',
+            'extra': 'Extra1'
+        }
+
     def test_DELETE_provider(self):
         ProviderFactory.create()
 
