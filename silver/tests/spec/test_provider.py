@@ -262,7 +262,7 @@ class TestProviderEndpoints(APITestCase):
 
         url = reverse('provider-detail', kwargs={'pk': 1})
         new_data = {
-            'company': 'TheNewCompany', # The changed field
+            'company': 'TheNewCompany',  # The changed field
             'address_1': 'Address11',
             'flow': 'proforma',
             'invoice_series': 'InvoiceSeries',
