@@ -99,8 +99,8 @@ class PlanSerializer(serializers.ModelSerializer):
         view_name='provider-detail',
     )
     product_code = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='value'
+        slug_field='value',
+        queryset=ProductCode.objects.all()
     )
 
     class Meta:

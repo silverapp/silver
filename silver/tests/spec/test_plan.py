@@ -3,6 +3,8 @@ import json
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
+
+from silver.models import ProductCode
 from silver.tests.factories import (AdminUserFactory, ProviderFactory,
                                     PlanFactory, MeteredFeatureFactory)
 
@@ -21,6 +23,9 @@ class TestPlanEndpoint(APITestCase):
             mf_urls.append(reverse('metered-feature-detail',
                                    kwargs={'pk': mf.pk}))
 
+        feature1_pc = ProductCode.objects.get(id=1).value
+        feature2_pc = ProductCode.objects.get(id=2).value
+        plan_pc = ProductCode.objects.get(id=3).value
         provider = ProviderFactory.create()
         provider_url = reverse('provider-detail',
                                kwargs={'pk': provider.pk})
@@ -35,19 +40,22 @@ class TestPlanEndpoint(APITestCase):
             "generate_after": 86400,
             "enabled": True,
             "private": False,
-            "product_code": "1234",
+            "product_code": plan_pc,
             'metered_features': [
                 {'name': 'Page Views',
+                 'unit': '100k',
                  'price_per_unit': 0.01,
-                 'included_units': 0},
+                 'included_units': 0,
+                 'product_code': feature1_pc},
                 {'name': 'VIP Support',
                  'price_per_unit': 49.99,
-                 'included_units': 1}
+                 'included_units': 1,
+                 'product_code': feature2_pc}
             ],
             'provider': provider_url
         }), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert response.status_code == status.HTTP_201_CREATED
 
     def test_create_plan_without_required_fields(self):
         url = reverse('plan-list')
