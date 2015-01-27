@@ -6,7 +6,8 @@ from rest_framework.test import APITestCase
 
 from silver.models import ProductCode
 from silver.tests.factories import (AdminUserFactory, ProviderFactory,
-                                    PlanFactory, MeteredFeatureFactory)
+                                    PlanFactory, MeteredFeatureFactory,
+                                    ProductCodeFactory)
 
 
 class TestPlanEndpoint(APITestCase):
