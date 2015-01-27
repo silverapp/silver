@@ -1,3 +1,4 @@
+from decimal import *
 import datetime
 
 import factory
@@ -30,7 +31,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
 
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
-    sales_tax_percent = factory.fuzzy.FuzzyDecimal(1.0, 19.0)
+    sales_tax_percent = Decimal(1.0)
     sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
 
 
