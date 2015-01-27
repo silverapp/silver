@@ -380,7 +380,7 @@ class InvoiceListCreate(HPListCreateAPIView):
     queryset = Invoice.objects.all()
 
 
-class InvoiceRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
