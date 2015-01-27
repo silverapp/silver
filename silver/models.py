@@ -618,7 +618,7 @@ class Proforma(AbstractInvoicingDocument):
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
-    unit = models.CharField(max_length=20)
+    unit = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.DecimalField(max_digits=28, decimal_places=10)
     unit_price = models.DecimalField(max_digits=28, decimal_places=10)
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
