@@ -420,7 +420,7 @@ class DocEntryCreate(generics.CreateAPIView):
             extra_context = {model_name.lower(): document}
             serializer.save(**extra_context)
 
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class InvoiceEntryCreate(DocEntryCreate):
