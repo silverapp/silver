@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -128,7 +129,29 @@ class CustomerAdmin(LiveModelAdmin):
     exclude = ['live']
 
 
+class ProviderForm(forms.ModelForm):
+    class Meta:
+        model = Provider
+
+    def clean(self):
+        cleaned_data = super(ProviderForm, self).clean()
+
+        if cleaned_data['flow'] == 'proforma':
+            if not cleaned_data['proforma_series'] and\
+               not cleaned_data['proforma_starting_number']:
+                raise ValidationError("The chosen flow is proforma. Please"
+                                      " provide proforma series and proforma"
+                                      " starting number.")
+            elif not cleaned_data['proforma_series']:
+                raise ValidationError("The chosen flow is proforma. Please"
+                                      " provide proforma series.")
+            elif not cleaned_data['proforma_starting_number']:
+                raise ValidationError("The chosen flow is proforma. Please"
+                                      " provide proforma starting number.")
+
+
 class ProviderAdmin(LiveModelAdmin):
+    form = ProviderForm
     fields = ('name', 'company', 'flow', 'invoice_series', 'invoice_starting_number',
               'proforma_series', 'proforma_starting_number', 'email',
               'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
