@@ -13,7 +13,7 @@ class ProductCodeFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = ProductCode
 
-    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
+    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n ** 2))
 
 class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
