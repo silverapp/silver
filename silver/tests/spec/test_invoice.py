@@ -124,6 +124,7 @@ class TestInvoiceEndpoints(APITestCase):
 
     def test_add_single_invoice_entry(self):
         InvoiceFactory.create_batch(10)
+
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
         entry_data = {"description": "Page views",
                       "unit_price": 10.0,
@@ -163,6 +164,7 @@ class TestInvoiceEndpoints(APITestCase):
 
     def test_add_multiple_invoice_entries(self):
         InvoiceFactory.create_batch(10)
+
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
         entry_data = {"description": "Page views",
                       "unit_price": 10.0,
@@ -188,6 +190,31 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
         response = self.client.get(url)
-
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == entries_count
+
+    def test_delete_invoice_entry(self):
+        InvoiceFactory.create()
+
+        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        entry_data = {"description": "Page views",
+                      "unit_price": 10.0,
+                      "quantity": 20}
+        entries_count = 10
+        for cnt in range(entries_count):
+            self.client.post(url, data=json.dumps(entry_data),
+                             content_type='application/json')
+
+        url = reverse('invoice-entry-update', kwargs={'document_pk': 1,
+                                                      'entry_id': 1})
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        url = reverse('invoice-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+        invoice_entries = response.data.get('invoice_entries', None)
+        assert len(invoice_entries) == entries_count - 1
+
+
+
+
