@@ -172,13 +172,13 @@ class TestProviderEndpoints(APITestCase):
             'extra': 'Extra1'
         }
 
-    def test_GET_unexisting_provider(self):
+    def test_get_unexisting_provider(self):
         url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_PUT_provider_correctly(self):
+    def test_put_provider_correctly(self):
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
@@ -193,6 +193,12 @@ class TestProviderEndpoints(APITestCase):
             'city': 'City',
             'zip_code': '1',
             'country': 'RO',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+
         }
 
         response = self.client.put(url, data=new_data)
@@ -212,7 +218,12 @@ class TestProviderEndpoints(APITestCase):
             'state': '',
             'zip_code': '1',
             'country': 'RO',
-            'extra': ''
+            'extra': '',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
         }
 
     def test_PUT_provider_without_required_field(self):
