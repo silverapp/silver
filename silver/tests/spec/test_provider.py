@@ -16,7 +16,7 @@ class TestProviderEndpoints(APITestCase):
     def _filter_providers(self, *args, **kwargs):
         return Provider.objects.filter(*args, **kwargs)
 
-    def test_POST_valid_provider(self):
+    def test_post_valid_provider(self):
         url = reverse('provider-list')
         data = {
             "name": "TestProvider",
@@ -25,19 +25,20 @@ class TestProviderEndpoints(APITestCase):
             "country": "RO",
             "city": "Timisoara",
             "zip_code": "300300",
-            "invoice_series": "TestSeries"
+            "flow": "proforma",
+            "invoice_series": "TestSeries",
+            "invoice_starting_number": 1,
+            "proforma_series": "TestSeries",
+            "proforma_starting_number": 1,
         }
         response = self.client.post(url, data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             'id': 1,
-            'url':
-            'http://testserver/providers/1/',
+            'url': 'http://testserver/providers/1/',
             'name': u'TestProvider',
             'company': u'S.C. Timisoara S.R.L',
-            'invoice_series': 'TestSeries',
-            'flow': 'proforma',
             'email': '',
             'address_1': u'Address',
             'address_2': '',
@@ -45,7 +46,12 @@ class TestProviderEndpoints(APITestCase):
             'state': '',
             'zip_code': u'300300',
             'country': u'RO',
-            'extra': ''
+            'extra': '',
+            'flow': 'proforma',
+            'invoice_series': 'TestSeries',
+            "invoice_starting_number": 1,
+            "proforma_series": "TestSeries",
+            "proforma_starting_number": 1,
         }
         qs = self._filter_providers()
         assert qs.count() == 1
