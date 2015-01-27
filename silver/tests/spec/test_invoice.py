@@ -517,10 +517,26 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be canceled only if it is in issued state.'}
 
-    def test_illegal_state_change(self):
+    def test_illegal_state_change_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         InvoiceFactory.create(provider=provider, customer=customer)
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'illegal-state'}
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'Illegal state value.'}
+
+    def test_illegal_state_change_when_in_issued_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
