@@ -330,7 +330,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
-    def test_issue_invoice_after_in_issued_state(self):
+    def test_issue_invoice_when_in_issued_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
@@ -344,7 +344,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
 
-    def test_issue_invoice_after_in_paid_state(self):
+    def test_issue_invoice_when_in_paid_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
@@ -435,3 +435,26 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be paid only if it is in issued state.'}
+
+    def test_cancel_invoice_with_default_dates(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
+        invoice.issue()
+        invoice.save()
+
+        url = reverse('invoice-state', kwargs={'pk': 1})
+        data = {'state': 'canceled'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'cancel_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'canceled'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
