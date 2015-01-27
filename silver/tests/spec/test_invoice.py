@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
@@ -11,7 +13,7 @@ class TestInvoiceEndpoints(APITestCase):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
 
-    def test_post_invoice(self):
+    def test_post_invoice_without_invoice_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
         url = reverse('invoice-list')
@@ -45,6 +47,29 @@ class TestInvoiceEndpoints(APITestCase):
             "proforma": None,
             "invoice_entries": []
         }
+
+    def test_post_invoice_with_invoice_entries(self):
+        CustomerFactory.create()
+        ProviderFactory.create()
+        url = reverse('invoice-list')
+        data = {
+            'provider': 'http://testserver/providers/1/',
+            'customer': 'http://testserver/customers/1/',
+            'number': None,
+            'currency': 'RON',
+            'invoice_entries': [{
+                "description": "Page views",
+                "unit_price": 10.0,
+                "quantity": 20}]
+        }
+
+        response = self.client.post(url, data=json.dumps(data),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        # TODO: Check the body of the response. There were some problems
+        # related to the invoice_entries list.
+
 
     def test_get_invoices(self):
         batch_size = 50
@@ -90,6 +115,3 @@ class TestInvoiceEndpoints(APITestCase):
             "proforma": None,
             "invoice_entries": []
         }
-
-
-
