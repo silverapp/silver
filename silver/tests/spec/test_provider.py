@@ -224,7 +224,7 @@ class TestProviderEndpoints(APITestCase):
             'proforma_starting_number': 1,
         }
 
-    def test_PUT_provider_without_required_field(self):
+    def test_put_provider_without_required_field(self):
         """
          .. note::
 
@@ -243,11 +243,13 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'TestProvider',
             'email': 'a@a.com',
-            'invoice_series': 'NSeries',
             'address_1': 'address',
             'city': 'City',
             'zip_code': '1',
             'country': 'RO',
+            'flow': 'invoice',
+            'invoice_series': 'NSeries',
+            'invoice_starting_number': 2,
         }
 
         response = self.client.put(url, data=new_data)
