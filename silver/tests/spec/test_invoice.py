@@ -359,7 +359,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
 
-    def test_pay_invoice_default_dates(self):
+    def test_pay_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
@@ -382,7 +382,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
-    def test_pay_invoice_provided_date(self):
+    def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
@@ -563,4 +563,3 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
-
