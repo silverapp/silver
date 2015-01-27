@@ -81,7 +81,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)
-    product_code = factory.Sequence(lambda n: '{cnt}'.format(cnt=n))
+    product_code = factory.SubFactory(ProductCodeFactory)
     provider = factory.SubFactory(ProviderFactory)
 
     @factory.post_generation
