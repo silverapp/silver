@@ -95,7 +95,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
 
     def test_get_metered_feature_list(self):
         MeteredFeatureFactory.create_batch(40)
-        url = reverse('silver_api:metered-feature-list')
+        url = reverse('metered-feature-list')
 
         response = self.client.get(url)
 
