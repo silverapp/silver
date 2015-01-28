@@ -1,8 +1,5 @@
-import simplejson as json
-
 import pytest
 from django.core.urlresolvers import reverse
-from django.core import serializers
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -19,23 +16,27 @@ class TestProviderEndpoints(APITestCase):
     def _filter_providers(self, *args, **kwargs):
         return Provider.objects.filter(*args, **kwargs)
 
-    def test_POST_valid_provider(self):
-        url = reverse('silver_api:provider-list')
+    def test_post_valid_provider(self):
+        url = reverse('provider-list')
         data = {
             "name": "TestProvider",
             "company": "S.C. Timisoara S.R.L",
             "address_1": "Address",
             "country": "RO",
             "city": "Timisoara",
-            "zip_code": "300300"
+            "zip_code": "300300",
+            "flow": "proforma",
+            "invoice_series": "TestSeries",
+            "invoice_starting_number": 1,
+            "proforma_series": "TestSeries",
+            "proforma_starting_number": 1,
         }
         response = self.client.post(url, data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             'id': 1,
-            'url':
-            'http://testserver/providers/1/',
+            'url': 'http://testserver/providers/1/',
             'name': u'TestProvider',
             'company': u'S.C. Timisoara S.R.L',
             'email': '',
@@ -45,44 +46,56 @@ class TestProviderEndpoints(APITestCase):
             'state': '',
             'zip_code': u'300300',
             'country': u'RO',
-            'extra': ''
+            'extra': '',
+            'flow': 'proforma',
+            'invoice_series': 'TestSeries',
+            "invoice_starting_number": 1,
+            "proforma_series": "TestSeries",
+            "proforma_starting_number": 1,
         }
         qs = self._filter_providers()
         assert qs.count() == 1
 
-    def test_POST_provider_without_required_fields(self):
-        url = reverse('silver_api:provider-list')
+    def test_post_provider_without_required_fields(self):
+        url = reverse('provider-list')
         complete_data = {
             "name": "TestProvider",
             'company': u'S.C. Timisoara S.R.L',
             "address_1": "Address",
             "country": "RO",
             "city": "Timisoara",
-            "zip_code": "300300"
+            "zip_code": "300300",
+            "invoice_series": "TheSeries",
         }
         required_fields = ['company', 'address_1', 'country', 'city',
-                           'zip_code']
+                           'zip_code', 'flow', 'invoice_series',
+                           'invoice_starting_number']
 
         for field in required_fields:
             temp_data = complete_data.copy()
             try:
                 temp_data.pop(field)
             except KeyError:
-                pytest.xfail('Required field %s for Provider not provided in the test data.' % field)
+                pytest.xfail("Required field %s for Provider not provided"
+                             " in the test data." % field)
 
             response = self.client.post(url, temp_data)
 
             assert response.status_code == 400
-            assert (response.data == {field: ['This field may not be blank.']}
-                    or response.data == {field: ['This field is required.']})
+            for response_item in response.data.iteritems():
+                field_name = response_item[0]
+                valid_responses = [
+                    (field_name, ['This field may not be blank.']),
+                    (field_name, ['This field is required.'])]
+                assert response_item in valid_responses
 
             qs = self._filter_providers()
             assert qs.count() == 0
 
-    def test_GET_providers(self):
-        ProviderFactory.create_batch(40)
-        url = reverse('silver_api:provider-list')
-
+    def test_get_providers(self):
+        batch_size = 40
+        ProviderFactory.create_batch(batch_size)
+        url = reverse('provider-list')
         response = self.client.get(url)
 
         full_url = None
@@ -95,7 +108,8 @@ class TestProviderEndpoints(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
         assert response._headers['link'] == \
             ('Link', '<' + full_url + '?page=2>; rel="next", ' +
              '<' + full_url + '?page=2>; rel="last", ' +
@@ -104,33 +118,36 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
         assert response._headers['link'] == \
             ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
              '<' + full_url + '?page=2>; rel="last", ' +
              '<' + full_url + '?page=1>; rel="first"')
 
-    def test_POST_bulk_providers(self):
-        providers = ProviderFactory.create_batch(5)
+    """
+    #def test_POST_bulk_providers(self):
+        #providers = ProviderFactory.create_batch(5)
 
-        raw_providers = json.loads(serializers.serialize('json', providers))
+        #raw_providers = json.loads(serializers.serialize('json', providers))
 
-        serialized_providers = []
-        for item in raw_providers:
-            serialized_providers.append(item['fields'])
+        #serialized_providers = []
+        #for item in raw_providers:
+            #serialized_providers.append(item['fields'])
 
-        url = reverse('silver_api:provider-list')
-        response = self.client.post(url, data=json.dumps(serialized_providers),
-                                    content_type='application/json')
+        #url = reverse('provider-list')
+        #response = self.client.post(url, data=json.dumps(serialized_providers),
+                                    #content_type='application/json')
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert len(response.data) == 5
+        #assert response.status_code == status.HTTP_201_CREATED
+        #assert len(response.data) == 5
+    """
 
-    def test_GET_provider(self):
+    def test_get_provider(self):
         ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
 
         response = self.client.get(url)
 
@@ -138,28 +155,33 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'Provider1',
+            'name': 'Name1',
             'company': 'Company1',
-            'email': None,
-            'address_1': 'Address_11',
-            'address_2': None,
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'email': 'some1@email.com',
+            'address_1': 'Address11',
+            'address_2': 'Address21',
             'city': 'City1',
-            'state': None,
+            'state': 'State1',
             'zip_code': '1',
-            'country': u'RO',
-            'extra': None
+            'country': u'AL',
+            'extra': 'Extra1'
         }
 
-    def test_GET_unexisting_provider(self):
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+    def test_get_unexisting_provider(self):
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_PUT_provider_correctly(self):
+    def test_put_provider_correctly(self):
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
@@ -170,6 +192,12 @@ class TestProviderEndpoints(APITestCase):
             'city': 'City',
             'zip_code': '1',
             'country': 'RO',
+            'flow': 'proforma',
+            'invoice_series': 'NewSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+
         }
 
         response = self.client.put(url, data=new_data)
@@ -180,6 +208,7 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': 'TestProvider',
             'company': 'TheNewCompany',
+            'flow': 'proforma',
             'email': 'a@a.com',
             'address_1': 'address',
             'address_2': '',
@@ -187,10 +216,15 @@ class TestProviderEndpoints(APITestCase):
             'state': '',
             'zip_code': '1',
             'country': 'RO',
-            'extra': ''
+            'extra': '',
+            'flow': 'proforma',
+            'invoice_series': 'NewSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
         }
 
-    def test_PUT_provider_without_required_field(self):
+    def test_put_provider_without_required_field(self):
         """
          .. note::
 
@@ -203,7 +237,7 @@ class TestProviderEndpoints(APITestCase):
 
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
@@ -213,6 +247,9 @@ class TestProviderEndpoints(APITestCase):
             'city': 'City',
             'zip_code': '1',
             'country': 'RO',
+            'flow': 'invoice',
+            'invoice_series': 'NSeries',
+            'invoice_starting_number': 2,
         }
 
         response = self.client.put(url, data=new_data)
@@ -220,16 +257,57 @@ class TestProviderEndpoints(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'company': ['This field may not be blank.']}
 
-    def test_DELETE_provider(self):
+    def test_patch_provider(self):
+        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': 1})
+        new_data = {
+            'company': 'TheNewCompany',  # The changed field
+            'address_1': 'Address11',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'city': 'City1',
+            'zip_code': '1',
+            'country': u'AL',
+        }
+
+        response = self.client.patch(url, data=new_data)
+
+        assert response.status_code == 200
+        assert response.data == {
+            'id': 1,
+            'url': 'http://testserver/providers/1/',
+            'name': 'Name1',
+            'company': 'TheNewCompany',
+            'flow': 'proforma',
+            'invoice_series': 'InvoiceSeries',
+            'invoice_starting_number': 1,
+            'proforma_series': 'ProformaSeries',
+            'proforma_starting_number': 1,
+            'email': 'some1@email.com',
+            'address_1': 'Address11',
+            'address_2': 'Address21',
+            'city': 'City1',
+            'state': 'State1',
+            'zip_code': '1',
+            'country': u'AL',
+            'extra': 'Extra1'
+        }
+
+    def test_delete_provider(self):
+        ProviderFactory.create()
+
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_DELETE_unexisting_provider(self):
-        url = reverse('silver_api:provider-detail', kwargs={'pk': 1})
+    def test_delete_unexisting_provider(self):
+        url = reverse('provider-detail', kwargs={'pk': 1})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

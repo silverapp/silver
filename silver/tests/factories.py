@@ -1,3 +1,4 @@
+from decimal import *
 import datetime
 
 import factory
@@ -5,27 +6,34 @@ from django.contrib.auth import get_user_model
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription)
+                           Subscription, ProductCode, Invoice, ProductCode,
+                           Proforma)
 
+
+class ProductCodeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProductCode
+
+    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
 
 class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
-    sales_tax_percent = factory.Sequence(lambda n: n)
-    sales_tax_name = factory.Sequence(lambda n: 'Tax{cnt}'.format(cnt=n))
-    consolidated_billing = factory.Sequence(lambda n: n % 2 == 1)
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
     email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
     address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
     address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
-    country = factory.Sequence(lambda n: countries[n][0])
+    country = factory.Sequence(lambda n: countries[n % len(countries)][0])
     city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: n)
+    zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+
+    customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
+    sales_tax_percent = Decimal(1.0)
+    sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
@@ -33,20 +41,32 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
         model = MeteredFeature
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
+    unit = 'Unit'
     price_per_unit = factory.Sequence(lambda n: n)
     included_units = factory.Sequence(lambda n: n)
+    product_code = factory.SubFactory(ProductCodeFactory)
 
 
 class ProviderFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Provider
 
-    name = factory.Sequence(lambda n: 'Provider{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
-    address_1 = factory.Sequence(lambda n: 'Address_1{cnt}'.format(cnt=n))
-    country = 'RO'
+    email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
+    address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
+    address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
+    country = factory.Sequence(lambda n: countries[n % len(countries)][0])
     city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: '{cnt}'.format(cnt=n))
+    state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
+    zip_code = factory.Sequence(lambda n: str(n))
+    extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+
+    flow = 'proforma'
+    invoice_series = 'InvoiceSeries'
+    invoice_starting_number = 1
+    proforma_series = 'ProformaSeries'
+    proforma_starting_number = 1
 
 
 class PlanFactory(factory.django.DjangoModelFactory):
@@ -63,7 +83,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)
-    product_code = factory.Sequence(lambda n: '{cnt}'.format(cnt=n))
+    product_code = factory.SubFactory(ProductCodeFactory)
     provider = factory.SubFactory(ProviderFactory)
 
     @factory.post_generation
@@ -86,6 +106,32 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     trial_end = factory.Sequence(lambda n: datetime.date.today() +
                                  datetime.timedelta(days=n))
     start_date = datetime.date.today()
+
+
+class InvoiceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Invoice
+
+    number = factory.Sequence(lambda n: n)
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    currency = 'RON'
+
+class ProformaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Proforma
+
+    number = factory.Sequence(lambda n: n)
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    currency = 'RON'
+
+
+class ProductCodeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProductCode
+
+    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
 
 
 class AdminUserFactory(factory.django.DjangoModelFactory):

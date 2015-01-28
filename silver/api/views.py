@@ -6,17 +6,20 @@ from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
-                           Customer, Plan, Provider)
+                           Customer, Plan, Provider, Invoice, ProductCode,
+                           DocumentEntry, Proforma)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
-                                    ProviderSerializer)
-from silver.api.generics import (HPListAPIView, HPListBulkCreateAPIView,
-                                 HPListCreateAPIView)
+                                    ProviderSerializer, InvoiceSerializer,
+                                    ProductCodeSerializer, ProformaSerializer,
+                                    DocumentEntrySerializer)
+from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
 from silver.utils import get_object_or_None
 
 
@@ -90,7 +93,7 @@ class MeteredFeaturesFilter(FilterSet):
         fields = ('name', )
 
 
-class MeteredFeatureList(HPListBulkCreateAPIView):
+class MeteredFeatureList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
@@ -345,7 +348,19 @@ class ProviderFilter(FilterSet):
         fields = ['email', 'company']
 
 
-class ProviderListBulkCreate(HPListBulkCreateAPIView):
+class ProductCodeListCreate(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProductCodeSerializer
+    queryset = ProductCode.objects.all()
+
+
+class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProductCodeSerializer
+    queryset = ProductCode.objects.all()
+
+
+class ProviderListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
@@ -357,3 +372,284 @@ class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
+
+
+class InvoiceListCreate(HPListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
+
+
+class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
+
+
+class DocEntryCreate(generics.CreateAPIView):
+    def get_model(self):
+        raise NotImplementedError
+
+    def get_model_name(self):
+        raise NotImplementedError
+
+    def post(self, request, *args, **kwargs):
+        doc_pk = kwargs.get('document_pk')
+        Model = self.get_model()
+        model_name = self.get_model_name()
+
+        try:
+            document = Model.objects.get(pk=doc_pk)
+        except Model.DoesNotExist:
+            msg = "{model} not found".format(model=model_name)
+            return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
+
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = DocumentEntrySerializer(data=request.DATA,
+                                             context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            # This will be eiter {invoice: <invoice_object>} or
+            # {proforma: <proforma_object>} as a DocumentEntry can have a
+            # foreign key to either an invoice or a proforma
+            extra_context = {model_name.lower(): document}
+            serializer.save(**extra_context)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class InvoiceEntryCreate(DocEntryCreate):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return super(InvoiceEntryCreate, self).post(request, *args, **kwargs)
+
+    def get_model(self):
+        return Invoice
+
+    def get_model_name(self):
+        return "Invoice"
+
+
+class DocEntryUpdateDestroy(APIView):
+
+    def put(self, request, *args, **kwargs):
+        doc_pk = kwargs.get('document_pk')
+        entry_id = kwargs.get('entry_id')
+
+        Model = self.get_model()
+        model_name = self.get_model_name()
+
+        document = get_object_or_404(Model, pk=doc_pk)
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        entry = get_object_or_404(DocumentEntry, **searched_fields)
+
+        serializer = DocumentEntrySerializer(entry, data=request.DATA,
+                                             context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        doc_pk = kwargs.get('document_pk')
+        entry_id = kwargs.get('entry_id')
+
+        Model = self.get_model()
+        model_name = self.get_model_name()
+
+        document = get_object_or_404(Model, pk=doc_pk)
+        if document.state != 'draft':
+            msg = "{model} entries can be added only when the {model_lower} is"\
+                  " in draft state.".format(model=model_name,
+                                            model_lower=model_name.lower())
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        entry = get_object_or_404(DocumentEntry, **searched_fields)
+        entry.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_model(self):
+        raise NotImplementedError
+
+    def get_model_name(self):
+        raise NotImplementedError
+
+class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        return super(InvoiceEntryUpdateDestroy, self).put(request, *args,
+                                                          **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return super(InvoiceEntryUpdateDestroy, self).delete(request, *args,
+                                                             **kwargs)
+
+    def get_model(self):
+        return Invoice
+
+    def get_model_name(self):
+        return "Invoice"
+
+
+class InvoiceStateHandler(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = InvoiceSerializer
+
+    def patch(self, request, *args, **kwargs):
+        invoice_pk = kwargs.get('pk')
+        try:
+            invoice = Invoice.objects.get(pk=invoice_pk)
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        state = request.DATA.get('state', None)
+        if state == 'issued':
+            if invoice.state != 'draft':
+                msg = "An invoice can be issued only if it is in draft state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            issue_date = request.DATA.get('issue_date', None)
+            due_date = request.DATA.get('due_date', None)
+            invoice.issue(issue_date, due_date)
+            invoice.save()
+        elif state == 'paid':
+            if invoice.state != 'issued':
+                msg = "An invoice can be paid only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            paid_date = request.DATA.get('paid_date', None)
+            invoice.pay(paid_date)
+            invoice.save()
+        elif state == 'canceled':
+            if invoice.state != 'issued':
+                msg = "An invoice can be canceled only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            cancel_date = request.DATA.get('cancel_date', None)
+            invoice.cancel(cancel_date)
+            invoice.save()
+        elif not state:
+            msg = "You have to provide a value for the state field."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            msg = "Illegal state value."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = InvoiceSerializer(invoice, context={'request': request})
+        return Response(serializer.data)
+
+
+class ProformaListCreate(HPListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProformaSerializer
+    queryset = Proforma.objects.all()
+
+
+class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProformaSerializer
+    queryset = Proforma.objects.all()
+
+
+class ProformaEntryCreate(DocEntryCreate):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return super(ProformaEntryCreate, self).post(request, *args, **kwargs)
+
+    def get_model(self):
+        return Proforma
+
+    def get_model_name(self):
+        return "Proforma"
+
+
+class ProformaEntryUpdateDestroy(DocEntryUpdateDestroy):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = DocumentEntrySerializer
+    queryset = DocumentEntry.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        return super(ProformaEntryUpdateDestroy, self).put(request, *args,
+                                                           **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return super(ProformaEntryUpdateDestroy, self).delete(request, *args,
+                                                              **kwargs)
+
+    def get_model(self):
+        return Proforma
+
+    def get_model_name(self):
+        return "Proforma"
+
+
+class ProformaStateHandler(APIView):
+    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    serializer_class = ProformaSerializer
+
+    def patch(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('pk')
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        state = request.DATA.get('state', None)
+        if state == 'issued':
+            if proforma.state != 'draft':
+                msg = "A proforma can be issued only if it is in draft state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            issue_date = request.DATA.get('issue_date', None)
+            due_date = request.DATA.get('due_date', None)
+            proforma.issue(issue_date, due_date)
+            proforma.save()
+        elif state == 'paid':
+            if proforma.state != 'issued':
+                msg = "A proforma can be paid only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            paid_date = request.DATA.get('paid_date', None)
+            proforma.pay(paid_date)
+            proforma.save()
+        elif state == 'canceled':
+            if proforma.state != 'issued':
+                msg = "A proforma can be canceled only if it is in issued state."
+                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+            cancel_date = request.DATA.get('cancel_date', None)
+            proforma.cancel(cancel_date)
+            proforma.save()
+        elif not state:
+            msg = "You have to provide a value for the state field."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            msg = "Illegal state value."
+            return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProformaSerializer(proforma, context={'request': request})
+        return Response(serializer.data)

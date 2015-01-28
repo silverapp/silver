@@ -1,10 +1,16 @@
 """Models for the silver app."""
 import datetime
-from django.core.exceptions import ValidationError
+from datetime import datetime as dt
+
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.utils import timezone
 from django.db import models
+from django.db.models import Max
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
+import jsonfield
+
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
@@ -64,7 +70,7 @@ class Plan(models.Model):
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
-    product_code = models.CharField(max_length=128, unique=True,
+    product_code = models.ForeignKey('ProductCode', unique=True,
                                     help_text='The product code for this plan.')
     provider = models.ForeignKey(
         'Provider', related_name='plans',
@@ -80,10 +86,13 @@ class MeteredFeature(models.Model):
         max_length=32,
         help_text='The feature display name.'
     )
+    unit = models.CharField(max_length=20, blank=True, null=True)
     price_per_unit = models.FloatField(help_text='The price per unit.')
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
+    product_code = models.ForeignKey('ProductCode',
+                                    help_text='The product code for this plan.')
 
     def __unicode__(self):
         return self.name
@@ -135,7 +144,6 @@ class Subscription(models.Model):
     STATES = (
         ('active', 'Active'),
         ('inactive', 'Inactive'),
-        ('past_due', 'Past Due'),
         ('on_trial', 'On Trial'),
         ('canceled', 'Canceled'),
         ('ended', 'Ended')
@@ -162,6 +170,11 @@ class Subscription(models.Model):
         blank=True, null=True,
         help_text='The date when the subscription ended.'
     )
+    reference = models.CharField(
+        max_length=128, blank=True, null=True,
+        help_text="The subscription's reference in an external system."
+    )
+
     state = FSMField(
         choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'
@@ -179,7 +192,7 @@ class Subscription(models.Model):
     def current_start_date(self):
         return last_date_that_fits(
             initial_date=self.start_date,
-            end_date=datetime.date.today(),
+            end_date=timezone.now().date(),
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
         )
@@ -227,22 +240,7 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
-class Offer(models.Model):
-    name = models.CharField(
-        max_length=128, blank=True, null=True,
-        help_text='The optional name of the offer.'
-    )
-    plans = models.ManyToManyField(
-        'Plan',
-        help_text="The plans that are included in the customer's offer."
-    )
-
-    def plans_list(self):
-        return ", ".join([plan.name for plan in self.plans.all()])
-    plans_list.short_description = 'Included plans'
-
-
-class BillingEntity(LiveModel):
+class AbstractBillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
         help_text='The name to be used for billing purposes.'
@@ -260,7 +258,6 @@ class BillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    is_active = models.BooleanField(default=True)
 
     class Meta:
         abstract = True
@@ -271,41 +268,40 @@ class BillingEntity(LiveModel):
             display = '%s (%s)' % (display, self.company)
         return display
 
+    def get_list_display_fields(self):
+        field_names = ['company', 'email', 'address_1', 'city', 'country',
+                       'zip_code']
+        return [getattr(self, field, '') for field in field_names]
 
-class Customer(BillingEntity):
+    def get_archivable_fields(self):
+        field_names = ['name', 'company', 'email', 'address_1', 'address_1',
+                       'city', 'country', 'city', 'zip_code', 'zip_code']
+        return {field: getattr(self, field, '') for field in field_names}
+
+
+class Customer(AbstractBillingEntity):
     customer_reference = models.CharField(
         max_length=256, blank=True, null=True,
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
     )
-    sales_tax_percent = models.FloatField(
-        null=True,
+    sales_tax_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
         help_text="Whenever to add sales tax. "
                   "If null, it won't show up on the invoice."
     )
     sales_tax_name = models.CharField(
-        max_length=64, help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
+        max_length=64, null=True, blank=True,
+        help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
     )
     consolidated_billing = models.BooleanField(
         default=False, help_text='A flag indicating consolidated billing.'
-    )
-    offer = models.OneToOneField(
-        'Offer', null=True, blank=True,
-        help_text="A custom offer consisting of a custom selection of plans."
     )
 
     def __init__(self, *args, **kwargs):
         super(Customer, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The company to which the bill is issued."
-
-    def __unicode__(self):
-        return " - ".join(filter(None, [self.name, self.company]))
-
-    def complete_address(self):
-        return ", ".join(filter(None, [self.address_1, self.city, self.state,
-                                       self.zip_code, self.country]))
-    complete_address.short_description = 'Complete address'
 
     def delete(self):
         subscriptions = Subscription.objects.filter(customer=self)
@@ -317,12 +313,348 @@ class Customer(BillingEntity):
                 pass
         super(Customer, self).delete()
 
+    def __unicode__(self):
+        return " - ".join(filter(None, [self.name, self.company]))
 
-class Provider(BillingEntity):
+    def get_archivable_fields(self):
+        base_fields = super(Customer, self).get_archivable_fields()
+        customer_fields = ['customer_reference', 'consolidated_billing']
+        fields_dict = {field: getattr(self, field, '') for field in customer_fields}
+        base_fields.update(fields_dict)
+        return base_fields
+
+    def complete_address(self):
+        return ", ".join(filter(None, [self.address_1, self.city, self.state,
+                                       self.zip_code, self.country]))
+    complete_address.short_description = 'Complete address'
+
+
+class Provider(AbstractBillingEntity):
+    FLOW_CHOICES = (
+        ('proforma', 'Proforma'),
+        ('invoice', 'Invoice'),
+    )
+
+    flow = models.CharField(
+        max_length=10, choices=FLOW_CHOICES,
+        default=FLOW_CHOICES[0][0],
+        help_text="One of the available workflows for generating proformas and\
+                   invoices (see the documentation for more details)."
+    )
+    invoice_series = models.CharField(
+        max_length=20,
+        help_text="The series that will be used on every invoice generated by\
+                   this provider."
+    )
+    invoice_starting_number = models.PositiveIntegerField()
+    proforma_series = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="The series that will be used on every proforma generated by\
+                   this provider."
+    )
+    proforma_starting_number = models.PositiveIntegerField(
+        blank=True, null=True
+    )
+
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
-        company_field.help_text = "The issuing the bill."
+        company_field.help_text = "The provider issuing the invoice."
+
+    def clean(self):
+        if self.flow == 'proforma':
+            if not self.proforma_starting_number and\
+               not self.proforma_series:
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma.",
+                          'proforma_starting_number': "This field is required "\
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise ValidationError(errors)
+            elif not self.proforma_series:
+                errors = {'proforma_series': "This field is required as the "
+                                             "chosen flow is proforma."}
+                raise ValidationError(errors)
+            elif not self.proforma_starting_number:
+                errors = {'proforma_starting_number': "This field is required "
+                                                      "as the chosen flow is "
+                                                      "proforma."}
+                raise ValidationError(errors)
+
+    def get_invoice_archivable_fields(self):
+        base_fields = super(Provider, self).get_archivable_fields()
+        base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
+        return base_fields
+
+    def get_proforma_archivable_fields(self):
+        base_fields = super(Provider, self).get_archivable_fields()
+        base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
+        return base_fields
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
+
+
+class ProductCode(models.Model):
+    value = models.CharField(max_length=128, unique=True)
+
+    def __unicode__(self):
+        return self.value
+
+
+class AbstractInvoicingDocument(models.Model):
+    states = ['draft', 'issued', 'paid', 'canceled']
+    STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
+                          for state in states)
+    number = models.IntegerField(blank=True, null=True)
+    customer = models.ForeignKey('Customer')
+    provider = models.ForeignKey('Provider')
+    archived_customer = jsonfield.JSONField()
+    archived_provider = jsonfield.JSONField()
+    due_date = models.DateField(null=True, blank=True)
+    issue_date = models.DateField(null=True, blank=True)
+    paid_date = models.DateField(null=True, blank=True)
+    cancel_date = models.DateField(null=True, blank=True)
+    sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
+                                            null=True, blank=True)
+    sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
+    currency = models.CharField(
+        choices=currencies, max_length=4,
+        help_text='The currency used for billing.'
+    )
+    state = FSMField(
+        choices=STATE_CHOICES, max_length=10, default=states[0],
+        verbose_name='Invoice state', help_text='The state the invoice is in.'
+    )
+
+    __last_state = None
+
+    class Meta:
+        abstract = True
+        unique_together = ('provider', 'number')
+        ordering = ('-issue_date', 'number')
+
+    def __init__(self, *args, **kwargs):
+        super(AbstractInvoicingDocument, self).__init__(*args, **kwargs)
+        self.__last_state = self.state
+
+    @transition(field=state, source='draft', target='issued')
+    def issue(self, issue_date=None, due_date=None):
+        if issue_date:
+            self.issue_date = dt.strptime(issue_date, '%Y-%m-%d').date()
+        elif not self.issue_date and not issue_date:
+            self.issue_date = timezone.now().date()
+
+        if due_date:
+            self.due_date = dt.strptime(due_date, '%Y-%m-%d').date()
+        elif not self.due_date and not due_date:
+            self.due_date = timezone.now().date()
+
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.archived_customer = self.customer.get_archivable_fields()
+
+    @transition(field=state, source='issued', target='paid')
+    def pay(self, paid_date=None):
+        if paid_date:
+            self.paid_date = dt.strptime(paid_date, '%Y-%m-%d').date()
+        if not self.paid_date and not paid_date:
+            self.paid_date = timezone.now().date()
+
+    @transition(field=state, source='issued', target='canceled')
+    def cancel(self, cancel_date=None):
+        if cancel_date:
+            self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
+        if not self.cancel_date and not cancel_date:
+            self.cancel_date = timezone.now().date()
+
+    def clean(self):
+        # The only change that is allowed if the document is in issued state
+        # is the state chage from issued to paid
+
+        # !! TODO: If __last_state == 'issued' and self.state == 'paid' || 'canceled'
+        # it should also be checked that the other fields are the same bc.
+        # right now a document can be in issued state and someone could
+        # send a request which contains the state = 'paid' and also send
+        # other changed fields and the request would be accepted bc. only
+        # the state is verified.
+        if self.__last_state == 'issued' and self.state not in ['paid', 'canceled']:
+            msg = 'You cannot edit the document once it is in issued state.'
+            raise ValidationError({NON_FIELD_ERRORS: msg})
+
+        if self.__last_state == 'canceled':
+            msg = 'You cannot edit the document once it is in canceled state.'
+            raise ValidationError({NON_FIELD_ERRORS: msg})
+
+        # If it's in paid state => don't allow any changes
+        if self.__last_state == 'paid':
+            msg = 'You cannot edit the document once it is in paid state.'
+            raise ValidationError({NON_FIELD_ERRORS: msg})
+
+    def _generate_number(self):
+        """Generates the number for a proforma/invoice. To be implemented
+        in the corresponding subclass."""
+
+        if not self.__class__._default_manager.filter(
+            provider=self.provider,
+        ).exists():
+            # An invoice with this provider does not exist
+            return self.provider.invoice_starting_number
+        else:
+            # An invoice with this provider already exists
+            max_existing_number = self.__class__._default_manager.filter(
+                provider=self.provider,
+            ).aggregate(Max('number'))['number__max']
+
+            return max_existing_number + 1
+
+    def save(self, *args, **kwargs):
+        # Generate the number
+        if not self.number:
+            self.number = self._generate_number()
+
+        # Add tax info
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.__last_state = self.state
+
+        super(AbstractInvoicingDocument, self).save(*args, **kwargs)
+
+    def customer_display(self):
+        try:
+            return ', '.join(self.customer.get_list_display_fields())
+        except Customer.DoesNotExist:
+            return ''
+    customer_display.short_description = 'Customer'
+
+    def provider_display(self):
+        try:
+            return ', '.join(self.provider.get_list_display_fields())
+        except Customer.DoesNotExist:
+            return ''
+    provider_display.short_description = 'Provider'
+
+    @property
+    def updateable_fields(self):
+        return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
+                'cancel_date', 'sales_tax_percent', 'sales_tax_name',
+                'currency']
+
+    def __unicode__(self):
+        return '%s-%s-%s' % (self.number, self.customer, self.provider)
+
+
+class Invoice(AbstractInvoicingDocument):
+    proforma = models.ForeignKey('Proforma', blank=True, null=True,
+                                 related_name='related_proforma')
+
+    def __init__(self, *args, **kwargs):
+        super(Invoice, self).__init__(*args, **kwargs)
+
+        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field.related_name = "invoices"
+
+        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field.related_name = "invoices"
+
+    @transition(field='state', source='draft', target='issued')
+    def issue(self, issue_date=None, due_date=None):
+        super(Invoice, self).issue(issue_date, due_date)
+        self.archived_provider = self.provider.get_invoice_archivable_fields()
+
+    @property
+    def series(self):
+        try:
+            return self.provider.invoice_series
+        except Provider.DoesNotExist:
+            return ''
+
+
+class Proforma(AbstractInvoicingDocument):
+    invoice = models.ForeignKey('Invoice', blank=True, null=True,
+                                related_name='related_invoice')
+
+    def __init__(self, *args, **kwargs):
+        super(Proforma, self).__init__(*args, **kwargs)
+
+        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field.related_name = "proformas"
+
+        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field.related_name = "proformas"
+
+    @transition(field='state', source='draft', target='issued')
+    def issue(self, issue_date=None, due_date=None):
+        super(Proforma, self).issue(issue_date, due_date)
+        self.archived_provider = self.provider.get_proforma_archivable_fields()
+
+    @transition(field='state', source='issued', target='paid')
+    def pay(self, paid_date=None):
+        super(Proforma, self).pay(paid_date)
+
+        # Generate the new invoice based this proforma
+        invoice_fields = self.fields_for_automatic_invoice_generation
+        invoice_fields.update({'proforma': self})
+        invoice = Invoice.objects.create(**invoice_fields)
+        invoice.issue()
+        invoice.pay()
+        invoice.save()
+
+        self.invoice = invoice
+
+        # For all the entries in the proforma => add the link to the new
+        # invoice
+        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
+
+    @property
+    def series(self):
+        try:
+            return self.provider.proforma_series
+        except Provider.DoesNotExist:
+            return ''
+
+    @property
+    def fields_for_automatic_invoice_generation(self):
+        fields = ['customer', 'provider', 'archived_customer', 'archived_provider',
+                  'due_date', 'issue_date', 'paid_date', 'cancel_date',
+                  'sales_tax_percent', 'sales_tax_name', 'currency']
+        return {field: getattr(self, field, None) for field in fields}
+
+class DocumentEntry(models.Model):
+    entry_id = models.IntegerField(blank=True)
+    description = models.CharField(max_length=255)
+    unit = models.CharField(max_length=20, blank=True, null=True)
+    quantity = models.DecimalField(max_digits=28, decimal_places=10)
+    unit_price = models.DecimalField(max_digits=28, decimal_places=10)
+    product_code = models.ForeignKey('ProductCode', null=True, blank=True,
+                                     related_name='invoices')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    prorated = models.BooleanField(default=False)
+    invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
+                               blank=True, null=True)
+    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
+                                blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Entry'
+        verbose_name_plural = 'Entries'
+
+    def _get_next_entry_id(self, invoice):
+        max_id = self.__class__._default_manager.filter(
+            invoice=self.invoice,
+        ).aggregate(Max('entry_id'))['entry_id__max']
+        return max_id + 1 if max_id else 1
+
+
+    def save(self, *args, **kwargs):
+        if not self.entry_id:
+            self.entry_id = self._get_next_entry_id(self.invoice)
+
+        super(DocumentEntry, self).save(*args, **kwargs)

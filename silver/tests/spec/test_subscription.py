@@ -4,6 +4,7 @@ import json
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
+
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     PlanFactory, SubscriptionFactory,
                                     MeteredFeatureFactory)
@@ -18,11 +19,11 @@ class TestSubscriptionEndpoint(APITestCase):
         plan = PlanFactory.create()
         customer = CustomerFactory.create()
 
-        plan_url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
-        customer_url = reverse('silver_api:customer-detail',
+        plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
+        customer_url = reverse('customer-detail',
                                kwargs={'pk': customer.pk})
 
-        url = reverse('silver_api:subscription-list')
+        url = reverse('subscription-list')
 
         response = self.client.post(url, json.dumps({
             "plan": plan_url,
@@ -37,11 +38,11 @@ class TestSubscriptionEndpoint(APITestCase):
         plan = PlanFactory.create()
         customer = CustomerFactory.create()
 
-        plan_url = reverse('silver_api:plan-detail', kwargs={'pk': plan.pk})
-        customer_url = reverse('silver_api:customer-detail',
+        plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
+        customer_url = reverse('customer-detail',
                                kwargs={'pk': customer.pk})
 
-        url = reverse('silver_api:subscription-list')
+        url = reverse('subscription-list')
 
         response = self.client.post(url, json.dumps({
             "plan": plan_url,
@@ -54,7 +55,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
     def test_activate_subscription(self):
         subscription = SubscriptionFactory.create()
-        url = reverse('silver_api:sub-activate',
+        url = reverse('sub-activate',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, content_type='application/json')
@@ -68,7 +69,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.cancel()
         subscription.save()
 
-        url = reverse('silver_api:sub-activate',
+        url = reverse('sub-activate',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, content_type='application/json')
@@ -84,7 +85,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('silver_api:sub-cancel',
+        url = reverse('sub-cancel',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, json.dumps({
@@ -96,7 +97,7 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_cancel_subscription_from_wrong_state(self):
         subscription = SubscriptionFactory.create()
 
-        url = reverse('silver_api:sub-cancel',
+        url = reverse('sub-cancel',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, json.dumps({
@@ -113,7 +114,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('silver_api:sub-cancel',
+        url = reverse('sub-cancel',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, json.dumps({
@@ -125,7 +126,7 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_end_subscription_from_wrong_state(self):
         subscription = SubscriptionFactory.create()
 
-        url = reverse('silver_api:sub-cancel',
+        url = reverse('sub-cancel',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, json.dumps({
@@ -143,7 +144,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.cancel()
         subscription.save()
 
-        url = reverse('silver_api:sub-reactivate',
+        url = reverse('sub-reactivate',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, content_type='application/json')
@@ -158,7 +159,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.end()
         subscription.save()
 
-        url = reverse('silver_api:sub-reactivate',
+        url = reverse('sub-reactivate',
                       kwargs={'sub': subscription.pk})
 
         response = self.client.post(url, content_type='application/json')
@@ -172,7 +173,7 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_get_subscription_list(self):
         SubscriptionFactory.create_batch(40)
 
-        url = reverse('silver_api:subscription-list')
+        url = reverse('subscription-list')
 
         response = self.client.get(url)
 
@@ -204,7 +205,7 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
 
-        url = reverse('silver_api:subscription-detail',
+        url = reverse('subscription-detail',
                       kwargs={'pk': subscription.pk})
 
         response = self.client.get(url)
@@ -213,7 +214,7 @@ class TestSubscriptionEndpoint(APITestCase):
         self.assertNotEqual(response.data, [])
 
     def test_get_subscription_detail_unexisting(self):
-        url = reverse('silver_api:subscription-detail',
+        url = reverse('subscription-detail',
                       kwargs={'pk': 42})
 
         response = self.client.get(url)
@@ -230,7 +231,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('silver_api:mf-log-list',
+        url = reverse('mf-log-list',
                       kwargs={'sub': subscription.pk,
                               'mf': metered_feature.pk})
 
@@ -260,7 +261,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('silver_api:mf-log-list',
+        url = reverse('mf-log-list',
                       kwargs={'sub': subscription.pk,
                               'mf': 42})
 
@@ -274,7 +275,7 @@ class TestSubscriptionEndpoint(APITestCase):
         metered_feature = MeteredFeatureFactory.create()
         subscription.plan.metered_features.add(metered_feature)
 
-        url = reverse('silver_api:mf-log-list',
+        url = reverse('mf-log-list',
                       kwargs={'sub': subscription.pk,
                               'mf': metered_feature.pk})
 
@@ -293,7 +294,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('silver_api:mf-log-list',
+        url = reverse('mf-log-list',
                       kwargs={'sub': subscription.pk,
                               'mf': metered_feature.pk})
 

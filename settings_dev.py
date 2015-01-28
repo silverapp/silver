@@ -18,6 +18,7 @@ DATABASES = {
 
 EXTERNAL_APPS = [
     # Django core apps
+    #'django_admin_bootstrapped',
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -30,9 +31,11 @@ EXTERNAL_APPS = [
     'international',
     'django_fsm',
     'rest_framework',
-    'django_extensions',
     'django_filters',
-    'rest_hooks'
+    'rest_hooks',
+
+    # Dev tools
+    'django_extensions',
 ]
 
 INTERNAL_APPS = [
@@ -59,6 +62,14 @@ REST_FRAMEWORK = {
     'PAGINATE_BY': 30,
     'PAGINATE_BY_PARAM': 'per_page',
     'MAX_PAGINATE_BY': 100,
+}
+
+from django.contrib import messages
+
+MESSAGE_TAGS = {
+    messages.SUCCESS: 'alert-success success',
+    messages.WARNING: 'alert-warning warning',
+    messages.ERROR: 'alert-danger error'
 }
 
 HOOK_EVENTS = {
