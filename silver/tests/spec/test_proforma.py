@@ -165,3 +165,10 @@ class TestProformaEndpoints(APITestCase):
             'prorated': False,
             'product_code': None
         }
+
+    def test_try_to_get_proforma_entries(self):
+        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert response.data == {"detail": "Method 'GET' not allowed."}
