@@ -5,8 +5,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import Invoice, Proforma
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, ProformaFactory)
+from silver.utils import get_object_or_None
 
 
 class TestProformaEndpoints(APITestCase):
@@ -352,3 +354,33 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
+
+    def test_pay_proforma_with_default_dates(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'paid'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'paid',
+            'invoice': 'http://testserver/invoices/1/'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+
+        invoice = get_object_or_None(Invoice, pk=1)
+        proforma = get_object_or_None(Proforma, pk=1)
+        assert proforma.invoice == invoice
+        assert invoice.proforma == proforma
+
