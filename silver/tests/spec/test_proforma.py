@@ -384,7 +384,7 @@ class TestProformaEndpoints(APITestCase):
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
 
-    def test_pay_invoice_with_provided_date(self):
+    def test_pay_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
