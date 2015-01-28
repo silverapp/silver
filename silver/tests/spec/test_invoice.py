@@ -314,7 +314,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'non_field_errors': ['You cannot edit the document once it is in issued state.']}
 
-    def test_edit_proforma_in_canceled_state(self):
+    def test_edit_invoice_in_canceled_state(self):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.cancel()
@@ -328,7 +328,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {'non_field_errors': ['You cannot edit the document once it is in canceled state.']}
 
-    def test_edit_proforma_in_paid_state(self):
+    def test_edit_invoice_in_paid_state(self):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.pay()
