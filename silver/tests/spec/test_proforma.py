@@ -337,3 +337,18 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
+
+    def test_issue_proforma_when_in_paid_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'issued'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
