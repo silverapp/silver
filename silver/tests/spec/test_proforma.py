@@ -252,3 +252,25 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
+
+    def test_issue_proforma_with_default_dates(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        ProformaFactory.create(provider=provider, customer=customer)
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'issued'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'state': 'issued'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+        assert response.data.get('archived_provider', {}) != {}
+        assert response.data.get('archived_customer', {}) != {}
