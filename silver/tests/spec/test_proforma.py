@@ -255,6 +255,30 @@ class TestProformaEndpoints(APITestCase):
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
 
+    def test_add_proforma_entry_in_paid_state(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
+        response = self.client.post(url, data=json.dumps(entry_data),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        msg = 'Proforma entries can be added only when the proforma is in draft state.'
+        assert response.data == {'detail': msg}
+
+        url = reverse('proforma-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+        invoice_entries = response.data.get('proforma_entries', None)
+        assert len(invoice_entries) == 0
+
     def test_issue_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
@@ -566,3 +590,21 @@ class TestProformaEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
         assert Invoice.objects.count() == 0
+
+    def test_illegal_state_change_when_in_paid_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'illegal-state'}
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'Illegal state value.'}
+        assert Invoice.objects.count() == 1
