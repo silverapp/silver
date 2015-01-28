@@ -477,7 +477,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
-    def test_cancel_invoice_with_provider_date(self):
+    def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
