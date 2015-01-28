@@ -14,7 +14,7 @@ class TestProformaEndpoints(APITestCase):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
 
-    def test_post_invoice_without_invoice_entries(self):
+    def test_post_proforma_without_proforma_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
         url = reverse('proforma-list')
@@ -49,3 +49,25 @@ class TestProformaEndpoints(APITestCase):
             "proforma_entries": []
         }
 
+    def test_post_proforma_with_proforma_entries(self):
+        CustomerFactory.create()
+        ProviderFactory.create()
+        url = reverse('proforma-list')
+        data = {
+            'provider': 'http://testserver/providers/1/',
+            'customer': 'http://testserver/customers/1/',
+            'number': None,
+            'currency': 'RON',
+            'proforma_entries': [{
+                "description": "Page views",
+                "unit_price": 10.0,
+                "quantity": 20
+            }]
+        }
+
+        response = self.client.post(url, data=json.dumps(data),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        # TODO: Check the body of the response. There were some problems
+        # related to the invoice_entries list.
