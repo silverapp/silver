@@ -87,8 +87,11 @@ class MeteredFeature(models.Model):
         help_text='The feature display name.'
     )
     unit = models.CharField(max_length=20, blank=True, null=True)
-    price_per_unit = models.FloatField(help_text='The price per unit.')
+    price_per_unit = models.DecimalField(
+        max_digits=8, decimal_places=2, help_text='The price per unit.'
+    )
     included_units = models.FloatField(
+        max_digits=8, decimal_places=2,
         help_text='The number of included units per plan interval.'
     )
     product_code = models.ForeignKey('ProductCode',
@@ -99,9 +102,9 @@ class MeteredFeature(models.Model):
 
 
 class MeteredFeatureUnitsLog(models.Model):
-    metered_feature = models.ForeignKey('MeteredFeature')
-    subscription = models.ForeignKey('Subscription')
-    consumed_units = models.FloatField()
+    metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
+    subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
+    consumed_units = models.DecimalField(max_digits=8, decimal_places=2)
     start_date = models.DateField(editable=False)
     end_date = models.DateField(editable=False)
 
