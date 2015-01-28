@@ -90,7 +90,7 @@ class MeteredFeature(models.Model):
     price_per_unit = models.DecimalField(
         max_digits=8, decimal_places=2, help_text='The price per unit.'
     )
-    included_units = models.FloatField(
+    included_units = models.DecimalField(
         max_digits=8, decimal_places=2,
         help_text='The number of included units per plan interval.'
     )
