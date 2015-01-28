@@ -276,6 +276,7 @@ class TestProformaEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+        assert Invoice.objects.count() == 0
 
     def test_issue_proforma_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -298,6 +299,7 @@ class TestProformaEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+        assert Invoice.objects.count() == 0
 
     def test_issue_proforma_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -325,6 +327,7 @@ class TestProformaEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+        assert Invoice.objects.count() == 0
 
     def test_issue_proforma_when_in_issued_state(self):
         provider = ProviderFactory.create()
@@ -339,6 +342,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
+        assert Invoice.objects.count() == 0
 
     def test_issue_proforma_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -354,6 +358,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
+        assert Invoice.objects.count() == 1
 
     def test_pay_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -427,6 +432,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be paid only if it is in issued state.'}
+        assert Invoice.objects.count() == 0
 
     def test_pay_proforma_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -442,3 +448,4 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be paid only if it is in issued state.'}
+        assert Invoice.objects.count() == 1
