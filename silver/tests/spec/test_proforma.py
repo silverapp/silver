@@ -384,3 +384,34 @@ class TestProformaEndpoints(APITestCase):
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
 
+    def test_pay_invoice_with_provided_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {
+            'state': 'paid',
+            'paid_date': '2014-05-05'
+        }
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'paid_date': '2014-05-05',
+            'state': 'paid',
+            'invoice': 'http://testserver/invoices/1/'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+
+        invoice = get_object_or_None(Invoice, pk=1)
+        proforma = get_object_or_None(Proforma, pk=1)
+        assert proforma.invoice == invoice
+        assert invoice.proforma == proforma
