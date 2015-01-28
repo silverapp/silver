@@ -516,3 +516,36 @@ class TestProformaEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
         assert Invoice.objects.count() == 0
+
+    def test_cancel_proforma_in_paid_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'canceled'}
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
+        assert Invoice.objects.count() == 1
+
+    def test_illegal_state_change_when_in_draft_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        ProformaFactory.create(provider=provider, customer=customer)
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'illegal-state'}
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'Illegal state value.'}
+        assert Invoice.objects.count() == 0
