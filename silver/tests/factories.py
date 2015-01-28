@@ -6,7 +6,8 @@ from django.contrib.auth import get_user_model
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription, ProductCode, Invoice, ProductCode)
+                           Subscription, ProductCode, Invoice, ProductCode,
+                           Proforma)
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -110,6 +111,15 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
 class InvoiceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Invoice
+
+    number = factory.Sequence(lambda n: n)
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    currency = 'RON'
+
+class ProformaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Proforma
 
     number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
