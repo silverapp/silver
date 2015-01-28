@@ -1,6 +1,7 @@
 """Models for the silver app."""
 import datetime
 from datetime import datetime as dt
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
@@ -581,7 +582,8 @@ class Invoice(AbstractInvoicingDocument):
     @property
     def total(self):
         return reduce(lambda x, y: x + y,
-                      [item.total for item in self.invoice_entries.all()])
+                      [item.total for item in self.invoice_entries.all()],
+                      Decimal(0).to_eng_string())
 
 class Proforma(AbstractInvoicingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
@@ -636,7 +638,8 @@ class Proforma(AbstractInvoicingDocument):
     @property
     def total(self):
         return reduce(lambda x, y: x + y,
-                      [item.total for item in self.invoice_entries.all()])
+                      [item.total for item in self.proforma_entries.all()],
+                      Decimal(0).to_eng_string())
 
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
@@ -660,7 +663,7 @@ class DocumentEntry(models.Model):
 
     @property
     def total(self):
-        return self.unit_price * self.quantity
+        return (self.unit_price * self.quantity).to_eng_string()
 
     def _get_next_entry_id(self, invoice):
         max_id = self.__class__._default_manager.filter(
