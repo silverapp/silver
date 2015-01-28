@@ -138,8 +138,8 @@ class ProviderAdmin(LiveModelAdmin):
 
 class DocumentEntryInline(admin.TabularInline):
     model = DocumentEntry
-    fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
-              'product_code', 'start_date', 'end_date')
+    fields = ('entry_id', 'description', 'product_code', 'unit', 'unit_price',
+              'quantity', 'start_date', 'end_date')
 
 
 class BillingDocumentForm(forms.ModelForm):
@@ -195,8 +195,9 @@ class BillingDocumentAdmin(admin.ModelAdmin):
 
     fields = (('series', 'number'), 'provider', 'customer',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
-              'sales_tax_name', 'sales_tax_percent', 'currency', 'state')
-    readonly_fields = ('series', 'state')
+              'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
+              'total')
+    readonly_fields = ('series', 'state', 'total')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
@@ -230,13 +231,17 @@ class BillingDocumentAdmin(admin.ModelAdmin):
             msg = 'Successfully changed %d invoice(s).' % qs_count
             self.message_user(request, msg)
 
+    def total(self, obj):
+        return '{value} {currency}'.format(value=str(obj.total),
+                                           currency=obj.currency)
+
 
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
     list_display = BillingDocumentAdmin.list_display
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('proforma',)
+    fields = BillingDocumentAdmin.fields + ('proforma', )
     readonly_fields = BillingDocumentAdmin.readonly_fields + ('proforma', )
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
@@ -252,6 +257,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoices'
+
 
     @property
     def _model(self):
