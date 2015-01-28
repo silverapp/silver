@@ -2,6 +2,7 @@ from decimal import *
 import datetime
 
 import factory
+import factory.fuzzy
 from django.contrib.auth import get_user_model
 from international.models import countries
 
@@ -42,8 +43,8 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     unit = 'Unit'
-    price_per_unit = factory.Sequence(lambda n: n)
-    included_units = factory.Sequence(lambda n: n)
+    price_per_unit = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
+    included_units = factory.fuzzy.FuzzyDecimal(0.01, 100000.00)
     product_code = factory.SubFactory(ProductCodeFactory)
 
 
