@@ -578,6 +578,10 @@ class Invoice(AbstractInvoicingDocument):
         except Provider.DoesNotExist:
             return ''
 
+    @property
+    def total(self):
+        return reduce(lambda x, y: x + y,
+                      [item.total for item in self.invoice_entries.all()])
 
 class Proforma(AbstractInvoicingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
@@ -629,6 +633,11 @@ class Proforma(AbstractInvoicingDocument):
                   'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
+    @property
+    def total(self):
+        return reduce(lambda x, y: x + y,
+                      [item.total for item in self.invoice_entries.all()])
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
@@ -648,6 +657,10 @@ class DocumentEntry(models.Model):
     class Meta:
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
+
+    @property
+    def total(self):
+        return self.unit_price * self.quantity
 
     def _get_next_entry_id(self, invoice):
         max_id = self.__class__._default_manager.filter(
