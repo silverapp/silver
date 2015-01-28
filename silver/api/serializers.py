@@ -229,8 +229,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'proforma',
-                  'invoice_entries')
-        read_only_fields = ('archived_provider', 'archived_customer')
+                  'invoice_entries', 'total')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
         entries = validated_data.pop('invoice_entries', None)
@@ -283,8 +283,8 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'invoice',
-                  'proforma_entries')
-        read_only_fields = ('archived_provider', 'archived_customer')
+                  'proforma_entries', 'total')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
         entries = validated_data.pop('proforma_entries', None)
