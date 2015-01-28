@@ -474,6 +474,13 @@ class AbstractInvoicingDocument(models.Model):
     def clean(self):
         # The only change that is allowed if the document is in issued state
         # is the state chage from issued to paid
+
+        # !! TODO: If __last_state == 'issued' and self.state == 'paid'
+        # it should also be checked that the other fields are the same bc.
+        # right now a document can be in issued state and someone could
+        # send a request which contains the state = 'paid' and also send
+        # other changed fields and the request would be accepted bc. only
+        # the state is verified.
         if self.__last_state == 'issued' and self.state != 'paid':
             msg = 'You cannot edit the document once it is in issued state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
