@@ -216,8 +216,8 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
 class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DocumentEntry
-        fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
-                  'start_date', 'end_date', 'prorated', 'product_code')
+        fields = ('entry_id', 'description', 'unit', 'unit_price', 'quantity',
+                  'total', 'start_date', 'end_date', 'prorated', 'product_code')
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
