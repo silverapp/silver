@@ -116,3 +116,10 @@ class TestProformaEndpoints(APITestCase):
             "invoice": None,
             "proforma_entries": []
         }
+
+    def test_delete_proforma(self):
+        url = reverse('proforma-detail', kwargs={'pk': 1})
+        response = self.client.delete(url)
+
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert response.data == {"detail": "Method 'DELETE' not allowed."}
