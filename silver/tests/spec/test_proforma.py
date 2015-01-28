@@ -6,7 +6,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory)
+                                    ProviderFactory, ProformaFactory)
 
 
 class TestProformaEndpoints(APITestCase):
@@ -71,3 +71,20 @@ class TestProformaEndpoints(APITestCase):
         assert response.status_code == status.HTTP_201_CREATED
         # TODO: Check the body of the response. There were some problems
         # related to the invoice_entries list.
+
+    def test_get_proformas(self):
+        batch_size = 50
+        ProformaFactory.create_batch(batch_size)
+
+        url = reverse('proforma-list')
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
+
+        response = self.client.get(url + '?page=2')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response._headers['x-result-count'] == ('X-Result-Count',
+                                                       str(batch_size))
