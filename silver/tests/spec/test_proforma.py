@@ -296,3 +296,30 @@ class TestProformaEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+    def test_issue_proforma_with_custom_issue_date_and_due_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        ProformaFactory.create(provider=provider, customer=customer)
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {
+            'state': 'issued',
+            'issue_date': '2014-01-01',
+            'due_date': '2014-01-20'
+        }
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': '2014-01-01',
+            'due_date': '2014-01-20',
+            'state': 'issued'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+        assert response.data.get('archived_provider', {}) != {}
+        assert response.data.get('archived_customer', {}) != {}
