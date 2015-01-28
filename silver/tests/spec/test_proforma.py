@@ -473,3 +473,46 @@ class TestProformaEndpoints(APITestCase):
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
         assert Invoice.objects.count() == 0
+
+    def test_cancel_invoice_with_provided_date(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
+        proforma.issue()
+        proforma.save()
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {
+            'state': 'canceled',
+            'cancel_date': '2014-10-10'
+        }
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        mandatory_content = {
+            'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'cancel_date': '2014-10-10',
+            'state': 'canceled'
+        }
+        assert response.status_code == status.HTTP_200_OK
+        assert all(item in response.data.items()
+                   for item in mandatory_content.iteritems())
+        assert Invoice.objects.count() == 0
+
+    def test_cancel_proforma_in_draft_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        ProformaFactory.create(provider=provider, customer=customer)
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'canceled'}
+
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
+        assert Invoice.objects.count() == 0
