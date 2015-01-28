@@ -122,6 +122,7 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert response.data == {"detail": "Method 'DELETE' not allowed."}
 
     def test_add_single_invoice_entry(self):
         InvoiceFactory.create_batch(10)
