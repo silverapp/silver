@@ -1,13 +1,12 @@
 import datetime
+from decimal import Decimal
+
 from django.http.response import Http404
 from django_filters import FilterSet, CharFilter, BooleanFilter
-
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from silver.api.dateutils import last_date_that_fits
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
@@ -21,6 +20,7 @@ from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     DocumentEntrySerializer)
 from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
 from silver.utils import get_object_or_None
+from silver.api.dateutils import last_date_that_fits
 
 
 class PlanFilter(FilterSet):
@@ -226,7 +226,7 @@ class MeteredFeatureUnitsLogList(APIView):
         metered_feature_pk = self.kwargs['mf']
         subscription_pk = self.kwargs['sub']
         date = request.data.get('date', None)
-        consumed_units = request.data.get('count', None)
+        consumed_units = Decimal(request.data.get('count', 0))
         update_type = request.data.get('update_type', None)
         if subscription_pk and metered_feature_pk:
             subscription = get_object_or_None(Subscription, pk=subscription_pk)
@@ -237,7 +237,7 @@ class MeteredFeatureUnitsLogList(APIView):
                 if subscription.state != 'active':
                     return Response({"detail": "Subscription is not active"},
                                     status=status.HTTP_403_FORBIDDEN)
-                if date and consumed_units is not None and update_type:
+                if date and consumed_units and update_type:
                     try:
                         date = datetime.datetime.strptime(date,
                                                           '%Y-%m-%d').date()
