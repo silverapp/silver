@@ -113,11 +113,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'end', queryset)
 
 
-class MeteredFeatureAdmin(admin.ModelAdmin):
-    def get_model_perms(self, request):
-        return {}
-
-
 class CustomerAdmin(LiveModelAdmin):
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
@@ -291,10 +286,10 @@ class ProformaAdmin(BillingDocumentAdmin):
 
 
 admin.site.register(Plan, PlanAdmin)
-admin.site.register(MeteredFeature, MeteredFeatureAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Provider, ProviderAdmin)
 admin.site.register(Invoice, InvoiceAdmin)
 admin.site.register(Proforma, ProformaAdmin)
 admin.site.register(ProductCode)
+admin.site.register(MeteredFeature)
