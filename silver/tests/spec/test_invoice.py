@@ -119,8 +119,8 @@ class TestInvoiceEndpoints(APITestCase):
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})
-        response = self.client.delete(url)
 
+        response = self.client.delete(url)
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
         assert response.data == {"detail": "Method 'DELETE' not allowed."}
 
@@ -128,9 +128,11 @@ class TestInvoiceEndpoints(APITestCase):
         InvoiceFactory.create_batch(10)
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
-        entry_data = {"description": "Page views",
-                      "unit_price": 10.0,
-                      "quantity": 20}
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
@@ -163,6 +165,13 @@ class TestInvoiceEndpoints(APITestCase):
             'prorated': False,
             'product_code': None
         }
+
+    def test_try_to_get_invoice_entries(self):
+        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert response.data == {"detail": "Method 'GET' not allowed."}
 
     def test_add_multiple_invoice_entries(self):
         InvoiceFactory.create_batch(10)
