@@ -172,3 +172,36 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
         assert response.data == {"detail": "Method 'GET' not allowed."}
+
+    def test_add_multiple_proforma_entries(self):
+        ProformaFactory.create_batch(10)
+
+        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
+
+        entries_count = 10
+        for cnt in range(entries_count):
+            response = self.client.post(url, data=json.dumps(entry_data),
+                                        content_type='application/json')
+
+            assert response.status_code == status.HTTP_201_CREATED
+            assert response.data == {
+                'entry_id': cnt + 1,
+                'description': 'Page views',
+                'unit': None,
+                'quantity': '20.0000000000',
+                'unit_price': '10.0000000000',
+                'start_date': None,
+                'end_date': None,
+                'prorated': False,
+                'product_code': None
+            }
+
+        url = reverse('proforma-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+        invoice_entries = response.data.get('proforma_entries', None)
+        assert len(invoice_entries) == entries_count
