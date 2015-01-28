@@ -205,3 +205,27 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == entries_count
+
+    def test_delete_proforma_entry(self):
+        ProformaFactory.create()
+
+        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
+        entries_count = 10
+        for cnt in range(entries_count):
+            self.client.post(url, data=json.dumps(entry_data),
+                             content_type='application/json')
+
+        url = reverse('proforma-entry-update', kwargs={'document_pk': 1,
+                                                       'entry_id': 1})
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        url = reverse('proforma-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+        invoice_entries = response.data.get('proforma_entries', None)
+        assert len(invoice_entries) == entries_count - 1
