@@ -253,6 +253,30 @@ class TestInvoiceEndpoints(APITestCase):
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
 
+    def test_add_invoice_entry_in_canceled_state(self):
+        invoice = InvoiceFactory.create()
+        invoice.issue()
+        invoice.cancel()
+        invoice.save()
+
+        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        entry_data = {
+            "description": "Page views",
+            "unit_price": 10.0,
+            "quantity": 20
+        }
+        response = self.client.post(url, data=json.dumps(entry_data),
+                                    content_type='application/json')
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        msg = 'Invoice entries can be added only when the invoice is in draft state.'
+        assert response.data == {'detail': msg}
+
+        url = reverse('invoice-detail', kwargs={'pk': 1})
+        response = self.client.get(url)
+        invoice_entries = response.data.get('invoice_entries', None)
+        assert len(invoice_entries) == 0
+
     def test_add_invoice_entry_in_paid_state(self):
         invoice = InvoiceFactory.create()
         invoice.issue()
