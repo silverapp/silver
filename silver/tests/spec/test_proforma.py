@@ -415,3 +415,15 @@ class TestProformaEndpoints(APITestCase):
         proforma = get_object_or_None(Proforma, pk=1)
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
+
+    def test_pay_proforma_when_in_draft_state(self):
+        provider = ProviderFactory.create()
+        customer = CustomerFactory.create()
+        ProformaFactory.create(provider=provider, customer=customer)
+
+        url = reverse('proforma-state', kwargs={'pk': 1})
+        data = {'state': 'paid'}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'A proforma can be paid only if it is in issued state.'}
