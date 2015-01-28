@@ -565,7 +565,7 @@ class ProformaListCreate(HPListCreateAPIView):
     queryset = Proforma.objects.all()
 
 
-class ProformaRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
