@@ -303,6 +303,19 @@ class TestProformaEndpoints(APITestCase):
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
 
+    def test_edit_proforma_in_issued_state(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.save()
+
+        url = reverse('proforma-detail', kwargs={'pk': 1})
+        data = {"description": "New Page views"}
+        response = self.client.patch(url, data=json.dumps(data),
+                                     content_type='application/json')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in issued state.']}
+
     def test_issue_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
