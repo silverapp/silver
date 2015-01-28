@@ -11,7 +11,6 @@ from international.models import countries, currencies
 from livefield.models import LiveModel
 import jsonfield
 
-
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
 
@@ -40,7 +39,8 @@ class Plan(models.Model):
     interval_count = models.PositiveIntegerField(
         help_text='The number of intervals between each subscription billing'
     )
-    amount = models.FloatField(
+    amount = models.DecimalField(
+        max_digits=8, decimal_places=2,
         help_text='The amount in the specified currency to be charged on the '
                   'interval specified.'
     )
@@ -154,7 +154,7 @@ class Subscription(models.Model):
         help_text='The plan the customer is subscribed to.'
     )
     customer = models.ForeignKey(
-        'Customer',
+        'Customer', related_name='subscriptions',
         help_text='The customer who is subscribed to the plan.'
     )
     trial_end = models.DateField(
@@ -286,7 +286,7 @@ class Customer(AbstractBillingEntity):
                   "It usually points to an account ID."
     )
     sales_tax_percent = models.DecimalField(
-        max_digits=5, decimal_places=2, null=True, blank=True,
+        max_digits=4, decimal_places=2, null=True, blank=True,
         help_text="Whenever to add sales tax. "
                   "If null, it won't show up on the invoice."
     )
@@ -415,7 +415,7 @@ class AbstractInvoicingDocument(models.Model):
     issue_date = models.DateField(null=True, blank=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
-    sales_tax_percent = models.DecimalField(max_digits=5, decimal_places=2,
+    sales_tax_percent = models.DecimalField(max_digits=4, decimal_places=2,
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
@@ -630,8 +630,8 @@ class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20, blank=True, null=True)
-    quantity = models.DecimalField(max_digits=28, decimal_places=10)
-    unit_price = models.DecimalField(max_digits=28, decimal_places=10)
+    quantity = models.DecimalField(max_digits=8, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
                                      related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
