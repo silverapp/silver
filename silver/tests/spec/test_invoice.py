@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import status
@@ -46,7 +47,8 @@ class TestInvoiceEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "proforma": None,
-            "invoice_entries": []
+            "invoice_entries": [],
+            "total": '0'
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -114,7 +116,8 @@ class TestInvoiceEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "proforma": None,
-            "invoice_entries": []
+            "invoice_entries": [],
+            "total": '0'
         }
 
     def test_delete_invoice(self):
@@ -141,12 +144,13 @@ class TestInvoiceEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.0'
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -158,12 +162,14 @@ class TestInvoiceEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200'
+
         }
 
     def test_try_to_get_invoice_entries(self):
@@ -193,12 +199,13 @@ class TestInvoiceEndpoints(APITestCase):
                 'entry_id': cnt + 1,
                 'description': 'Page views',
                 'unit': None,
-                'quantity': '20.0000000000',
-                'unit_price': '10.0000000000',
+                'quantity': '20.00',
+                'unit_price': '10.00',
                 'start_date': None,
                 'end_date': None,
                 'prorated': False,
-                'product_code': None
+                'product_code': None,
+                'total': '200.0'
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})

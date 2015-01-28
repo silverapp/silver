@@ -19,8 +19,8 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.complete_data = {
             "name": "Page Views",
             "unit": "100k",
-            "price_per_unit": 0.05,
-            "included_units": 0,
+            "price_per_unit": '0.05',
+            "included_units": '0.00',
             "product_code": self.product_code.value
         }
 
@@ -88,8 +88,8 @@ class TestMeteredFeatureEndpoint(APITestCase):
         assert response.data == {
             "name": metered_feature.name,
             "unit": metered_feature.unit,
-            "included_units": metered_feature.included_units,
-            "price_per_unit": metered_feature.price_per_unit,
+            "included_units": metered_feature.included_units.to_eng_string(),
+            "price_per_unit": metered_feature.price_per_unit.to_eng_string(),
             "product_code": self.product_code.value,
             'url': self._full_url(1)
         }

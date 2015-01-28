@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import status
@@ -30,6 +31,7 @@ class TestProformaEndpoints(APITestCase):
         }
 
         response = self.client.post(url, data=data)
+
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             "id": 1,
@@ -48,7 +50,8 @@ class TestProformaEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "invoice": None,
-            "proforma_entries": []
+            "proforma_entries": [],
+            "total": '0'
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -116,7 +119,8 @@ class TestProformaEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "invoice": None,
-            "proforma_entries": []
+            "proforma_entries": [],
+            'total': '0'
         }
 
     def test_delete_proforma(self):
@@ -143,12 +147,13 @@ class TestProformaEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.0'
         }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -160,12 +165,13 @@ class TestProformaEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200'
         }
 
     def test_try_to_get_proforma_entries(self):
@@ -195,12 +201,13 @@ class TestProformaEndpoints(APITestCase):
                 'entry_id': cnt + 1,
                 'description': 'Page views',
                 'unit': None,
-                'quantity': '20.0000000000',
-                'unit_price': '10.0000000000',
+                'quantity': '20.00',
+                'unit_price': '10.00',
                 'start_date': None,
                 'end_date': None,
                 'prorated': False,
-                'product_code': None
+                'product_code': None,
+                'total': '200.0'
             }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
