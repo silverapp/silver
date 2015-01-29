@@ -315,7 +315,8 @@ class CustomerFilter(FilterSet):
 
     class Meta:
         model = Customer
-        fields = ['email', 'name', 'company', 'active', 'country', 'sales_tax_name']
+        fields = ['email', 'name', 'company', 'active', 'country',
+                  'sales_tax_name']
 
 
 class CustomerList(HPListCreateAPIView):

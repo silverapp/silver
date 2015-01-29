@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -39,8 +38,7 @@ class LiveModelAdmin(admin.ModelAdmin):
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'due_days', 'generate_after',
-                    'enabled', 'private']
+                    'trial_period_days', 'generate_after', 'enabled', 'private']
     search_fields = ['due_days', 'name']
 
 
@@ -114,6 +112,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 class CustomerAdmin(LiveModelAdmin):
+    fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
+              'address_2', 'city', 'state', 'zip_code', 'country',
+              'consolidated_billing', 'payment_due_days', 'sales_tax_name',
+              'sales_tax_percent', 'extra']
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
@@ -125,10 +127,10 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ('name', 'company', 'flow', 'invoice_series', 'invoice_starting_number',
+    fields = ['company', 'name', 'flow', 'invoice_series', 'invoice_starting_number',
               'proforma_series', 'proforma_starting_number', 'email',
               'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
-              'extra')
+              'extra']
     list_display = ['name', 'company', 'invoice_series', 'email', 'address_1',
                     'address_2', 'city', 'state', 'zip_code', 'country']
     list_display_links = list_display

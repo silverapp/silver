@@ -58,9 +58,6 @@ class Plan(models.Model):
         'MeteredFeature', blank=True, null=True,
         help_text="A list of the plan's metered features."
     )
-    due_days = models.PositiveIntegerField(
-        help_text='Due days for generated invoice.'
-    )
     generate_after = models.PositiveIntegerField(
         default=0,
         help_text='Number of seconds to wait after current billing cycle ends '
@@ -289,6 +286,12 @@ class AbstractBillingEntity(LiveModel):
 
 
 class Customer(AbstractBillingEntity):
+    payment_due_days = models.PositiveIntegerField(
+        default=5, help_text='Due days for generated proforma/invoice.'
+    )
+    consolidated_billing = models.BooleanField(
+        default=False, help_text='A flag indicating consolidated billing.'
+    )
     customer_reference = models.CharField(
         max_length=256, blank=True, null=True,
         help_text="It's a reference to be passed between silver and clients. "
@@ -302,9 +305,6 @@ class Customer(AbstractBillingEntity):
     sales_tax_name = models.CharField(
         max_length=64, null=True, blank=True,
         help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
-    )
-    consolidated_billing = models.BooleanField(
-        default=False, help_text='A flag indicating consolidated billing.'
     )
 
     def __init__(self, *args, **kwargs):
@@ -327,7 +327,8 @@ class Customer(AbstractBillingEntity):
 
     def get_archivable_fields(self):
         base_fields = super(Customer, self).get_archivable_fields()
-        customer_fields = ['customer_reference', 'consolidated_billing']
+        customer_fields = ['customer_reference', 'consolidated_billing',
+                          'payment_due_days']
         fields_dict = {field: getattr(self, field, '') for field in customer_fields}
         base_fields.update(fields_dict)
         return base_fields

@@ -199,12 +199,12 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 
 
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
-
     class Meta:
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
-                  'country', 'extra', 'sales_tax_name', 'sales_tax_percent')
+                  'country', 'payment_due_days', 'sales_tax_name',
+                  'sales_tax_percent', 'extra')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
