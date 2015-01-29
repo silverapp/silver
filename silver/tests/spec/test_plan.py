@@ -37,22 +37,22 @@ class TestPlanEndpoint(APITestCase):
             "amount": 149.99,
             "currency": "USD",
             "trial_period_days": 15,
-            "due_days": 10,
             "generate_after": 86400,
             "enabled": True,
             "private": False,
             "product_code": plan_pc,
-            'metered_features': [
-                {'name': 'Page Views',
-                 'unit': '100k',
-                 'price_per_unit': 0.01,
-                 'included_units': 0,
-                 'product_code': feature1_pc},
-                {'name': 'VIP Support',
-                 'price_per_unit': 49.99,
-                 'included_units': 1,
-                 'product_code': feature2_pc}
-            ],
+            'metered_features': [{
+                'name': 'Page Views',
+                'unit': '100k',
+                'price_per_unit': 0.01,
+                'included_units': 0,
+                'product_code': feature1_pc
+            }, {
+                'name': 'VIP Support',
+                'price_per_unit': 49.99,
+                'included_units': 1,
+                'product_code': feature2_pc
+            }],
             'provider': provider_url
         }), content_type='application/json')
 
@@ -67,7 +67,6 @@ class TestPlanEndpoint(APITestCase):
             "amount": 149.99,
             "currency": "USD",
             "trial_period_days": 15,
-            "due_days": 10,
             "generate_after": 86400,
             "enabled": True,
             "private": False,
@@ -82,11 +81,9 @@ class TestPlanEndpoint(APITestCase):
 
         response = self.client.patch(url, json.dumps({
             "name": "Hydrogen",
-            "due_days": 10,
             "generate_after": 86400
         }), content_type='application/json')
         self.assertEqual(response.data['name'], 'Hydrogen')
-        self.assertEqual(response.data['due_days'], 10)
         self.assertEqual(response.data['generate_after'], 86400)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
