@@ -26,7 +26,8 @@ class TestCustomerEndpoints(APITestCase):
             "country": "US",
             "extra": "What is there more to say?",
             "sales_tax_name": "VAT",
-            "sales_tax_percent": '3.00'
+            "sales_tax_percent": '3.00',
+            "payment_due_days": 5
         }
 
 
@@ -150,7 +151,8 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['email', 'zip_code', 'company']
+        unchanged_fields = ['email', 'zip_code', 'company',
+                            'payment_due_days']
         for field in unchanged_fields:
             changed_data.pop(field)
 
