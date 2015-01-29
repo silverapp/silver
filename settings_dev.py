@@ -104,3 +104,5 @@ HOOK_EVENTS = {
 }
 
 # DEFAULT_TARGET_URL = 'http://presslabs.com/api'
+
+PAYMENT_DUE_DAYS = 5
