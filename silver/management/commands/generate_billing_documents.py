@@ -60,15 +60,11 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
-                # For now we take into consideration only the invoices
-                # we will deal with the proformas later.
+                # Cache the invoice/proforma per provider
                 document_per_provider = {}
                 for subscription in customer.subscriptions.all():
                     provider_flow = subscription.plan.provider_flow
-                    if provider_flow == 'proforma':
-                        DocumentModel = Proforma
-                    else:
-                        DocumentModel = Invoice
+                    DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
                     plan = subscription.plan
                     if plan.provider in document_per_provider:
@@ -87,10 +83,7 @@ class Command(BaseCommand):
                 # Generate an invoice for each subscription
                 for subscription in customer.subscriptions.all():
                     provider_flow = subscription.plan.provider_flow
-                    if provider_flow == 'proforma':
-                        DocumentModel = Proforma
-                    else:
-                        DocumentModel = Invoice
+                    DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
                     plan = subscription.plan
                     document = DocumentModel.objects.create(
