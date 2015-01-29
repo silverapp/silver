@@ -150,7 +150,6 @@ class Subscription(models.Model):
     STATES = (
         ('active', 'Active'),
         ('inactive', 'Inactive'),
-        ('on_trial', 'On Trial'),
         ('canceled', 'Canceled'),
         ('ended', 'Ended')
     )
@@ -220,6 +219,10 @@ class Subscription(models.Model):
                 return ced
         return None
 
+    @property
+    def on_trial(self):
+        return self.trial_end < timezone.now().date()
+
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
@@ -234,8 +237,7 @@ class Subscription(models.Model):
                 days=self.plan.trial_period_days
             )
 
-    @transition(field=state, source=['active', 'past_due', 'on_trial'],
-                target='canceled')
+    @transition(field=state, source=['active', 'past_due'], target='canceled')
     def cancel(self):
         pass
 
