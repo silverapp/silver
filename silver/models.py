@@ -81,6 +81,10 @@ class Plan(models.Model):
     def __unicode__(self):
         return self.name
 
+    @property
+    def provider_flow(self):
+        return self.provider.flow
+
 
 class MeteredFeature(models.Model):
     name = models.CharField(
@@ -157,6 +161,7 @@ class Subscription(models.Model):
         'Plan',
         help_text='The plan the customer is subscribed to.'
     )
+    description = models.CharField(max_length=1024, blank=True, null=True)
     customer = models.ForeignKey(
         'Customer', related_name='subscriptions',
         help_text='The customer who is subscribed to the plan.'
