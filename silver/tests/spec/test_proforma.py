@@ -52,7 +52,8 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": '0.00'
+            "total": '0.00',
+            "subscription": None
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -121,7 +122,8 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            'total': '0.00'
+            'total': '0.00',
+            "subscription": None
         }
 
     def test_delete_proforma(self):

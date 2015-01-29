@@ -49,7 +49,8 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0.00'
+            "total": '0.00',
+            "subscription": None
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -118,7 +119,8 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0.00'
+            "total": '0.00',
+            "subscription": None
         }
 
     def test_delete_invoice(self):

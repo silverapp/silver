@@ -198,13 +198,17 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     fields = (('series', 'number'), 'provider', 'customer',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
-              'total')
+              'total', 'subscription')
     readonly_fields = ('series', 'state', 'total')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
     @property
     def _model(self):
+        raise NotImplementedError
+
+    @property
+    def _model_name(self):
         raise NotImplementedError
 
     def perform_action(self, request, queryset, action):
@@ -225,12 +229,14 @@ class BillingDocumentAdmin(admin.ModelAdmin):
 
         if exist_failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
-            msg = "The state change failed for invoice(s) with "\
-                  "numbers: %s" % failed_ids
+            msg = "The state change failed for {model_name}(s) with "\
+                  "numbers: {ids}".format(model_name=self._model_name.lower(),
+                                          ids=failed_ids)
             self.message_user(request, msg, level=messages.ERROR)
         else:
             qs_count = queryset.count()
-            msg = 'Successfully changed %d invoice(s).' % qs_count
+            msg = 'Successfully changed {count} {model_name}(s).'.format(
+                model_name=self._model_name.lower(), count=qs_count)
             self.message_user(request, msg)
 
     def total(self, obj):
@@ -265,6 +271,10 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def _model(self):
         return Invoice
 
+    @property
+    def _model_name(self):
+        return "Invoice"
+
 
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
@@ -291,6 +301,10 @@ class ProformaAdmin(BillingDocumentAdmin):
     @property
     def _model(self):
         return Proforma
+
+    @property
+    def _model_name(self):
+        return "Proforma"
 
 
 admin.site.register(Plan, PlanAdmin)
