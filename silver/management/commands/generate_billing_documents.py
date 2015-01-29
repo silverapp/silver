@@ -10,8 +10,7 @@ class Command(BaseCommand):
                                  proforma=None):
 
         description = subscription.description or '%s plan subscription.' % plan.name
-        DocumentEntry.objects.create(invoice=invoice,
-                                     proforma=proforma,
+        DocumentEntry.objects.create(invoice=invoice, proforma=proforma,
                                      description=description,
                                      unit_price=plan.amount,
                                      quantity=Decimal('1.00'),
@@ -31,6 +30,7 @@ class Command(BaseCommand):
             if final_units_count != 0:
                 # Add the metered feature to the invoice
                 DocumentEntry.objects.create(invoice=invoice,
+                                             proforma=proforma,
                                              description=mf.name,
                                              unit_price=mf.price_per_unit,
                                              quantity=final_units_count,
@@ -93,8 +93,8 @@ class Command(BaseCommand):
                         DocumentModel = Invoice
 
                     plan = subscription.plan
-                    document = DocumentModel.objects.create(provider=plan.provider,
-                                                            customer=customer)
+                    document = DocumentModel.objects.create(
+                        provider=plan.provider, customer=customer)
 
                     # Add plan to invoice/proforma
                     self._add_plan_entry(provider_flow, subscription, plan,
