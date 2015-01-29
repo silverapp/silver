@@ -48,7 +48,7 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0'
+            "total": '0.00'
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -117,7 +117,7 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0'
+            "total": '0.00'
         }
 
     def test_delete_invoice(self):
@@ -150,7 +150,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.0'
+            'total': '200.00'
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -168,7 +168,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200'
+            'total': '200.00'
 
         }
 
@@ -205,7 +205,7 @@ class TestInvoiceEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': '200.0'
+                'total': '200.00'
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
