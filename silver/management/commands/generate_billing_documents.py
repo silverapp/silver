@@ -24,9 +24,11 @@ class Command(BaseCommand):
                                  proforma=None):
 
         description = subscription.description or '%s plan subscription.' % plan.name
+
+        unit_price = Decimal('0.00') if subscription.on_trial else plan.amount
         DocumentEntry.objects.create(invoice=invoice, proforma=proforma,
                                      description=description,
-                                     unit_price=plan.amount,
+                                     unit_price=unit_price,
                                      quantity=Decimal('1.00'),
                                      product_code=plan.product_code)
 
@@ -42,11 +44,12 @@ class Command(BaseCommand):
                 total_units_consumed += log_item.consumed_units
             final_units_count = max(0, total_units_consumed - mf.included_units)
             if final_units_count != 0:
+                unit_price = Decimal('0.00') if subscription.on_trial else mf.price_per_unit
                 # Add the metered feature to the invoice
                 DocumentEntry.objects.create(invoice=invoice,
                                              proforma=proforma,
                                              description=mf.name,
-                                             unit_price=mf.price_per_unit,
+                                             unit_price=unit_price,
                                              quantity=final_units_count,
                                              product_code=mf.product_code)
 
@@ -57,8 +60,7 @@ class Command(BaseCommand):
             entry_args = {'invoice': document}
 
         doc_entry_args = entry_args.copy()
-        doc_entry_args.update({'subscription': subscription,
-                               'plan': plan})
+        doc_entry_args.update({'subscription': subscription, 'plan': plan})
         self._add_plan_document_entry(**doc_entry_args)
 
     def _add_mf_entries(self, provider_flow, document, subscription):
