@@ -39,7 +39,7 @@ class LiveModelAdmin(admin.ModelAdmin):
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
                     'trial_period_days', 'generate_after', 'enabled', 'private']
-    search_fields = ['due_days', 'name']
+    search_fields = ['name']
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):

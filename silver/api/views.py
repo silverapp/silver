@@ -59,10 +59,8 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
         name = request.data.get('name', None)
         generate_after = request.data.get('generate_after', None)
-        due_days = request.data.get('due_days', None)
         plan.name = name or plan.name
         plan.generate_after = generate_after or plan.generate_after
-        plan.due_days = due_days or plan.due_days
         plan.save()
         return Response(PlanSerializer(plan, context={'request': request}).data,
                         status=status.HTTP_200_OK)
