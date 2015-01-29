@@ -35,6 +35,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = Decimal(1.0)
     sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
+    payment_due_days = 5
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
@@ -80,7 +81,6 @@ class PlanFactory(factory.django.DjangoModelFactory):
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
     trial_period_days = factory.Sequence(lambda n: n)
-    due_days = factory.Sequence(lambda n: n)
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)

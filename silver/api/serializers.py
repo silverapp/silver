@@ -129,9 +129,8 @@ class PlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Plan
         fields = ('name', 'url', 'interval', 'interval_count', 'amount',
-                  'currency', 'trial_period_days', 'due_days', 'generate_after',
-                  'enabled', 'private', 'product_code', 'metered_features',
-                  'provider')
+                  'currency', 'trial_period_days', 'generate_after', 'enabled',
+                  'private', 'product_code', 'metered_features', 'provider')
 
     def create(self, validated_data):
         metered_features_data = validated_data.pop('metered_features')
@@ -147,7 +146,6 @@ class PlanSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.name = validated_data.get('name', instance.name)
         instance.generate_after = validated_data.get('generate_after', instance.generate_after)
-        instance.due_days = validated_data.get('due_days', instance.due_days)
         instance.save()
 
         return instance
