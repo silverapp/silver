@@ -1,6 +1,8 @@
 import json
+from datetime import timedelta
 
 from django.utils import timezone
+from django.conf import settings
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
@@ -361,9 +363,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -384,9 +387,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': '2014-01-01',
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -468,9 +472,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid',
             'invoice': 'http://testserver/invoices/1/'
@@ -500,9 +505,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid',
             'invoice': 'http://testserver/invoices/1/'
@@ -558,9 +564,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'canceled'
         }
@@ -586,9 +593,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': '2014-10-10',
             'state': 'canceled'
         }
