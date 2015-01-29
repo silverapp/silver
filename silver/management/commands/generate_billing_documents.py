@@ -1,10 +1,24 @@
 from decimal import Decimal
+from datetime import timedelta
+from optparse import make_option
+
 from django.core.management.base import BaseCommand
+from django.utils import timezone
+from django.conf import settings
 
 from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
                            DocumentEntry, Proforma)
 
 class Command(BaseCommand):
+    help = 'Generates the billing documents (Invoices, Proformas).'
+    option_list = BaseCommand.option_list + (
+        make_option('--state',
+                    action='store',
+                    dest='state',
+                    type='string',
+                    default='draft',
+                    help='The final state for the generated documents'),
+    )
 
     def _add_plan_document_entry(self, subscription, plan, invoice=None,
                                  proforma=None):
@@ -57,8 +71,10 @@ class Command(BaseCommand):
         mf_entry_args.update({'subscription': subscription})
         self._add_mf_document_entries(**mf_entry_args)
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **options):
+        final_state = options['state']
         for customer in Customer.objects.all():
+            self.stdout.write('Generating invoice(s) for: %s' % customer)
             if customer.consolidated_billing:
                 # Cache the invoice/proforma per provider
                 document_per_provider = {}
@@ -70,8 +86,11 @@ class Command(BaseCommand):
                     if plan.provider in document_per_provider:
                         document = document_per_provider[plan.provider]
                     else:
+                        delta = timedelta(days=settings.PAYMENT_DUE_DAYS)
+                        due_date = timezone.now().date() + delta
                         document = DocumentModel.objects.create(
-                            provider=plan.provider, customer=customer)
+                            provider=plan.provider, customer=customer,
+                            due_date=due_date)
                         document_per_provider[plan.provider] = document
 
                     # Add plan to invoice/proforma
@@ -79,6 +98,11 @@ class Command(BaseCommand):
                                          document)
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(provider_flow, document, subscription)
+
+                    if final_state == 'issued':
+                        for document in document_per_provider.values():
+                            document.issue()
+                            document.save()
             else:
                 # Generate an invoice for each subscription
                 for subscription in customer.subscriptions.all():
@@ -86,11 +110,19 @@ class Command(BaseCommand):
                     DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
                     plan = subscription.plan
+                    delta = timedelta(days=settings.PAYMENT_DUE_DAYS)
+                    due_date = timezone.now().date() + delta
                     document = DocumentModel.objects.create(
-                        provider=plan.provider, customer=customer)
+                        provider=plan.provider, customer=customer,
+                        due_date=due_date)
 
                     # Add plan to invoice/proforma
                     self._add_plan_entry(provider_flow, subscription, plan,
                                          document)
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(provider_flow, document, subscription)
+
+                    if final_state == 'issued':
+                        for document in document_per_provider.values():
+                            document.issue()
+                            document.save()
