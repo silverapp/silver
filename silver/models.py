@@ -47,7 +47,7 @@ class Plan(models.Model):
                   'interval specified.'
     )
     currency = models.CharField(
-        choices=currencies, max_length=4, default=currencies[0][0],
+        choices=currencies, max_length=4, default='USD',
         help_text='The currency in which the subscription will be charged.'
     )
     trial_period_days = models.PositiveIntegerField(
@@ -221,7 +221,7 @@ class Subscription(models.Model):
 
     @property
     def on_trial(self):
-        return self.trial_end < timezone.now().date()
+        return timezone.now().date() <= self.trial_end
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
@@ -433,7 +433,7 @@ class AbstractInvoicingDocument(models.Model):
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
-        choices=currencies, max_length=4,
+        choices=currencies, max_length=4, default='USD',
         help_text='The currency used for billing.'
     )
     state = FSMField(
