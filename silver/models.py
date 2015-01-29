@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
 from django.db.models import Max
+from django.conf import settings
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
@@ -287,7 +288,8 @@ class AbstractBillingEntity(LiveModel):
 
 class Customer(AbstractBillingEntity):
     payment_due_days = models.PositiveIntegerField(
-        default=5, help_text='Due days for generated proforma/invoice.'
+        default=settings.PAYMENT_DUE_DAYS,
+        help_text='Due days for generated proforma/invoice.'
     )
     consolidated_billing = models.BooleanField(
         default=False, help_text='A flag indicating consolidated billing.'
@@ -458,7 +460,8 @@ class AbstractInvoicingDocument(models.Model):
         if due_date:
             self.due_date = dt.strptime(due_date, '%Y-%m-%d').date()
         elif not self.due_date and not due_date:
-            self.due_date = timezone.now().date()
+            delta = datetime.timedelta(days=settings.PAYMENT_DUE_DAYS)
+            self.due_date = timezone.now().date() + delta
 
         if not self.sales_tax_name:
             self.sales_tax_name = self.customer.sales_tax_name
