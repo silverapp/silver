@@ -1,5 +1,4 @@
 import json
-from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import status
@@ -51,7 +50,7 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": '0'
+            "total": '0.00'
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -120,7 +119,7 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            'total': '0'
+            'total': '0.00'
         }
 
     def test_delete_proforma(self):
@@ -153,7 +152,7 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.0'
+            'total': '200.00'
         }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -171,7 +170,7 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200'
+            'total': '200.00'
         }
 
     def test_try_to_get_proforma_entries(self):
@@ -207,7 +206,7 @@ class TestProformaEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': '200.0'
+                'total': '200.00'
             }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
