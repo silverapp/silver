@@ -1,6 +1,5 @@
 from decimal import Decimal
 from datetime import timedelta
-from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -11,14 +10,6 @@ from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
 
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
-    option_list = BaseCommand.option_list + (
-        make_option('--state',
-                    action='store',
-                    dest='state',
-                    type='string',
-                    default='draft',
-                    help='The final state for the generated documents'),
-    )
 
     def _add_plan_document_entry(self, subscription, plan, invoice=None,
                                  proforma=None):
@@ -74,17 +65,19 @@ class Command(BaseCommand):
         self._add_mf_document_entries(**mf_entry_args)
 
     def handle(self, *args, **options):
-        final_state = options['state']
         for customer in Customer.objects.all():
             self.stdout.write('Generating invoice(s) for: %s' % customer)
             if customer.consolidated_billing:
                 # Cache the invoice/proforma per provider
                 document_per_provider = {}
+                default_doc_state = {}
+
                 for subscription in customer.subscriptions.all():
                     provider_flow = subscription.plan.provider_flow
                     DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
                     plan = subscription.plan
+                    default_doc_state[plan.provider] = plan.provider.default_document_state
                     if plan.provider in document_per_provider:
                         document = document_per_provider[plan.provider]
                     else:
@@ -92,7 +85,7 @@ class Command(BaseCommand):
                         due_date = timezone.now().date() + delta
                         document = DocumentModel.objects.create(
                             provider=plan.provider, customer=customer,
-                            due_date=due_date)
+                            due_date=due_date, subscription=subscription)
                         document_per_provider[plan.provider] = document
 
                     # Add plan to invoice/proforma
@@ -101,10 +94,10 @@ class Command(BaseCommand):
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(provider_flow, document, subscription)
 
-                    if final_state == 'issued':
-                        for document in document_per_provider.values():
-                            document.issue()
-                            document.save()
+                for provider, document in document_per_provider.iteritems():
+                    if default_doc_state[provider] == 'issued':
+                        document.issue()
+                        document.save()
             else:
                 # Generate an invoice for each subscription
                 for subscription in customer.subscriptions.all():
@@ -116,7 +109,7 @@ class Command(BaseCommand):
                     due_date = timezone.now().date() + delta
                     document = DocumentModel.objects.create(
                         provider=plan.provider, customer=customer,
-                        due_date=due_date)
+                        due_date=due_date, subscription=subscription)
 
                     # Add plan to invoice/proforma
                     self._add_plan_entry(provider_flow, subscription, plan,
@@ -124,7 +117,6 @@ class Command(BaseCommand):
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(provider_flow, document, subscription)
 
-                    if final_state == 'issued':
-                        for document in document_per_provider.values():
-                            document.issue()
-                            document.save()
+                    if plan.provider.default_document_state == 'issued':
+                        document.issue()
+                        document.save()
