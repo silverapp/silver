@@ -100,3 +100,16 @@ def next_date_after_period(initial_date, interval_type, interval_count):
             return initial_date + datetime.timedelta(weeks=interval_count)
         elif interval_type == 'day':
             return initial_date + datetime.timedelta(days=interval_count)
+
+
+def next_month_after_date(initial_date, day=None):
+    if initial_date:
+        year = initial_date.year
+        month = initial_date.month + 1
+        day = day or initial_date.day
+        if month == 12:
+            month = 1
+            year += 1
+        return get_valid_date(year, month, day)
+
+    return None
