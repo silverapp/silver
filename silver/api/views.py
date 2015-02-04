@@ -472,7 +472,7 @@ class DocEntryUpdateDestroy(APIView):
 
         document = get_object_or_404(Model, pk=doc_pk)
         if document.state != 'draft':
-            msg = "{model} entries can be added only when the {model_lower} is"\
+            msg = "{model} entries can be deleted only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
