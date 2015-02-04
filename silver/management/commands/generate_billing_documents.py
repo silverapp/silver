@@ -13,7 +13,6 @@ class Command(BaseCommand):
 
     def _add_plan_document_entry(self, subscription, plan, invoice=None,
                                  proforma=None):
-
         description = subscription.description or '%s plan subscription.' % plan.name
 
         unit_price = Decimal('0.00') if subscription.on_trial else plan.amount
@@ -26,25 +25,24 @@ class Command(BaseCommand):
 
     def _add_mf_document_entries(self, subscription, invoice=None,
                                  proforma=None):
-
-        # TODO: filter by date + separate them by start_date, end_date
         for mf in subscription.plan.metered_features.all():
             criteria = {'metered_feature': mf,
                         'subscription': subscription}
             total_units_consumed = 0
+            # Filter the ones included in the interval and for each separate
+            # entry (differente start_date, end_date) add a new document entry
             consumed_mf_log = MeteredFeatureUnitsLog.objects.filter(**criteria)
             for log_item in consumed_mf_log:
                 total_units_consumed += log_item.consumed_units
             final_units_count = max(0, total_units_consumed - mf.included_units)
-            if final_units_count != 0:
-                unit_price = Decimal('0.00') if subscription.on_trial else mf.price_per_unit
-                # Add the metered feature to the invoice
-                DocumentEntry.objects.create(invoice=invoice,
-                                             proforma=proforma,
-                                             description=mf.name,
-                                             unit_price=unit_price,
-                                             quantity=final_units_count,
-                                             product_code=mf.product_code)
+            unit_price = Decimal('0.00') if subscription.on_trial else mf.price_per_unit
+            # Add the metered feature to the invoice
+            DocumentEntry.objects.create(invoice=invoice,
+                                        proforma=proforma,
+                                        description=mf.name,
+                                        unit_price=unit_price,
+                                        quantity=final_units_count,
+                                        product_code=mf.product_code)
 
     def _add_plan_entry(self, provider_flow, subscription, plan, document):
         if provider_flow == 'proforma':
@@ -72,9 +70,12 @@ class Command(BaseCommand):
             if customer.consolidated_billing:
                 # Cache the invoice/proforma per provider
                 document_per_provider = {}
+
+                # Save the default used state for each provider
                 default_doc_state = {}
 
                 for subscription in customer.subscriptions.all():
+                    # TODO: Generate only if now() > [interval-logic]
                     provider_flow = subscription.plan.provider_flow
                     DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
@@ -103,6 +104,7 @@ class Command(BaseCommand):
             else:
                 # Generate an invoice for each subscription
                 for subscription in customer.subscriptions.all():
+                    # TODO: Geenrate only if now() > [interval-logic]
                     provider_flow = subscription.plan.provider_flow
                     DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
