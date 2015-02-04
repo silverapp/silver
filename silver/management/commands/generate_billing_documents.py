@@ -19,6 +19,7 @@ class Command(BaseCommand):
         unit_price = Decimal('0.00') if subscription.on_trial else plan.amount
         DocumentEntry.objects.create(invoice=invoice, proforma=proforma,
                                      description=description,
+                                     subscription=subscription,
                                      unit_price=unit_price,
                                      quantity=Decimal('1.00'),
                                      product_code=plan.product_code)
@@ -26,6 +27,7 @@ class Command(BaseCommand):
     def _add_mf_document_entries(self, subscription, invoice=None,
                                  proforma=None):
 
+        # TODO: filter by date + separate them by start_date, end_date
         for mf in subscription.plan.metered_features.all():
             criteria = {'metered_feature': mf,
                         'subscription': subscription}
