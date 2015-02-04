@@ -176,6 +176,7 @@ class Subscription(models.Model):
         blank=True, null=True,
         help_text='The date when the subscription ended.'
     )
+    last_billing_date = models.DateField(blank=True, null=True)
     reference = models.CharField(
         max_length=128, blank=True, null=True,
         help_text="The subscription's reference in an external system."
@@ -416,13 +417,14 @@ class ProductCode(models.Model):
         return self.value
 
 
-class AbstractInvoicingDocument(models.Model):
+class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
+    subscription = models.ForeignKey('Subscription')
     archived_customer = jsonfield.JSONField()
     archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
@@ -449,7 +451,7 @@ class AbstractInvoicingDocument(models.Model):
         ordering = ('-issue_date', 'number')
 
     def __init__(self, *args, **kwargs):
-        super(AbstractInvoicingDocument, self).__init__(*args, **kwargs)
+        super(BillingDocument, self).__init__(*args, **kwargs)
         self.__last_state = self.state
 
     @transition(field=state, source='draft', target='issued')
@@ -471,6 +473,9 @@ class AbstractInvoicingDocument(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self.archived_customer = self.customer.get_archivable_fields()
+
+        self.subscription.last_billing_date = timezone.now().date()
+        self.subscription.save()
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -539,7 +544,7 @@ class AbstractInvoicingDocument(models.Model):
 
         self.__last_state = self.state
 
-        super(AbstractInvoicingDocument, self).save(*args, **kwargs)
+        super(BillingDocument, self).save(*args, **kwargs)
 
     def customer_display(self):
         try:
@@ -565,7 +570,7 @@ class AbstractInvoicingDocument(models.Model):
         return '%s-%s-%s' % (self.number, self.customer, self.provider)
 
 
-class Invoice(AbstractInvoicingDocument):
+class Invoice(BillingDocument):
     proforma = models.ForeignKey('Proforma', blank=True, null=True,
                                  related_name='related_proforma')
 
@@ -577,6 +582,9 @@ class Invoice(AbstractInvoicingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
+
+        subscription_field = self._meta.get_field_by_name("subscription")[0]
+        subscription_field.related_name = "invoices"
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -596,7 +604,7 @@ class Invoice(AbstractInvoicingDocument):
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
 
-class Proforma(AbstractInvoicingDocument):
+class Proforma(BillingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_invoice')
 
@@ -608,6 +616,9 @@ class Proforma(AbstractInvoicingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
+
+        subscription_field = self._meta.get_field_by_name("subscription")[0]
+        subscription_field.related_name = "proformas"
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -643,7 +654,8 @@ class Proforma(AbstractInvoicingDocument):
     def fields_for_automatic_invoice_generation(self):
         fields = ['customer', 'provider', 'archived_customer', 'archived_provider',
                   'due_date', 'issue_date', 'paid_date', 'cancel_date',
-                  'sales_tax_percent', 'sales_tax_name', 'currency']
+                  'sales_tax_percent', 'sales_tax_name', 'currency',
+                  'subscription']
         return {field: getattr(self, field, None) for field in fields}
 
     @property
