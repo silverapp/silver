@@ -9,7 +9,8 @@ from rest_framework.test import APITestCase
 
 from silver.models import Invoice, Proforma
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, ProformaFactory)
+                                    ProviderFactory, ProformaFactory,
+                                    SubscriptionFactory)
 from silver.utils import get_object_or_None
 
 
@@ -21,11 +22,13 @@ class TestProformaEndpoints(APITestCase):
     def test_post_proforma_without_proforma_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
-        url = reverse('proforma-list')
+        SubscriptionFactory.create()
 
+        url = reverse('proforma-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'subscription': 'http://testserver/subscriptions/1/',
             'number': "",
             'currency': 'RON',
             'proforma_entries': []
@@ -40,6 +43,7 @@ class TestProformaEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
+            "subscription": "http://testserver/subscriptions/1/",
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -58,10 +62,13 @@ class TestProformaEndpoints(APITestCase):
     def test_post_proforma_with_proforma_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
+        SubscriptionFactory.create()
+
         url = reverse('proforma-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'subscription': 'http://testserver/subscriptions/1/',
             'number': None,
             'currency': 'RON',
             'proforma_entries': [{
@@ -107,8 +114,9 @@ class TestProformaEndpoints(APITestCase):
             "id": 1,
             "series": "ProformaSeries",
             "number": 1,
-            "provider": "http://testserver/providers/1/",
+            "provider": "http://testserver/providers/2/",
             "customer": "http://testserver/customers/1/",
+            "subscription": "http://testserver/subscriptions/1/",
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -355,7 +363,7 @@ class TestProformaEndpoints(APITestCase):
     def test_issue_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
@@ -375,6 +383,10 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
+        assert proforma.subscription.last_billing_date == timezone.now().date()
+
 
     def test_issue_proforma_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -399,6 +411,9 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
+        assert proforma.subscription.last_billing_date == timezone.now().date()
 
     def test_issue_proforma_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -427,6 +442,9 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
+        assert proforma.subscription.last_billing_date == timezone.now().date()
 
     def test_issue_proforma_when_in_issued_state(self):
         provider = ProviderFactory.create()
@@ -489,6 +507,10 @@ class TestProformaEndpoints(APITestCase):
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
 
+        invoice = get_object_or_None(Invoice, proforma=proforma)
+        assert invoice.subscription.last_billing_date == timezone.now().date()
+
+
     def test_pay_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
@@ -521,6 +543,9 @@ class TestProformaEndpoints(APITestCase):
         proforma = get_object_or_None(Proforma, pk=1)
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
+
+        invoice = get_object_or_None(Invoice, proforma=proforma)
+        assert invoice.subscription.last_billing_date == timezone.now().date()
 
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()

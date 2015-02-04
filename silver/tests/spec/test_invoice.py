@@ -7,8 +7,11 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import Invoice
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, InvoiceFactory)
+                                    ProviderFactory, InvoiceFactory,
+                                    SubscriptionFactory)
+from silver.utils import get_object_or_None
 
 
 class TestInvoiceEndpoints(APITestCase):
@@ -19,11 +22,13 @@ class TestInvoiceEndpoints(APITestCase):
     def test_post_invoice_without_invoice_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
-        url = reverse('invoice-list')
+        SubscriptionFactory.create()
 
+        url = reverse('invoice-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'subscription': 'http://testserver/subscriptions/1/',
             'number': "",
             'currency': 'RON',
             'invoice_entries': []
@@ -37,6 +42,7 @@ class TestInvoiceEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
+            "subscription": "http://testserver/subscriptions/1/",
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -55,10 +61,13 @@ class TestInvoiceEndpoints(APITestCase):
     def test_post_invoice_with_invoice_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
+        SubscriptionFactory.create()
+
         url = reverse('invoice-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'subscription': 'http://testserver/subscriptions/1/',
             'number': None,
             'currency': 'RON',
             'invoice_entries': [{
@@ -104,8 +113,9 @@ class TestInvoiceEndpoints(APITestCase):
             "id": 1,
             "series": "InvoiceSeries",
             "number": 1,
-            "provider": "http://testserver/providers/1/",
+            "provider": "http://testserver/providers/2/",
             "customer": "http://testserver/customers/1/",
+            "subscription": "http://testserver/subscriptions/1/",
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -373,6 +383,10 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
+        invoice = get_object_or_None(Invoice, pk=1)
+        assert invoice.subscription.last_billing_date == timezone.now().date()
+
+
     def test_issue_invoice_with_custom_issue_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
@@ -395,6 +409,9 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+        invoice = get_object_or_None(Invoice, pk=1)
+        assert invoice.subscription.last_billing_date == timezone.now().date()
 
     def test_issue_invoice_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -422,6 +439,9 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+        invoice = get_object_or_None(Invoice, pk=1)
+        assert invoice.subscription.last_billing_date == timezone.now().date()
 
     def test_issue_invoice_when_in_issued_state(self):
         provider = ProviderFactory.create()

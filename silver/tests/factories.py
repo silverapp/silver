@@ -116,6 +116,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
+    subscription = factory.SubFactory(SubscriptionFactory)
     currency = 'RON'
 
 class ProformaFactory(factory.django.DjangoModelFactory):
@@ -125,6 +126,7 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
+    subscription = factory.SubFactory(SubscriptionFactory)
     currency = 'RON'
 
 
