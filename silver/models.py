@@ -349,6 +349,10 @@ class Provider(AbstractBillingEntity):
         ('proforma', 'Proforma'),
         ('invoice', 'Invoice'),
     )
+    DOCUMENT_DEFAULT_STATE = (
+        ('draft', 'Draft'),
+        ('issued', 'Issued')
+    )
 
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
@@ -369,6 +373,11 @@ class Provider(AbstractBillingEntity):
     )
     proforma_starting_number = models.PositiveIntegerField(
         blank=True, null=True
+    )
+    default_document_state = models.CharField(
+        max_length=10, choices=DOCUMENT_DEFAULT_STATE,
+        default=DOCUMENT_DEFAULT_STATE[0][0],
+        help_text="The default state of the auto-generated documents."
     )
 
     def __init__(self, *args, **kwargs):
