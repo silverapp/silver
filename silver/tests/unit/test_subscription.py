@@ -400,6 +400,66 @@ class TestSubscriptionModel(TestCase):
 
             assert subscription.should_be_billed == True
 
+    def test_first_billing_one_day_interval_positive_generate_after_fail(self):
+        test_year = 2015
+        test_month = 2
+        current_tz = timezone.get_current_timezone()
+        test_date = dt.datetime(test_year, test_month, 2, 0, 0, 2,
+                                tzinfo=current_tz)
+        mocked_timezone_now = MagicMock()
+        mocked_timezone_now.return_value = test_date
+
+        with patch('silver.models.timezone.now', mocked_timezone_now):
+            subscription = SubscriptionFactory.create()
+
+            subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 120
+            subscription.plan.interval = 'day'
+            subscription.plan.interval_count = 1
+            subscription.save()
+
+            assert subscription.should_be_billed == False
+
+    def test_first_billing_one_day_interval_positive_generate_after_limit(self):
+        test_year = 2015
+        test_month = 2
+        current_tz = timezone.get_current_timezone()
+        test_date = dt.datetime(test_year, test_month, 2, 0, 2, 0,
+                                tzinfo=current_tz)
+        mocked_timezone_now = MagicMock()
+        mocked_timezone_now.return_value = test_date
+
+        with patch('silver.models.timezone.now', mocked_timezone_now):
+            subscription = SubscriptionFactory.create()
+
+            subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 120
+            subscription.plan.interval = 'day'
+            subscription.plan.interval_count = 1
+            subscription.save()
+
+            assert subscription.should_be_billed == False
+
+    def test_first_billing_one_day_interval_positive_generate_after_pass(self):
+        test_year = 2015
+        test_month = 2
+        current_tz = timezone.get_current_timezone()
+        test_date = dt.datetime(test_year, test_month, 2, 0, 2, 1,
+                                tzinfo=current_tz)
+        mocked_timezone_now = MagicMock()
+        mocked_timezone_now.return_value = test_date
+
+        with patch('silver.models.timezone.now', mocked_timezone_now):
+            subscription = SubscriptionFactory.create()
+
+            subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 120
+            subscription.plan.interval = 'day'
+            subscription.plan.interval_count = 1
+            subscription.save()
+
+            assert subscription.should_be_billed == True
+
     def test_first_billing_one_day_interval_limit(self):
         test_year = 2015
         test_month = 2
