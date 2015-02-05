@@ -19,6 +19,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 1, 2, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -36,6 +37,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 1, 1, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -53,6 +55,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 1, 1, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -70,6 +73,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 2, 5, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -87,6 +91,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 2, 1, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -104,6 +109,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 2, 1, 2)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -121,6 +127,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year - 2, 1, 2)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -138,6 +145,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, 2, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -156,6 +164,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month - 1, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -174,6 +183,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month - 1, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -192,6 +202,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 10)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -210,6 +221,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month - 2, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -228,6 +240,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month - 2, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -246,6 +259,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month - 2, 5)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -264,6 +278,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -282,6 +297,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -300,6 +316,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -318,6 +335,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -336,6 +354,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -354,6 +373,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -373,6 +393,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'day'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -392,6 +413,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'day'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -411,6 +433,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.start_date = dt.date(test_year, test_month, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'day'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -429,6 +452,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(2014, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -447,6 +471,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(2014, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -465,6 +490,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(2014, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -483,6 +509,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(test_year - 2, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -501,6 +528,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(test_year - 2, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -519,6 +547,7 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             subscription.last_billing_date = dt.date(test_year - 2, 2, 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'year'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -540,6 +569,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 1,
                                                      test_day - 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -561,6 +591,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 1,
                                                      test_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -582,6 +613,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 1,
                                                      test_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -603,6 +635,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 2,
                                                      test_day - 1)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -624,6 +657,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 2,
                                                      test_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -645,6 +679,7 @@ class TestSubscriptionModel(TestCase):
 
             subscription.last_billing_date = dt.date(test_year, test_month - 2,
                                                      test_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'month'
             subscription.plan.interval_count = 2
             subscription.save()
@@ -668,6 +703,7 @@ class TestSubscriptionModel(TestCase):
             subscription.last_billing_date = dt.date(last_issue_year,
                                                      last_issue_month,
                                                      last_issue_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -691,6 +727,7 @@ class TestSubscriptionModel(TestCase):
             subscription.last_billing_date = dt.date(last_issue_year,
                                                      last_issue_month,
                                                      last_issue_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
@@ -714,6 +751,7 @@ class TestSubscriptionModel(TestCase):
             subscription.last_billing_date = dt.date(last_issue_year,
                                                      last_issue_month,
                                                      last_issue_day)
+            subscription.plan.generate_after = 0
             subscription.plan.interval = 'week'
             subscription.plan.interval_count = 1
             subscription.save()
