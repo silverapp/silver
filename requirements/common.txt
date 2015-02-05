@@ -5,3 +5,6 @@ django-filter
 djangorestframework-bulk
 django-livefield
 git+git://github.com/PressLabs/django-rest-hooks.git
+django-jsonfield
+python-dateutil
+pytz
