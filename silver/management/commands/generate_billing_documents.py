@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.conf import settings
 
 from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
                            DocumentEntry, Proforma)
@@ -38,13 +37,14 @@ class Command(BaseCommand):
             unit_price = Decimal('0.00') if subscription.on_trial else mf.price_per_unit
             # Add the metered feature to the invoice
             DocumentEntry.objects.create(invoice=invoice,
-                                        proforma=proforma,
-                                        description=mf.name,
-                                        unit_price=unit_price,
-                                        quantity=final_units_count,
-                                        product_code=mf.product_code)
+                                         proforma=proforma,
+                                         description=mf.name,
+                                         unit_price=unit_price,
+                                         quantity=final_units_count,
+                                         product_code=mf.product_code)
 
-    def _add_plan_entry(self, provider_flow, subscription, plan, document):
+    def _add_plan_entry(self, subscription, plan, document):
+        provider_flow = subscription.plan.provider_flow
         if provider_flow == 'proforma':
             entry_args = {'proforma': document}
         else:
@@ -54,7 +54,8 @@ class Command(BaseCommand):
         doc_entry_args.update({'subscription': subscription, 'plan': plan})
         self._add_plan_document_entry(**doc_entry_args)
 
-    def _add_mf_entries(self, provider_flow, document, subscription):
+    def _add_mf_entries(self, document, subscription):
+        provider_flow = subscription.plan.provider_flow
         if provider_flow == 'proforma':
             entry_args = {'proforma': document}
         else:
@@ -63,6 +64,18 @@ class Command(BaseCommand):
         mf_entry_args = entry_args.copy()
         mf_entry_args.update({'subscription': subscription})
         self._add_mf_document_entries(**mf_entry_args)
+
+    def _create_document(provider, customer, subscription):
+        provider_flow = subscription.plan.provider_flow
+        DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
+
+        delta = timedelta(days=customer.payment_due_days)
+        due_date = timezone.now().date() + delta
+        document = DocumentModel.objects.create(
+            provider=subscription.plan.provider, customer=customer,
+            due_date=due_date, subscription=subscription)
+
+        return document
 
     def handle(self, *args, **options):
         for customer in Customer.objects.all():
@@ -75,27 +88,23 @@ class Command(BaseCommand):
                 default_doc_state = {}
 
                 for subscription in customer.subscriptions.all():
-                    # TODO: Generate only if now() > [interval-logic]
-                    provider_flow = subscription.plan.provider_flow
-                    DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
+                    if not subscription.should_be_billed:
+                        continue
 
                     plan = subscription.plan
+
                     default_doc_state[plan.provider] = plan.provider.default_document_state
                     if plan.provider in document_per_provider:
                         document = document_per_provider[plan.provider]
                     else:
-                        delta = timedelta(days=settings.PAYMENT_DUE_DAYS)
-                        due_date = timezone.now().date() + delta
-                        document = DocumentModel.objects.create(
-                            provider=plan.provider, customer=customer,
-                            due_date=due_date, subscription=subscription)
+                        document = self._create_document(
+                            plan.provider, customer, subscription)
                         document_per_provider[plan.provider] = document
 
                     # Add plan to invoice/proforma
-                    self._add_plan_entry(provider_flow, subscription, plan,
-                                         document)
+                    self._add_plan_entry(subscription, plan, document)
                     # Add mf units to proforma/invoice
-                    self._add_mf_entries(provider_flow, document, subscription)
+                    self._add_mf_entries(document, subscription)
 
                 for provider, document in document_per_provider.iteritems():
                     if default_doc_state[provider] == 'issued':
@@ -104,22 +113,17 @@ class Command(BaseCommand):
             else:
                 # Generate an invoice for each subscription
                 for subscription in customer.subscriptions.all():
-                    # TODO: Geenrate only if now() > [interval-logic]
-                    provider_flow = subscription.plan.provider_flow
-                    DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
+                    if not subscription.should_be_billed:
+                        continue
 
                     plan = subscription.plan
-                    delta = timedelta(days=settings.PAYMENT_DUE_DAYS)
-                    due_date = timezone.now().date() + delta
-                    document = DocumentModel.objects.create(
-                        provider=plan.provider, customer=customer,
-                        due_date=due_date, subscription=subscription)
+                    document = self._create_document(plan.provider, customer,
+                                                     subscription)
 
                     # Add plan to invoice/proforma
-                    self._add_plan_entry(provider_flow, subscription, plan,
-                                         document)
+                    self._add_plan_entry(subscription, plan, document)
                     # Add mf units to proforma/invoice
-                    self._add_mf_entries(provider_flow, document, subscription)
+                    self._add_mf_entries(document, subscription)
 
                     if plan.provider.default_document_state == 'issued':
                         document.issue()
