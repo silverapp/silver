@@ -228,8 +228,12 @@ class Subscription(models.Model):
 
     @property
     def _should_reissue(self):
-        current_timezone = timezone.get_current_timezone()
-        last_billing_date = current_timezone.localize(self.last_billing_date)
+        last_billing_date = datetime.datetime(
+            year=self.last_billing_date.year,
+            month=self.last_billing_date.month,
+            day=self.last_billing_date.day,
+            tzinfo=timezone.get_current_timezone()
+        )
         intervals = {
             'year': {'years': +1},
             'month': {'months': +1},
@@ -240,7 +244,7 @@ class Subscription(models.Model):
         # generate one object of 'year', 'month', 'week, ...
         interval_unit = relativedelta(**intervals[self.plan.interval])
         interval_length = self.plan.interval_count * interval_unit
-        generate_after = datetime.timedelta(seconds=self.generate_after)
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         interval_end = last_billing_date + interval_length + generate_after
 
         return timezone.now() > interval_end
@@ -253,20 +257,36 @@ class Subscription(models.Model):
         # weekly plans - next monday + generate_after
         # daily plans - next day (start_date + 1) + generate_after
         if self.plan.interval == 'year':
-            next_interval_start = list(rrule(YEARLY, count=1, byyearday=1,
-                                             dtstart=self.start_date))[0]
+            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
+            next_interval_start = list(rrule(YEARLY,
+                                             interval=self.plan.interval_count,
+                                             byyearday=1,
+                                             count=count,
+                                             dtstart=self.start_date))[-1]
         if self.plan.interval == 'month':
-            next_interval_start = list(rrule(MONTHLY, count=1, bymonthday=1,
-                                             dtstart=self.start_date))[0]
+            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
+            next_interval_start = list(rrule(MONTHLY,
+                                             interval=self.plan.interval_count,
+                                             count=count,
+                                             bymonthday=1,
+                                             dtstart=self.start_date))[-1]
         elif self.plan.interval == 'week':
-            next_interval_start = list(rrule(WEEKLY, count=1, byweekday=MO,
-                                             dtstart=self.start_date))[0]
+            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
+            next_interval_start = list(rrule(WEEKLY,
+                                             interval=self.plan.interval_count,
+                                             count=count,
+                                             byweekday=MO,
+                                             dtstart=self.start_date))[-1]
         elif self.plan.interval == 'day':
-            next_interval_start = self.start_date + dt.timedelta(days=1)
+            days = self.plan.interval_count
+            next_interval_start = self.start_date + datetime.timedelta(days=days)
+            next_interval_start = dt(year=next_interval_start.year,
+                                     month=next_interval_start.month,
+                                     day=next_interval_start.day)
 
         current_timezone = timezone.get_current_timezone()
         next_interval_start = current_timezone.localize(next_interval_start)
-        generate_after = datetime.timedelta(seconds=self.generate_after)
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
 
         return timezone.now() > next_interval_start + generate_after
 
