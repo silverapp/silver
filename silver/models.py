@@ -3,6 +3,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 
+import jsonfield
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.utils import timezone
 from django.db import models
@@ -11,7 +12,8 @@ from django.conf import settings
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
-import jsonfield
+from dateutil.relativedelta import *
+from dateutil.rrule import *
 
 from silver.api.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
@@ -223,6 +225,56 @@ class Subscription(models.Model):
     @property
     def on_trial(self):
         return timezone.now().date() <= self.trial_end
+
+    @property
+    def _should_reissue(self):
+        current_timezone = timezone.get_current_timezone()
+        last_billing_date = current_timezone.localize(self.last_billing_date)
+        intervals = {
+            'year': {'years': +1},
+            'month': {'months': +1},
+            'week': {'weeks': +1},
+            'day': {'days': +1}
+        }
+
+        # generate one object of 'year', 'month', 'week, ...
+        interval_unit = relativedelta(**intervals[self.plan.interval])
+        interval_length = self.plan.interval_count * interval_unit
+        generate_after = datetime.timedelta(seconds=self.generate_after)
+        interval_end = last_billing_date + interval_length + generate_after
+
+        return timezone.now() > interval_end
+
+    @property
+    def _should_issue_first_time(self):
+        # Get the datetime object for the next interval
+        # yearly plans - first day of next year + generate_after
+        # monthly plans - first day of next month + generate_after
+        # weekly plans - next monday + generate_after
+        # daily plans - next day (start_date + 1) + generate_after
+        if self.plan.interval == 'year':
+            next_interval_start = list(rrule(YEARLY, count=1, byyearday=1,
+                                             dtstart=self.start_date))[0]
+        if self.plan.interval == 'month':
+            next_interval_start = list(rrule(MONTHLY, count=1, bymonthday=1,
+                                             dtstart=self.start_date))[0]
+        elif self.plan.interval == 'week':
+            next_interval_start = list(rrule(WEEKLY, count=1, byweekday=MO,
+                                             dtstart=self.start_date))[0]
+        elif self.plan.interval == 'day':
+            next_interval_start = self.start_date + dt.timedelta(days=1)
+
+        current_timezone = timezone.get_current_timezone()
+        next_interval_start = current_timezone.localize(next_interval_start)
+        generate_after = datetime.timedelta(seconds=self.generate_after)
+
+        return timezone.now() > next_interval_start + generate_after
+
+    @property
+    def should_be_billed(self):
+        if self.last_billing_date:
+            return self._should_reissue
+        return self._should_issue_first_time
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
@@ -613,6 +665,7 @@ class Invoice(BillingDocument):
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
 
+
 class Proforma(BillingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_invoice')
@@ -685,9 +738,9 @@ class DocumentEntry(models.Model):
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
     invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
-                               blank=True, null=True)
-    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
                                 blank=True, null=True)
+    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
+                                 blank=True, null=True)
 
     class Meta:
         verbose_name = 'Entry'
