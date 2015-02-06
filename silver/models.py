@@ -235,15 +235,14 @@ class Subscription(models.Model):
             tzinfo=timezone.get_current_timezone()
         )
         intervals = {
-            'year': {'years': +1},
-            'month': {'months': +1},
-            'week': {'weeks': +1},
-            'day': {'days': +1}
+            'year': {'years': +self.plan.interval_count},
+            'month': {'months': +self.plan.interval_count},
+            'week': {'weeks': +self.plan.interval_count},
+            'day': {'days': +self.plan.interval_count}
         }
 
         # generate one object of 'year', 'month', 'week, ...
-        interval_unit = relativedelta(**intervals[self.plan.interval])
-        interval_length = self.plan.interval_count * interval_unit
+        interval_length = relativedelta(**intervals[self.plan.interval])
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         interval_end = last_billing_date + interval_length + generate_after
 
