@@ -41,10 +41,10 @@ class Command(BaseCommand):
             end_date = timzone.now().date()
         else:
             intervals = {
-                'year': {'years': subscription.plan.interval_count},
-                'month': {'month': subscription.plan.interval_count},
-                'week': {'wee': subscription.plan.interval_count},
-                'day': {'day': subscription.plan.interval_count},
+                'year': {'years': +subscription.plan.interval_count},
+                'month': {'month': +subscription.plan.interval_count},
+                'week': {'wee': +subscription.plan.interval_count},
+                'day': {'day': +subscription.plan.interval_count},
             }
             interval_len = relativedelta(**intervals[subscription.plan.interval])
 
