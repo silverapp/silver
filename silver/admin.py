@@ -127,10 +127,10 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'flow', 'invoice_series', 'invoice_starting_number',
-              'proforma_series', 'proforma_starting_number', 'email',
-              'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
-              'extra']
+    fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
+              'state', 'zip_code', 'country', 'flow', 'invoice_series',
+              'invoice_starting_number', 'proforma_series',
+              'proforma_starting_number', 'default_document_state', 'extra']
     list_display = ['name', 'company', 'invoice_series', 'email', 'address_1',
                     'address_2', 'city', 'state', 'zip_code', 'country']
     list_display_links = list_display
