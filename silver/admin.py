@@ -64,8 +64,8 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ['customer', 'plan', 'trial_end', 'start_date', 'ended_at',
-                    'state', ]
+    list_display = ['customer', 'plan', 'last_billing_date', 'trial_end',
+                    'start_date', 'ended_at', 'state']
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
