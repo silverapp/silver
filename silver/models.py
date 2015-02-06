@@ -506,7 +506,7 @@ class BillingDocument(models.Model):
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
-    subscription = models.ForeignKey('Subscription')
+    subscription = models.ForeignKey('Subscription', blank=True, null=True)
     archived_customer = jsonfield.JSONField()
     archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
@@ -556,8 +556,9 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self.subscription.last_billing_date = timezone.now().date()
-        self.subscription.save()
+        if self.subscription:
+            self.subscription.last_billing_date = timezone.now().date()
+            self.subscription.save()
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
