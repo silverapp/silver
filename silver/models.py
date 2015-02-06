@@ -125,10 +125,13 @@ class MeteredFeatureUnitsLog(models.Model):
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
         if not self.id:
-            self.start_date = self.subscription.current_start_date
-            self.end_date = self.subscription.current_end_date
+            if not self.start_date:
+                self.start_date = self.subscription.current_start_date
+            if not self.end_date:
+                self.end_date = self.subscription.current_end_date
             super(MeteredFeatureUnitsLog, self).save()
-        else:
+
+        if self.id:
             update_fields = []
             for field in self._meta.fields:
                 if field.name != 'metered_feature' and field.name != 'id':
@@ -190,8 +193,13 @@ class Subscription(models.Model):
 
     @property
     def current_start_date(self):
+        if self.trial_end > timezone.now().date():
+            initial_date = self.start_date
+        else:
+            initial_date = self.trial_end
+
         return last_date_that_fits(
-            initial_date=self.start_date,
+            initial_date=initial_date,
             end_date=timezone.now().date(),
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
@@ -199,18 +207,20 @@ class Subscription(models.Model):
 
     @property
     def current_end_date(self):
+        if self.trial_end > timezone.now().date():
+            return self.trial_end
+
         next_start_date = next_date_after_period(
             initial_date=self.current_start_date,
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
         )
         if next_start_date:
-            ced = next_start_date - datetime.timedelta(days=1)
             if self.ended_at:
-                if self.ended_at < ced:
+                if self.ended_at < next_start_date:
                     return self.ended_at
             else:
-                return ced
+                return next_start_date
         return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
@@ -367,7 +377,7 @@ class Provider(AbstractBillingEntity):
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise ValidationError(errors)
@@ -626,6 +636,7 @@ class Proforma(AbstractInvoicingDocument):
                   'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
@@ -651,7 +662,6 @@ class DocumentEntry(models.Model):
             invoice=self.invoice,
         ).aggregate(Max('entry_id'))['entry_id__max']
         return max_id + 1 if max_id else 1
-
 
     def save(self, *args, **kwargs):
         if not self.entry_id:

@@ -244,28 +244,46 @@ class MeteredFeatureUnitsLogList(APIView):
                         csd = subscription.current_start_date
                         ced = subscription.current_end_date
 
-                        if date <= csd:
+                        if csd is None or ced is None:
+                            return Response(
+                                {"detail": "The request can't be handled."},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                            )
+
+                        if csd > date >= subscription.start_date:
+                            # if this is a request for the last bucket
                             csdt = datetime.datetime.combine(csd, datetime.time())
+
                             allowed_time = datetime.timedelta(
                                 seconds=subscription.plan.generate_after)
+
                             if datetime.datetime.now() < csdt + allowed_time:
-                                ced = csd - datetime.timedelta(days=1)
+                                # if the time does not exceed the allowed time
+                                # then the request is valid
+                                ced = csd
+
+                                if ced <= subscription.trial_end:
+                                    initial_date = subscription.start_date
+                                else:
+                                    initial_date = subscription.trial_end
+
                                 csd = last_date_that_fits(
-                                    initial_date=subscription.start_date,
+                                    initial_date=initial_date,
                                     end_date=ced,
                                     interval_type=subscription.plan.interval,
                                     interval_count=subscription.plan.interval_count
                                 )
 
-                        if csd <= date <= ced:
-                            if metered_feature not in \
-                                    subscription.plan.metered_features.all():
+                        if csd <= date < ced:
+                            if (metered_feature not in
+                                    subscription.plan.metered_features.all()):
                                 err = "The metered feature does not belong to "\
                                       "the subscription's plan."
                                 return Response(
                                     {"detail": err},
                                     status=status.HTTP_400_BAD_REQUEST
                                 )
+
                             try:
                                 log = MeteredFeatureUnitsLog.objects.get(
                                     start_date=csd,
@@ -278,21 +296,22 @@ class MeteredFeatureUnitsLogList(APIView):
                                 elif update_type == 'relative':
                                     log.consumed_units += consumed_units
                                 log.save()
+                                return Response({"count": log.consumed_units},
+                                                status=status.HTTP_200_OK)
                             except MeteredFeatureUnitsLog.DoesNotExist:
                                 log = MeteredFeatureUnitsLog.objects.create(
                                     metered_feature=metered_feature,
                                     subscription=subscription,
-                                    start_date=subscription.current_start_date,
-                                    end_date=subscription.current_end_date,
+                                    start_date=csd,
+                                    end_date=ced,
                                     consumed_units=consumed_units
                                 )
-                            finally:
                                 return Response({"count": log.consumed_units},
                                                 status=status.HTTP_200_OK)
                         else:
                             return Response({"detail": "Date is out of bounds"},
                                             status=status.HTTP_400_BAD_REQUEST)
-                    except TypeError:
+                    except (TypeError, ValueError):
                         return Response({"detail": "Invalid date format"},
                                         status=status.HTTP_400_BAD_REQUEST)
                 else:
@@ -489,6 +508,7 @@ class DocEntryUpdateDestroy(APIView):
 
     def get_model_name(self):
         raise NotImplementedError
+
 
 class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
     permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
