@@ -11,7 +11,7 @@ from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
 
-    def _get_plan_price(self, subscription):
+    def _get_plan_price_and_proration_status(self, subscription):
         now = timezone.now().date()
         intervals = {
             'year': {'years': -subscription.plan.interval_count},
