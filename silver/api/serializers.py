@@ -212,6 +212,11 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
+    product_code = serializers.SlugRelatedField(
+        slug_field='value',
+        read_only=True
+    )
+
     class Meta:
         model = DocumentEntry
         fields = ('entry_id', 'description', 'unit', 'unit_price', 'quantity',
