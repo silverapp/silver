@@ -263,7 +263,7 @@ class Subscription(models.Model):
                                              byyearday=1,
                                              count=count,
                                              dtstart=self.start_date))[-1]
-        if self.plan.interval == 'month':
+        elif self.plan.interval == 'month':
             count = 2 if self.start_date.month == self.start_date.day == 1 else 1
             next_interval_start = list(rrule(MONTHLY,
                                              interval=self.plan.interval_count,
@@ -355,9 +355,10 @@ class AbstractBillingEntity(LiveModel):
                        'zip_code']
         return [getattr(self, field, '') for field in field_names]
 
-    def get_archivable_fields(self):
+    def get_archivable_field_values(self):
         field_names = ['name', 'company', 'email', 'address_1', 'address_1',
-                       'city', 'country', 'city', 'zip_code', 'zip_code']
+                       'city', 'country', 'city', 'zip_code', 'zip_code',
+                       'extra']
         return {field: getattr(self, field, '') for field in field_names}
 
 
@@ -402,8 +403,8 @@ class Customer(AbstractBillingEntity):
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
 
-    def get_archivable_fields(self):
-        base_fields = super(Customer, self).get_archivable_fields()
+    def get_archivable_field_values(self):
+        base_fields = super(Customer, self).get_archivable_field_values()
         customer_fields = ['customer_reference', 'consolidated_billing',
                           'payment_due_days']
         fields_dict = {field: getattr(self, field, '') for field in customer_fields}
@@ -477,13 +478,13 @@ class Provider(AbstractBillingEntity):
                                                       "proforma."}
                 raise ValidationError(errors)
 
-    def get_invoice_archivable_fields(self):
-        base_fields = super(Provider, self).get_archivable_fields()
+    def get_invoice_archivable_field_values(self):
+        base_fields = super(Provider, self).get_archivable_field_values()
         base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
         return base_fields
 
-    def get_proforma_archivable_fields(self):
-        base_fields = super(Provider, self).get_archivable_fields()
+    def get_proforma_archivable_field_values(self):
+        base_fields = super(Provider, self).get_archivable_field_values()
         base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
         return base_fields
 
@@ -553,7 +554,7 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        self.archived_customer = self.customer.get_archivable_fields()
+        self.archived_customer = self.customer.get_archivable_field_values()
 
         self.subscription.last_billing_date = timezone.now().date()
         self.subscription.save()
@@ -670,7 +671,7 @@ class Invoice(BillingDocument):
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         super(Invoice, self).issue(issue_date, due_date)
-        self.archived_provider = self.provider.get_invoice_archivable_fields()
+        self.archived_provider = self.provider.get_invoice_archivable_field_values()
 
     @property
     def series(self):
@@ -705,7 +706,7 @@ class Proforma(BillingDocument):
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         super(Proforma, self).issue(issue_date, due_date)
-        self.archived_provider = self.provider.get_proforma_archivable_fields()
+        self.archived_provider = self.provider.get_proforma_archivable_field_values()
 
     @transition(field='state', source='issued', target='paid')
     def pay(self, paid_date=None):
