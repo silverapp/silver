@@ -16,7 +16,7 @@ class Command(BaseCommand):
         intervals = {
             'year': {'years': -subscription.plan.interval_count},
             'month': {'month': -subscription.plan.interval_count},
-            'week': {'wee': -subscription.plan.interval_count},
+            'week': {'weeks': -subscription.plan.interval_count},
             'day': {'day': -subscription.plan.interval_count},
         }
         # This will be UTC, which implies a max difference of 27 hours ~= 1 day
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             intervals = {
                 'year': {'years': +subscription.plan.interval_count},
                 'month': {'month': +subscription.plan.interval_count},
-                'week': {'wee': +subscription.plan.interval_count},
+                'week': {'weeks': +subscription.plan.interval_count},
                 'day': {'day': +subscription.plan.interval_count},
             }
             interval_len = relativedelta(**intervals[subscription.plan.interval])
