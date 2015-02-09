@@ -15,9 +15,9 @@ class Command(BaseCommand):
         now = timezone.now().date()
         intervals = {
             'year': {'years': -subscription.plan.interval_count},
-            'month': {'month': -subscription.plan.interval_count},
+            'month': {'months': -subscription.plan.interval_count},
             'week': {'weeks': -subscription.plan.interval_count},
-            'day': {'day': -subscription.plan.interval_count},
+            'day': {'days': -subscription.plan.interval_count},
         }
         # This will be UTC, which implies a max difference of 27 hours ~= 1 day
         interval_len = relativedelta(**intervals[subscription.plan.interval])
@@ -38,13 +38,13 @@ class Command(BaseCommand):
         if not subscription.last_billing_date:
             # First time bill
             start_date = subscription.start_date
-            end_date = timzone.now().date()
+            end_date = timezone.now().date()
         else:
             intervals = {
                 'year': {'years': +subscription.plan.interval_count},
-                'month': {'month': +subscription.plan.interval_count},
+                'month': {'months': +subscription.plan.interval_count},
                 'week': {'weeks': +subscription.plan.interval_count},
-                'day': {'day': +subscription.plan.interval_count},
+                'day': {'days': +subscription.plan.interval_count},
             }
             interval_len = relativedelta(**intervals[subscription.plan.interval])
 
@@ -58,9 +58,8 @@ class Command(BaseCommand):
                                     end_date=end_date)
         description = subscription.description or composed_description
 
-
         if not subscription.on_trial:
-            unit_price, prorated = self._get_price()
+            unit_price, prorated = self._get_plan_price_and_proration_status(subscription)
         else:
             unit_price, prorated = Decimal('0.00'), False
 
@@ -119,10 +118,12 @@ class Command(BaseCommand):
 
         delta = timedelta(days=customer.payment_due_days)
         due_date = timezone.now().date() + delta
+        print 'due_date: ', due_date
         document = DocumentModel.objects.create(
             provider=subscription.plan.provider, customer=customer,
-            due_date=due_date, subscription=subscription
+            due_date=due_date
         )
+        document.subscriptions.add(subscription)
 
         return document
 
@@ -136,7 +137,6 @@ class Command(BaseCommand):
             action=action, doc_name=doc_name, subscription=subscription)
 
         self.stdout.write(msg)
-
 
     def handle(self, *args, **options):
         for customer in Customer.objects.all():
@@ -157,6 +157,7 @@ class Command(BaseCommand):
                     default_doc_state[provider] = provider.default_document_state
                     if provider in document_per_provider:
                         document = document_per_provider[provider]
+                        document.subscriptions.add(subscription)
                         self._print_status_to_stdout(subscription,
                                                      created=False)
                     else:
