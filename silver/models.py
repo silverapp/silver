@@ -647,7 +647,7 @@ class BillingDocument(models.Model):
     def updateable_fields(self):
         return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
-                'currency']
+                'currency', 'subscriptions']
 
     def __unicode__(self):
         return '%s-%s-%s' % (self.number, self.customer, self.provider)

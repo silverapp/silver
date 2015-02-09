@@ -151,7 +151,7 @@ class PlanSerializer(serializers.ModelSerializer):
         return instance
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
+class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
@@ -163,9 +163,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         view_name='customer-detail',
         queryset=Customer.objects.all()
     )
-    url = serializers.HyperlinkedIdentityField(
-        source='pk', view_name='subscription-detail'
-    )
+    #url = serializers.HyperlinkedIdentityField(
+        #source='pk', view_name='subscription-detail'
+    #)
 
     def validate(self, attrs):
         instance = Subscription(**attrs)
@@ -237,8 +237,15 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
     def create(self, validated_data):
         entries = validated_data.pop('invoice_entries', None)
+        subscriptions = validated_data.pop('subscriptions', None)
+
+        # Create the new invoice objectj
         invoice = Invoice.objects.create(**validated_data)
 
+        # Add the related subscriptions
+        invoice.subscriptions = subscriptions
+
+        # Add the invoice entries
         for entry in entries:
             entry_dict = {}
             entry_dict['invoice'] = invoice
@@ -291,7 +298,10 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
 
     def create(self, validated_data):
         entries = validated_data.pop('proforma_entries', None)
+        subscriptions = validated_data.pop('subscriptions', None)
+
         proforma = Proforma.objects.create(**validated_data)
+        proforma.subscriptions = subscriptions
 
         for entry in entries:
             entry_dict = {}
