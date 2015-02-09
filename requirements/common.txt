@@ -5,3 +5,5 @@ django-filter
 djangorestframework-bulk
 django-livefield
 git+git://github.com/PressLabs/django-rest-hooks.git
+xhtml2pdf
+django-xhtml2pdf

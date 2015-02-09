@@ -4,7 +4,11 @@ from datetime import datetime as dt
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
+from django_xhtml2pdf.utils import generate_pdf
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
@@ -391,7 +395,7 @@ class Provider(AbstractBillingEntity):
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise ValidationError(errors)
@@ -431,6 +435,8 @@ class BillingDocument(models.Model):
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
     number = models.IntegerField(blank=True, null=True)
+    pdf = models.FileField(null=True, blank=True, editable=False,
+                           upload_to='pdfs/')
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
     subscription = models.ForeignKey('Subscription')
@@ -551,8 +557,13 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        self.__last_state = self.state
+        if self.state == 'issued' and self.__last_state != 'issued':
+            data = self.generate_billing_pdf()
+            pdf = ContentFile(data)
+            filename = 'Invoice_%s-%d.pdf' % (self.series, self.number)
+            self.pdf.save(filename, pdf, False)
 
+        self.__last_state = self.state
         super(BillingDocument, self).save(*args, **kwargs)
 
     def customer_display(self):
@@ -577,6 +588,29 @@ class BillingDocument(models.Model):
 
     def __unicode__(self):
         return '%s-%s-%s' % (self.number, self.customer, self.provider)
+
+    def generate_billing_pdf(self):
+        billing_type = type(self).__name__
+        kwargs = {billing_type.lower(): self}
+
+        entries = DocumentEntry.objects.filter(**kwargs)
+        customer = Customer(**self.archived_customer)
+        provider = Provider(**self.archived_provider)
+
+        context = {
+            'invoice': self,
+            'provider': provider,
+            'customer': customer,
+            'entries': entries
+        }
+        resp = HttpResponse(content_type='application/pdf')
+        result = generate_pdf('invoice_pdf.html', context=context,
+                              file_object=resp)
+
+        if result:
+            return result
+        raise RuntimeError(_('Could not generate invoice pdf'))
+    generate_billing_pdf.alter_data = True
 
 
 class Invoice(BillingDocument):
@@ -612,6 +646,7 @@ class Invoice(BillingDocument):
         entries_total = [Decimal(item.total) for item in self.invoice_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
+
 
 class Proforma(BillingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
@@ -673,6 +708,7 @@ class Proforma(BillingDocument):
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
 
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
@@ -703,7 +739,6 @@ class DocumentEntry(models.Model):
             invoice=self.invoice,
         ).aggregate(Max('entry_id'))['entry_id__max']
         return max_id + 1 if max_id else 1
-
 
     def save(self, *args, **kwargs):
         if not self.entry_id:
