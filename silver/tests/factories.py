@@ -116,8 +116,17 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
-    subscription = factory.SubFactory(SubscriptionFactory)
     currency = 'RON'
+
+    @factory.post_generation
+    def subscriptions(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            for subscription in extracted:
+                self.subscriptions.add(subscription)
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -126,8 +135,16 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
-    subscription = factory.SubFactory(SubscriptionFactory)
     currency = 'RON'
+
+    @factory.post_generation
+    def subscriptions(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            for subscription in extracted:
+                self.subscriptions.add(subscription)
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):

@@ -717,6 +717,7 @@ class Proforma(BillingDocument):
         invoice_fields = self.fields_for_automatic_invoice_generation
         invoice_fields.update({'proforma': self})
         invoice = Invoice.objects.create(**invoice_fields)
+        invoice.subscriptions = self.subscriptions.all()
         invoice.issue()
         invoice.pay()
         invoice.save()
@@ -738,8 +739,7 @@ class Proforma(BillingDocument):
     def fields_for_automatic_invoice_generation(self):
         fields = ['customer', 'provider', 'archived_customer', 'archived_provider',
                   'due_date', 'issue_date', 'paid_date', 'cancel_date',
-                  'sales_tax_percent', 'sales_tax_name', 'currency',
-                  'subscription']
+                  'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
     @property

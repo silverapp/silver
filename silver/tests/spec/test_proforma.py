@@ -28,7 +28,7 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
-            'subscription': 'http://testserver/subscriptions/1/',
+            'subscriptions': ['http://testserver/subscriptions/1/'],
             'number': "",
             'currency': 'RON',
             'proforma_entries': []
@@ -43,7 +43,7 @@ class TestProformaEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
-            "subscription": "http://testserver/subscriptions/1/",
+            "subscriptions": ["http://testserver/subscriptions/1/"],
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -68,7 +68,7 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
-            'subscription': 'http://testserver/subscriptions/1/',
+            'subscriptions': ['http://testserver/subscriptions/1/'],
             'number': None,
             'currency': 'RON',
             'proforma_entries': [{
@@ -114,9 +114,9 @@ class TestProformaEndpoints(APITestCase):
             "id": 1,
             "series": "ProformaSeries",
             "number": 1,
-            "provider": "http://testserver/providers/2/",
+            "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
-            "subscription": "http://testserver/subscriptions/1/",
+            "subscriptions": [],
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -385,7 +385,9 @@ class TestProformaEndpoints(APITestCase):
         assert Invoice.objects.count() == 0
 
         proforma = get_object_or_None(Proforma, pk=1)
-        assert proforma.subscription.last_billing_date == timezone.now().date()
+        now = timezone.now().date()
+        for subscription in proforma.subscriptions.all():
+            assert subscription.last_billing_date == now
 
 
     def test_issue_proforma_with_custom_issue_date(self):
@@ -413,7 +415,9 @@ class TestProformaEndpoints(APITestCase):
         assert Invoice.objects.count() == 0
 
         proforma = get_object_or_None(Proforma, pk=1)
-        assert proforma.subscription.last_billing_date == timezone.now().date()
+        now = timezone.now().date()
+        for subscription in proforma.subscriptions.all():
+            assert subscription.last_billing_date == now
 
     def test_issue_proforma_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -444,7 +448,9 @@ class TestProformaEndpoints(APITestCase):
         assert Invoice.objects.count() == 0
 
         proforma = get_object_or_None(Proforma, pk=1)
-        assert proforma.subscription.last_billing_date == timezone.now().date()
+        now = timezone.now().date()
+        for subscription in proforma.subscriptions.all():
+            assert subscription.last_billing_date == now
 
     def test_issue_proforma_when_in_issued_state(self):
         provider = ProviderFactory.create()
@@ -508,7 +514,9 @@ class TestProformaEndpoints(APITestCase):
         assert invoice.proforma == proforma
 
         invoice = get_object_or_None(Invoice, proforma=proforma)
-        assert invoice.subscription.last_billing_date == timezone.now().date()
+        now = timezone.now().date()
+        for subscription in proforma.subscriptions.all():
+            assert subscription.last_billing_date == now
 
 
     def test_pay_proforma_with_provided_date(self):
@@ -545,7 +553,9 @@ class TestProformaEndpoints(APITestCase):
         assert invoice.proforma == proforma
 
         invoice = get_object_or_None(Invoice, proforma=proforma)
-        assert invoice.subscription.last_billing_date == timezone.now().date()
+        now = timezone.now().date()
+        for subscription in proforma.subscriptions.all():
+            assert subscription.last_billing_date == now
 
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()
