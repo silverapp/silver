@@ -229,7 +229,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Invoice
         fields = ('id', 'series', 'number', 'provider', 'customer',
-                  'subscription', 'archived_provider', 'archived_customer',
+                  'subscriptions', 'archived_provider', 'archived_customer',
                   'due_date', 'issue_date', 'paid_date', 'cancel_date',
                   'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
                   'proforma', 'invoice_entries', 'total')
@@ -283,7 +283,7 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Proforma
         fields = ('id', 'series', 'number', 'provider', 'customer',
-                  'subscription', 'archived_provider', 'archived_customer',
+                  'subscriptions', 'archived_provider', 'archived_customer',
                   'due_date', 'issue_date', 'paid_date', 'cancel_date',
                   'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
                   'invoice', 'proforma_entries', 'total')

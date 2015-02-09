@@ -162,7 +162,7 @@ class BillingDocumentForm(forms.ModelForm):
             obj.number = None
         else:
             # If the number input box was just cleaned => place back the
-            # old number.
+            # old number. This will prevent from having unused numbers.
             if self.initial_number and not obj.number:
                 obj.number = self.initial_number
 
@@ -182,9 +182,10 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'number', 'customer_display', 'provider_display', 'state',
-                    'issue_date', 'due_date', 'paid_date', 'cancel_date',
-                    'sales_tax_name', 'sales_tax_percent', 'currency']
+    list_display = ['id', 'number', 'customer_display', 'provider_display',
+                    'state', 'issue_date', 'due_date', 'paid_date',
+                    'cancel_date', 'sales_tax_name', 'sales_tax_percent',
+                    'currency']
     list_display_links = list_display
 
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
@@ -195,7 +196,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
 
-    fields = (('series', 'number'), 'provider', 'customer', 'subscription',
+    fields = (('series', 'number'), 'provider', 'customer', 'subscriptions',
               'issue_date', 'due_date', 'paid_date', 'cancel_date',
               'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
               'total')
@@ -265,7 +266,6 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoices'
-
 
     @property
     def _model(self):

@@ -505,7 +505,8 @@ class BillingDocument(models.Model):
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
-    subscription = models.ForeignKey('Subscription', blank=True, null=True)
+    subscriptions = models.ManyToManyField('Subscription', blank=True,
+                                           null=True)
     archived_customer = jsonfield.JSONField()
     archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
@@ -555,9 +556,9 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        if self.subscription:
-            self.subscription.last_billing_date = timezone.now().date()
-            self.subscription.save()
+        if self.subscriptions:
+            now = timezone.now().date()
+            self.subscriptions.all().update(last_billing_date=now)
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -665,8 +666,8 @@ class Invoice(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
 
-        subscription_field = self._meta.get_field_by_name("subscription")[0]
-        subscription_field.related_name = "invoices"
+        subscriptions_field = self._meta.get_field_by_name("subscriptions")[0]
+        subscriptions_field.related_name = "invoices"
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -700,8 +701,8 @@ class Proforma(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
 
-        subscription_field = self._meta.get_field_by_name("subscription")[0]
-        subscription_field.related_name = "proformas"
+        subscriptions_field = self._meta.get_field_by_name("subscriptions")[0]
+        subscriptions_field.related_name = "proformas"
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
