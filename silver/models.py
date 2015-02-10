@@ -289,15 +289,18 @@ class Subscription(models.Model):
 
     @property
     def should_be_billed(self):
-        last_billing_date = self.last_billing_date
-        if last_billing_date:
-            return self._should_reissue(last_billing_date)
+        if not self.is_billed_first_time:
+            return self._should_reissue(self.last_billing_date)
         return self._should_issue_first_time()
 
     @property
+    def is_billed_first_time(self):
+        qs_count = BillingLog.objects.filter(subscription=self).count()
+        return False if qs_count else True
+
+    @property
     def last_billing_date(self):
-        qs = BillingLog.objects.filter(subscription=self)
-        return None if not qs.count() else qs[0]
+        return BillingLog.objects.filter(subscription=self)[0]
 
     def _get_proration_percent_and_status(self, date):
         """
@@ -310,8 +313,10 @@ class Subscription(models.Model):
         :rtype: tuple
         """
 
-        if self.last_billing_date:
-            # Full interval value
+        # We assume that an invoice/proforma is issued only if
+        # plan.interval * plan.interval_count has passed so if we get to this
+        # point => percent = 100%
+        if not self.is_billed_first_time:
             return Decimal('100.00'), False
         else:
             # Proration
