@@ -51,12 +51,11 @@ class Command(BaseCommand):
             start_date = subscription.last_billing_date
             end_date = subscription.last_billing_date + interval_len
 
-        composed_description = "{plan_name} {interval} plan subscription"\
-                               " ({start_date} - {end_date})".format(
-                                    plan_name=subscription.plan.name,
-                                    interval=interval, start_date=start_date,
-                                    end_date=end_date)
-        description = subscription.description or composed_description
+        description = "{plan_name} {interval} plan subscription ({start_date}"\
+                      " - {end_date})".format(plan_name=subscription.plan.name,
+                                              interval=interval,
+                                              start_date=start_date,
+                                              end_date=end_date)
 
         if not subscription.is_on_trial:
             unit_price, prorated = self._get_plan_price_and_proration_status(subscription)
@@ -89,8 +88,12 @@ class Command(BaseCommand):
             for log_item in consumed_mf_log:
                 total_units = max(0, log_item.consumed_units - mf.included_units)
                 unit_price = Decimal('0.00') if subscription.is_on_trial else mf.price_per_unit
+                description = "{name} ({start_date} - {end_date})".format(
+                    name=mf.name,
+                    start_date=log_item.start_date,
+                    end_date=log_item.end_date)
                 DocumentEntry.objects.create(
-                    invoice=invoice, proforma=proforma, description=mf.name,
+                    invoice=invoice, proforma=proforma, description=description,
                     unit=mf.unit, unit_price=unit_price, quantity=total_units,
                     product_code=mf.product_code
                 )
