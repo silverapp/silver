@@ -226,12 +226,11 @@ class Subscription(models.Model):
     def is_on_trial(self):
         return timezone.now().date() <= self.trial_end
 
-    @property
-    def _should_reissue(self):
+    def _should_reissue(self, last_billing_date):
         last_billing_date = datetime.datetime(
-            year=self.last_billing_date.year,
-            month=self.last_billing_date.month,
-            day=self.last_billing_date.day,
+            year=last_billing_date.year,
+            month=last_billing_date.month,
+            day=last_billing_date.day,
             tzinfo=timezone.get_current_timezone()
         )
         intervals = {
@@ -248,7 +247,6 @@ class Subscription(models.Model):
 
         return timezone.now() > interval_end
 
-    @property
     def _should_issue_first_time(self):
         # Get the datetime object for the next interval
         # yearly plans - first day of next year + generate_after
@@ -291,9 +289,15 @@ class Subscription(models.Model):
 
     @property
     def should_be_billed(self):
-        if self.last_billing_date:
-            return self._should_reissue
-        return self._should_issue_first_time
+        last_billing_date = self.last_billing_date
+        if last_billing_date:
+            return self._should_reissue(last_billing_date)
+        return self._should_issue_first_time()
+
+    @property
+    def last_billing_date(self):
+        qs = BillingLog.objects.filter(subscription=self)
+        return None if not qs.count() else qs[0]
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
@@ -324,11 +328,16 @@ class Subscription(models.Model):
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
                                      related_name='billing_log_entries')
-    invoice = models.ForeignKey('Invoice', related_name='billing_log_entries')
-    proforma = models.ForeignKey('Proforma', related_name='billing_log_entries')
+    invoice = models.ForeignKey('Invoice', null=True, blank=True,
+                                related_name='billing_log_entries')
+    proforma = models.ForeignKey('Proforma', null=True, blank=True,
+                                 related_name='billing_log_entries')
     billing_date = models.DateField(
-        auto_now_add=True,
-        help_text='The date when the invoice/proforma was issued.')
+        help_text="The date when the invoice/proforma was issued."
+    )
+
+    class Meta:
+        ordering = ['-billing_date']
 
 
 class AbstractBillingEntity(LiveModel):
