@@ -45,7 +45,8 @@ install_requires = [
     'django-fsm',
     'django-livefield',
     'django-rest-hooks',
-    'django-international'
+    'django-international',
+    'django-jsonfield'
 ]
 
 
