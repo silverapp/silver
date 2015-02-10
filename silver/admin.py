@@ -196,10 +196,9 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
 
-    fields = (('series', 'number'), 'provider', 'customer', 'subscriptions',
-              'issue_date', 'due_date', 'paid_date', 'cancel_date',
-              'sales_tax_name', 'sales_tax_percent', 'currency', 'state',
-              'total')
+    fields = (('series', 'number'), 'provider', 'customer', 'issue_date',
+              'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+              'sales_tax_percent', 'currency', 'state', 'total')
     readonly_fields = ('series', 'state', 'total')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
