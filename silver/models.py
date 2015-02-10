@@ -321,6 +321,16 @@ class Subscription(models.Model):
         return '%s (%s)' % (self.customer, self.plan)
 
 
+class BillingLog(models.Model):
+    subscription = models.ForeignKey('Subscription',
+                                     related_name='billing_log_entries')
+    invoice = models.ForeignKey('Invoice', related_name='billing_log_entries')
+    proforma = models.ForeignKey('Proforma', related_name='billing_log_entries')
+    billing_date = models.DateField(
+        auto_now_add=True,
+        help_text='The date when the invoice/proforma was issued.')
+
+
 class AbstractBillingEntity(LiveModel):
     name = models.CharField(
         max_length=128, blank=True, null=True,
