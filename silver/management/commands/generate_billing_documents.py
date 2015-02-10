@@ -58,7 +58,7 @@ class Command(BaseCommand):
                                     end_date=end_date)
         description = subscription.description or composed_description
 
-        if not subscription.on_trial:
+        if not subscription.is_on_trial:
             unit_price, prorated = self._get_plan_price_and_proration_status(subscription)
         else:
             unit_price, prorated = Decimal('0.00'), False
@@ -72,6 +72,7 @@ class Command(BaseCommand):
         )
 
     def _add_metered_features(self, subscription, invoice=None, proforma=None):
+        # TODO: treat included units keeping in mind the prorated percent
         if subscription.last_billing_date:
             start_date = subscription.last_billing_date
         else:
@@ -87,7 +88,7 @@ class Command(BaseCommand):
             consumed_mf_log = MeteredFeatureUnitsLog.objects.filter(**criteria)
             for log_item in consumed_mf_log:
                 total_units = max(0, log_item.consumed_units - mf.included_units)
-                unit_price = Decimal('0.00') if subscription.on_trial else mf.price_per_unit
+                unit_price = Decimal('0.00') if subscription.is_on_trial else mf.price_per_unit
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=mf.name,
                     unit=mf.unit, unit_price=unit_price, quantity=total_units,
@@ -118,12 +119,10 @@ class Command(BaseCommand):
 
         delta = timedelta(days=customer.payment_due_days)
         due_date = timezone.now().date() + delta
-        print 'due_date: ', due_date
         document = DocumentModel.objects.create(
             provider=subscription.plan.provider, customer=customer,
             due_date=due_date
         )
-        document.subscriptions.add(subscription)
 
         return document
 
@@ -148,7 +147,11 @@ class Command(BaseCommand):
                 # Default doc state (issued, draft) for each provider
                 default_doc_state = {}
 
-                for subscription in customer.subscriptions.all():
+                # If a subscription is canceld, bill it and then change the
+                # state to ended.
+
+                # Process all the active subscriptions
+                for subscription in customer.subscriptions.filter(state='active'):
                     if not subscription.should_be_billed:
                         continue
 
@@ -157,7 +160,6 @@ class Command(BaseCommand):
                     default_doc_state[provider] = provider.default_document_state
                     if provider in document_per_provider:
                         document = document_per_provider[provider]
-                        document.subscriptions.add(subscription)
                         self._print_status_to_stdout(subscription,
                                                      created=False)
                     else:
