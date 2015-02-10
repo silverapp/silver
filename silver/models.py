@@ -299,6 +299,42 @@ class Subscription(models.Model):
         qs = BillingLog.objects.filter(subscription=self)
         return None if not qs.count() else qs[0]
 
+    def _get_proration_percent_and_status(self, date):
+        """
+        Returns proration percent (how much of the interval will be billed) and
+        the status (if the subscription is prorated or not).
+
+        :param date: the date at which the percent and status are computed
+        :returns: a tuple containing (Decimal(percent), status) where status
+            can be one of [True, False]
+        :rtype: tuple
+        """
+
+        if self.last_billing_date:
+            # Full interval value
+            return Decimal('100.00'), False
+        else:
+            # Proration
+            now = date
+
+            intervals = {
+                'year': {'years': -self.plan.interval_count},
+                'month': {'months': -self.plan.interval_count},
+                'week': {'weeks': -self.plan.interval_count},
+                'day': {'days': -self.plan.interval_count},
+            }
+            # This will be UTC, which implies a max difference of 27 hours ~= 1 day
+            # NOTE: this will be a negative interval (e.g.: -1 month, -1 week, etc.)
+            interval_len = relativedelta(**intervals[self.plan.interval])
+
+            # Add the negative value of the interval_len. This will actually
+            # be a subtraction which will yield the start of the interval.
+            interval_start = now + interval_len
+            days_in_interval = (now - interval_start).days
+            days_since_subscription_start = (now - self.start_date).days
+            percent = 100.0 * days_since_subscription_start / days_in_interval
+            return Decimal(percent).quantize(Decimal('0.00')), True
+
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
