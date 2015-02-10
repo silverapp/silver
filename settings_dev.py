@@ -64,14 +64,6 @@ REST_FRAMEWORK = {
     'MAX_PAGINATE_BY': 100,
 }
 
-from django.contrib import messages
-
-MESSAGE_TAGS = {
-    messages.SUCCESS: 'alert-success success',
-    messages.WARNING: 'alert-warning warning',
-    messages.ERROR: 'alert-danger error'
-}
-
 from silver import HOOK_EVENTS as _HOOK_EVENTS
 HOOK_EVENTS = _HOOK_EVENTS
 
