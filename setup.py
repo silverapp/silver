@@ -38,6 +38,14 @@ dev_requires = [
 
 install_requires = [
     'django',
+    'djangorestframework',
+    'django-rest-hooks',
+    'django-filter',
+    'djangorestframework-bulk',
+    'django-fsm',
+    'django-livefield',
+    'django-rest-hooks',
+    'django-international'
 ]
 
 
@@ -57,7 +65,7 @@ setup(
     keywords='django, app, reusable, billing, invoicing, api',
     author='PressLabs',
     author_email='ping@presslabs.com',
-    url="https://github.com/mbrochh/django-reusable-app-template",
+    url="https://github.com/PressLabs/silver",
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
