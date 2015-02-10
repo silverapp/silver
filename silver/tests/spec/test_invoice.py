@@ -28,7 +28,6 @@ class TestInvoiceEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
-            'subscriptions': ['http://testserver/subscriptions/1/'],
             'number': "",
             'currency': 'RON',
             'invoice_entries': []
@@ -42,7 +41,6 @@ class TestInvoiceEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
-            "subscriptions": ["http://testserver/subscriptions/1/"],
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -67,7 +65,6 @@ class TestInvoiceEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
-            'subscriptions': ['http://testserver/subscriptions/1/'],
             'number': None,
             'currency': 'RON',
             'invoice_entries': [{
@@ -115,7 +112,6 @@ class TestInvoiceEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
-            "subscriptions": [],
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -384,10 +380,6 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data.get('archived_customer', {}) != {}
 
         invoice = get_object_or_None(Invoice, pk=1)
-        now = timezone.now().date()
-        for subscription in invoice.subscriptions.all():
-            assert subscription.last_billing_date == now
-
 
     def test_issue_invoice_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -413,9 +405,6 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data.get('archived_customer', {}) != {}
 
         invoice = get_object_or_None(Invoice, pk=1)
-        now = timezone.now().date()
-        for subscription in invoice.subscriptions.all():
-            assert subscription.last_billing_date == now
 
     def test_issue_invoice_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -445,9 +434,6 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data.get('archived_customer', {}) != {}
 
         invoice = get_object_or_None(Invoice, pk=1)
-        now = timezone.now().date()
-        for subscription in invoice.subscriptions.all():
-            assert subscription.last_billing_date == now
 
     def test_issue_invoice_when_in_issued_state(self):
         provider = ProviderFactory.create()

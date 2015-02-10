@@ -223,7 +223,7 @@ class Subscription(models.Model):
         return None
 
     @property
-    def on_trial(self):
+    def is_on_trial(self):
         return timezone.now().date() <= self.trial_end
 
     @property
@@ -505,8 +505,6 @@ class BillingDocument(models.Model):
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
-    subscriptions = models.ManyToManyField('Subscription', blank=True,
-                                           null=True)
     archived_customer = jsonfield.JSONField()
     archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
@@ -555,10 +553,6 @@ class BillingDocument(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self.archived_customer = self.customer.get_archivable_field_values()
-
-        if self.subscriptions:
-            now = timezone.now().date()
-            self.subscriptions.all().update(last_billing_date=now)
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -647,7 +641,7 @@ class BillingDocument(models.Model):
     def updateable_fields(self):
         return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
-                'currency', 'subscriptions']
+                'currency']
 
     def __unicode__(self):
         return '%s-%s-%s' % (self.number, self.customer, self.provider)
@@ -665,9 +659,6 @@ class Invoice(BillingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
-
-        subscriptions_field = self._meta.get_field_by_name("subscriptions")[0]
-        subscriptions_field.related_name = "invoices"
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -701,9 +692,6 @@ class Proforma(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
 
-        subscriptions_field = self._meta.get_field_by_name("subscriptions")[0]
-        subscriptions_field.related_name = "proformas"
-
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         super(Proforma, self).issue(issue_date, due_date)
@@ -717,7 +705,6 @@ class Proforma(BillingDocument):
         invoice_fields = self.fields_for_automatic_invoice_generation
         invoice_fields.update({'proforma': self})
         invoice = Invoice.objects.create(**invoice_fields)
-        invoice.subscriptions = self.subscriptions.all()
         invoice.issue()
         invoice.pay()
         invoice.save()
