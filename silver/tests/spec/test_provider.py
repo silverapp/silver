@@ -179,6 +179,7 @@ class TestProviderEndpoints(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_put_provider_correctly(self):
+        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
@@ -211,12 +212,12 @@ class TestProviderEndpoints(APITestCase):
             'flow': 'proforma',
             'email': 'a@a.com',
             'address_1': 'address',
-            'address_2': 'Address22',
+            'address_2': 'Address21',
             'city': 'City',
-            'state': 'State2',
+            'state': 'State1',
             'zip_code': '1',
             'country': 'RO',
-            'extra': 'Extra2',
+            'extra': 'Extra1',
             'flow': 'proforma',
             'invoice_series': 'NewSeries',
             'invoice_starting_number': 1,
@@ -241,7 +242,6 @@ class TestProviderEndpoints(APITestCase):
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'TestProvider',
             'email': 'a@a.com',
             'address_1': 'address',
             'city': 'City',
@@ -255,7 +255,7 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.put(url, data=new_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'company': ['This field is required.']}
+        assert response.data == {'name': ['This field is required.']}
 
     def test_patch_provider(self):
         ProviderFactory.reset_sequence(1)

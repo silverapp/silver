@@ -4,6 +4,7 @@ django-fsm
 django-filter
 djangorestframework-bulk
 django-livefield
+django-jsonfield
 git+git://github.com/PressLabs/django-rest-hooks.git
 django-jsonfield
 python-dateutil

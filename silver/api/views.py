@@ -39,7 +39,7 @@ class PlanFilter(FilterSet):
 
 
 class PlanList(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
@@ -47,7 +47,7 @@ class PlanList(HPListCreateAPIView):
 
 
 class PlanDetail(generics.RetrieveDestroyAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PlanSerializer
     model = Plan
 
@@ -74,7 +74,7 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
 
 
 class PlanMeteredFeatures(HPListAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
 
@@ -92,7 +92,7 @@ class MeteredFeaturesFilter(FilterSet):
 
 
 class MeteredFeatureList(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
@@ -104,7 +104,7 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
         pk = self.kwargs.get('pk', None)
         return get_object_or_404(MeteredFeature, pk=pk)
 
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
 
@@ -121,7 +121,7 @@ class SubscriptionFilter(FilterSet):
 
 
 class SubscriptionList(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
@@ -133,13 +133,13 @@ class SubscriptionDetail(generics.RetrieveAPIView):
         pk = self.kwargs.get('pk', None)
         return get_object_or_404(Subscription, pk=pk)
 
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     model = Subscription
     serializer_class = SubscriptionDetailSerializer
 
 
 class SubscriptionDetailActivate(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
@@ -162,7 +162,7 @@ class SubscriptionDetailActivate(APIView):
 
 
 class SubscriptionDetailCancel(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
@@ -189,7 +189,7 @@ class SubscriptionDetailCancel(APIView):
 
 
 class SubscriptionDetailReactivate(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
@@ -206,7 +206,7 @@ class SubscriptionDetailReactivate(APIView):
 
 
 class MeteredFeatureUnitsLogList(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     paginate_by = None
 
     def get(self, request, format=None, **kwargs):
@@ -318,7 +318,7 @@ class CustomerFilter(FilterSet):
 
 
 class CustomerList(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
@@ -333,7 +333,7 @@ class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
         except (TypeError, ValueError, Customer.DoesNotExist):
             raise Http404
 
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
     model = Customer
 
@@ -348,19 +348,19 @@ class ProviderFilter(FilterSet):
 
 
 class ProductCodeListCreate(generics.ListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProductCodeSerializer
     queryset = ProductCode.objects.all()
 
 
 class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProductCodeSerializer
     queryset = ProductCode.objects.all()
 
 
 class ProviderListCreate(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
     filter_backends = (filters.DjangoFilterBackend,)
@@ -368,19 +368,19 @@ class ProviderListCreate(HPListCreateAPIView):
 
 
 class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
 
 
 class InvoiceListCreate(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
 
 class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
@@ -423,7 +423,7 @@ class DocEntryCreate(generics.CreateAPIView):
 
 
 class InvoiceEntryCreate(DocEntryCreate):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
@@ -490,7 +490,7 @@ class DocEntryUpdateDestroy(APIView):
         raise NotImplementedError
 
 class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
@@ -510,7 +510,7 @@ class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
 
 
 class InvoiceStateHandler(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
 
     def patch(self, request, *args, **kwargs):
@@ -559,19 +559,19 @@ class InvoiceStateHandler(APIView):
 
 
 class ProformaListCreate(HPListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
 
 
 class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
 
 
 class ProformaEntryCreate(DocEntryCreate):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
@@ -586,7 +586,7 @@ class ProformaEntryCreate(DocEntryCreate):
 
 
 class ProformaEntryUpdateDestroy(DocEntryUpdateDestroy):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentEntrySerializer
     queryset = DocumentEntry.objects.all()
 
@@ -606,7 +606,7 @@ class ProformaEntryUpdateDestroy(DocEntryUpdateDestroy):
 
 
 class ProformaStateHandler(APIView):
-    permission_classes = (permissions.IsAuthenticated, permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
 
     def patch(self, request, *args, **kwargs):
