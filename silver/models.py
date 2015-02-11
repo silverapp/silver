@@ -285,6 +285,7 @@ class Customer(AbstractBillingEntity):
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
     )
+    sales_tax_number = models.CharField(max_length=64, blank=True, null=True)
     sales_tax_percent = models.DecimalField(
         max_digits=5, decimal_places=2, null=True, blank=True,
         help_text="Whenever to add sales tax. "
