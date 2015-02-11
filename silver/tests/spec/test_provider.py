@@ -242,7 +242,6 @@ class TestProviderEndpoints(APITestCase):
         new_data = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'TestProvider',
             'email': 'a@a.com',
             'address_1': 'address',
             'city': 'City',
@@ -256,7 +255,7 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.put(url, data=new_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'company': ['This field is required.']}
+        assert response.data == {'name': ['This field is required.']}
 
     def test_patch_provider(self):
         ProviderFactory.reset_sequence(1)

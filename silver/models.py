@@ -242,17 +242,17 @@ class Subscription(models.Model):
 
 class AbstractBillingEntity(LiveModel):
     name = models.CharField(
-        max_length=128, blank=True, null=True,
+        max_length=128,
         help_text='The name to be used for billing purposes.'
     )
-    company = models.CharField(max_length=128)
+    company = models.CharField(max_length=128, blank=True, null=True)
     email = models.EmailField(max_length=254, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
-    address_2 = models.CharField(max_length=48, blank=True, null=True)
+    address_2 = models.CharField(max_length=128, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3)
     city = models.CharField(max_length=128)
     state = models.CharField(max_length=128, blank=True, null=True)
-    zip_code = models.CharField(max_length=32)
+    zip_code = models.CharField(max_length=32, blank=True, null=True)
     extra = models.TextField(
         blank=True, null=True,
         help_text='Extra information to display on the invoice '
