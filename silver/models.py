@@ -154,7 +154,7 @@ class Subscription(models.Model):
         help_text='The plan the customer is subscribed to.'
     )
     customer = models.ForeignKey(
-        'Customer',
+        'Customer', related_name='subscriptions',
         help_text='The customer who is subscribed to the plan.'
     )
     trial_end = models.DateField(

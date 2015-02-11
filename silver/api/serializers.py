@@ -152,50 +152,32 @@ class PlanSerializer(serializers.ModelSerializer):
 
         return instance
 
+class SubscriptionUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'customer_pk': obj.customer.pk, 'subscription_pk': obj.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
-class SubscriptionSerializer(serializers.ModelSerializer):
+
+class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
-    plan = serializers.HyperlinkedRelatedField(
-        queryset=Plan.objects.all(),
-        view_name='plan-detail',
-    )
-    customer = serializers.HyperlinkedRelatedField(
-        view_name='customer-detail',
-        queryset=Customer.objects.all()
-    )
-    url = serializers.HyperlinkedIdentityField(
-        source='pk', view_name='subscription-detail'
-    )
-
-    def validate(self, attrs):
-        instance = Subscription(**attrs)
-        instance.clean()
-        return attrs
-
-    class Meta:
-        model = Subscription
-        fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference')
-        read_only_fields = ('state', )
-
-
-class SubscriptionDetailSerializer(SubscriptionSerializer):
     metered_features = MeteredFeatureInSubscriptionSerializer(
         source='plan.metered_features', many=True, read_only=True
     )
+    url = SubscriptionUrl(view_name='subscription-detail', source='*',
+                          queryset=Subscription.objects.all())
+
+    class Meta:
+        model = Subscription
+        fields = ('url', 'plan', 'customer', 'trial_end', 'start_date',
+                  'ended_at', 'state', 'reference', 'metered_features')
+        read_only_fields = ('state', )
 
     def validate(self, attrs):
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
-
-    class Meta:
-        model = Subscription
-        fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'metered_features', 'reference')
-        read_only_fields = ('state', )
 
 
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
@@ -327,4 +309,3 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)
         return data
-

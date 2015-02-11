@@ -3,10 +3,12 @@ from django.conf.urls import patterns, url
 from silver.api import views
 
 urlpatterns = patterns('',
-    url(r'^subscriptions/$',
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/$',
         views.SubscriptionList.as_view(), name='subscription-list'),
-    url(r'^subscriptions/(?P<pk>[0-9]+)/$',
+
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/$',
         views.SubscriptionDetail.as_view(), name='subscription-detail'),
+
     url(r'^subscriptions/(?P<sub>[0-9]+)/activate/$',
         views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
     url(r'^subscriptions/(?P<sub>[0-9]+)/cancel/$',
@@ -15,6 +17,7 @@ urlpatterns = patterns('',
         views.SubscriptionDetailReactivate.as_view(), name='sub-reactivate'),
     url(r'^subscriptions/(?P<sub>[0-9]+)/(?P<mf>[0-9]+)/$',
         views.MeteredFeatureUnitsLogList.as_view(), name='mf-log-list'),
+
     url(r'^customers/$',
         views.CustomerList.as_view(), name='customer-list'),
     url(r'^customers/(?P<pk>[0-9]+)/$',

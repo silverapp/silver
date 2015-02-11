@@ -14,7 +14,6 @@ from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            DocumentEntry, Proforma)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
-                                    SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
@@ -102,20 +101,18 @@ class MeteredFeatureList(HPListCreateAPIView):
 
 
 class MeteredFeatureDetail(generics.RetrieveAPIView):
-    def get_object(self):
-        pk = self.kwargs.get('pk', None)
-        return get_object_or_404(MeteredFeature, pk=pk)
-
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
 
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(MeteredFeature, pk=pk)
 
 class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
     customer = CharFilter(name='customer__name', lookup_type='icontains')
     company = CharFilter(name='customer__company', lookup_type='icontains')
-    state = CharFilter(name='state', lookup_type='icontains')
 
     class Meta:
         model = Subscription
@@ -124,20 +121,24 @@ class SubscriptionFilter(FilterSet):
 
 class SubscriptionList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
-    queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
+    def get_queryset(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        return Subscription.objects.filter(customer__id=customer_pk)
+
 
 class SubscriptionDetail(generics.RetrieveAPIView):
-    def get_object(self):
-        pk = self.kwargs.get('pk', None)
-        return get_object_or_404(Subscription, pk=pk)
-
     permission_classes = (permissions.IsAuthenticated,)
-    model = Subscription
-    serializer_class = SubscriptionDetailSerializer
+    serializer_class = SubscriptionSerializer
+
+    def get_object(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        subscription_pk = self.kwargs.get('subscription_pk', None)
+        return get_object_or_404(Subscription, customer__id=customer_pk,
+                                 pk=subscription_pk)
 
 
 class SubscriptionDetailActivate(APIView):
