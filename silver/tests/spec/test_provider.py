@@ -39,14 +39,14 @@ class TestProviderEndpoints(APITestCase):
             'url': 'http://testserver/providers/1/',
             'name': u'TestProvider',
             'company': u'S.C. Timisoara S.R.L',
-            'email': '',
+            'email': None,
             'address_1': u'Address',
-            'address_2': '',
+            'address_2': None,
             'city': u'Timisoara',
-            'state': '',
+            'state': None,
             'zip_code': u'300300',
             'country': u'RO',
-            'extra': '',
+            'extra': None,
             'flow': 'proforma',
             'invoice_series': 'TestSeries',
             "invoice_starting_number": 1,
@@ -179,6 +179,7 @@ class TestProviderEndpoints(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_put_provider_correctly(self):
+        ProviderFactory.reset_sequence(1)
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
@@ -211,12 +212,12 @@ class TestProviderEndpoints(APITestCase):
             'flow': 'proforma',
             'email': 'a@a.com',
             'address_1': 'address',
-            'address_2': '',
+            'address_2': 'Address21',
             'city': 'City',
-            'state': '',
+            'state': 'State1',
             'zip_code': '1',
             'country': 'RO',
-            'extra': '',
+            'extra': 'Extra1',
             'flow': 'proforma',
             'invoice_series': 'NewSeries',
             'invoice_starting_number': 1,
@@ -255,7 +256,7 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.put(url, data=new_data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'company': ['This field may not be blank.']}
+        assert response.data == {'company': ['This field is required.']}
 
     def test_patch_provider(self):
         ProviderFactory.reset_sequence(1)
