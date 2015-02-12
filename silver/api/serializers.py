@@ -51,27 +51,28 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
 
 class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        print 'MFUnitsLogUrl.get_url'
         customer_pk = request.parser_context['kwargs']['customer_pk']
         subscription_pk = request.parser_context['kwargs']['subscription_pk']
+        print obj
+        print customer_pk, subscription_pk, obj.product_code, view_name
         kwargs = {
             'customer_pk': customer_pk,
             'subscription_pk': subscription_pk,
-            'mf_product_code': obj.product_code
+            'mf_product_code': obj.product_code.value
         }
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
-
-    def to_representation(self, obj):
-        print obj
+        print kwargs
+        print reverse(view_name, kwargs=kwargs, request=request, format=format)
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
 class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
-    #logs = MFUnitsLogUrl(view_name='mf-log-units', source='*', read_only=True)
+    logs = MFUnitsLogUrl(view_name='mf-log-units', source='*',
+                         lookup_field='metered_feature',
+                         queryset=MeteredFeatureUnitsLog.objects.all())
 
     class Meta:
         model = MeteredFeature
-        #fields = ('name', 'price_per_unit', 'included_units', 'logs')
-        fields = ('name', 'price_per_unit', 'included_units')
+        fields = ('name', 'price_per_unit', 'included_units', 'logs')
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
@@ -100,7 +101,7 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                not data.get('proforma_series', None):
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise serializers.ValidationError(errors)
@@ -115,7 +116,6 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                 raise serializers.ValidationError(errors)
 
         return data
-
 
 
 class PlanSerializer(serializers.ModelSerializer):

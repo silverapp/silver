@@ -110,6 +110,7 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
         pk = self.kwargs.get('pk', None)
         return get_object_or_404(MeteredFeature, pk=pk)
 
+
 class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
     customer = CharFilter(name='customer__name', lookup_type='icontains')
@@ -232,15 +233,17 @@ class MeteredFeatureUnitsLogDetail(APIView):
         return Response(serializer.data)
 
     def patch(self, request, *args, **kwargs):
-        metered_feature_pk = self.kwargs['mf']
-        subscription_pk = self.kwargs['sub']
+        mf_product_code = self.kwargs.get('mf_product_code', None)
+        subscription_pk = self.kwargs.get('subscription_pk', None)
         date = request.data.get('date', None)
         consumed_units = request.data.get('count', None)
         update_type = request.data.get('update_type', None)
-        if subscription_pk and metered_feature_pk:
+        print mf_product_code
+        metered_feature = get_object_or_404(
+            MeteredFeature, product_code__value=mf_product_code
+        )
+        if subscription_pk and metered_feature:
             subscription = get_object_or_None(Subscription, pk=subscription_pk)
-            metered_feature = get_object_or_None(MeteredFeature,
-                                                 pk=metered_feature_pk)
 
             if subscription and metered_feature:
                 if subscription.state != 'active':
@@ -279,7 +282,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
                                 log = MeteredFeatureUnitsLog.objects.get(
                                     start_date=csd,
                                     end_date=ced,
-                                    metered_feature=metered_feature_pk,
+                                    metered_feature=metered_feature.pk,
                                     subscription=subscription_pk
                                 )
                                 if update_type == 'absolute':
@@ -498,6 +501,7 @@ class DocEntryUpdateDestroy(APIView):
 
     def get_model_name(self):
         raise NotImplementedError
+
 
 class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
     permission_classes = (permissions.IsAuthenticated,)
