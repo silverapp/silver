@@ -627,6 +627,7 @@ class Proforma(AbstractInvoicingDocument):
                   'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
