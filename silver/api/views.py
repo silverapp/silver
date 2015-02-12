@@ -216,8 +216,11 @@ class MeteredFeatureUnitsLogDetail(APIView):
         subscription_pk = kwargs.get('subscription_pk', None)
         mf_product_code = kwargs.get('mf_product_code', None)
 
+        subscription = Subscription.objects.get(pk=subscription_pk)
+
         metered_feature = get_object_or_404(
-            MeteredFeature, product_code__value=mf_product_code
+            subscription.plan.metered_features,
+            product_code__value=mf_product_code
         )
 
         logs = MeteredFeatureUnitsLog.objects.filter(
@@ -236,80 +239,79 @@ class MeteredFeatureUnitsLogDetail(APIView):
         consumed_units = request.data.get('count', None)
         update_type = request.data.get('update_type', None)
 
+        subscription = get_object_or_None(Subscription, pk=subscription_pk)
         metered_feature = get_object_or_404(
-            MeteredFeature, product_code__value=mf_product_code
+            subscription.plan.metered_features,
+            product_code__value=mf_product_code
         )
-        if subscription_pk and metered_feature:
-            subscription = get_object_or_None(Subscription, pk=subscription_pk)
+        if subscription and metered_feature:
+            if subscription.state != 'active':
+                return Response({"detail": "Subscription is not active"},
+                                status=status.HTTP_403_FORBIDDEN)
+            if date and consumed_units is not None and update_type:
+                try:
+                    date = datetime.datetime.strptime(date,
+                                                      '%Y-%m-%d').date()
+                    csd = subscription.current_start_date
+                    ced = subscription.current_end_date
 
-            if subscription and metered_feature:
-                if subscription.state != 'active':
-                    return Response({"detail": "Subscription is not active"},
-                                    status=status.HTTP_403_FORBIDDEN)
-                if date and consumed_units is not None and update_type:
-                    try:
-                        date = datetime.datetime.strptime(date,
-                                                          '%Y-%m-%d').date()
-                        csd = subscription.current_start_date
-                        ced = subscription.current_end_date
+                    if date <= csd:
+                        csdt = datetime.datetime.combine(csd, datetime.time())
+                        allowed_time = datetime.timedelta(
+                            seconds=subscription.plan.generate_after)
+                        if datetime.datetime.now() < csdt + allowed_time:
+                            ced = csd - datetime.timedelta(days=1)
+                            csd = last_date_that_fits(
+                                initial_date=subscription.start_date,
+                                end_date=ced,
+                                interval_type=subscription.plan.interval,
+                                interval_count=subscription.plan.interval_count
+                            )
 
-                        if date <= csd:
-                            csdt = datetime.datetime.combine(csd, datetime.time())
-                            allowed_time = datetime.timedelta(
-                                seconds=subscription.plan.generate_after)
-                            if datetime.datetime.now() < csdt + allowed_time:
-                                ced = csd - datetime.timedelta(days=1)
-                                csd = last_date_that_fits(
-                                    initial_date=subscription.start_date,
-                                    end_date=ced,
-                                    interval_type=subscription.plan.interval,
-                                    interval_count=subscription.plan.interval_count
-                                )
-
-                        if csd <= date <= ced:
-                            if metered_feature not in \
-                                    subscription.plan.metered_features.all():
-                                err = "The metered feature does not belong to "\
-                                      "the subscription's plan."
-                                return Response(
-                                    {"detail": err},
-                                    status=status.HTTP_400_BAD_REQUEST
-                                )
-                            try:
-                                log = MeteredFeatureUnitsLog.objects.get(
-                                    start_date=csd,
-                                    end_date=ced,
-                                    metered_feature=metered_feature.pk,
-                                    subscription=subscription_pk
-                                )
-                                if update_type == 'absolute':
-                                    log.consumed_units = consumed_units
-                                elif update_type == 'relative':
-                                    log.consumed_units += consumed_units
-                                log.save()
-                            except MeteredFeatureUnitsLog.DoesNotExist:
-                                log = MeteredFeatureUnitsLog.objects.create(
-                                    metered_feature=metered_feature,
-                                    subscription=subscription,
-                                    start_date=subscription.current_start_date,
-                                    end_date=subscription.current_end_date,
-                                    consumed_units=consumed_units
-                                )
-                            finally:
-                                return Response({"count": log.consumed_units},
-                                                status=status.HTTP_200_OK)
-                        else:
-                            return Response({"detail": "Date is out of bounds"},
-                                            status=status.HTTP_400_BAD_REQUEST)
-                    except TypeError:
-                        return Response({"detail": "Invalid date format"},
+                    if csd <= date <= ced:
+                        if metered_feature not in \
+                                subscription.plan.metered_features.all():
+                            err = "The metered feature does not belong to "\
+                                  "the subscription's plan."
+                            return Response(
+                                {"detail": err},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                        try:
+                            log = MeteredFeatureUnitsLog.objects.get(
+                                start_date=csd,
+                                end_date=ced,
+                                metered_feature=metered_feature.pk,
+                                subscription=subscription_pk
+                            )
+                            if update_type == 'absolute':
+                                log.consumed_units = consumed_units
+                            elif update_type == 'relative':
+                                log.consumed_units += consumed_units
+                            log.save()
+                        except MeteredFeatureUnitsLog.DoesNotExist:
+                            log = MeteredFeatureUnitsLog.objects.create(
+                                metered_feature=metered_feature,
+                                subscription=subscription,
+                                start_date=subscription.current_start_date,
+                                end_date=subscription.current_end_date,
+                                consumed_units=consumed_units
+                            )
+                        finally:
+                            return Response({"count": log.consumed_units},
+                                            status=status.HTTP_200_OK)
+                    else:
+                        return Response({"detail": "Date is out of bounds"},
                                         status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return Response({"detail": "Not enough information provided"},
+                except TypeError:
+                    return Response({"detail": "Invalid date format"},
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"detail": "Not found"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return Response({"detail": "Not enough information provided"},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
         return Response({"detail": "Wrong address"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
