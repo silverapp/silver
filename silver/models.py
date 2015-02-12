@@ -91,8 +91,9 @@ class MeteredFeature(models.Model):
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
-    product_code = models.ForeignKey('ProductCode',
-                                     help_text='The product code for this plan.')
+    product_code = models.ForeignKey(
+        'ProductCode', unique=True, help_text='The product code for this plan.'
+    )
 
     def __unicode__(self):
         return self.name
@@ -368,7 +369,7 @@ class Provider(AbstractBillingEntity):
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise ValidationError(errors)
@@ -627,6 +628,7 @@ class Proforma(AbstractInvoicingDocument):
                   'sales_tax_percent', 'sales_tax_name', 'currency']
         return {field: getattr(self, field, None) for field in fields}
 
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
@@ -652,7 +654,6 @@ class DocumentEntry(models.Model):
             invoice=self.invoice,
         ).aggregate(Max('entry_id'))['entry_id__max']
         return max_id + 1 if max_id else 1
-
 
     def save(self, *args, **kwargs):
         if not self.entry_id:
