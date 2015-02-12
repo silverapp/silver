@@ -10,8 +10,6 @@ urlpatterns = patterns('',
         views.SubscriptionDetail.as_view(), name='subscription-detail'),
 
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/metered-features/(?P<mf_product_code>([^/])+)/$',
-        views.MeteredFeatureDetail.as_view(), name='metered-feature-detail'),
-    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/metered-features/(?P<mf_product_code>([^/])+)/logs/$',
         views.MeteredFeatureUnitsLogDetail.as_view(), name='mf-log-units'),
 
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/activate/$',

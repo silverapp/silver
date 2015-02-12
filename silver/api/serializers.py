@@ -1,5 +1,3 @@
-from string import rfind
-
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -8,9 +6,19 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma)
 
 
+class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        subscription_pk = request.parser_context['kwargs']['subscription_pk']
+        kwargs = {
+            'customer_pk': customer_pk,
+            'subscription_pk': subscription_pk,
+            'mf_product_code': obj.product_code.value
+        }
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class MeteredFeatureSerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name='metered-feature-detail')
     product_code = serializers.SlugRelatedField(
         slug_field='value',
         queryset=ProductCode.objects.all()
@@ -18,25 +26,8 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'unit', 'price_per_unit', 'included_units', 'url',
+        fields = ('name', 'unit', 'price_per_unit', 'included_units',
                   'product_code')
-
-
-class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        print 'type(obj): ', type(obj)
-        print 'obj: ', obj
-        print 'view_name: ', view_name
-        request = self.context['request']
-        path = request._request.path
-        left = len('/subscriptions/')
-        right = rfind(path, '/', left)
-        sub_pk = path[left:right]
-        kwargs = {
-            'sub': sub_pk,
-            'mf': obj.pk
-        }
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
 class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
@@ -49,30 +40,20 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
         return MeteredFeatureSerializer(obj, context={'request': request}).data
 
 
-class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        customer_pk = request.parser_context['kwargs']['customer_pk']
-        subscription_pk = request.parser_context['kwargs']['subscription_pk']
-        print obj
-        print customer_pk, subscription_pk, obj.product_code, view_name
-        kwargs = {
-            'customer_pk': customer_pk,
-            'subscription_pk': subscription_pk,
-            'mf_product_code': obj.product_code.value
-        }
-        print kwargs
-        print reverse(view_name, kwargs=kwargs, request=request, format=format)
-        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
-
-
 class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
-    logs = MFUnitsLogUrl(view_name='mf-log-units', source='*',
-                         lookup_field='metered_feature',
-                         queryset=MeteredFeatureUnitsLog.objects.all())
+    url = MFUnitsLogUrl(view_name='mf-log-units', source='*',
+                        lookup_field='metered_feature',
+                        queryset=MeteredFeatureUnitsLog.objects.all())
+
+    product_code = serializers.SlugRelatedField(
+        slug_field='value',
+        queryset=ProductCode.objects.all()
+    )
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units', 'logs')
+        fields = ('name', 'unit', 'price_per_unit', 'included_units',
+                  'product_code', 'url')
 
 
 class MeteredFeatureUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
