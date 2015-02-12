@@ -113,12 +113,10 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
 
 class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
-    customer = CharFilter(name='customer__name', lookup_type='icontains')
-    company = CharFilter(name='customer__company', lookup_type='icontains')
 
     class Meta:
         model = Subscription
-        fields = ['plan', 'customer', 'company', 'state']
+        fields = ['plan', 'reference', 'state']
 
 
 class SubscriptionList(HPListCreateAPIView):
