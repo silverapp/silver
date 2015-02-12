@@ -148,7 +148,7 @@ class SubscriptionDetailActivate(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         if sub.state != 'inactive':
             message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message},
@@ -171,7 +171,7 @@ class SubscriptionDetailCancel(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         when = request.data.get('when', None)
         if sub.state != 'active':
             message = 'Cannot cancel subscription from %s state.' % sub.state
@@ -198,7 +198,7 @@ class SubscriptionDetailReactivate(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         if sub.state != 'canceled':
             msg = 'Cannot reactivate subscription from %s state.' % sub.state
             return Response({"error": msg},
@@ -215,16 +215,15 @@ class MeteredFeatureUnitsLogDetail(APIView):
     paginate_by = None
 
     def get(self, request, format=None, **kwargs):
-        print 'MeteredFeatureUnitsLogDetail'
-        metered_feature_pk = kwargs.get('mf', None)
-        subscription_pk = kwargs.get('sub', None)
+        subscription_pk = kwargs.get('subscription_pk', None)
         mf_product_code = kwargs.get('mf_product_code', None)
-        print 'metered_feature_pk: ', metered_feature_pk
-        print 'subscription_pk: ', subscription_pk
-        print 'mf_product_code: ', mf_product_code
+
+        metered_feature = get_object_or_404(
+            MeteredFeature, product_code__value=mf_product_code
+        )
 
         logs = MeteredFeatureUnitsLog.objects.filter(
-            metered_feature=metered_feature_pk,
+            metered_feature=metered_feature.pk,
             subscription=subscription_pk)
 
         serializer = MeteredFeatureUnitsLogSerializer(
@@ -238,7 +237,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
         date = request.data.get('date', None)
         consumed_units = request.data.get('count', None)
         update_type = request.data.get('update_type', None)
-        print mf_product_code
+
         metered_feature = get_object_or_404(
             MeteredFeature, product_code__value=mf_product_code
         )
