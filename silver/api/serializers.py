@@ -24,9 +24,12 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
 class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
+        print 'type(obj): ', type(obj)
+        print 'obj: ', obj
+        print 'view_name: ', view_name
         request = self.context['request']
         path = request._request.path
-        left = '/subscriptions/'.__len__()
+        left = len('/subscriptions/')
         right = rfind(path, '/', left)
         sub_pk = path[left:right]
         kwargs = {
@@ -46,33 +49,39 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
         return MeteredFeatureSerializer(obj, context={'request': request}).data
 
 
-class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
-    units_log_url = MeteredFeatureLogRelatedField(
-        view_name='mf-log-list', source='*', read_only=True
-    )
+class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        print 'MFUnitsLogUrl.get_url'
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        subscription_pk = request.parser_context['kwargs']['subscription_pk']
+        kwargs = {
+            'customer_pk': customer_pk,
+            'subscription_pk': subscription_pk,
+            'mf_product_code': obj.product_code
+        }
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def to_representation(self, obj):
+        print obj
+
+
+class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
+    #logs = MFUnitsLogUrl(view_name='mf-log-units', source='*', read_only=True)
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units', 'units_log_url')
+        #fields = ('name', 'price_per_unit', 'included_units', 'logs')
+        fields = ('name', 'price_per_unit', 'included_units')
 
 
-class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
-    metered_feature = serializers.HyperlinkedRelatedField(
-        view_name='metered-feature-detail',
-        read_only=True,
-    )
-    subscription = serializers.HyperlinkedRelatedField(
-        view_name='subscription-detail',
-        read_only=True
-    )
+class MeteredFeatureUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
     # The 2 lines below are needed because of a DRF3 bug
     start_date = serializers.DateField(read_only=True)
     end_date = serializers.DateField(read_only=True)
 
     class Meta:
         model = MeteredFeatureUnitsLog
-        fields = ('metered_feature', 'subscription', 'consumed_units',
-                  'start_date', 'end_date')
+        fields = ('consumed_units', 'start_date', 'end_date')
 
 
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
@@ -152,6 +161,7 @@ class PlanSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class SubscriptionUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
         kwargs = {'customer_pk': obj.customer.pk, 'subscription_pk': obj.pk}
@@ -162,22 +172,28 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
-    metered_features = MeteredFeatureInSubscriptionSerializer(
-        source='plan.metered_features', many=True, read_only=True
-    )
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
-                          queryset=Subscription.objects.all())
+                          queryset=Subscription.objects.all(), required=False)
 
     class Meta:
         model = Subscription
         fields = ('url', 'plan', 'customer', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference', 'metered_features')
+                  'ended_at', 'state', 'reference')
         read_only_fields = ('state', )
 
     def validate(self, attrs):
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
+
+
+class SubscriptionDetailSerializer(SubscriptionSerializer):
+    metered_features = MeteredFeatureInSubscriptionSerializer(
+        source='plan.metered_features', many=True, read_only=True
+    )
+
+    class Meta(SubscriptionSerializer.Meta):
+        fields = SubscriptionSerializer.Meta.fields + ('metered_features',)
 
 
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):

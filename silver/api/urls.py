@@ -9,14 +9,15 @@ urlpatterns = patterns('',
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/$',
         views.SubscriptionDetail.as_view(), name='subscription-detail'),
 
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/(?P<mf_product_code>[A-z]+)$',
+        views.MeteredFeatureUnitsLogDetail.as_view(), name='mf-log-units'),
+
     url(r'^subscriptions/(?P<sub>[0-9]+)/activate/$',
         views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
     url(r'^subscriptions/(?P<sub>[0-9]+)/cancel/$',
         views.SubscriptionDetailCancel.as_view(), name='sub-cancel'),
     url(r'^subscriptions/(?P<sub>[0-9]+)/reactivate/$',
         views.SubscriptionDetailReactivate.as_view(), name='sub-reactivate'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/(?P<mf>[0-9]+)/$',
-        views.MeteredFeatureUnitsLogList.as_view(), name='mf-log-list'),
 
     url(r'^customers/$',
         views.CustomerList.as_view(), name='customer-list'),

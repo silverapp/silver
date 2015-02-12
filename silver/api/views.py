@@ -14,6 +14,7 @@ from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            DocumentEntry, Proforma)
 from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
+                                    SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
@@ -132,7 +133,7 @@ class SubscriptionList(HPListCreateAPIView):
 
 class SubscriptionDetail(generics.RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = SubscriptionSerializer
+    serializer_class = SubscriptionDetailSerializer
 
     def get_object(self):
         customer_pk = self.kwargs.get('customer_pk', None)
@@ -208,16 +209,23 @@ class SubscriptionDetailReactivate(APIView):
                             status=status.HTTP_200_OK)
 
 
-class MeteredFeatureUnitsLogList(APIView):
+class MeteredFeatureUnitsLogDetail(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     paginate_by = None
 
     def get(self, request, format=None, **kwargs):
+        print 'MeteredFeatureUnitsLogDetail'
         metered_feature_pk = kwargs.get('mf', None)
         subscription_pk = kwargs.get('sub', None)
+        mf_product_code = kwargs.get('mf_product_code', None)
+        print 'metered_feature_pk: ', metered_feature_pk
+        print 'subscription_pk: ', subscription_pk
+        print 'mf_product_code: ', mf_product_code
+
         logs = MeteredFeatureUnitsLog.objects.filter(
             metered_feature=metered_feature_pk,
             subscription=subscription_pk)
+
         serializer = MeteredFeatureUnitsLogSerializer(
             logs, many=True, context={'request': request}
         )

@@ -92,7 +92,7 @@ class MeteredFeature(models.Model):
         help_text='The number of included units per plan interval.'
     )
     product_code = models.ForeignKey('ProductCode',
-                                    help_text='The product code for this plan.')
+                                     help_text='The product code for this plan.')
 
     def __unicode__(self):
         return self.name
