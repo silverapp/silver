@@ -42,9 +42,7 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
 
 
 class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
-    url = MFUnitsLogUrl(view_name='mf-log-units', source='*',
-                        lookup_field='metered_feature',
-                        queryset=MeteredFeatureUnitsLog.objects.all())
+    url = MFUnitsLogUrl(view_name='mf-log-units', source='*', read_only=True)
 
     product_code = serializers.SlugRelatedField(
         slug_field='value',
@@ -114,13 +112,9 @@ class ProductCodeRelatedField(serializers.SlugRelatedField):
             self.fail('invalid')
 
 
-class PlanSerializer(serializers.ModelSerializer):
+class PlanSerializer(serializers.HyperlinkedModelSerializer):
     metered_features = MeteredFeatureSerializer(
         required=False, many=True
-    )
-
-    url = serializers.HyperlinkedIdentityField(
-        source='*', view_name='plan-detail'
     )
     provider = serializers.HyperlinkedRelatedField(
         queryset=Provider.objects.all(),
