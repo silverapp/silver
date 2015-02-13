@@ -1,16 +1,23 @@
 from decimal import Decimal
 from datetime import timedelta
+from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from dateutil.relativedelta import *
 
 from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
-                           DocumentEntry, Proforma)
+                           DocumentEntry, Proforma, Subscription)
 
 
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
+    option_list = BaseCommand.option_list + (
+        make_option('--subscription',
+            action='store',
+            dest='subscription_id',
+            type="int"),
+    )
 
     def _get_proration_percent_and_status(self, subscription, now_date):
         """
@@ -47,7 +54,7 @@ class Command(BaseCommand):
             # be a subtraction which will yield the start of the interval.
             interval_start = now + interval_len
             days_in_interval = (now - interval_start).days
-            days_since_subscription_start = (now - self.start_date).days
+            days_since_subscription_start = (now - subscription.start_date).days
             percent = 100.0 * days_since_subscription_start / days_in_interval
             percent = Decimal(percent).quantize(Decimal('0.00')) / Decimal('100.0')
             return percent, True
@@ -111,7 +118,7 @@ class Command(BaseCommand):
         return percent * metered_feature.included_units
 
     def _add_mf_entries(self, subscription, now_date, invoice=None,
-                              proforma=None):
+                        proforma=None):
         if subscription.last_billing_date:
             start_date = subscription.last_billing_date
         else:
@@ -187,9 +194,35 @@ class Command(BaseCommand):
 
         self.stdout.write(msg)
 
+    def _generate_single_document(self, subscription_id):
+        subscription = Subscription.objects.get(id=subscription_id)
+
+        provider = subscription.plan.provider
+        customer = subscription.customer
+        now = timezone.now().date()
+
+        document = self._create_document(provider, customer, subscription, now)
+        self._print_status_to_stdout(subscription, created=True)
+
+        # Add plan to invoice/proforma
+        self._add_plan(document, subscription, now)
+        # Add mf units to proforma/invoice
+        self._add_metered_features(document, subscription, now)
+
+        if subscription.state == 'canceled':
+            subscription.end()
+
+        if provider.default_document_state == 'issued':
+            document.issue()
+            document.save()
+
     def handle(self, *args, **options):
         # Use the same exact date for all the generated documents
         now = timezone.now().date()
+
+        if options['subscription_id']:
+            self._generate_single_document(options['subscription_id'])
+            return
 
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
@@ -198,6 +231,13 @@ class Command(BaseCommand):
 
                 # Default doc state (issued, draft) for each provider
                 default_doc_state = {}
+
+                # TODO:
+                # 1) If the subscription was on trial for a part of the month
+                # add separate entry for the trial period and a prorated one
+                # for the rest of the interval.
+                # 2) Add separate messages for the trial entry and the normal
+                # one
 
                 # Process all the active or canceled subscriptions
                 subs = customer.subscriptions.filter(state__in=['active', 'canceled'])
@@ -226,6 +266,7 @@ class Command(BaseCommand):
 
                     if subscription.state == 'canceled':
                         subscription.end()
+                        subscription.save()
 
                 for provider, document in document_per_provider.iteritems():
                     if default_doc_state[provider] == 'issued':
@@ -233,7 +274,7 @@ class Command(BaseCommand):
                         document.save()
             else:
                 # Generate an invoice for each subscription
-                for subscription in customer.subscriptions.all():
+                for subscription in customer.subscriptions.filter(state__in=['active', 'canceled']):
                     if not subscription.should_be_billed:
                         continue
 
@@ -249,6 +290,7 @@ class Command(BaseCommand):
 
                     if subscription.state == 'canceled':
                         subscription.end()
+                        subscription.save()
 
                     if provider.default_document_state == 'issued':
                         document.issue()

@@ -71,8 +71,8 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
                   'email', 'address_1', 'address_2', 'city', 'state',
-                  'zip_code', 'country', 'extra', 'invoice_starting_number',
-                  'invoice_series', 'proforma_series',
+                  'zip_code', 'country', 'extra', 'invoice_series',
+                  'invoice_starting_number', 'proforma_series',
                   'proforma_starting_number')
 
     def validate(self, data):

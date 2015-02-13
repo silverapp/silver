@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 
+from django.core.management import call_command
 from django.http.response import Http404
 from django_filters import FilterSet, CharFilter, BooleanFilter
 from rest_framework import generics, permissions, status, filters
@@ -176,10 +177,12 @@ class SubscriptionDetailCancel(APIView):
         else:
             if when == 'now':
                 sub.cancel()
-                sub.end()
-                # TODO: GENERATE PRORATED INVOICE
                 sub.save()
-                return Response({"state": sub.state},
+
+                # TODO: remove after refactor
+                call_command('generate_billing_documents', subscription=sub.id)
+
+                return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
                 sub.cancel()
