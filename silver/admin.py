@@ -48,9 +48,8 @@ class PlanForm(forms.ModelForm):
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'due_days', 'generate_after',
-                    'enabled', 'private']
-    search_fields = ['due_days', 'name']
+                    'trial_period_days', 'generate_after', 'enabled', 'private']
+    search_fields = ['name']
     form = PlanForm
 
 
