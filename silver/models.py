@@ -223,7 +223,7 @@ class Subscription(models.Model):
 
     @property
     def is_on_trial(self):
-        return timezone.now().date() <= self.trial_end
+        return timezone.now().date() <= self.trial_end and self.state != 'canceled'
 
     def _should_reissue(self, last_billing_date):
         last_billing_date = datetime.datetime(
@@ -288,6 +288,9 @@ class Subscription(models.Model):
 
     @property
     def should_be_billed(self):
+        if self.state == 'canceled':
+            return True
+
         if not self.is_billed_first_time:
             return self._should_reissue(self.last_billing_date)
         return self._should_issue_first_time()
@@ -318,7 +321,7 @@ class Subscription(models.Model):
                 days=self.plan.trial_period_days
             )
 
-    @transition(field=state, source=['active', 'past_due'], target='canceled')
+    @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
         pass
 
