@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -122,6 +123,18 @@ class PlanSerializer(serializers.ModelSerializer):
                   'currency', 'trial_period_days', 'due_days', 'generate_after',
                   'enabled', 'private', 'product_code', 'metered_features',
                   'provider')
+
+    def validate_metered_features(self, value):
+        metered_features = []
+        for mf_data in value:
+            metered_features.append(MeteredFeature(**mf_data))
+
+        try:
+            Plan.validate_metered_features(metered_features)
+        except ValidationError, e:
+            raise serializers.ValidationError(str(e)[3:-2])
+
+        return value
 
     def create(self, validated_data):
         metered_features_data = validated_data.pop('metered_features')
