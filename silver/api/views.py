@@ -176,6 +176,7 @@ class SubscriptionDetailCancel(APIView):
             if when == 'now':
                 sub.cancel()
                 sub.end()
+                # TODO: GENERATE PRORATED INVOICE
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
