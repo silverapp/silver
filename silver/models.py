@@ -800,3 +800,15 @@ class DocumentEntry(models.Model):
             self.entry_id = self._get_next_entry_id(self.invoice)
 
         super(DocumentEntry, self).save(*args, **kwargs)
+
+    def __unicode__(self):
+        s = "{id} - {descr} - {unit} - {unit_price} - {quantity} - {product_code}"
+        return s.format(
+            id=self.entry_id,
+            descr=self.description,
+            unit=self.unit,
+            unit_price=self.unit_price,
+            quantity=self.quantity,
+            product_code=self.product_code
+        )
+
