@@ -1,4 +1,4 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -100,6 +100,20 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
+class ProductCodeRelatedField(serializers.SlugRelatedField):
+    def __init__(self, **kwargs):
+        super(ProductCodeRelatedField, self).__init__(
+            slug_field='value', queryset=ProductCode.objects.all(), **kwargs)
+
+    def to_internal_value(self, data):
+        try:
+            return ProductCode.objects.get(**{self.slug_field: data})
+        except ObjectDoesNotExist:
+            return ProductCode(**{self.slug_field: data})
+        except (TypeError, ValueError):
+            self.fail('invalid')
+
+
 class PlanSerializer(serializers.ModelSerializer):
     metered_features = MeteredFeatureSerializer(
         required=False, many=True
@@ -112,10 +126,7 @@ class PlanSerializer(serializers.ModelSerializer):
         queryset=Provider.objects.all(),
         view_name='provider-detail',
     )
-    product_code = serializers.SlugRelatedField(
-        slug_field='value',
-        queryset=ProductCode.objects.all()
-    )
+    product_code = ProductCodeRelatedField()
 
     class Meta:
         model = Plan
@@ -142,8 +153,16 @@ class PlanSerializer(serializers.ModelSerializer):
         for mf_data in metered_features_data:
             metered_features.append(MeteredFeature.objects.create(**mf_data))
 
+        product_code = validated_data.pop('product_code')
+        product_code = ProductCode.objects.get_or_create(value=product_code)[0]
+
+        validated_data.update({'product_code': product_code})
+
         plan = Plan.objects.create(**validated_data)
         plan.metered_features.add(*metered_features)
+        plan.product_code = product_code
+
+        plan.save()
 
         return plan
 
