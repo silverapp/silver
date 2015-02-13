@@ -77,6 +77,17 @@ class Plan(models.Model):
         help_text='The provider which provides the plan.'
     )
 
+    @staticmethod
+    def validate_metered_features(metered_features):
+        product_codes = dict()
+        for mf in metered_features:
+            if product_codes.get(mf.product_code.value, None):
+                err_msg = 'A plan cannot have two or more metered features ' \
+                          'with the same product code. (%s, %s)' \
+                          % (mf.name, product_codes.get(mf.product_code.value))
+                raise ValidationError(err_msg)
+            product_codes[mf.product_code.value] = mf.name
+
     def __unicode__(self):
         return self.name
 
@@ -91,8 +102,9 @@ class MeteredFeature(models.Model):
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
-    product_code = models.ForeignKey('ProductCode',
-                                    help_text='The product code for this plan.')
+    product_code = models.ForeignKey(
+        'ProductCode', help_text='The product code for this plan.'
+    )
 
     def __unicode__(self):
         return self.name
@@ -154,7 +166,7 @@ class Subscription(models.Model):
         help_text='The plan the customer is subscribed to.'
     )
     customer = models.ForeignKey(
-        'Customer',
+        'Customer', related_name='subscriptions',
         help_text='The customer who is subscribed to the plan.'
     )
     trial_end = models.DateField(
@@ -368,7 +380,7 @@ class Provider(AbstractBillingEntity):
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise ValidationError(errors)
@@ -653,7 +665,6 @@ class DocumentEntry(models.Model):
             invoice=self.invoice,
         ).aggregate(Max('entry_id'))['entry_id__max']
         return max_id + 1 if max_id else 1
-
 
     def save(self, *args, **kwargs):
         if not self.entry_id:

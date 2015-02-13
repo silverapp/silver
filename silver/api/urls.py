@@ -3,18 +3,22 @@ from django.conf.urls import patterns, url
 from silver.api import views
 
 urlpatterns = patterns('',
-    url(r'^subscriptions/$',
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/$',
         views.SubscriptionList.as_view(), name='subscription-list'),
-    url(r'^subscriptions/(?P<pk>[0-9]+)/$',
+
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/$',
         views.SubscriptionDetail.as_view(), name='subscription-detail'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/activate/$',
+
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/metered-features/(?P<mf_product_code>([^/])+)/$',
+        views.MeteredFeatureUnitsLogDetail.as_view(), name='mf-log-units'),
+
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/activate/$',
         views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/cancel/$',
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/cancel/$',
         views.SubscriptionDetailCancel.as_view(), name='sub-cancel'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/reactivate/$',
+    url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/reactivate/$',
         views.SubscriptionDetailReactivate.as_view(), name='sub-reactivate'),
-    url(r'^subscriptions/(?P<sub>[0-9]+)/(?P<mf>[0-9]+)/$',
-        views.MeteredFeatureUnitsLogList.as_view(), name='mf-log-list'),
+
     url(r'^customers/$',
         views.CustomerList.as_view(), name='customer-list'),
     url(r'^customers/(?P<pk>[0-9]+)/$',
@@ -27,8 +31,6 @@ urlpatterns = patterns('',
         views.PlanMeteredFeatures.as_view(), name='plans-metered-features'),
     url(r'^metered-features/$',
         views.MeteredFeatureList.as_view(), name='metered-feature-list'),
-    url(r'^metered-features/(?P<pk>[0-9]+)/$',
-        views.MeteredFeatureDetail.as_view(), name='metered-feature-detail'),
     url(r'^providers/$',
         views.ProviderListCreate.as_view(), name='provider-list'),
     url(r'^providers/(?P<pk>[0-9]+)/$',
