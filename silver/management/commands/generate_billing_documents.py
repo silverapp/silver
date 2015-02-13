@@ -235,7 +235,8 @@ class Command(BaseCommand):
                 # TODO:
                 # 1) If the subscription was on trial for a part of the month
                 # add separate entry for the trial period and a prorated one
-                # for the rest of the interval.
+                # for the rest of the interval
+                # => start_date -> trial_end; trial_end+1 -> now
                 # 2) Add separate messages for the trial entry and the normal
                 # one
 
