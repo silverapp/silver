@@ -3,26 +3,22 @@ from django.conf.urls import patterns, url
 from silver.api import views
 
 urlpatterns = patterns('',
+    url(r'^customers/$',
+        views.CustomerList.as_view(), name='customer-list'),
+    url(r'^customers/(?P<pk>[0-9]+)/$',
+        views.CustomerDetail.as_view(), name='customer-detail'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/$',
         views.SubscriptionList.as_view(), name='subscription-list'),
-
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/$',
         views.SubscriptionDetail.as_view(), name='subscription-detail'),
-
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/metered-features/(?P<mf_product_code>([^/])+)/$',
         views.MeteredFeatureUnitsLogDetail.as_view(), name='mf-log-units'),
-
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/activate/$',
         views.SubscriptionDetailActivate.as_view(), name='sub-activate'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/cancel/$',
         views.SubscriptionDetailCancel.as_view(), name='sub-cancel'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/reactivate/$',
         views.SubscriptionDetailReactivate.as_view(), name='sub-reactivate'),
-
-    url(r'^customers/$',
-        views.CustomerList.as_view(), name='customer-list'),
-    url(r'^customers/(?P<pk>[0-9]+)/$',
-        views.CustomerDetail.as_view(), name='customer-detail'),
     url(r'^plans/$',
         views.PlanList.as_view(), name='plan-list'),
     url(r'^plans/(?P<pk>[0-9]+)/$',
