@@ -77,6 +77,17 @@ class Plan(models.Model):
         help_text='The provider which provides the plan.'
     )
 
+    @staticmethod
+    def validate_metered_features(metered_features):
+        product_codes = dict()
+        for mf in metered_features:
+            if product_codes.get(mf.product_code.value, None):
+                err_msg = 'A plan cannot have two or more metered features ' \
+                          'with the same product code. (%s, %s)' \
+                          % (mf.name, product_codes.get(mf.product_code.value))
+                raise ValidationError(err_msg)
+            product_codes[mf.product_code.value] = mf.name
+
     def __unicode__(self):
         return self.name
 

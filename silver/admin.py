@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
 
@@ -43,15 +42,7 @@ class PlanForm(forms.ModelForm):
 
     def clean(self):
         metered_features = self.cleaned_data.get('metered_features')
-        print metered_features
-        product_codes = dict()
-        for mf in metered_features:
-            if product_codes.get(mf.product_code.value, None):
-                err_msg = 'A plan cannot have two or more metered features ' \
-                          'with the same product code. (%s, %s)' \
-                          % (mf.name, product_codes.get(mf.product_code.value))
-                raise ValidationError(err_msg)
-            product_codes[mf.product_code.value] = mf.name
+        Plan.validate_metered_features(metered_features)
         return self.cleaned_data
 
 
