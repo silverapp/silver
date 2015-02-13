@@ -36,10 +36,22 @@ class LiveModelAdmin(admin.ModelAdmin):
     actions = ['delete_selected']
 
 
+class PlanForm(forms.ModelForm):
+    class Meta:
+        model = Plan
+
+    def clean(self):
+        metered_features = self.cleaned_data.get('metered_features')
+        Plan.validate_metered_features(metered_features)
+        return self.cleaned_data
+
+
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'generate_after', 'enabled', 'private']
-    search_fields = ['name']
+                    'trial_period_days', 'due_days', 'generate_after',
+                    'enabled', 'private']
+    search_fields = ['due_days', 'name']
+    form = PlanForm
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):

@@ -100,42 +100,43 @@ class MeteredFeatureList(HPListCreateAPIView):
 
 
 class MeteredFeatureDetail(generics.RetrieveAPIView):
-    def get_object(self):
-        pk = self.kwargs.get('pk', None)
-        return get_object_or_404(MeteredFeature, pk=pk)
-
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
 
+    def get_object(self):
+        pk = self.kwargs.get('pk', None)
+        return get_object_or_404(MeteredFeature, pk=pk)
+
 
 class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
-    customer = CharFilter(name='customer__name', lookup_type='icontains')
-    company = CharFilter(name='customer__company', lookup_type='icontains')
-    state = CharFilter(name='state', lookup_type='icontains')
 
     class Meta:
         model = Subscription
-        fields = ['plan', 'customer', 'company', 'state']
+        fields = ['plan', 'reference', 'state']
 
 
 class SubscriptionList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
-    queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
+    def get_queryset(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        return Subscription.objects.filter(customer__id=customer_pk)
+
 
 class SubscriptionDetail(generics.RetrieveAPIView):
-    def get_object(self):
-        pk = self.kwargs.get('pk', None)
-        return get_object_or_404(Subscription, pk=pk)
-
     permission_classes = (permissions.IsAuthenticated,)
-    model = Subscription
     serializer_class = SubscriptionDetailSerializer
+
+    def get_object(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        subscription_pk = self.kwargs.get('subscription_pk', None)
+        return get_object_or_404(Subscription, customer__id=customer_pk,
+                                 pk=subscription_pk)
 
 
 class SubscriptionDetailActivate(APIView):
@@ -143,7 +144,7 @@ class SubscriptionDetailActivate(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         if sub.state != 'inactive':
             message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message},
@@ -166,7 +167,7 @@ class SubscriptionDetailCancel(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         when = request.data.get('when', None)
         if sub.state != 'active':
             message = 'Cannot cancel subscription from %s state.' % sub.state
@@ -194,7 +195,7 @@ class SubscriptionDetailReactivate(APIView):
 
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('sub', None))
+                                pk=self.kwargs.get('subscription_pk', None))
         if sub.state != 'canceled':
             msg = 'Cannot reactivate subscription from %s state.' % sub.state
             return Response({"error": msg},
@@ -206,100 +207,109 @@ class SubscriptionDetailReactivate(APIView):
                             status=status.HTTP_200_OK)
 
 
-class MeteredFeatureUnitsLogList(APIView):
+class MeteredFeatureUnitsLogDetail(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     paginate_by = None
 
     def get(self, request, format=None, **kwargs):
-        metered_feature_pk = kwargs.get('mf', None)
-        subscription_pk = kwargs.get('sub', None)
+        subscription_pk = kwargs.get('subscription_pk', None)
+        mf_product_code = kwargs.get('mf_product_code', None)
+
+        subscription = Subscription.objects.get(pk=subscription_pk)
+
+        metered_feature = get_object_or_404(
+            subscription.plan.metered_features,
+            product_code__value=mf_product_code
+        )
+
         logs = MeteredFeatureUnitsLog.objects.filter(
-            metered_feature=metered_feature_pk,
+            metered_feature=metered_feature.pk,
             subscription=subscription_pk)
+
         serializer = MeteredFeatureUnitsLogSerializer(
             logs, many=True, context={'request': request}
         )
         return Response(serializer.data)
 
     def patch(self, request, *args, **kwargs):
-        metered_feature_pk = self.kwargs['mf']
-        subscription_pk = self.kwargs['sub']
+        mf_product_code = self.kwargs.get('mf_product_code', None)
+        subscription_pk = self.kwargs.get('subscription_pk', None)
         date = request.data.get('date', None)
         consumed_units = Decimal(request.data.get('count', 0))
         update_type = request.data.get('update_type', None)
-        if subscription_pk and metered_feature_pk:
-            subscription = get_object_or_None(Subscription, pk=subscription_pk)
-            metered_feature = get_object_or_None(MeteredFeature,
-                                                 pk=metered_feature_pk)
+        subscription = get_object_or_None(Subscription, pk=subscription_pk)
+        metered_feature = get_object_or_404(
+            subscription.plan.metered_features,
+            product_code__value=mf_product_code
+        )
+        if subscription and metered_feature:
+            if subscription.state != 'active':
+                return Response({"detail": "Subscription is not active"},
+                                status=status.HTTP_403_FORBIDDEN)
+            if date and consumed_units is not None and update_type:
+                try:
+                    date = datetime.datetime.strptime(date,
+                                                      '%Y-%m-%d').date()
+                    csd = subscription.current_start_date
+                    ced = subscription.current_end_date
 
-            if subscription and metered_feature:
-                if subscription.state != 'active':
-                    return Response({"detail": "Subscription is not active"},
-                                    status=status.HTTP_403_FORBIDDEN)
-                if date and consumed_units and update_type:
-                    try:
-                        date = datetime.datetime.strptime(date,
-                                                          '%Y-%m-%d').date()
-                        csd = subscription.current_start_date
-                        ced = subscription.current_end_date
+                    if date <= csd:
+                        csdt = datetime.datetime.combine(csd, datetime.time())
+                        allowed_time = datetime.timedelta(
+                            seconds=subscription.plan.generate_after)
+                        if datetime.datetime.now() < csdt + allowed_time:
+                            ced = csd - datetime.timedelta(days=1)
+                            csd = last_date_that_fits(
+                                initial_date=subscription.start_date,
+                                end_date=ced,
+                                interval_type=subscription.plan.interval,
+                                interval_count=subscription.plan.interval_count
+                            )
 
-                        if date <= csd:
-                            csdt = datetime.datetime.combine(csd, datetime.time())
-                            allowed_time = datetime.timedelta(
-                                seconds=subscription.plan.generate_after)
-                            if datetime.datetime.now() < csdt + allowed_time:
-                                ced = csd - datetime.timedelta(days=1)
-                                csd = last_date_that_fits(
-                                    initial_date=subscription.start_date,
-                                    end_date=ced,
-                                    interval_type=subscription.plan.interval,
-                                    interval_count=subscription.plan.interval_count
-                                )
-
-                        if csd <= date <= ced:
-                            if metered_feature not in \
-                                    subscription.plan.metered_features.all():
-                                err = "The metered feature does not belong to "\
-                                      "the subscription's plan."
-                                return Response(
-                                    {"detail": err},
-                                    status=status.HTTP_400_BAD_REQUEST
-                                )
-                            try:
-                                log = MeteredFeatureUnitsLog.objects.get(
-                                    start_date=csd,
-                                    end_date=ced,
-                                    metered_feature=metered_feature_pk,
-                                    subscription=subscription_pk
-                                )
-                                if update_type == 'absolute':
-                                    log.consumed_units = consumed_units
-                                elif update_type == 'relative':
-                                    log.consumed_units += consumed_units
-                                log.save()
-                            except MeteredFeatureUnitsLog.DoesNotExist:
-                                log = MeteredFeatureUnitsLog.objects.create(
-                                    metered_feature=metered_feature,
-                                    subscription=subscription,
-                                    start_date=subscription.current_start_date,
-                                    end_date=subscription.current_end_date,
-                                    consumed_units=consumed_units
-                                )
-                            finally:
-                                return Response({"count": log.consumed_units},
-                                                status=status.HTTP_200_OK)
-                        else:
-                            return Response({"detail": "Date is out of bounds"},
-                                            status=status.HTTP_400_BAD_REQUEST)
-                    except TypeError:
-                        return Response({"detail": "Invalid date format"},
+                    if csd <= date <= ced:
+                        if metered_feature not in \
+                                subscription.plan.metered_features.all():
+                            err = "The metered feature does not belong to "\
+                                  "the subscription's plan."
+                            return Response(
+                                {"detail": err},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                        try:
+                            log = MeteredFeatureUnitsLog.objects.get(
+                                start_date=csd,
+                                end_date=ced,
+                                metered_feature=metered_feature.pk,
+                                subscription=subscription_pk
+                            )
+                            if update_type == 'absolute':
+                                log.consumed_units = consumed_units
+                            elif update_type == 'relative':
+                                log.consumed_units += consumed_units
+                            log.save()
+                        except MeteredFeatureUnitsLog.DoesNotExist:
+                            log = MeteredFeatureUnitsLog.objects.create(
+                                metered_feature=metered_feature,
+                                subscription=subscription,
+                                start_date=subscription.current_start_date,
+                                end_date=subscription.current_end_date,
+                                consumed_units=consumed_units
+                            )
+                        finally:
+                            return Response({"count": log.consumed_units},
+                                            status=status.HTTP_200_OK)
+                    else:
+                        return Response({"detail": "Date is out of bounds"},
                                         status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return Response({"detail": "Not enough information provided"},
+                except TypeError:
+                    return Response({"detail": "Invalid date format"},
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"detail": "Not found"},
-                                status=status.HTTP_404_NOT_FOUND)
+                return Response({"detail": "Not enough information provided"},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "Not found"},
+                            status=status.HTTP_404_NOT_FOUND)
         return Response({"detail": "Wrong address"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -489,6 +499,7 @@ class DocEntryUpdateDestroy(APIView):
 
     def get_model_name(self):
         raise NotImplementedError
+
 
 class InvoiceEntryUpdateDestroy(DocEntryUpdateDestroy):
     permission_classes = (permissions.IsAuthenticated,)

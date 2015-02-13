@@ -1,5 +1,4 @@
-from string import rfind
-
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -8,9 +7,19 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma)
 
 
+class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        subscription_pk = request.parser_context['kwargs']['subscription_pk']
+        kwargs = {
+            'customer_pk': customer_pk,
+            'subscription_pk': subscription_pk,
+            'mf_product_code': obj.product_code.value
+        }
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class MeteredFeatureSerializer(serializers.ModelSerializer):
-    url = serializers.HyperlinkedIdentityField(
-        view_name='metered-feature-detail')
     product_code = serializers.SlugRelatedField(
         slug_field='value',
         queryset=ProductCode.objects.all()
@@ -18,22 +27,8 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'unit', 'price_per_unit', 'included_units', 'url',
+        fields = ('name', 'unit', 'price_per_unit', 'included_units',
                   'product_code')
-
-
-class MeteredFeatureLogRelatedField(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        request = self.context['request']
-        path = request._request.path
-        left = '/subscriptions/'.__len__()
-        right = rfind(path, '/', left)
-        sub_pk = path[left:right]
-        kwargs = {
-            'sub': sub_pk,
-            'mf': obj.pk
-        }
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
 class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
@@ -46,33 +41,28 @@ class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
         return MeteredFeatureSerializer(obj, context={'request': request}).data
 
 
-class MeteredFeatureInSubscriptionSerializer(serializers.ModelSerializer):
-    units_log_url = MeteredFeatureLogRelatedField(
-        view_name='mf-log-list', source='*', read_only=True
+class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
+    url = MFUnitsLogUrl(view_name='mf-log-units', source='*', read_only=True)
+
+    product_code = serializers.SlugRelatedField(
+        slug_field='value',
+        queryset=ProductCode.objects.all()
     )
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', 'price_per_unit', 'included_units', 'units_log_url')
+        fields = ('name', 'unit', 'price_per_unit', 'included_units',
+                  'product_code', 'url')
 
 
-class MeteredFeatureUnitsLogSerializer(serializers.ModelSerializer):
-    metered_feature = serializers.HyperlinkedRelatedField(
-        view_name='metered-feature-detail',
-        read_only=True,
-    )
-    subscription = serializers.HyperlinkedRelatedField(
-        view_name='subscription-detail',
-        read_only=True
-    )
+class MeteredFeatureUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
     # The 2 lines below are needed because of a DRF3 bug
     start_date = serializers.DateField(read_only=True)
     end_date = serializers.DateField(read_only=True)
 
     class Meta:
         model = MeteredFeatureUnitsLog
-        fields = ('metered_feature', 'subscription', 'consumed_units',
-                  'start_date', 'end_date')
+        fields = ('consumed_units', 'start_date', 'end_date')
 
 
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
@@ -91,7 +81,7 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                not data.get('proforma_series', None):
                 errors = {'proforma_series': "This field is required as the "
                                              "chosen flow is proforma.",
-                          'proforma_starting_number': "This field is required "\
+                          'proforma_starting_number': "This field is required "
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise serializers.ValidationError(errors)
@@ -108,23 +98,29 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
+class ProductCodeRelatedField(serializers.SlugRelatedField):
+    def __init__(self, **kwargs):
+        super(ProductCodeRelatedField, self).__init__(
+            slug_field='value', queryset=ProductCode.objects.all(), **kwargs)
 
-class PlanSerializer(serializers.ModelSerializer):
+    def to_internal_value(self, data):
+        try:
+            return ProductCode.objects.get(**{self.slug_field: data})
+        except ObjectDoesNotExist:
+            return ProductCode(**{self.slug_field: data})
+        except (TypeError, ValueError):
+            self.fail('invalid')
+
+
+class PlanSerializer(serializers.HyperlinkedModelSerializer):
     metered_features = MeteredFeatureSerializer(
         required=False, many=True
-    )
-
-    url = serializers.HyperlinkedIdentityField(
-        source='*', view_name='plan-detail'
     )
     provider = serializers.HyperlinkedRelatedField(
         queryset=Provider.objects.all(),
         view_name='provider-detail',
     )
-    product_code = serializers.SlugRelatedField(
-        slug_field='value',
-        queryset=ProductCode.objects.all()
-    )
+    product_code = ProductCodeRelatedField()
 
     class Meta:
         model = Plan
@@ -132,14 +128,34 @@ class PlanSerializer(serializers.ModelSerializer):
                   'currency', 'trial_period_days', 'generate_after', 'enabled',
                   'private', 'product_code', 'metered_features', 'provider')
 
+    def validate_metered_features(self, value):
+        metered_features = []
+        for mf_data in value:
+            metered_features.append(MeteredFeature(**mf_data))
+
+        try:
+            Plan.validate_metered_features(metered_features)
+        except ValidationError, e:
+            raise serializers.ValidationError(str(e)[3:-2])
+
+        return value
+
     def create(self, validated_data):
         metered_features_data = validated_data.pop('metered_features')
         metered_features = []
         for mf_data in metered_features_data:
             metered_features.append(MeteredFeature.objects.create(**mf_data))
 
+        product_code = validated_data.pop('product_code')
+        product_code = ProductCode.objects.get_or_create(value=product_code)[0]
+
+        validated_data.update({'product_code': product_code})
+
         plan = Plan.objects.create(**validated_data)
         plan.metered_features.add(*metered_features)
+        plan.product_code = product_code
+
+        plan.save()
 
         return plan
 
@@ -151,32 +167,29 @@ class PlanSerializer(serializers.ModelSerializer):
         return instance
 
 
+class SubscriptionUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'customer_pk': obj.customer.pk, 'subscription_pk': obj.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
-    plan = serializers.HyperlinkedRelatedField(
-        queryset=Plan.objects.all(),
-        view_name='plan-detail',
-    )
-    customer = serializers.HyperlinkedRelatedField(
-        view_name='customer-detail',
-        queryset=Customer.objects.all()
-    )
-    #url = serializers.HyperlinkedIdentityField(
-        #source='pk', view_name='subscription-detail'
-    #)
+    url = SubscriptionUrl(view_name='subscription-detail', source='*',
+                          queryset=Subscription.objects.all(), required=False)
+
+    class Meta:
+        model = Subscription
+        fields = ('url', 'plan', 'customer', 'trial_end', 'start_date',
+                  'ended_at', 'state', 'reference')
+        read_only_fields = ('state', )
 
     def validate(self, attrs):
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
-
-    class Meta:
-        model = Subscription
-        fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference')
-        read_only_fields = ('state', )
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
@@ -184,25 +197,20 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
         source='plan.metered_features', many=True, read_only=True
     )
 
-    def validate(self, attrs):
-        instance = Subscription(**attrs)
-        instance.clean()
-        return attrs
-
-    class Meta:
-        model = Subscription
-        fields = ('plan', 'customer', 'url', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'metered_features', 'reference')
-        read_only_fields = ('state', )
+    class Meta(SubscriptionSerializer.Meta):
+        fields = SubscriptionSerializer.Meta.fields + ('metered_features',)
 
 
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
+    subscriptions = SubscriptionUrl(view_name='subscription-detail', many=True,
+                                    read_only=True)
+
     class Meta:
         model = Customer
-        fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
+        fields = ('url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_number', 'sales_tax_name',
-                  'sales_tax_percent')
+                  'sales_tax_percent', 'subscriptions')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
@@ -333,4 +341,3 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)
         return data
-

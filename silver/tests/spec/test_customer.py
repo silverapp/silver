@@ -29,6 +29,7 @@ class TestCustomerEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '3.00',
             "payment_due_days": 5
+            "consolidated_billing": False
         }
 
 
@@ -141,7 +142,6 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('id')
         response.data.pop('url')
         for field in response.data:
             if field not in unchanged_fields:
@@ -163,7 +163,6 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('id')
         response.data.pop('url')
         for field in response.data:
             if field not in unchanged_fields:
