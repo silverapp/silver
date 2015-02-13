@@ -178,7 +178,6 @@ class Subscription(models.Model):
         blank=True, null=True,
         help_text='The date when the subscription ended.'
     )
-    last_billing_date = models.DateField(blank=True, null=True)
     reference = models.CharField(
         max_length=128, blank=True, null=True,
         help_text="The subscription's reference in an external system."
@@ -295,50 +294,15 @@ class Subscription(models.Model):
 
     @property
     def is_billed_first_time(self):
-        qs_count = BillingLog.objects.filter(subscription=self).count()
+        qs_count = self.billing_log_entries.all().count()
         return False if qs_count else True
 
     @property
     def last_billing_date(self):
-        return BillingLog.objects.filter(subscription=self)[0]
-
-    def _get_proration_percent_and_status(self, date):
-        """
-        Returns proration percent (how much of the interval will be billed) and
-        the status (if the subscription is prorated or not).
-
-        :param date: the date at which the percent and status are computed
-        :returns: a tuple containing (Decimal(percent), status) where status
-            can be one of [True, False]
-        :rtype: tuple
-        """
-
-        # We assume that an invoice/proforma is issued only if
-        # plan.interval * plan.interval_count has passed so if we get to this
-        # point => percent = 100%
-        if not self.is_billed_first_time:
-            return Decimal('100.00'), False
-        else:
-            # Proration
-            now = date
-
-            intervals = {
-                'year': {'years': -self.plan.interval_count},
-                'month': {'months': -self.plan.interval_count},
-                'week': {'weeks': -self.plan.interval_count},
-                'day': {'days': -self.plan.interval_count},
-            }
-            # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-            # NOTE: this will be a negative interval (e.g.: -1 month, -1 week, etc.)
-            interval_len = relativedelta(**intervals[self.plan.interval])
-
-            # Add the negative value of the interval_len. This will actually
-            # be a subtraction which will yield the start of the interval.
-            interval_start = now + interval_len
-            days_in_interval = (now - interval_start).days
-            days_since_subscription_start = (now - self.start_date).days
-            percent = 100.0 * days_since_subscription_start / days_in_interval
-            return Decimal(percent).quantize(Decimal('0.00')), True
+        try:
+            return self.billing_log_entries.all()[:1].get().last_billing_date
+        except BillingLog.DoesNotExist:
+            return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):

@@ -8,37 +8,59 @@ from dateutil.relativedelta import *
 from silver.models import (Customer, MeteredFeatureUnitsLog, Invoice,
                            DocumentEntry, Proforma)
 
+
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
 
-    def _get_plan_price_and_proration_status(self, subscription):
-        now = timezone.now().date()
-        intervals = {
-            'year': {'years': -subscription.plan.interval_count},
-            'month': {'months': -subscription.plan.interval_count},
-            'week': {'weeks': -subscription.plan.interval_count},
-            'day': {'days': -subscription.plan.interval_count},
-        }
-        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-        interval_len = relativedelta(**intervals[subscription.plan.interval])
+    def _get_proration_percent_and_status(self, subscription, now_date):
+        """
+        Returns proration percent (how much of the interval will be billed) and
+        the status (if the subscription is prorated or not).
 
-        if subscription.last_billing_date:
-            # Full interval value
-            return subscription.plan.amount, False
+        :param date: the date at which the percent and status are computed
+        :returns: a tuple containing (Decimal(percent), status) where status
+            can be one of [True, False]
+        :rtype: tuple
+        """
+
+        # We assume that an invoice/proforma is issued only if
+        # plan.interval * plan.interval_count has passed so if we get to this
+        # point => an entire billing interval has passed
+        if not subscription.is_billed_first_time:
+            # An interval has passed and it's not billed for the first time
+            # percent = 100%
+            return Decimal('100.00'), False
         else:
             # Proration
-            days_in_interval = (now - (now + interval_len)).days
-            days_since_subscription_start = (now - subscription.start_date).days
-            percent = 100.0 * days_since_subscription_start / days_in_interval
-            return Decimal(percent) * subscription.plan.amount, True
+            now = now_date
 
-    def _add_plan(self, subscription, invoice=None, proforma=None):
+            intervals = {
+                'year': {'years': -subscription.plan.interval_count},
+                'month': {'months': -subscription.plan.interval_count},
+                'week': {'weeks': -subscription.plan.interval_count},
+                'day': {'days': -subscription.plan.interval_count},
+            }
+
+            # This will be UTC, which implies a max difference of 27 hours ~= 1 day
+            # NOTE: this will be a negative interval (e.g.: -1 month, -1 week, etc.)
+            interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+            # Add the negative value of the interval_len. This will actually
+            # be a subtraction which will yield the start of the interval.
+            interval_start = now + interval_len
+            days_in_interval = (now - interval_start).days
+            days_since_subscription_start = (now - self.start_date).days
+            percent = 100.0 * days_since_subscription_start / days_in_interval
+            return Decimal(percent).quantize(Decimal('0.00')), True
+
+    def _add_plan(self, subscription, now_date, invoice=None,
+                  proforma=None):
         interval = '%sly' % subscription.plan.interval
 
         if not subscription.last_billing_date:
             # First time bill
             start_date = subscription.start_date
-            end_date = timezone.now().date()
+            end_date = now_date
         else:
             intervals = {
                 'year': {'years': +subscription.plan.interval_count},
@@ -58,7 +80,8 @@ class Command(BaseCommand):
                                               end_date=end_date)
 
         if not subscription.is_on_trial:
-            unit_price, prorated = self._get_plan_price_and_proration_status(subscription)
+            unit_price, prorated = self._get_proration_percent_and_status(subscription,
+                                                                          now_date)
         else:
             unit_price, prorated = Decimal('0.00'), False
 
@@ -72,6 +95,7 @@ class Command(BaseCommand):
 
     def _add_metered_features(self, subscription, invoice=None, proforma=None):
         # TODO: treat included units keeping in mind the prorated percent
+        # included_units = percent * total_included_units
         if subscription.last_billing_date:
             start_date = subscription.last_billing_date
         else:
@@ -98,13 +122,14 @@ class Command(BaseCommand):
                     product_code=mf.product_code
                 )
 
-    def _add_plan_entry(self, document, subscription):
+    def _add_plan_entry(self, document, subscription, now_date):
         if subscription.plan.provider_flow == 'proforma':
             plan_entry_args = {'proforma': document}
         else:
             plan_entry_args = {'invoice': document}
 
-        plan_entry_args.update({'subscription': subscription})
+        plan_entry_args.update({'subscription': subscription,
+                                'now_date': now_date})
         self._add_plan(**plan_entry_args)
 
     def _add_mf_entries(self, document, subscription):
@@ -116,12 +141,12 @@ class Command(BaseCommand):
         mf_entry_args.update({'subscription': subscription})
         self._add_metered_features(**mf_entry_args)
 
-    def _create_document(self, provider, customer, subscription):
+    def _create_document(self, provider, customer, subscription, now_date):
         provider_flow = subscription.plan.provider_flow
         DocumentModel = Proforma if provider_flow == 'proforma' else Invoice
 
         delta = timedelta(days=customer.payment_due_days)
-        due_date = timezone.now().date() + delta
+        due_date = now_date + delta
         document = DocumentModel.objects.create(
             provider=subscription.plan.provider, customer=customer,
             due_date=due_date
@@ -141,6 +166,9 @@ class Command(BaseCommand):
         self.stdout.write(msg)
 
     def handle(self, *args, **options):
+        # Use the same exact date for all the generated documents
+        now = timezone.now().date()
+
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
 
@@ -153,8 +181,9 @@ class Command(BaseCommand):
                 # If a subscription is canceld, bill it and then change the
                 # state to ended.
 
-                # Process all the active subscriptions
-                for subscription in customer.subscriptions.filter(state='active'):
+                # Process all the active or canceled subscriptions
+                subs = customer.subscriptions.filter(state__in=['active', 'canceled'])
+                for subscription in subs:
                     if not subscription.should_be_billed:
                         continue
 
@@ -167,15 +196,18 @@ class Command(BaseCommand):
                                                      created=False)
                     else:
                         document = self._create_document(provider, customer,
-                                                         subscription)
+                                                         subscription, now)
                         document_per_provider[provider] = document
                         self._print_status_to_stdout(subscription,
                                                      created=True)
 
                     # Add plan to invoice/proforma
-                    self._add_plan_entry(document, subscription)
+                    self._add_plan_entry(document, subscription, now)
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(document, subscription)
+
+                    if subscription.state == 'canceled':
+                        subscription.end()
 
                 for provider, document in document_per_provider.iteritems():
                     if default_doc_state[provider] == 'issued':
@@ -189,13 +221,16 @@ class Command(BaseCommand):
 
                     provider = subscription.plan.provider
                     document = self._create_document(provider, customer,
-                                                     subscription)
+                                                     subscription, now)
                     self._print_status_to_stdout(subscription, created=True)
 
                     # Add plan to invoice/proforma
-                    self._add_plan_entry(document, subscription)
+                    self._add_plan_entry(document, subscription, now)
                     # Add mf units to proforma/invoice
                     self._add_mf_entries(document, subscription)
+
+                    if subscription.state == 'canceled':
+                        subscription.end()
 
                     if provider.default_document_state == 'issued':
                         document.issue()
