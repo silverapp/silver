@@ -102,14 +102,35 @@ def next_date_after_period(initial_date, interval_type, interval_count):
             return initial_date + datetime.timedelta(days=interval_count)
 
 
-def next_month_after_date(initial_date, day=None):
+def next_date_after_date(initial_date, day=None, depth=None):
+    if depth is None:
+        depth = 0
+    elif depth == 3:
+        return None
     if initial_date:
         year = initial_date.year
-        month = initial_date.month + 1
-        day = day or initial_date.day
-        if month == 12:
-            month = 1
-            year += 1
-        return get_valid_date(year, month, day)
+        print 1
+        if day:
+            if day <= initial_date.day:
+                month = initial_date.month + 1
+                if month == 13:
+                    month = 1
+                    year += 1
+            else:
+                month = initial_date.month
+
+            date = get_valid_date(year=year, month=month, day=day)
+            print date
+        else:
+            date = initial_date + datetime.timedelta(days=1)
+
+        if date:
+            if day:
+                if date.day != day:
+                    print 2
+                    return next_date_after_date(initial_date=date, day=day,
+                                                depth=depth + 1)
+
+            return date
 
     return None

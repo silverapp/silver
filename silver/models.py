@@ -11,9 +11,8 @@ from international.models import countries, currencies
 from livefield.models import LiveModel
 import jsonfield
 
-
-from silver.api.dateutils import last_date_that_fits, next_date_after_period, \
-    next_month_after_date
+from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
+                                  next_date_after_date)
 from silver.utils import get_object_or_None
 
 
@@ -197,7 +196,7 @@ class Subscription(models.Model):
         if self.trial_end > timezone.now().date():
             initial_date = self.start_date
         else:
-            fake_initial_date = next_month_after_date(
+            fake_initial_date = next_date_after_date(
                 initial_date=self.trial_end, day=1
             )
             if timezone.now().date() < fake_initial_date:
@@ -218,11 +217,11 @@ class Subscription(models.Model):
         if self.trial_end > timezone.now().date():
             end_date = self.trial_end
         else:
-            month_after_trial = next_month_after_date(
+            end_date_after_trial = next_date_after_date(
                 initial_date=self.trial_end, day=1
             )
-            if timezone.now().date() < month_after_trial:
-                end_date = month_after_trial
+            if timezone.now().date() < end_date_after_trial:
+                end_date = end_date_after_trial
 
         end_date = end_date or next_date_after_period(
             initial_date=self.current_start_date,
@@ -242,7 +241,7 @@ class Subscription(models.Model):
         if start_date:
             self.start_date = start_date
         elif self.start_date is None:
-            self.start_date = datetime.date.today()
+            self.start_date = timezone.now().date()
 
         if trial_end_date:
             self.trial_end = trial_end_date
@@ -258,7 +257,7 @@ class Subscription(models.Model):
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
-        self.ended_at = datetime.date.today()
+        self.ended_at = timezone.now().date()
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
