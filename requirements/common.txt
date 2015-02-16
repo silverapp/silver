@@ -9,3 +9,6 @@ git+git://github.com/PressLabs/django-rest-hooks.git
 django-jsonfield
 python-dateutil
 pytz
+# python-dev is required for xhtml2pdf to work
+xhtml2pdf
+django-xhtml2pdf

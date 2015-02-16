@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice {{ invoice }}</title>
+    <style type="text/css">
+        @page {
+            size: a4;
+            margin: 7.5cm 2cm 2cm;
+            @frame header {
+                -pdf-frame-content: header;
+                margin: 2cm 2cm 0;
+                height: 5.5cm;
+
+            }
+        }
+
+            /* Normal */
+        @font-face {
+            font-family: hlv;
+            src: url(font/helvetica.ttf);
+        }
+
+            /* Bold */
+        @font-face {
+            font-family: hlv;
+            src: url(font/helvatica-bold.ttf);
+            font-weight: bold;
+        }
+
+            /* Italic */
+        @font-face {
+            font-family: hlv;
+            src: url(font/helvatica-italic.ttf);
+            font-style: italic;
+        }
+
+        hr {
+            color: #86ba49;
+        }
+
+        html {
+            font-family: hlv;
+        }
+
+        body {
+            font-size: 8pt;
+            color: #4d4d4d;
+        }
+
+        strong {
+            font-weight: bold;
+        }
+
+        #header {
+        }
+
+        #header .title {
+            margin-left: 1cm;
+        }
+
+        #footer td {
+            vertical-align: top;
+        }
+
+        #content {
+        }
+
+
+        #info td {
+            font-size: 9pt;
+            vertical-align: top;
+        }
+
+        #info .invoice-details {
+            width: 45%;
+            vertical-align: top;
+        }
+
+        #info .invoice-details strong {
+            display: block;
+            margin-right: 1em;
+        }
+
+        #entries {
+            margin-top: 1cm;
+        }
+
+        #entries th {
+            text-align: left;
+        }
+
+        #entries th.price {
+            text-align: left;
+        }
+
+        #entries tr {
+            padding: 5pt 0 1pt;
+            border-bottom: 1pt solid #ddd;
+        }
+
+        #entries tbody td {
+            vertical-align: top;
+        }
+
+        #entries tbody td {
+            padding-right: 3pt;
+        }
+
+
+        #entries tfoot {
+            font-weight: bold;
+        }
+
+        #entries tfoot tr {
+            border-bottom: none;
+        }
+
+        #entries tfoot td {
+            vertical-align: top;
+        }
+
+        #entries tfoot .total {
+            padding-left: 5pt;
+            padding-right: 5pt;
+            text-align: right;
+        }
+
+    </style>
+</head>
+<body>
+<div id="header">
+    <table>
+        <tr>
+            <td class="title" width="11cm">
+                <h1>Invoice/Factura {{ invoice }}</h1>
+                <table>
+                    <tr>
+                        <td width="48mm"><strong>Issue date / Ziua emiterii</strong></td>
+                        <td>{{ invoice.issue_date|date:"d M. Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td width="48mm"><strong>Due date / Termen de plata</strong></td>
+                        <td>{{ invoice.due_date|date:"d M. Y" }}</td>
+                    </tr>
+                    {% if invoice.sales_tax_percent%}
+                        <tr>
+                            <td width="48mm" style="vertical-align: top;">
+                                <strong> {% if invoice.sales_tax_name %} invoice.sales_tax_name / {% endif %}
+                                    TVA</strong>
+                            </td>
+                            <td>
+                                {% if invoice.sales_tax_percent == 0 %}
+                                    exempt & recoverable<br>
+                                    <i>(scutit cu drept de deducere)</i>
+                                {% else %}
+                                    {{ invoice.sales_tax_percent }}%
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </table>
+            </td>
+        </tr>
+    </table>
+    <hr color="#86ba49" size="0.5mm">
+    <table>
+        <tr>
+            <td>
+                <strong>Address:</strong> str. 1 Decembrie, nr. 94, ap. 1,<br>
+                300566 Timisoara, jud. Timis, Romania <br>
+                <strong>www.presslabs.com</strong>
+            </td>
+            <td>
+                <strong>Branch Office Timisoara</strong><br>
+                Str. Vasile Alecsandri, nr. 3, ap. 12<br>
+                300078, Timisoara, jud. Timis, Romania <br>
+            </td>
+        </tr>
+    </table>
+    <hr color="#86ba49" size="0.5mm">
+</div>
+
+<div id="content">
+    <table id="parties">
+        <tr>
+            <td width="8cm" align="top">
+                <h1> {{ provider.company }}</h1>
+                <strong>VAT Number:</strong> RO28378350 <br>
+                <strong>Tax Number:</strong> J35/976/2012 <br>
+                <strong>Bank:</strong> Banca Transilvania <br>
+                <strong>SWIFT:</strong> BTRLRO22 <br>
+                <strong>IBAN (RON):</strong> RO58BTRL00201202390187XX <br>
+                <strong>IBAN (USD):</strong> RO41BTRL00202202390187XX <br>
+                <strong>Company capital:</strong> 1000.00 RON<br>
+            </td>
+            <td align="top">
+                <h1>{% if customer.name %}
+                        {{ customer.name }}
+                    {% else %}
+                        {{ customer.company }}
+                    {% endif %}
+                </h1>
+
+                <strong>Address</strong>: {{ customer.address_1 }}<br>
+
+                {% if customer.address_2 %}
+                    {{ customer.address_2 }}<br>
+                {% endif %}
+
+                {{ customer.city }}<br>
+                {% if customer.state %}
+                    {{ customer.state }}<br>
+                {% endif %}
+
+                {% if customer.zip_code %}
+                    {{ customer.zip_code }}<br>
+                {% endif %}
+
+                {% if customer.email %}
+                    <strong>Email</strong>: {{ customer.email }}<br>
+                {% endif %}
+
+                {% if not customer.name %}
+                    <strong>Company</strong>: {{ customer.company }}<br>
+                {% endif %}
+
+                {% if customer.extra %}
+                    <strong>Extra:</strong> {{ extra.extra }}<br>
+                {% endif %}
+                {% if customer.customer_reference%}
+                    <strong>{% if provider.name %} {{ provider.name }} {% endif %} ID</strong>:
+                    #{{ customer.customer_reference|stringformat:"0#6d" }}
+                    {% if customer.name %}
+                        ({{ customer.name }})
+                    {% endif %}
+                    <br>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    <table id="entries">
+        <thead>
+            <tr>
+                <th width="3%">
+                    <i>#</i><br>
+                </th>
+                <th width="3%">
+                    ID<br>
+                </th>
+                <th width="25%" class="description">
+                    Service<br>
+                    <i>(Denumire serviciu)</i>
+                </th>
+                <th width="14%">
+                    Unit<br>
+                    <i>(U.M.)</i>
+                </th>
+                <th width="6%">
+                    Qty.<br>
+                    <i>(Cant.)</i>
+                </th>
+                <th class="price" width="12%">
+                    Unit price<br>
+                    (excl {{ customer.sales_tax_name }})<br>
+                    - {{ invoice.currency }} -<br>
+                    <i>- (RON) -</i>
+                </th>
+                <th class="price" width="12%">
+                    Value<br>
+                    (excl {{ customer.sales_tax_name }})<br>
+                    - {{ invoice.currency }} -<br>
+                    <i>- (RON) -</i>
+                </th>
+                <th class="price" width="5%">
+                    {{ customer.sales_tax_name }} %
+                </th>
+                <th class="price" width="12%">
+                    {{ customer.sales_tax_name }} Amount<br>
+                    - {{ invoice.currency }} -<br>
+                    <i>- (RON) -</i>
+                </th>
+                <th class="price" width="12%">
+                    Total Amount<br>
+                    - {{ invoice.currency }} -<br>
+                    <i>- (RON) -</i>
+                </th>
+
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+                <tr>
+                    <td class="index">
+                        {{ forloop.counter }}
+                    </td>
+                    <td class="id">
+                        {{ entry.entry_id }}
+                    </td>
+                    <td class="description">
+                        {% autoescape off %}
+                        {{ entry.description }}<br>
+                        <i>({{ entry.description_ro }})</i>
+                        {% endautoescape %}
+                    </td>
+                    <td class="unit">
+                        {{ entry.unit }}<br>
+                        <i>({{ entry.unit_ro }})</i>
+                    </td>
+                    <td class="count">
+                        {{ entry.quantity|floatformat:-2 }}
+                    </td>
+                    <td class="unit_price">
+                        {{ entry.unit_price|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ entry.unit_price_ron|floatformat:2 }} RON)</i>
+                    </td>
+                    <td class="price">
+                        {{ entry.price_without_vat|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ entry.price_without_vat_ron|floatformat:2 }} RON)</i>
+                    </td>
+                    <td class="vat">
+                        {{ customer.sales_tax_percent }}
+                    </td>
+                    <td class="vat_amount">
+                        {% if invoice.sales_tax_percent == 0 %}
+                            exempt & recoverable<br>
+                            <i>(scutit cu drept de deducere)</i>
+                        {% else %}
+                            {{ entry.vat_value|floatformat:2 }} {{ invoice.currency }}<br>
+                            <i>({{ entry.vat_value_ron|floatformat:2 }} RON)</i>
+                        {% endif %}
+                    </td>
+                    <td class="price">
+                        {{ entry.price|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ entry.price_ron|floatformat:2 }} RON)</i>
+                    </td>
+
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                {% if invoice.sales_tax_percent == 0 %}
+                    <td colspan="8" class="total">Total</td>
+                    <td class="total_amount">
+                        {{ invoice.total|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ invoice.total_ron|floatformat:2 }}RON)</i>
+                    </td>
+                {% else %}
+                    <td colspan="5" class="total">Total</td>
+                    <td class="total_amount" colspan="2">
+                        {{ invoice.total_without_vat|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ invoice.total_without_vat_ron|floatformat:2 }}RON)</i>
+                    </td>
+                    <td class="total_amount">
+                        {{ invoice.vat_total|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ invoice.vat_total_ron|floatformat:2 }}RON)</i>
+                    </td>
+                    <td class="total_amount">
+                        {{ invoice.total|floatformat:2 }} {{ invoice.currency }}<br>
+                        <i>({{ invoice.total_ron|floatformat:2 }}RON)</i>
+                    </td>
+                {% endif %}
+            </tr>
+        </tfoot>
+    </table>
+    <p>Prices in RON are calculated using the Romanian National Bank's exchange rates <br>
+    (Preturile in RON sunt calculate folosind cursul de referinta BNR) <br>
+    1 {{ invoice.currency }} = {{ invoice.xe_rate }} RON <br>
+    <br>
+    Issued by (Emisa de): Daniel Petre Dobrescu, CNP: 1800326385571, CI RR 951258
+    </p>
+</div>
+</body>
+</html>

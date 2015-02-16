@@ -2,6 +2,8 @@
 These settings are used by the ``manage.py`` command.
 
 """
+import os
+
 DEBUG = True
 
 SITE_ID = 1
@@ -33,6 +35,7 @@ EXTERNAL_APPS = [
     'rest_framework',
     'django_filters',
     'rest_hooks',
+    'django_xhtml2pdf',
 
     # Dev tools
     'django_extensions',
@@ -46,6 +49,8 @@ INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 
 ROOT_URLCONF = 'silver.urls'
 STATIC_URL = '/static/'
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+TEMPLATE_DIRS = (PROJECT_ROOT + '/silver/templates/',)
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
