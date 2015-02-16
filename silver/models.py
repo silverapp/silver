@@ -19,6 +19,9 @@ from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil.rrule import *
 
+from storages.backends.s3boto import S3BotoStorage
+
+
 from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
                                   next_date_after_date)
 from silver.utils import get_object_or_None
@@ -28,6 +31,10 @@ UPDATE_TYPES = (
     ('absolute', 'Absolute'),
     ('relative', 'Relative')
 )
+
+S3Storage = S3BotoStorage(bucket=settings.INVOICES_S3_BUCKET,
+                          access_key=settings.AWS_KEY,
+                          secret_key=settings.AWS_SECRET)
 
 
 class Plan(models.Model):
@@ -571,6 +578,10 @@ class ProductCode(models.Model):
         return self.value
 
 
+def invoice_pdf_path(document, filename):
+    return filename
+
+
 class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
@@ -592,7 +603,7 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.'
     )
     pdf = models.FileField(null=True, blank=True, editable=False,
-                           upload_to='pdfs/')
+                           storage=S3Storage)
     state = FSMField(
         choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name='Invoice state', help_text='The state the invoice is in.'
@@ -745,7 +756,7 @@ class BillingDocument(models.Model):
             filename = 'Invoice_%s-%d.pdf' % (self.series, self.number)
             self.pdf.save(filename, pdf_content, False)
         else:
-            raise RuntimeError(_('Could not generate invoice pdf'))
+            raise RuntimeError(_('Could not generate invoice pdf.'))
 
 
 class Invoice(BillingDocument):
