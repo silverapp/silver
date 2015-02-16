@@ -12,6 +12,7 @@ class MeteredFeaturesFilter(FilterSet):
 
 class SubscriptionFilter(FilterSet):
     plan = CharFilter(name='plan__name', lookup_type='icontains')
+    reference = CharFilter(name='reference', lookup_type='icontains')
 
     class Meta:
         model = Subscription
@@ -25,11 +26,15 @@ class CustomerFilter(FilterSet):
     name = CharFilter(name='name', lookup_type='icontains')
     country = CharFilter(name='country', lookup_type='icontains')
     sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+    sales_tax_number = CharFilter(name='sales_tax_number',
+                                  lookup_type='icontains')
+    consolidated_billing = CharFilter(name='consolidated_billing',
+                                      lookup_type='icontains')
 
     class Meta:
         model = Customer
         fields = ['email', 'name', 'company', 'active', 'country',
-                  'sales_tax_name']
+                  'sales_tax_name', 'consolidated_billing', 'sales_tax_number']
 
 
 class ProviderFilter(FilterSet):
@@ -53,4 +58,4 @@ class PlanFilter(FilterSet):
     class Meta:
         model = Plan
         fields = ['name', 'currency', 'enabled', 'private', 'product_code',
-                  'currency', 'provider', 'interval']
+                  'provider', 'interval']
