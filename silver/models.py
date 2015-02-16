@@ -303,9 +303,9 @@ class Subscription(models.Model):
         if self.state == 'canceled':
             return True
 
-        if not self.is_billed_first_time:
-            return self._should_reissue(self.last_billing_date)
-        return self._should_issue_first_time()
+        if self.is_billed_first_time:
+            return self._should_issue_first_time()
+        return self._should_reissue(self.last_billing_date)
 
     @property
     def is_billed_first_time(self):
@@ -317,6 +317,7 @@ class Subscription(models.Model):
         try:
             return self.billing_log_entries.all()[:1].get().last_billing_date
         except BillingLog.DoesNotExist:
+            # It should never get here.
             return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')

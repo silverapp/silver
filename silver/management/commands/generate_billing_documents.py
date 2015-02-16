@@ -19,7 +19,8 @@ class Command(BaseCommand):
             type="int"),
     )
 
-    def _get_proration_percent_and_status(self, subscription, now_date):
+    def _get_proration_percent_and_status(self, subscription, start_date,
+                                          end_date):
         """
         Returns proration percent (how much of the interval will be billed) and
         the status (if the subscription is prorated or not).
@@ -31,42 +32,83 @@ class Command(BaseCommand):
         :rtype: tuple
         """
 
-        if not subscription.is_billed_first_time and subscription.state != 'canceled':
-            # An interval has passed and has been billed before
-            # => percent = 100%
-            return Decimal('1.00'), False
+        intervals = {
+            'year': {'years': -subscription.plan.interval_count},
+            'month': {'months': -subscription.plan.interval_count},
+            'week': {'weeks': -subscription.plan.interval_count},
+            'day': {'days': -subscription.plan.interval_count},
+        }
+
+        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
+        # NOTE (IMPORTANT): this will be a negative interval (e.g.: -1 month,
+        # -1 week, etc.)
+        interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+        if end_date + interval_len >= start_date:
+            # Not prorated
+            return False, Decimal('1.00')
         else:
-            # Proration.
-            now = now_date
-
-            intervals = {
-                'year': {'years': -subscription.plan.interval_count},
-                'month': {'months': -subscription.plan.interval_count},
-                'week': {'weeks': -subscription.plan.interval_count},
-                'day': {'days': -subscription.plan.interval_count},
-            }
-
-            # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-            # NOTE: this will be a negative interval (e.g.: -1 month, -1 week, etc.)
-            interval_len = relativedelta(**intervals[subscription.plan.interval])
-
-            # Add the negative value of the interval_len. This will actually
-            # be a subtraction which will yield the start of the interval.
-            interval_start = now + interval_len
-            days_in_interval = (now - interval_start).days
-            days_since_subscription_start = (now - subscription.start_date).days
+            # Proration
+            interval_start = end_date + interval_len
+            days_in_interval = (end_date - interval_start).days
+            days_since_subscription_start = (end_date - start_date).days
             percent = 100.0 * days_since_subscription_start / days_in_interval
             percent = Decimal(percent).quantize(Decimal('0.00')) / Decimal('100.0')
-            return percent, True
+
+            return True, percent
+
+    def _add_plan_trial(self, subscription, end_date, invoice=None,
+                        proforma=None):
+        unit = '%ss' % subscription.plan.interval
+        interval = '%sly' % subscription.plan.interval
+
+        start_date = subscription.start_date
+        plan_price = Decimal('0.00')
+
+        description = "{plan_name} plan trial subscription ({start_date} -"\
+                      " {end_date})".format(plan_name=subscription.plan.name,
+                                            interval=interval,
+                                            start_date=start_date,
+                                            end_date=end_date)
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+            product_code=subscription.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date
+        )
 
     def _add_plan_entry(self, subscription, now_date, invoice=None,
                   proforma=None):
 
-        if not subscription.last_billing_date:
-            # First time billing
-            start_date = subscription.start_date
-            end_date = now_date
+        unit = '%ss' % subscription.plan.interval
+        interval = '%sly' % subscription.plan.interval
+
+        if subscription.is_billed_first_time:
+            # First time billing and on trial => add only the trial entry
+            if subscription.is_on_trial:
+                # Add the trial
+                self._add_plan_trial(subscription, now_date, invoice, proforma)
+                return
+            else:
+                # First time billing and with ended trial => 2 entries:
+                # 1) The trial one
+                # 2) The remaining period
+
+                # Add the trial
+                self._add_plan_trial(subscription=subscription,
+                                     end_date=subscription.trial_end,
+                                     invoice=invoice, proforma=proforma)
+
+                # Add prorated entry with dates between trial_end and now
+                # E.g.: start_date = 2015-01-01
+                #       trial_end  = 2015-01-10
+                #       now_date   = 2015-01-20
+                # will generate prorated entry between 2015-01-10 -> 2015-01-20
+                start_date = subscription.trial_end
+                end_date = now_date
         else:
+            # Was billed before => we use the last_billing_date to determine
+            # the current end date
             start_date = subscription.last_billing_date
 
             if subscription.state == 'canceled':
@@ -82,22 +124,21 @@ class Command(BaseCommand):
 
                 end_date = subscription.last_billing_date + interval_len
 
-        if subscription.is_on_trial:
-            plan_price, prorated = Decimal('0.00'), False
-        else:
-            percent, prorated = self._get_proration_percent_and_status(subscription,
-                                                                       now_date)
-            plan_price = subscription.plan.amount * percent
+        prorated, percent = self._get_proration_percent_and_status(
+            subscription, start_date, end_date
+        )
 
-        unit = '%ss' % subscription.plan.interval
-        interval = '%sly' % subscription.plan.interval
-        # Enterprise monthly plan subscription (2015-01-01 - 2015-02-02)
+        # Get the prorated value
+        plan_price = subscription.plan.amount * percent
+
+        # E.g.: PlanName monthly plan subscription (2015-01-01 - 2015-02-02)
         description = "{plan_name} {interval} plan subscription ({start_date}"\
                       " - {end_date})".format(plan_name=subscription.plan.name,
                                               interval=interval,
                                               start_date=start_date,
                                               end_date=end_date)
 
+        # Add the document
         DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
             unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
@@ -111,10 +152,24 @@ class Command(BaseCommand):
         return consumed_units - included_units
 
     def _get_included_units(self, subscription, metered_feature, now_date):
-        percent, prorated = self._get_proration_percent_and_status(subscription,
-                                                                   now_date)
+        if subscription.is_on_trial:
+            return metered_feature.included_units
+
+        last_billing_date = subscription.last_billing_date
+        if last_billing_date:
+            # Was billed before
+            start_date = last_billing_date
+        else:
+            # First billing cycle and the subscription is not on trial
+            start_date = subscription.trial_end
+
+        end_date = now_date
+
+        prorated, percent = self._get_proration_percent_and_status(
+            subscription, start_date, end_date)
+
         if not prorated:
-            return mf.included_units
+            return metered_feature.included_units
         return percent * metered_feature.included_units
 
     def _add_mf_entries(self, subscription, now_date, invoice=None,
@@ -241,8 +296,8 @@ class Command(BaseCommand):
                 # one
 
                 # Process all the active or canceled subscriptions
-                subs = customer.subscriptions.filter(state__in=['active', 'canceled'])
-                for subscription in subs:
+                criteria = {'state__in': ['active', 'canceled']}
+                for subscription in customer.subscriptions.filter(**criteria):
                     if not subscription.should_be_billed:
                         continue
 
@@ -275,7 +330,8 @@ class Command(BaseCommand):
                         document.save()
             else:
                 # Generate an invoice for each subscription
-                for subscription in customer.subscriptions.filter(state__in=['active', 'canceled']):
+                criteria = {'state__in': ['active', 'canceled']}
+                for subscription in customer.subscriptions.filter(**criteria):
                     if not subscription.should_be_billed:
                         continue
 
