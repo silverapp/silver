@@ -15,7 +15,8 @@ from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil.rrule import *
 
-from silver.api.dateutils import last_date_that_fits, next_date_after_period
+from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
+                                  next_date_after_date)
 from silver.utils import get_object_or_None
 
 
@@ -145,10 +146,13 @@ class MeteredFeatureUnitsLog(models.Model):
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
         if not self.id:
-            self.start_date = self.subscription.current_start_date
-            self.end_date = self.subscription.current_end_date
+            if not self.start_date:
+                self.start_date = self.subscription.current_start_date
+            if not self.end_date:
+                self.end_date = self.subscription.current_end_date
             super(MeteredFeatureUnitsLog, self).save()
-        else:
+
+        if self.id:
             update_fields = []
             for field in self._meta.fields:
                 if field.name != 'metered_feature' and field.name != 'id':
@@ -210,8 +214,22 @@ class Subscription(models.Model):
 
     @property
     def current_start_date(self):
+        if self.trial_end > timezone.now().date():
+            initial_date = self.start_date
+        else:
+            fake_initial_date = next_date_after_date(
+                initial_date=self.trial_end, day=1
+            )
+            if fake_initial_date:
+                if timezone.now().date() < fake_initial_date:
+                    initial_date = self.trial_end
+                else:
+                    initial_date = fake_initial_date
+            else:
+                initial_date = None
+
         return last_date_that_fits(
-            initial_date=self.start_date,
+            initial_date=initial_date,
             end_date=timezone.now().date(),
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
@@ -219,18 +237,28 @@ class Subscription(models.Model):
 
     @property
     def current_end_date(self):
-        next_start_date = next_date_after_period(
+        end_date = None
+        if self.trial_end > timezone.now().date():
+            end_date = self.trial_end
+        else:
+            end_date_after_trial = next_date_after_date(
+                initial_date=self.trial_end, day=1
+            )
+            if end_date_after_trial:
+                if timezone.now().date() < end_date_after_trial:
+                    end_date = end_date_after_trial
+
+        end_date = end_date or next_date_after_period(
             initial_date=self.current_start_date,
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
         )
-        if next_start_date:
-            ced = next_start_date - datetime.timedelta(days=1)
+        if end_date:
             if self.ended_at:
-                if self.ended_at < ced:
+                if self.ended_at < end_date:
                     return self.ended_at
             else:
-                return ced
+                return end_date
         return None
 
     @property
@@ -325,7 +353,7 @@ class Subscription(models.Model):
         if start_date:
             self.start_date = start_date
         elif self.start_date is None:
-            self.start_date = datetime.date.today()
+            self.start_date = timezone.now().date()
 
         if trial_end_date:
             self.trial_end = trial_end_date
@@ -340,7 +368,7 @@ class Subscription(models.Model):
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
-        self.ended_at = datetime.date.today()
+        self.ended_at = timezone.now().date()
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)

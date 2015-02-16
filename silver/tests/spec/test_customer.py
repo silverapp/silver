@@ -32,7 +32,6 @@ class TestCustomerEndpoints(APITestCase):
             "consolidated_billing": False
         }
 
-
     def test_create_post_customer(self):
         url = reverse('customer-list')
 
@@ -120,7 +119,6 @@ class TestCustomerEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Customer.objects.all().count() == 0
-
 
     def test_delete_unexisting_customer(self):
         url = reverse('customer-detail', kwargs={'pk': 42})

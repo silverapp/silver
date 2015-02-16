@@ -126,7 +126,8 @@ class SubscriptionList(HPListCreateAPIView):
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
-        return Subscription.objects.filter(customer__id=customer_pk)
+        queryset = Subscription.objects.filter(customer__id=customer_pk)
+        return queryset.order_by('start_date')
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
@@ -313,8 +314,6 @@ class MeteredFeatureUnitsLogDetail(APIView):
         else:
             return Response({"detail": "Not found"},
                             status=status.HTTP_404_NOT_FOUND)
-        return Response({"detail": "Wrong address"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerFilter(FilterSet):
