@@ -12,7 +12,7 @@ from silver.api.filters import MeteredFeaturesFilter, SubscriptionFilter, \
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma)
-from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
+from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
@@ -197,7 +197,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
             metered_feature=metered_feature.pk,
             subscription=subscription_pk)
 
-        serializer = MeteredFeatureUnitsLogSerializer(
+        serializer = MFUnitsLogSerializer(
             logs, many=True, context={'request': request}
         )
         return Response(serializer.data)
