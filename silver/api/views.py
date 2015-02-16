@@ -127,7 +127,8 @@ class SubscriptionList(HPListCreateAPIView):
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
-        return Subscription.objects.filter(customer__id=customer_pk)
+        queryset = Subscription.objects.filter(customer__id=customer_pk)
+        return queryset.order_by('start_date')
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
