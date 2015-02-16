@@ -77,6 +77,17 @@ class Plan(models.Model):
         help_text='The provider which provides the plan.'
     )
 
+    @staticmethod
+    def validate_metered_features(metered_features):
+        product_codes = dict()
+        for mf in metered_features:
+            if product_codes.get(mf.product_code.value, None):
+                err_msg = 'A plan cannot have two or more metered features ' \
+                          'with the same product code. (%s, %s)' \
+                          % (mf.name, product_codes.get(mf.product_code.value))
+                raise ValidationError(err_msg)
+            product_codes[mf.product_code.value] = mf.name
+
     def __unicode__(self):
         return self.name
 
@@ -91,8 +102,9 @@ class MeteredFeature(models.Model):
     included_units = models.FloatField(
         help_text='The number of included units per plan interval.'
     )
-    product_code = models.ForeignKey('ProductCode',
-                                    help_text='The product code for this plan.')
+    product_code = models.ForeignKey(
+        'ProductCode', help_text='The product code for this plan.'
+    )
 
     def __unicode__(self):
         return self.name
@@ -157,7 +169,7 @@ class Subscription(models.Model):
         help_text='The plan the customer is subscribed to.'
     )
     customer = models.ForeignKey(
-        'Customer',
+        'Customer', related_name='subscriptions',
         help_text='The customer who is subscribed to the plan.'
     )
     trial_end = models.DateField(
@@ -252,17 +264,17 @@ class Subscription(models.Model):
 
 class AbstractBillingEntity(LiveModel):
     name = models.CharField(
-        max_length=128, blank=True, null=True,
+        max_length=128,
         help_text='The name to be used for billing purposes.'
     )
-    company = models.CharField(max_length=128)
+    company = models.CharField(max_length=128, blank=True, null=True)
     email = models.EmailField(max_length=254, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
-    address_2 = models.CharField(max_length=48, blank=True, null=True)
+    address_2 = models.CharField(max_length=128, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3)
     city = models.CharField(max_length=128)
     state = models.CharField(max_length=128, blank=True, null=True)
-    zip_code = models.CharField(max_length=32)
+    zip_code = models.CharField(max_length=32, blank=True, null=True)
     extra = models.TextField(
         blank=True, null=True,
         help_text='Extra information to display on the invoice '
@@ -295,6 +307,7 @@ class Customer(AbstractBillingEntity):
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
     )
+    sales_tax_number = models.CharField(max_length=64, blank=True, null=True)
     sales_tax_percent = models.DecimalField(
         max_digits=5, decimal_places=2, null=True, blank=True,
         help_text="Whenever to add sales tax. "

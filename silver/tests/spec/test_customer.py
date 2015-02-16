@@ -25,10 +25,11 @@ class TestCustomerEndpoints(APITestCase):
             "zip_code": "1111",
             "country": "US",
             "extra": "What is there more to say?",
+            "sales_tax_number": "RO5555555",
             "sales_tax_name": "VAT",
-            "sales_tax_percent": '3.00'
+            "sales_tax_percent": '3.00',
+            "consolidated_billing": False
         }
-
 
     def test_create_post_customer(self):
         url = reverse('customer-list')
@@ -40,7 +41,7 @@ class TestCustomerEndpoints(APITestCase):
     def test_create_post_customer_without_required_field(self):
         url = reverse('customer-list')
 
-        required_fields = ['address_1', 'city', 'zip_code', 'country']
+        required_fields = ['name', 'address_1', 'city', 'country']
 
         for field in required_fields:
             temp_data = self.complete_data.copy()
@@ -118,7 +119,6 @@ class TestCustomerEndpoints(APITestCase):
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Customer.objects.all().count() == 0
 
-
     def test_delete_unexisting_customer(self):
         url = reverse('customer-detail', kwargs={'pk': 42})
         response = self.client.delete(url)
@@ -129,7 +129,7 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['email', 'address_2', 'name']
+        unchanged_fields = ['email', 'address_2']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -139,7 +139,6 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('id')
         response.data.pop('url')
         for field in response.data:
             if field not in unchanged_fields:
@@ -160,7 +159,6 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('id')
         response.data.pop('url')
         for field in response.data:
             if field not in unchanged_fields:
