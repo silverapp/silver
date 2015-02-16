@@ -576,8 +576,6 @@ class BillingDocument(models.Model):
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
     number = models.IntegerField(blank=True, null=True)
-    pdf = models.FileField(null=True, blank=True, editable=False,
-                           upload_to='pdfs/')
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
     archived_customer = jsonfield.JSONField()
@@ -593,6 +591,8 @@ class BillingDocument(models.Model):
         choices=currencies, max_length=4, default='USD',
         help_text='The currency used for billing.'
     )
+    pdf = models.FileField(null=True, blank=True, editable=False,
+                           upload_to='pdfs/')
     state = FSMField(
         choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name='Invoice state', help_text='The state the invoice is in.'
@@ -628,6 +628,8 @@ class BillingDocument(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self.archived_customer = self.customer.get_archivable_field_values()
+
+        self._generate_pdf()
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -694,12 +696,6 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        if self.state == 'issued' and self.__last_state != 'issued':
-            data = self.generate_billing_pdf()
-            pdf = ContentFile(data)
-            filename = 'Invoice_%s-%d.pdf' % (self.series, self.number)
-            self.pdf.save(filename, pdf, False)
-
         self.__last_state = self.state
         super(BillingDocument, self).save(*args, **kwargs)
 
@@ -726,9 +722,9 @@ class BillingDocument(models.Model):
     def __unicode__(self):
         return '%s-%s-%s' % (self.number, self.customer, self.provider)
 
-    def generate_billing_pdf(self):
-        billing_type = type(self).__name__
-        kwargs = {billing_type.lower(): self}
+    def _generate_pdf(self):
+        document_type_name = self.__class__.__name__  # Invoice or Proforma
+        kwargs = {document_type_name.lower(): self}
 
         entries = DocumentEntry.objects.filter(**kwargs)
         customer = Customer(**self.archived_customer)
@@ -741,13 +737,15 @@ class BillingDocument(models.Model):
             'entries': entries
         }
         resp = HttpResponse(content_type='application/pdf')
-        result = generate_pdf('invoice_pdf.html', context=context,
-                              file_object=resp)
+        data = generate_pdf('invoice_pdf.html', context=context,
+                            file_object=resp)
 
-        if result:
-            return result
-        raise RuntimeError(_('Could not generate invoice pdf'))
-    generate_billing_pdf.alter_data = True
+        if data:
+            pdf_content = ContentFile(data)
+            filename = 'Invoice_%s-%d.pdf' % (self.series, self.number)
+            self.pdf.save(filename, pdf_content, False)
+        else:
+            raise RuntimeError(_('Could not generate invoice pdf'))
 
 
 class Invoice(BillingDocument):
@@ -765,8 +763,9 @@ class Invoice(BillingDocument):
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
-        super(Invoice, self).issue(issue_date, due_date)
         self.archived_provider = self.provider.get_invoice_archivable_field_values()
+
+        super(Invoice, self).issue(issue_date, due_date)
 
     @property
     def series(self):
@@ -797,8 +796,9 @@ class Proforma(BillingDocument):
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
-        super(Proforma, self).issue(issue_date, due_date)
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
+
+        super(Proforma, self).issue(issue_date, due_date)
 
     @transition(field='state', source='issued', target='paid')
     def pay(self, paid_date=None):
