@@ -219,6 +219,18 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def _model(self):
         raise NotImplementedError
 
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        return False
+
+    def get_actions(self, request):
+        actions = super(BillingDocumentAdmin, self).get_actions(request)
+        if not request.user.is_superuser:
+            if 'delete_selected' in actions:
+                del actions['delete_selected']
+        return actions
+
     def perform_action(self, request, queryset, action):
         method = getattr(self._model, action, None)
         if not method:
