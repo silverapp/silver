@@ -11,8 +11,8 @@ from international.models import countries, currencies
 from livefield.models import LiveModel
 import jsonfield
 
-
-from silver.api.dateutils import last_date_that_fits, next_date_after_period
+from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
+                                  next_date_after_date)
 from silver.utils import get_object_or_None
 
 
@@ -208,7 +208,16 @@ class Subscription(models.Model):
         if self.trial_end > timezone.now().date():
             initial_date = self.start_date
         else:
-            initial_date = self.trial_end
+            fake_initial_date = next_date_after_date(
+                initial_date=self.trial_end, day=1
+            )
+            if fake_initial_date:
+                if timezone.now().date() < fake_initial_date:
+                    initial_date = self.trial_end
+                else:
+                    initial_date = fake_initial_date
+            else:
+                initial_date = None
 
         return last_date_that_fits(
             initial_date=initial_date,
@@ -219,20 +228,28 @@ class Subscription(models.Model):
 
     @property
     def current_end_date(self):
+        end_date = None
         if self.trial_end > timezone.now().date():
-            return self.trial_end
+            end_date = self.trial_end
+        else:
+            end_date_after_trial = next_date_after_date(
+                initial_date=self.trial_end, day=1
+            )
+            if end_date_after_trial:
+                if timezone.now().date() < end_date_after_trial:
+                    end_date = end_date_after_trial
 
-        next_start_date = next_date_after_period(
+        end_date = end_date or next_date_after_period(
             initial_date=self.current_start_date,
             interval_type=self.plan.interval,
             interval_count=self.plan.interval_count
         )
-        if next_start_date:
+        if end_date:
             if self.ended_at:
-                if self.ended_at < next_start_date:
+                if self.ended_at < end_date:
                     return self.ended_at
             else:
-                return next_start_date
+                return end_date
         return None
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
@@ -240,7 +257,7 @@ class Subscription(models.Model):
         if start_date:
             self.start_date = start_date
         elif self.start_date is None:
-            self.start_date = datetime.date.today()
+            self.start_date = timezone.now().date()
 
         if trial_end_date:
             self.trial_end = trial_end_date
@@ -256,7 +273,7 @@ class Subscription(models.Model):
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
-        self.ended_at = datetime.date.today()
+        self.ended_at = timezone.now().date()
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
