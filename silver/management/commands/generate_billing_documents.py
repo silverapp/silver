@@ -86,8 +86,10 @@ class Command(BaseCommand):
         if subscription.is_billed_first_time:
             # First time billing and on trial => add only the trial entry
             if subscription.is_on_trial:
-                # Add the trial
-                self._add_plan_trial(subscription, now_date, invoice, proforma)
+                # Add the trial and exit
+                self._add_plan_trial(subscription=subscription,
+                                     end_date=now_date, invoice=invoice,
+                                     proforma=proforma)
                 return
             else:
                 # First time billing and with ended trial => 2 entries:
@@ -104,6 +106,8 @@ class Command(BaseCommand):
                 #       trial_end  = 2015-01-10
                 #       now_date   = 2015-01-20
                 # will generate prorated entry between 2015-01-10 -> 2015-01-20
+                # NOTE: even if the subscription was canceled before now_date
+                # now_date is still considered the end interval chunk.
                 start_date = subscription.trial_end
                 end_date = now_date
         else:
@@ -122,13 +126,13 @@ class Command(BaseCommand):
                 }
                 interval_len = relativedelta(**intervals[subscription.plan.interval])
 
-                end_date = subscription.last_billing_date + interval_len
+                end_date = start_date + interval_len
 
         prorated, percent = self._get_proration_percent_and_status(
             subscription, start_date, end_date
         )
 
-        # Get the prorated value
+        # Get the plan's prorated value
         plan_price = subscription.plan.amount * percent
 
         # E.g.: PlanName monthly plan subscription (2015-01-01 - 2015-02-02)
