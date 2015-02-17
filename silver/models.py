@@ -578,8 +578,12 @@ class ProductCode(models.Model):
         return self.value
 
 
-def invoice_pdf_path(document, filename):
-    return filename
+def documents_pdf_path(document, filename):
+    path = '{date}/{doc_name}/{filename}'.format(
+        date=document.issue_date.strftime('/%Y/%m'),
+        doc_name='%ss' % document.__class__.__name__,
+        filename=filename)
+    return path
 
 
 class BillingDocument(models.Model):
@@ -603,7 +607,7 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.'
     )
     pdf = models.FileField(null=True, blank=True, editable=False,
-                           storage=S3Storage)
+                           storage=S3Storage, upload_to=documents_pdf_path)
     state = FSMField(
         choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name='Invoice state', help_text='The state the invoice is in.'
