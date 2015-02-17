@@ -1,5 +1,7 @@
-from django_filters import FilterSet, CharFilter, BooleanFilter
-from silver.models import MeteredFeature, Subscription, Customer, Provider, Plan
+from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
+                            NumberFilter)
+from silver.models import (MeteredFeature, Subscription, Customer, Provider,
+                           Plan, AbstractInvoicingDocument, Invoice, Proforma)
 
 
 class MeteredFeaturesFilter(FilterSet):
@@ -59,3 +61,44 @@ class PlanFilter(FilterSet):
         model = Plan
         fields = ['name', 'currency', 'enabled', 'private', 'product_code',
                   'provider', 'interval']
+
+
+class BillingDocumentFilter(FilterSet):
+    state = CharFilter(name='state', lookup_type='icontains')
+    number = NumberFilter(name='number', lookup_type='iexact')
+    customer_name = CharFilter(name='customer__name', lookup_type='icontains')
+    customer_company = CharFilter(name='customer__company',
+                                  lookup_type='icontains')
+    provider_name = CharFilter(name='provider__name', lookup_type='icontains')
+    provider_company = CharFilter(name='provider__company',
+                                  lookup_type='icontains')
+    issue_date = DateFilter(name='issue_date', lookup_type='iexact')
+    due_date = DateFilter(name='due_date', lookup_type='iexact')
+    paid_date = DateFilter(name='due_date', lookup_type='iexact')
+    cancel_date = DateFilter(name='cancel_date', lookup_type='iexact')
+    currency = CharFilter(name='currency', lookup_type='icontains')
+    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+
+    class Meta:
+        model = AbstractInvoicingDocument
+        fields = ['state', 'number', 'customer_name', 'customer_company',
+                  'issue_date', 'due_date', 'paid_date', 'cancel_date',
+                  'currency', 'sales_tax_name']
+
+
+class InvoiceFilter(BillingDocumentFilter):
+    series = CharFilter(name='provider__invoice_series',
+                        lookup_type='icontains')
+
+    class Meta(BillingDocumentFilter.Meta):
+        model = Invoice
+        fields = BillingDocumentFilter.Meta.fields + ['series', ]
+
+
+class ProformaFilter(BillingDocumentFilter):
+    series = CharFilter(name='provider__proforma_series',
+                        lookup_type='icontains')
+
+    class Meta(BillingDocumentFilter.Meta):
+        model = Proforma
+        fields = BillingDocumentFilter.Meta.fields + ['series', ]

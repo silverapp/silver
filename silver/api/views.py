@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from silver.api.dateutils import last_date_that_fits
-from silver.api.filters import MeteredFeaturesFilter, SubscriptionFilter, \
-    CustomerFilter, ProviderFilter, PlanFilter
+from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
+                                CustomerFilter, ProviderFilter, PlanFilter,
+                                InvoiceFilter, ProformaFilter)
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma)
@@ -335,6 +336,8 @@ class InvoiceListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = InvoiceFilter
 
 
 class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
@@ -521,6 +524,8 @@ class ProformaListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = ProformaFilter
 
 
 class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
