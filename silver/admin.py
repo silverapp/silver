@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
 from django_fsm import TransitionNotAllowed
+from django.core.urlresolvers import reverse
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
@@ -196,7 +197,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     list_display = ['id', 'number', 'customer_display', 'provider_display',
                     'state', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', 'sales_tax_name', 'sales_tax_percent',
-                    'currency', 'pdf']
+                    'currency']
     list_display_links = list_display
 
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
@@ -257,7 +258,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
 
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
-    list_display = BillingDocumentAdmin.list_display
+    list_display = BillingDocumentAdmin.list_display + ['invoice_pdf']
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
     fields = BillingDocumentAdmin.fields + ('proforma', )
@@ -277,6 +278,11 @@ class InvoiceAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoices'
 
+    def invoice_pdf(self, invoice):
+        url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
+        return '<a href="{url}">{url}</a>'.format(url=url)
+    invoice_pdf.allow_tags = True
+
     @property
     def _model(self):
         return Invoice
@@ -288,7 +294,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
 
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
-    list_display = BillingDocumentAdmin.list_display
+    list_display = BillingDocumentAdmin.list_display + ['proforma_pdf']
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
     fields = BillingDocumentAdmin.fields + ('invoice', )
@@ -307,6 +313,11 @@ class ProformaAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected proformas'
+
+    def proforma_pdf(self, proforma):
+        url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
+        return '<a href="{url}">{url}</a>'.format(url=url)
+    proforma_pdf.allow_tags = True
 
     @property
     def _model(self):

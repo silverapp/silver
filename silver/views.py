@@ -1,8 +1,17 @@
-"""Views for the silver app."""
-# from django.views.generic import TemplateView
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
 
-# from . import models
+from silver.models import Proforma, Invoice
 
 
-# class YourView(TemplateView):
-#    template_name = 'silver/default.html'
+@login_required
+def proforma_pdf(request, proforma_id):
+    proforma = get_object_or_404(Proforma, id=proforma_id)
+    return HttpResponseRedirect(proforma.pdf.url)
+
+
+@login_required
+def invoice_pdf(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    return HttpResponseRedirect(invoice.pdf.url)
