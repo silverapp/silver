@@ -132,7 +132,7 @@
     <table>
         <tr>
             <td class="title" width="11cm">
-                <h1>Invoice/Factura {{ invoice.series }} | {{ invoice.number }}</h1>
+                <h1>Invoice/Factura {{ invoice.series }}-{{ invoice.number }}</h1>
                 <table>
                     <tr>
                         <td width="48mm"><strong>Issue date / Ziua emiterii</strong></td>
@@ -227,15 +227,12 @@
 
                 {% if customer.extra %}
                     <br><br>
-                    <strong>Extra:</strong> {{ extra.extra }}<br>
+                    <strong>Extra:</strong> {{ extra.extra }}
                 {% endif %}
-                {% if customer.customer_reference%}
+                {% if customer.customer_reference %}
                     <br>
                     <strong>{% if provider.name %} {{ provider.name }} {% endif %} ID</strong>:
-                    #{{ customer.customer_reference|stringformat:"0#6d" }}
-                    {% if customer.name %}
-                        ({{ customer.name }})
-                    {% endif %}
+                    #{{ customer.customer_reference }}
                     <br>
                 {% endif %}
             </td>
