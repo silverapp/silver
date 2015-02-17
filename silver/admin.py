@@ -268,15 +268,15 @@ class InvoiceAdmin(BillingDocumentAdmin):
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
-    issue.short_description = 'Issue the selected invoices'
+    issue.short_description = 'Issue the selected invoice(s)'
 
     def pay(self, request, queryset):
         self.perform_action(request, queryset, 'pay')
-    pay.short_description = 'Pay the selected invoices'
+    pay.short_description = 'Pay the selected invoice(s)'
 
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
-    cancel.short_description = 'Cancel the selected invoices'
+    cancel.short_description = 'Cancel the selected invoice(s)'
 
     def invoice_pdf(self, invoice):
         url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
@@ -304,15 +304,15 @@ class ProformaAdmin(BillingDocumentAdmin):
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
-    issue.short_description = 'Issue the selected proformas'
+    issue.short_description = 'Issue the selected proforma(s)'
 
     def pay(self, request, queryset):
         self.perform_action(request, queryset, 'pay')
-    pay.short_description = 'Pay the selected proformas'
+    pay.short_description = 'Pay the selected proforma(s)'
 
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
-    cancel.short_description = 'Cancel the selected proformas'
+    cancel.short_description = 'Cancel the selected proforma(s)'
 
     def proforma_pdf(self, proforma):
         url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
