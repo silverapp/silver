@@ -58,7 +58,7 @@ class Command(BaseCommand):
             return True, percent
 
     def _add_plan_trial(self, subscription, end_date, invoice=None,
-                        proforma=None):
+                        proforma=None, prorated=False):
         unit = '%ss' % subscription.plan.interval
         interval = '%sly' % subscription.plan.interval
 
@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 # Add the trial and exit
                 self._add_plan_trial(subscription=subscription,
                                      end_date=now_date, invoice=invoice,
-                                     proforma=proforma)
+                                     proforma=proforma, prorated=True)
                 return
             else:
                 # First time billing and with ended trial => 2 entries:
