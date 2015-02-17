@@ -3,7 +3,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 
-import jsonfield
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.files.base import ContentFile
 from django.http import HttpResponse
@@ -13,14 +13,14 @@ from django_xhtml2pdf.utils import generate_pdf
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
-from django_fsm import FSMField, transition, TransitionNotAllowed
+from django.db.models.signals import pre_delete
+from django.dispatch.dispatcher import receiver
+import jsonfield
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil.rrule import *
-
 from storages.backends.s3boto import S3BotoStorage
-
 
 from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
                                   next_date_after_date)
@@ -375,6 +375,7 @@ class Subscription(models.Model):
 
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
+        # XXX: shouldn't the trial_end date be set to now()?
         pass
 
     @transition(field=state, source='canceled', target='ended')
@@ -796,6 +797,19 @@ class Invoice(BillingDocument):
         return res.to_eng_string()
 
 
+@receiver(pre_delete, sender=Invoice)
+def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
+    print 'delete_invoice_pdf_from_storage'
+    if instance.pdf:
+        # Delete the invoice's pdf
+        instance.pdf.delete(False)
+
+    # If exists, delete the pdf of the related proforma
+    if instance.proforma:
+        if instance.proforma.pdf:
+            instance.proforma.pdf.delete(False)
+
+
 class Proforma(BillingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_invoice')
@@ -854,6 +868,19 @@ class Proforma(BillingDocument):
         return res.to_eng_string()
 
 
+@receiver(pre_delete, sender=Proforma)
+def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
+    print 'delete_proforma_pdf_from_storage'
+    if instance.pdf:
+        # Delete the proforma's pdf
+        instance.pdf.delete(False)
+
+    # If exists, delete the pdf of the related invoice
+    if instance.invoice:
+        if instance.invoice.pdf:
+            instance.invoice.pdf.delete(False)
+
+
 class DocumentEntry(models.Model):
     entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
@@ -901,4 +928,3 @@ class DocumentEntry(models.Model):
             quantity=self.quantity,
             product_code=self.product_code
         )
-
