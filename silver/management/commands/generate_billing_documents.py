@@ -104,6 +104,7 @@ class Command(BaseCommand):
                 self._add_plan_trial(subscription=subscription,
                                      end_date=now_date, invoice=invoice,
                                      proforma=proforma, prorated=True)
+                # TODO: add the mfs for this interval
                 return
             else:
                 intervals = {
@@ -122,16 +123,20 @@ class Command(BaseCommand):
                     self._add_plan_trial(subscription=subscription,
                                          end_date=subscription.trial_end,
                                          invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
 
                     end_date2 = subscription.start_date + interval_len
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=subscription.trial_end,
                                             end_date=end_date2,
                                             invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
+
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=end_date2,
                                             end_date=now_date,
                                             invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
                 else:
                     # Add prorated entry with dates between trial_end and now
                     # E.g.: start_date = 2015-01-01
@@ -141,13 +146,16 @@ class Command(BaseCommand):
                     # 2015-01-20
                     # NOTE: even if the subscription was canceled before now_date
                     # now_date is still considered the end interval chunk.
+
                     self._add_plan_trial(subscription=subscription,
                                          end_date=subscription.trial_end,
                                          invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=subscription.trial_end,
                                             end_date=now_date,
                                             invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
 
         else:
             # Was billed before => we use the last_billing_date to determine
@@ -173,21 +181,20 @@ class Command(BaseCommand):
                                             start_date=last_billing_date,
                                             end_date=end_date1,
                                             invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
 
                     # The prorated one
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=end_date1,
                                             end_date=now_date,
                                             invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
                 else:
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=last_billing_date,
                                             end_date=now_date,
+                    # TODO: add the mfs for this interval
                                             invoice=invoice, proforma=proforma)
-
-        # TODO: keeping in mind the new proration cases, add the metered features
-        # from here, for each interval separately
-
 
     def _get_consumed_units(self, included_units, consumed_units):
         if included_units - consumed_units >= 0:
