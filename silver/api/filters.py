@@ -64,7 +64,7 @@ class PlanFilter(FilterSet):
 
 
 class BillingDocumentFilter(FilterSet):
-    state = CharFilter(name='state', lookup_type='icontains')
+    state = CharFilter(name='state', lookup_type='iexact')
     number = NumberFilter(name='number', lookup_type='iexact')
     customer_name = CharFilter(name='customer__name', lookup_type='icontains')
     customer_company = CharFilter(name='customer__company',
