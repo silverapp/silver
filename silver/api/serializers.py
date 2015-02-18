@@ -231,8 +231,16 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
                   'total', 'start_date', 'end_date', 'prorated', 'product_code')
 
 
+class InvoicePdfUrlSerializer(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'invoice_id': obj.id}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
+    pdf = InvoicePdfUrlSerializer(view_name='invoice-pdf', source='*',
+                                  read_only=True)
 
     class Meta:
         model = Invoice
@@ -240,7 +248,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'proforma',
-                  'invoice_entries', 'total')
+                  'invoice_entries', 'total', 'pdf')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
@@ -288,8 +296,16 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
+class ProformaPdfUrlSerializer(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'proforma_id': obj.id}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
+    pdf = ProformaPdfUrlSerializer(view_name='proforma-pdf', source='*',
+                                   read_only=True)
 
     class Meta:
         model = Proforma
@@ -297,7 +313,7 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'invoice',
-                  'proforma_entries', 'total')
+                  'proforma_entries', 'total', 'pdf')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):

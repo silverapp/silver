@@ -194,8 +194,8 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'number', 'customer_display', 'provider_display',
-                    'state', 'issue_date', 'due_date', 'paid_date',
+    list_display = ['id', 'number', 'customer_display', 'state',
+                    'provider_display', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', 'sales_tax_name', 'sales_tax_percent',
                     'currency']
     list_display_links = list_display
@@ -279,8 +279,11 @@ class InvoiceAdmin(BillingDocumentAdmin):
     cancel.short_description = 'Cancel the selected invoice(s)'
 
     def invoice_pdf(self, invoice):
-        url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
-        return '<a href="{url}">{url}</a>'.format(url=url)
+        if invoice.pdf:
+            url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
+            return '<a href="{url}">{url}</a>'.format(url=url)
+        else:
+            return ''
     invoice_pdf.allow_tags = True
 
     @property
@@ -315,8 +318,11 @@ class ProformaAdmin(BillingDocumentAdmin):
     cancel.short_description = 'Cancel the selected proforma(s)'
 
     def proforma_pdf(self, proforma):
-        url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
-        return '<a href="{url}">{url}</a>'.format(url=url)
+        if proforma.pdf:
+            url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
+            return '<a href="{url}">{url}</a>'.format(url=url)
+        else:
+            return ''
     proforma_pdf.allow_tags = True
 
     @property

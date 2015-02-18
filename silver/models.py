@@ -591,6 +591,7 @@ class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
+
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
@@ -605,14 +606,11 @@ class BillingDocument(models.Model):
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
         choices=currencies, max_length=4, default='USD',
-        help_text='The currency used for billing.'
-    )
+        help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=S3Storage, upload_to=documents_pdf_path)
-    state = FSMField(
-        choices=STATE_CHOICES, max_length=10, default=states[0],
-        verbose_name='Invoice state', help_text='The state the invoice is in.'
-    )
+    state = FSMField(choices=STATE_CHOICES, max_length=10, default=states[0],
+        verbose_name="State", help_text='The state the invoice is in.')
 
     __last_state = None
 
@@ -799,7 +797,6 @@ class Invoice(BillingDocument):
 
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
-    print 'delete_invoice_pdf_from_storage'
     if instance.pdf:
         # Delete the invoice's pdf
         instance.pdf.delete(False)
@@ -870,7 +867,6 @@ class Proforma(BillingDocument):
 
 @receiver(pre_delete, sender=Proforma)
 def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
-    print 'delete_proforma_pdf_from_storage'
     if instance.pdf:
         # Delete the proforma's pdf
         instance.pdf.delete(False)

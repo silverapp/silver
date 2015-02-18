@@ -14,8 +14,8 @@ urlpatterns = patterns(
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
 
-    url(r'^rendered-invoices/(?P<invoice_id>.*)/$',
+    url(r'^invoices/(?P<invoice_id>.*)/rendered-pdf/$',
         views.invoice_pdf, name='invoice-pdf'),
-    url(r'^rendered-proformas/(?P<proforma_id>.*)/$',
+    url(r'^proformas/(?P<proforma_id>.*)/rendered-pdf/$',
         views.proforma_pdf, name='proforma-pdf')
 )
