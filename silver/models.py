@@ -922,5 +922,4 @@ class DocumentEntry(models.Model):
             unit=self.unit,
             unit_price=self.unit_price,
             quantity=self.quantity,
-            product_code=self.product_code
-        )
+            product_code=self.product_code)
