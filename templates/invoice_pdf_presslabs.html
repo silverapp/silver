@@ -132,7 +132,7 @@
     <table>
         <tr>
             <td class="title" width="11cm">
-                <h1>Invoice/Factura {{ invoice }}</h1>
+                <h1>{{ type(invoice).__name__ }}/Factura {{ invoice }}</h1>
                 <table>
                     <tr>
                         <td width="48mm"><strong>Issue date / Ziua emiterii</strong></td>
@@ -142,7 +142,7 @@
                         <td width="48mm"><strong>Due date / Termen de plata</strong></td>
                         <td>{{ invoice.due_date|date:"d M. Y" }}</td>
                     </tr>
-                    {% if invoice.sales_tax_percent%}
+                    {% if invoice.sales_tax_percent %}
                         <tr>
                             <td width="48mm" style="vertical-align: top;">
                                 <strong> {% if invoice.sales_tax_name %} invoice.sales_tax_name / {% endif %}
@@ -181,7 +181,7 @@
 </div>
 
 <div id="content">
-    <table id="parties">
+    <table id="parties" align="top">
         <tr>
             <td width="8cm" align="top">
                 <h1> {{ provider.company }}</h1>

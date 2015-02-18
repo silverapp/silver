@@ -753,7 +753,7 @@ class BillingDocument(models.Model):
             'entries': entries
         }
         resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf('invoice_pdf.html', context=context,
+        data = generate_pdf('invoice_pdf_generic.html', context=context,
                             file_object=resp)
 
         if data:
