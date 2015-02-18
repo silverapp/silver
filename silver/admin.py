@@ -251,6 +251,18 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 model_name=self._model_name.lower(), count=qs_count)
             self.message_user(request, msg)
 
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        return False
+
+    def get_actions(self, request):
+        actions = super(BillingDocumentAdmin, self).get_actions(request)
+        if not request.user.is_superuser:
+            if 'delete_selected' in actions:
+                del actions['delete_selected']
+        return actions
+
     def total(self, obj):
         return '{value} {currency}'.format(value=str(obj.total),
                                            currency=obj.currency)

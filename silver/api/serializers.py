@@ -7,18 +7,6 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma)
 
 
-class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        customer_pk = request.parser_context['kwargs']['customer_pk']
-        subscription_pk = request.parser_context['kwargs']['subscription_pk']
-        kwargs = {
-            'customer_pk': customer_pk,
-            'subscription_pk': subscription_pk,
-            'mf_product_code': obj.product_code.value
-        }
-        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
-
-
 class MeteredFeatureSerializer(serializers.ModelSerializer):
     product_code = serializers.SlugRelatedField(
         slug_field='value',
@@ -31,31 +19,27 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
                   'product_code')
 
 
-class MeteredFeatureRelatedField(serializers.HyperlinkedRelatedField):
+class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        kwargs = {'pk': obj.pk}
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        subscription_pk = request.parser_context['kwargs']['subscription_pk']
+        kwargs = {
+            'customer_pk': customer_pk,
+            'subscription_pk': subscription_pk,
+            'mf_product_code': obj.product_code.value
+        }
+        return self.reverse(view_name, kwargs=kwargs, request=request,
+                            format=format)
 
-    def to_native(self, obj):
-        request = self.context.get('request', None)
-        return MeteredFeatureSerializer(obj, context={'request': request}).data
 
-
-class MeteredFeatureInSubscriptionSerializer(serializers.HyperlinkedModelSerializer):
+class MeteredFeatureInSubscriptionSerializer(MeteredFeatureSerializer):
     url = MFUnitsLogUrl(view_name='mf-log-units', source='*', read_only=True)
 
-    product_code = serializers.SlugRelatedField(
-        slug_field='value',
-        queryset=ProductCode.objects.all()
-    )
-
-    class Meta:
-        model = MeteredFeature
-        fields = ('name', 'unit', 'price_per_unit', 'included_units',
-                  'product_code', 'url')
+    class Meta(MeteredFeatureSerializer.Meta):
+        fields = MeteredFeatureSerializer.Meta.fields + ('url', )
 
 
-class MeteredFeatureUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
+class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
     # The 2 lines below are needed because of a DRF3 bug
     start_date = serializers.DateField(read_only=True)
     end_date = serializers.DateField(read_only=True)

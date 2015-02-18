@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.core.management import call_command
 from django.http.response import Http404
-from django_filters import FilterSet, CharFilter, BooleanFilter
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -12,31 +11,19 @@ from rest_framework.views import APIView
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma)
-from silver.api.serializers import (MeteredFeatureUnitsLogSerializer,
+from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
                                     DocumentEntrySerializer)
+from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
+                                CustomerFilter, ProviderFilter, PlanFilter,
+                                InvoiceFilter, ProformaFilter)
 from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
 from silver.utils import get_object_or_None
 from silver.api.dateutils import last_date_that_fits
-
-
-class PlanFilter(FilterSet):
-    name = CharFilter(name='name', lookup_type='icontains')
-    currency = CharFilter(name='currency', lookup_type='icontains')
-    enabled = BooleanFilter(name='enabled', lookup_type='iexact')
-    private = BooleanFilter(name='private', lookup_type='iexact')
-    interval = CharFilter(name='interval', lookup_type='icontains')
-    product_code = CharFilter(name='product_code', lookup_type='icontains')
-    provider = CharFilter(name='provider__company', lookup_type='icontains')
-
-    class Meta:
-        model = Plan
-        fields = ['name', 'currency', 'enabled', 'private', 'product_code',
-                  'currency', 'provider', 'interval']
 
 
 class PlanList(HPListCreateAPIView):
@@ -84,14 +71,6 @@ class PlanMeteredFeatures(HPListAPIView):
         return plan.metered_features.all() if plan else None
 
 
-class MeteredFeaturesFilter(FilterSet):
-    name = CharFilter(name='name', lookup_type='icontains')
-
-    class Meta:
-        model = MeteredFeature
-        fields = ('name', )
-
-
 class MeteredFeatureList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
@@ -108,14 +87,6 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
     def get_object(self):
         pk = self.kwargs.get('pk', None)
         return get_object_or_404(MeteredFeature, pk=pk)
-
-
-class SubscriptionFilter(FilterSet):
-    plan = CharFilter(name='plan__name', lookup_type='icontains')
-
-    class Meta:
-        model = Subscription
-        fields = ['plan', 'reference', 'state']
 
 
 class SubscriptionList(HPListCreateAPIView):
@@ -230,7 +201,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
             metered_feature=metered_feature.pk,
             subscription=subscription_pk)
 
-        serializer = MeteredFeatureUnitsLogSerializer(
+        serializer = MFUnitsLogSerializer(
             logs, many=True, context={'request': request}
         )
         return Response(serializer.data)
@@ -316,20 +287,6 @@ class MeteredFeatureUnitsLogDetail(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
 
-class CustomerFilter(FilterSet):
-    active = BooleanFilter(name='is_active', lookup_type='iexact')
-    email = CharFilter(name='email', lookup_type='icontains')
-    company = CharFilter(name='company', lookup_type='icontains')
-    name = CharFilter(name='name', lookup_type='icontains')
-    country = CharFilter(name='country', lookup_type='icontains')
-    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
-
-    class Meta:
-        model = Customer
-        fields = ['email', 'name', 'company', 'active', 'country',
-                  'sales_tax_name']
-
-
 class CustomerList(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
@@ -349,15 +306,6 @@ class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
     model = Customer
-
-
-class ProviderFilter(FilterSet):
-    email = CharFilter(name='email', lookup_type='icontains')
-    company = CharFilter(name='company', lookup_type='icontains')
-
-    class Meta:
-        model = Provider
-        fields = ['email', 'company']
 
 
 class ProductCodeListCreate(generics.ListCreateAPIView):
@@ -390,6 +338,8 @@ class InvoiceListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = InvoiceFilter
 
 
 class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
@@ -576,6 +526,8 @@ class ProformaListCreate(HPListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = ProformaFilter
 
 
 class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
