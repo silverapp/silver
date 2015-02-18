@@ -233,6 +233,8 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
 
 class InvoicePdfUrlSerializer(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
+        if not obj.pdf:
+            return None
         kwargs = {'invoice_id': obj.id}
         return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
@@ -298,6 +300,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
 class ProformaPdfUrlSerializer(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
+        if not obj.pdf:
+            return None
         kwargs = {'proforma_id': obj.id}
         return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
