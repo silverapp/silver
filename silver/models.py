@@ -206,7 +206,19 @@ class Subscription(models.Model):
     @property
     def current_start_date(self):
         if self.trial_end > timezone.now().date():
-            initial_date = self.start_date
+            fake_initial_date = next_date_after_date(
+                initial_date=self.start_date, day=1
+            )
+            if fake_initial_date > timezone.now().date():
+                return self.start_date
+            else:
+                fake_initial_date = last_date_that_fits(
+                    initial_date=fake_initial_date,
+                    end_date=timezone.now().date(),
+                    interval_type=self.plan.interval,
+                    interval_count=self.plan.interval_count
+                )
+                return fake_initial_date
         else:
             fake_initial_date = next_date_after_date(
                 initial_date=self.trial_end, day=1
@@ -230,7 +242,13 @@ class Subscription(models.Model):
     def current_end_date(self):
         end_date = None
         if self.trial_end > timezone.now().date():
-            end_date = self.trial_end
+            fake_end_date = next_date_after_date(
+                initial_date=self.current_start_date, day=1
+            )
+            if fake_end_date > self.trial_end:
+                return self.trial_end
+            else:
+                return fake_end_date
         else:
             end_date_after_trial = next_date_after_date(
                 initial_date=self.trial_end, day=1
@@ -254,8 +272,6 @@ class Subscription(models.Model):
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
-        print start_date
-        print trial_end_date
         if start_date:
             self.start_date = min(timezone.now().date(), start_date)
         else:
