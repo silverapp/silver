@@ -189,16 +189,16 @@ class BillingDocumentForm(forms.ModelForm):
 class InvoiceForm(BillingDocumentForm):
     class Meta:
         model = Invoice
-        # The exact fields fill be added in the InvoiceAdmin
-        # Add this here to remove the deprecation warning
+        # NOTE: The exact fields fill be added in the InvoiceAdmin. This was
+        # added here to remove the deprecation warning.
         fields = ()
 
 
 class ProformaForm(BillingDocumentForm):
     class Meta:
         model = Proforma
-        # The exact fields fill be added in the ProformaAdmin
-        # Add this here to remove the deprecation warning
+        # NOTE: The exact fields fill be added in the ProformaAdmin. This was
+        # added here to remove the deprecation warning.
         fields = ()
 
 
