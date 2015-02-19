@@ -259,15 +259,18 @@ class Subscription(models.Model):
         else:
             if self.start_date:
                 self.start_date = min(timezone.now().date(), self.start_date)
-            elif self.start_date is None:
+            else:
                 self.start_date = timezone.now().date()
 
         if trial_end_date:
-            self.trial_end = trial_end_date
-        elif self.trial_end is None:
-            self.trial_end = self.start_date + datetime.timedelta(
-                days=self.plan.trial_period_days
-            )
+            self.trial_end = max(self.start_date, trial_end_date)
+        else:
+            if self.trial_end:
+                self.trial_end = max(self.start_date, self.trial_end_date)
+            else:
+                self.trial_end = self.start_date + datetime.timedelta(
+                    days=self.plan.trial_period_days
+                )
 
     @transition(field=state, source=['active', 'past_due', 'on_trial'],
                 target='canceled')
