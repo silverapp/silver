@@ -241,9 +241,17 @@ class MeteredFeatureUnitsLogDetail(APIView):
                 try:
                     date = datetime.datetime.strptime(date,
                                                       '%Y-%m-%d').date()
+                except TypeError:
+                    return Response({'detail': 'Invalid date format. Please '
+                                    'use the ISO 8601 date format.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                try:
                     csd = subscription.current_start_date
                     ced = subscription.current_end_date
-
+                    if not csd or not ced:
+                        return Response(
+                            {'detail': 'An error has been encountered.'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     if date <= csd:
                         csdt = datetime.datetime.combine(csd, datetime.time())
                         allowed_time = datetime.timedelta(
@@ -293,9 +301,9 @@ class MeteredFeatureUnitsLogDetail(APIView):
                         return Response({"detail": "Date is out of bounds"},
                                         status=status.HTTP_400_BAD_REQUEST)
                 except TypeError:
-                    return Response({'detail': 'Invalid date format. Please '
-                                    'use the ISO 8601 date format.'},
-                                    status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        {'detail': 'An error has been encountered.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 return Response({"detail": "Not enough information provided"},
                                 status=status.HTTP_400_BAD_REQUEST)
