@@ -40,6 +40,9 @@ class LiveModelAdmin(admin.ModelAdmin):
 class PlanForm(forms.ModelForm):
     class Meta:
         model = Plan
+        fields = ('provider', 'name', 'product_code', 'interval',
+                  'interval_count', 'amount', 'currency', 'trial_period_days',
+                  'generate_after', 'metered_features', 'enabled', 'private')
 
     def clean(self):
         metered_features = self.cleaned_data.get('metered_features')
@@ -186,11 +189,17 @@ class BillingDocumentForm(forms.ModelForm):
 class InvoiceForm(BillingDocumentForm):
     class Meta:
         model = Invoice
+        # The exact fields fill be added in the InvoiceAdmin
+        # Add this here to remove the deprecation warning
+        fields = ()
 
 
 class ProformaForm(BillingDocumentForm):
     class Meta:
         model = Proforma
+        # The exact fields fill be added in the ProformaAdmin
+        # Add this here to remove the deprecation warning
+        fields = ()
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
