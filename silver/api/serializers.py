@@ -174,7 +174,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ('url', 'plan', 'customer', 'trial_end', 'start_date',
+        fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
                   'ended_at', 'state', 'reference')
         read_only_fields = ('state', )
 
