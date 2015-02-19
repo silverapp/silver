@@ -132,7 +132,8 @@ class SubscriptionDetailActivate(APIView):
                             start_date, '%Y-%m-%d').date()
                     except TypeError:
                         return Response(
-                            {"detail": "Invalid start_date date format"},
+                            {'detail': 'Invalid start_date date format. Please '
+                                       'use the ISO 8601 date format.'},
                             status=status.HTTP_400_BAD_REQUEST)
                 if trial_end:
                     try:
@@ -140,7 +141,8 @@ class SubscriptionDetailActivate(APIView):
                             trial_end, '%Y-%m-%d').date()
                     except TypeError:
                         return Response(
-                            {"detail": "Invalid trial_end date format"},
+                            {'detail': 'Invalid trial_end date format. Please '
+                                       'use the ISO 8601 date format.'},
                             status=status.HTTP_400_BAD_REQUEST)
                 sub.activate(start_date=start_date, trial_end_date=trial_end)
                 sub.save()
@@ -291,7 +293,8 @@ class MeteredFeatureUnitsLogDetail(APIView):
                         return Response({"detail": "Date is out of bounds"},
                                         status=status.HTTP_400_BAD_REQUEST)
                 except TypeError:
-                    return Response({"detail": "Invalid date format"},
+                    return Response({'detail': 'Invalid date format. Please '
+                                    'use the ISO 8601 date format.'},
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({"detail": "Not enough information provided"},
