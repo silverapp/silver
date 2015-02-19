@@ -157,10 +157,18 @@ class SubscriptionUrl(serializers.HyperlinkedRelatedField):
         return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
+class CustomerUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'pk': obj.customer.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
+    customer = CustomerUrl(view_name='customer-detail', source='*',
+                           read_only=True)
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
 
@@ -170,7 +178,21 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
                   'ended_at', 'state', 'reference')
         read_only_fields = ('state', )
 
+    def create(self, validated_data):
+        request = self._context['request']
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        customer = Customer.objects.get(pk=customer_pk)
+        validated_data.update({'customer': customer})
+
+        subscription = Subscription.objects.create(**validated_data)
+        return subscription
+
     def validate(self, attrs):
+        if self.initial_data.get('customer', None):
+            msg = "You cannot add the customer via POST data as it is added"\
+                  " automatically. Remove the field from the body."
+            raise serializers.ValidationError({'customer': msg})
+
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
