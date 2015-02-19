@@ -255,9 +255,12 @@ class Subscription(models.Model):
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
-            self.start_date = start_date
-        elif self.start_date is None:
-            self.start_date = timezone.now().date()
+            self.start_date = min(timezone.now().date(), start_date)
+        else:
+            if self.start_date:
+                self.start_date = min(timezone.now().date(), self.start_date)
+            elif self.start_date is None:
+                self.start_date = timezone.now().date()
 
         if trial_end_date:
             self.trial_end = trial_end_date
