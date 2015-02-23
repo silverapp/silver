@@ -203,18 +203,23 @@ class Subscription(models.Model):
                                   'the subscription start date.'}
                 )
 
-    @property
-    def current_start_date(self):
-        if self.trial_end > timezone.now().date():
+    def _current_start_date(self, reference_date=None, ignore_trial=None):
+        ignore_trial_default = False
+        ignore_trial = ignore_trial_default or ignore_trial
+
+        if reference_date is None:
+            reference_date = timezone.now().date()
+
+        if self.trial_end > reference_date or ignore_trial:
             fake_initial_date = next_date_after_date(
                 initial_date=self.start_date, day=1
             )
-            if fake_initial_date > timezone.now().date():
+            if fake_initial_date > reference_date:
                 return self.start_date
             else:
                 fake_initial_date = last_date_that_fits(
                     initial_date=fake_initial_date,
-                    end_date=timezone.now().date(),
+                    end_date=reference_date,
                     interval_type=self.plan.interval,
                     interval_count=self.plan.interval_count
                 )
@@ -224,26 +229,33 @@ class Subscription(models.Model):
                 initial_date=self.trial_end, day=1
             )
             if fake_initial_date:
-                if timezone.now().date() < fake_initial_date:
+                if reference_date < fake_initial_date:
                     initial_date = self.trial_end
                 else:
                     initial_date = fake_initial_date
             else:
                 initial_date = None
 
-        return last_date_that_fits(
-            initial_date=initial_date,
-            end_date=timezone.now().date(),
-            interval_type=self.plan.interval,
-            interval_count=self.plan.interval_count
-        )
+            return last_date_that_fits(
+                initial_date=initial_date,
+                end_date=reference_date,
+                interval_type=self.plan.interval,
+                interval_count=self.plan.interval_count
+            )
 
-    @property
-    def current_end_date(self):
+    def _current_end_date(self, reference_date=None, ignore_trial=None):
+        ignore_trial_default = False
+        ignore_trial = ignore_trial_default or ignore_trial
+
+        if reference_date is None:
+            reference_date = timezone.now().date()
+
         end_date = None
-        if self.trial_end > timezone.now().date():
+        if self.trial_end > reference_date or ignore_trial:
             fake_end_date = next_date_after_date(
-                initial_date=self.current_start_date, day=1
+                initial_date=self._current_start_date(reference_date,
+                                                      ignore_trial),
+                day=1
             )
             if fake_end_date > self.trial_end:
                 return self.trial_end
@@ -254,21 +266,38 @@ class Subscription(models.Model):
                 initial_date=self.trial_end, day=1
             )
             if end_date_after_trial:
-                if timezone.now().date() < end_date_after_trial:
+                if reference_date < end_date_after_trial:
                     end_date = end_date_after_trial
 
-        end_date = end_date or next_date_after_period(
-            initial_date=self.current_start_date,
-            interval_type=self.plan.interval,
-            interval_count=self.plan.interval_count
-        )
-        if end_date:
-            if self.ended_at:
-                if self.ended_at < end_date:
-                    return self.ended_at
-            else:
-                return end_date
-        return None
+            end_date = end_date or next_date_after_period(
+                initial_date=self._current_start_date(reference_date,
+                                                      ignore_trial),
+                interval_type=self.plan.interval,
+                interval_count=self.plan.interval_count
+            )
+            if end_date:
+                if self.ended_at:
+                    if self.ended_at < end_date:
+                        return self.ended_at
+                else:
+                    return end_date
+            return None
+
+    @property
+    def current_start_date(self):
+        return self._current_start_date(ignore_trial=True)
+
+    @property
+    def current_end_date(self):
+        return self._current_end_date(ignore_trial=True)
+
+    def bucket_start_date(self, reference_date=None):
+        return self._current_start_date(reference_date=reference_date,
+                                        ignore_trial=False)
+
+    def bucket_end_date(self, reference_date=None):
+        return self._current_end_date(reference_date=reference_date,
+                                      ignore_trial=False)
 
     @transition(field=state, source=['inactive', 'canceled'], target='active')
     def activate(self, start_date=None, trial_end_date=None):

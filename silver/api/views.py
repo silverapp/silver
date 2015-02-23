@@ -245,65 +245,63 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     return Response({'detail': 'Invalid date format. Please '
                                     'use the ISO 8601 date format.'},
                                     status=status.HTTP_400_BAD_REQUEST)
-                try:
-                    csd = subscription.current_start_date
-                    ced = subscription.current_end_date
-                    if not csd or not ced:
-                        return Response(
-                            {'detail': 'An error has been encountered.'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                    if date <= csd:
-                        csdt = datetime.datetime.combine(csd, datetime.time())
-                        allowed_time = datetime.timedelta(
-                            seconds=subscription.plan.generate_after)
-                        if datetime.datetime.now() < csdt + allowed_time:
-                            ced = csd - datetime.timedelta(days=1)
-                            csd = last_date_that_fits(
-                                initial_date=subscription.start_date,
-                                end_date=ced,
-                                interval_type=subscription.plan.interval,
-                                interval_count=subscription.plan.interval_count
-                            )
 
-                    if csd <= date <= ced:
-                        if metered_feature not in \
-                                subscription.plan.metered_features.all():
-                            err = "The metered feature does not belong to "\
-                                  "the subscription's plan."
-                            return Response(
-                                {"detail": err},
-                                status=status.HTTP_400_BAD_REQUEST
-                            )
-                        try:
-                            log = MeteredFeatureUnitsLog.objects.get(
-                                start_date=csd,
-                                end_date=ced,
-                                metered_feature=metered_feature.pk,
-                                subscription=subscription_pk
-                            )
-                            if update_type == 'absolute':
-                                log.consumed_units = consumed_units
-                            elif update_type == 'relative':
-                                log.consumed_units += consumed_units
-                            log.save()
-                        except MeteredFeatureUnitsLog.DoesNotExist:
-                            log = MeteredFeatureUnitsLog.objects.create(
-                                metered_feature=metered_feature,
-                                subscription=subscription,
-                                start_date=subscription.current_start_date,
-                                end_date=subscription.current_end_date,
-                                consumed_units=consumed_units
-                            )
-                        finally:
-                            return Response({"count": log.consumed_units},
-                                            status=status.HTTP_200_OK)
-                    else:
-                        return Response({"detail": "Date is out of bounds"},
-                                        status=status.HTTP_400_BAD_REQUEST)
-                except TypeError:
+                bsd = subscription.bucket_start_date()
+                bed = subscription.bucket_end_date()
+                if not bsd or not bed:
                     return Response(
                         {'detail': 'An error has been encountered.'},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                if date <= bsd:
+                    bsdt = datetime.datetime.combine(bsd, datetime.time())
+                    allowed_time = datetime.timedelta(
+                        seconds=subscription.plan.generate_after)
+                    if datetime.datetime.now() < bsdt + allowed_time:
+                        bed = bsd
+                        bsd = last_date_that_fits(
+                            initial_date=subscription.start_date,
+                            end_date=bed,
+                            interval_type=subscription.plan.interval,
+                            interval_count=subscription.plan.interval_count
+                        )
+
+                if bsd <= date <= bed:
+                    if metered_feature not in \
+                            subscription.plan.metered_features.all():
+                        err = "The metered feature does not belong to "\
+                              "the subscription's plan."
+                        return Response(
+                            {"detail": err},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    log = MeteredFeatureUnitsLog.objects.filter(
+                        start_date=bsd,
+                        end_date=bed,
+                        metered_feature=metered_feature.pk,
+                        subscription=subscription_pk
+                    ).first()
+
+                    if log is not None:
+                        if update_type == 'absolute':
+                            log.consumed_units = consumed_units
+                        elif update_type == 'relative':
+                            log.consumed_units += consumed_units
+                        log.save()
+                    else:
+                        log = MeteredFeatureUnitsLog.objects.create(
+                            metered_feature=metered_feature,
+                            subscription=subscription,
+                            start_date=bsd,
+                            end_date=bed,
+                            consumed_units=consumed_units
+                        )
+                    return Response({"count": log.consumed_units},
+                                    status=status.HTTP_200_OK)
+                else:
+                    return Response({"detail": "Date is out of bounds"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
             else:
                 return Response({"detail": "Not enough information provided"},
                                 status=status.HTTP_400_BAD_REQUEST)
