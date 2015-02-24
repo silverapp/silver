@@ -123,9 +123,19 @@ class MeteredFeatureUnitsLog(models.Model):
 
     def clean(self):
         super(MeteredFeatureUnitsLog, self).clean()
+        if self.subscription.state in ['ended', 'inactive']:
+            if not self.id:
+                action_type = "create"
+            else:
+                action_type = "change"
+            err_msg = 'You cannot %s a metered feature units log belonging to ' \
+                      'an %s subscription.' % (action_type,
+                                               self.subscription.state)
+            raise ValidationError(err_msg)
+
         if not self.id:
-            start_date = self.subscription.current_start_date
-            end_date = self.subscription.current_end_date
+            start_date = self.subscription.bucket_start_date
+            end_date = self.subscription.bucket_end_date
             if get_object_or_None(MeteredFeatureUnitsLog, start_date=start_date,
                                   end_date=end_date,
                                   metered_feature=self.metered_feature,
@@ -138,9 +148,9 @@ class MeteredFeatureUnitsLog(models.Model):
              update_fields=None):
         if not self.id:
             if not self.start_date:
-                self.start_date = self.subscription.current_start_date
+                self.start_date = self.subscription.bucket_start_date
             if not self.end_date:
-                self.end_date = self.subscription.current_end_date
+                self.end_date = self.subscription.bucket_end_date
             super(MeteredFeatureUnitsLog, self).save()
 
         if self.id:
