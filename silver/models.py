@@ -3,6 +3,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 
+import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.files.base import ContentFile
@@ -15,7 +16,6 @@ from django.db.models import Max
 from django.conf import settings
 from django.db.models.signals import pre_delete
 from django.dispatch.dispatcher import receiver
-import jsonfield
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
