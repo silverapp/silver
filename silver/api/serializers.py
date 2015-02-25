@@ -247,8 +247,7 @@ class InvoicePdfUrlSerializer(serializers.HyperlinkedRelatedField):
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
-    pdf = InvoicePdfUrlSerializer(view_name='invoice-pdf', source='*',
-                                  read_only=True)
+    pdf_url = serializers.URLField(source='pdf.url', read_only=True)
 
     class Meta:
         model = Invoice
@@ -256,7 +255,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'proforma',
-                  'invoice_entries', 'total', 'pdf')
+                  'invoice_entries', 'total', 'pdf_url')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
@@ -314,8 +313,7 @@ class ProformaPdfUrlSerializer(serializers.HyperlinkedRelatedField):
 
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
-    pdf = ProformaPdfUrlSerializer(view_name='proforma-pdf', source='*',
-                                   read_only=True)
+    pdf_url = serializers.URLField(source='pdf.url', read_only=True)
 
     class Meta:
         model = Proforma
@@ -323,7 +321,7 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'invoice',
-                  'proforma_entries', 'total', 'pdf')
+                  'proforma_entries', 'total', 'pdf_url')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
