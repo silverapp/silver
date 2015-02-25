@@ -237,17 +237,14 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
                   'total', 'start_date', 'end_date', 'prorated', 'product_code')
 
 
-class InvoicePdfUrlSerializer(serializers.HyperlinkedRelatedField):
+class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        if not obj.pdf:
-            return None
-        kwargs = {'invoice_id': obj.id}
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+        return obj.pdf.url if obj.pdf else None
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
-    pdf_url = serializers.URLField(source='pdf.url', read_only=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
 
     class Meta:
         model = Invoice
@@ -303,17 +300,9 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
-class ProformaPdfUrlSerializer(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        if not obj.pdf:
-            return None
-        kwargs = {'proforma_id': obj.id}
-        return reverse(view_name, kwargs=kwargs, request=request, format=format)
-
-
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
-    pdf_url = serializers.URLField(source='pdf.url', read_only=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
 
     class Meta:
         model = Proforma
