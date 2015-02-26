@@ -682,6 +682,20 @@ class BillingDocument(models.Model):
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
+    def save(self, *args, **kwargs):
+        # Generate the number
+        if not self.number:
+            self.number = self._generate_number()
+
+        # Add tax info
+        if not self.sales_tax_name:
+            self.sales_tax_name = self.customer.sales_tax_name
+        if not self.sales_tax_percent:
+            self.sales_tax_percent = self.customer.sales_tax_percent
+
+        self.__last_state = self.state
+        super(BillingDocument, self).save(*args, **kwargs)
+
     def _generate_number(self):
         """Generates the number for a proforma/invoice. To be implemented
         in the corresponding subclass."""
@@ -699,19 +713,8 @@ class BillingDocument(models.Model):
 
             return max_existing_number + 1
 
-    def save(self, *args, **kwargs):
-        # Generate the number
-        if not self.number:
-            self.number = self._generate_number()
-
-        # Add tax info
-        if not self.sales_tax_name:
-            self.sales_tax_name = self.customer.sales_tax_name
-        if not self.sales_tax_percent:
-            self.sales_tax_percent = self.customer.sales_tax_percent
-
-        self.__last_state = self.state
-        super(BillingDocument, self).save(*args, **kwargs)
+    def __unicode__(self):
+        return '%s-%s-%s' % (self.number, self.customer, self.provider)
 
     def customer_display(self):
         try:
@@ -732,9 +735,6 @@ class BillingDocument(models.Model):
         return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
                 'currency']
-
-    def __unicode__(self):
-        return '%s-%s-%s' % (self.number, self.customer, self.provider)
 
     def _generate_pdf(self):
         document_type_name = self.__class__.__name__  # Invoice or Proforma
@@ -760,6 +760,18 @@ class BillingDocument(models.Model):
             self.pdf.save(filename, pdf_content, False)
         else:
             raise RuntimeError(_('Could not generate invoice pdf.'))
+
+    def serialize_hook(self, hook):
+        """
+        Used to generate a skinny payload.
+        """
+
+        return {
+            'hook': hook.dict(),
+            'data': {
+                'id': self.id
+            }
+        }
 
 
 class Invoice(BillingDocument):
