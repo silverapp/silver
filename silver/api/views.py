@@ -477,7 +477,7 @@ class InvoiceStateHandler(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         invoice_pk = kwargs.get('pk')
         try:
             invoice = Invoice.objects.get(pk=invoice_pk)
@@ -575,7 +575,7 @@ class ProformaStateHandler(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         proforma_pk = kwargs.get('pk')
         try:
             proforma = Proforma.objects.get(pk=proforma_pk)
