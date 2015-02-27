@@ -95,6 +95,9 @@ class ProductCodeRelatedField(serializers.SlugRelatedField):
         except (TypeError, ValueError):
             self.fail('invalid')
 
+    def to_representation(self, obj):
+        return getattr(obj, self.slug_field)
+
 
 class PlanSerializer(serializers.HyperlinkedModelSerializer):
     metered_features = MeteredFeatureSerializer(
@@ -132,7 +135,7 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
             metered_features.append(MeteredFeature.objects.create(**mf_data))
 
         product_code = validated_data.pop('product_code')
-        product_code = ProductCode.objects.get_or_create(value=product_code)[0]
+        product_code.save()
 
         validated_data.update({'product_code': product_code})
 
