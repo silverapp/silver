@@ -140,10 +140,10 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ('name', 'company', 'flow', 'invoice_series', 'invoice_starting_number',
-              'proforma_series', 'proforma_starting_number', 'email',
-              'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
-              'extra')
+    fields = ('name', 'company', 'flow', 'invoice_series',
+              'invoice_starting_number', 'proforma_series',
+              'proforma_starting_number', 'email', 'address_1', 'address_2',
+              'city', 'state', 'zip_code', 'country', 'extra')
     list_display = ['name', 'company', 'invoice_series', 'email', 'address_1',
                     'address_2', 'city', 'state', 'zip_code', 'country']
     list_display_links = list_display
@@ -195,9 +195,10 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'number', 'customer_display', 'provider_display', 'state',
-                    'issue_date', 'due_date', 'paid_date', 'cancel_date',
-                    'sales_tax_name', 'sales_tax_percent', 'currency']
+    list_display = ['id', 'number', 'customer_display', 'provider_display',
+                    'state', 'issue_date', 'due_date', 'paid_date',
+                    'cancel_date', 'sales_tax_name', 'sales_tax_percent',
+                    'currency']
     list_display_links = list_display
 
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',

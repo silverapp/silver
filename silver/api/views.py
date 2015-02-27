@@ -512,7 +512,8 @@ class InvoiceStateHandler(APIView):
         if state == 'issued':
             if invoice.state != 'draft':
                 msg = "An invoice can be issued only if it is in draft state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             issue_date = request.DATA.get('issue_date', None)
             due_date = request.DATA.get('due_date', None)
@@ -521,15 +522,18 @@ class InvoiceStateHandler(APIView):
         elif state == 'paid':
             if invoice.state != 'issued':
                 msg = "An invoice can be paid only if it is in issued state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             paid_date = request.DATA.get('paid_date', None)
             invoice.pay(paid_date)
             invoice.save()
         elif state == 'canceled':
             if invoice.state != 'issued':
-                msg = "An invoice can be canceled only if it is in issued state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                msg = "An invoice can be canceled only if it is in issued " \
+                      "state."
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             cancel_date = request.DATA.get('cancel_date', None)
             invoice.cancel(cancel_date)
@@ -610,7 +614,8 @@ class ProformaStateHandler(APIView):
         if state == 'issued':
             if proforma.state != 'draft':
                 msg = "A proforma can be issued only if it is in draft state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             issue_date = request.DATA.get('issue_date', None)
             due_date = request.DATA.get('due_date', None)
@@ -619,15 +624,18 @@ class ProformaStateHandler(APIView):
         elif state == 'paid':
             if proforma.state != 'issued':
                 msg = "A proforma can be paid only if it is in issued state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             paid_date = request.DATA.get('paid_date', None)
             proforma.pay(paid_date)
             proforma.save()
         elif state == 'canceled':
             if proforma.state != 'issued':
-                msg = "A proforma can be canceled only if it is in issued state."
-                return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
+                msg = "A proforma can be canceled only if it is in issued " \
+                      "state."
+                return Response({"detail": msg},
+                                status=status.HTTP_403_FORBIDDEN)
 
             cancel_date = request.DATA.get('cancel_date', None)
             proforma.cancel(cancel_date)

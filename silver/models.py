@@ -70,8 +70,9 @@ class Plan(models.Model):
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
-    product_code = models.ForeignKey('ProductCode', unique=True,
-                                    help_text='The product code for this plan.')
+    product_code = models.ForeignKey(
+        'ProductCode', unique=True, help_text='The product code for this plan.'
+    )
     provider = models.ForeignKey(
         'Provider', related_name='plans',
         help_text='The provider which provides the plan.'
@@ -509,12 +510,16 @@ class Provider(AbstractBillingEntity):
 
     def get_invoice_archivable_fields(self):
         base_fields = super(Provider, self).get_archivable_fields()
-        base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
+        base_fields.update(
+            {'invoice_series': getattr(self, 'invoice_series', '')}
+        )
         return base_fields
 
     def get_proforma_archivable_fields(self):
         base_fields = super(Provider, self).get_archivable_fields()
-        base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
+        base_fields.update(
+            {'proforma_series': getattr(self, 'proforma_series', '')}
+        )
         return base_fields
 
     def __unicode__(self):
@@ -747,9 +752,10 @@ class Proforma(AbstractInvoicingDocument):
 
     @property
     def fields_for_automatic_invoice_generation(self):
-        fields = ['customer', 'provider', 'archived_customer', 'archived_provider',
-                  'due_date', 'issue_date', 'paid_date', 'cancel_date',
-                  'sales_tax_percent', 'sales_tax_name', 'currency']
+        fields = ['customer', 'provider', 'archived_customer',
+                  'archived_provider', 'due_date', 'issue_date', 'paid_date',
+                  'cancel_date', 'sales_tax_percent', 'sales_tax_name',
+                  'currency']
         return {field: getattr(self, field, None) for field in fields}
 
 
@@ -765,9 +771,9 @@ class DocumentEntry(models.Model):
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
     invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
-                               blank=True, null=True)
-    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
                                 blank=True, null=True)
+    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
+                                 blank=True, null=True)
 
     class Meta:
         verbose_name = 'Entry'

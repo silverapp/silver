@@ -156,7 +156,8 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
 
     def update(self, instance, validated_data):
         instance.name = validated_data.get('name', instance.name)
-        instance.generate_after = validated_data.get('generate_after', instance.generate_after)
+        instance.generate_after = validated_data.get('generate_after',
+                                                     instance.generate_after)
         instance.due_days = validated_data.get('due_days', instance.due_days)
         instance.save()
 
@@ -239,7 +240,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         invoice = Invoice.objects.create(**validated_data)
 
         for entry in entries:
-            entry_dict = {}
+            entry_dict = dict()
             entry_dict['invoice'] = invoice
             for field in entry.items():
                 entry_dict[field[0]] = field[1]
@@ -293,7 +294,7 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         proforma = Proforma.objects.create(**validated_data)
 
         for entry in entries:
-            entry_dict = {}
+            entry_dict = dict()
             entry_dict['proforma'] = proforma
             for field in entry.items():
                 entry_dict[field[0]] = field[1]
