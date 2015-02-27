@@ -7,16 +7,37 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma)
 
 
+class ProductCodeRelatedField(serializers.SlugRelatedField):
+    def __init__(self, **kwargs):
+        super(ProductCodeRelatedField, self).__init__(
+            slug_field='value', queryset=ProductCode.objects.all(), **kwargs)
+
+    def to_internal_value(self, data):
+        try:
+            return ProductCode.objects.get(**{self.slug_field: data})
+        except ObjectDoesNotExist:
+            return ProductCode(**{self.slug_field: data})
+        except (TypeError, ValueError):
+            self.fail('invalid')
+
+
 class MeteredFeatureSerializer(serializers.ModelSerializer):
-    product_code = serializers.SlugRelatedField(
-        slug_field='value',
-        queryset=ProductCode.objects.all()
-    )
+    product_code = ProductCodeRelatedField()
 
     class Meta:
         model = MeteredFeature
         fields = ('name', 'unit', 'price_per_unit', 'included_units',
                   'product_code')
+
+    def create(self, validated_data):
+        product_code = validated_data.pop('product_code')
+        product_code.save()
+
+        validated_data.update({'product_code': product_code})
+
+        metered_feature = MeteredFeature.objects.create(**validated_data)
+
+        return metered_feature
 
 
 class MFUnitsLogUrl(serializers.HyperlinkedRelatedField):
@@ -82,23 +103,6 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
-class ProductCodeRelatedField(serializers.SlugRelatedField):
-    def __init__(self, **kwargs):
-        super(ProductCodeRelatedField, self).__init__(
-            slug_field='value', queryset=ProductCode.objects.all(), **kwargs)
-
-    def to_internal_value(self, data):
-        try:
-            return ProductCode.objects.get(**{self.slug_field: data})
-        except ObjectDoesNotExist:
-            return ProductCode(**{self.slug_field: data})
-        except (TypeError, ValueError):
-            self.fail('invalid')
-
-    def to_representation(self, obj):
-        return getattr(obj, self.slug_field)
-
-
 class PlanSerializer(serializers.HyperlinkedModelSerializer):
     metered_features = MeteredFeatureSerializer(
         required=False, many=True
@@ -132,7 +136,10 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         metered_features_data = validated_data.pop('metered_features')
         metered_features = []
         for mf_data in metered_features_data:
-            metered_features.append(MeteredFeature.objects.create(**mf_data))
+            mf = MeteredFeatureSerializer(data=mf_data)
+            mf.is_valid(raise_exception=True)
+            mf = mf.create(mf.validated_data)
+            metered_features.append(mf)
 
         product_code = validated_data.pop('product_code')
         product_code.save()
