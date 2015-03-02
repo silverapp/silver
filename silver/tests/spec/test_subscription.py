@@ -20,18 +20,14 @@ class TestSubscriptionEndpoint(APITestCase):
         customer = CustomerFactory.create()
 
         plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
-        customer_url = reverse('customer-detail',
-                               kwargs={'pk': customer.pk})
 
-        url = reverse('subscription-list')
+        url = reverse('subscription-list', kwargs={'customer_pk': customer.pk})
 
         response = self.client.post(url, json.dumps({
             "plan": plan_url,
-            "customer": customer_url,
             "trial_end": '2014-12-07',
             "start_date": '2014-11-19'
         }), content_type='application/json')
-
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_post_subscription_with_invalid_trial_end(self):
@@ -39,14 +35,11 @@ class TestSubscriptionEndpoint(APITestCase):
         customer = CustomerFactory.create()
 
         plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
-        customer_url = reverse('customer-detail',
-                               kwargs={'pk': customer.pk})
 
-        url = reverse('subscription-list')
+        url = reverse('subscription-list', kwargs={'customer_pk': customer.pk})
 
         response = self.client.post(url, json.dumps({
             "plan": plan_url,
-            "customer": customer_url,
             "trial_end": '2014-11-07',
             "start_date": '2014-11-19'
         }), content_type='application/json')
@@ -56,7 +49,8 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_activate_subscription(self):
         subscription = SubscriptionFactory.create()
         url = reverse('sub-activate',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, content_type='application/json')
 
@@ -70,7 +64,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.save()
 
         url = reverse('sub-activate',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, content_type='application/json')
 
@@ -86,7 +81,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.save()
 
         url = reverse('sub-cancel',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, json.dumps({
             "when": "end_of_billing_cycle"}), content_type='application/json')
@@ -98,7 +94,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription = SubscriptionFactory.create()
 
         url = reverse('sub-cancel',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, json.dumps({
             "when": "end_of_billing_cycle"}), content_type='application/json')
@@ -115,7 +112,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.save()
 
         url = reverse('sub-cancel',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, json.dumps({
             "when": "now"}), content_type='application/json')
@@ -127,7 +125,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription = SubscriptionFactory.create()
 
         url = reverse('sub-cancel',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, json.dumps({
             "when": "now"}), content_type='application/json')
@@ -145,7 +144,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.save()
 
         url = reverse('sub-reactivate',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, content_type='application/json')
 
@@ -160,7 +160,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.save()
 
         url = reverse('sub-reactivate',
-                      kwargs={'sub': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.post(url, content_type='application/json')
 
@@ -171,9 +172,11 @@ class TestSubscriptionEndpoint(APITestCase):
         )
 
     def test_get_subscription_list(self):
-        SubscriptionFactory.create_batch(40)
+        customer = CustomerFactory.create()
+        SubscriptionFactory.create_batch(40, customer=customer)
 
-        url = reverse('subscription-list')
+        url = reverse('subscription-list',
+                      kwargs={'customer_pk': customer.pk})
 
         response = self.client.get(url)
 
@@ -206,7 +209,8 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription = SubscriptionFactory.create()
 
         url = reverse('subscription-detail',
-                      kwargs={'pk': subscription.pk})
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
 
         response = self.client.get(url)
 
@@ -214,8 +218,10 @@ class TestSubscriptionEndpoint(APITestCase):
         self.assertNotEqual(response.data, [])
 
     def test_get_subscription_detail_unexisting(self):
+        customer = CustomerFactory.create()
         url = reverse('subscription-detail',
-                      kwargs={'pk': 42})
+                      kwargs={'subscription_pk': 42,
+                              'customer_pk': customer.pk})
 
         response = self.client.get(url)
 
@@ -231,9 +237,10 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('mf-log-list',
-                      kwargs={'sub': subscription.pk,
-                              'mf': metered_feature.pk})
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
 
         date = str(datetime.date.today() + datetime.timedelta(days=3))
 
@@ -261,9 +268,10 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('mf-log-list',
-                      kwargs={'sub': subscription.pk,
-                              'mf': 42})
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': '1234'})
 
         response = self.client.patch(url)
 
@@ -275,9 +283,10 @@ class TestSubscriptionEndpoint(APITestCase):
         metered_feature = MeteredFeatureFactory.create()
         subscription.plan.metered_features.add(metered_feature)
 
-        url = reverse('mf-log-list',
-                      kwargs={'sub': subscription.pk,
-                              'mf': metered_feature.pk})
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
 
         response = self.client.patch(url)
 
@@ -294,9 +303,10 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        url = reverse('mf-log-list',
-                      kwargs={'sub': subscription.pk,
-                              'mf': metered_feature.pk})
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
 
         response = self.client.patch(url, json.dumps({
             "count": 150,

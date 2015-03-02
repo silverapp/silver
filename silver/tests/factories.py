@@ -1,4 +1,4 @@
-from decimal import *
+from decimal import Decimal
 import datetime
 
 import factory
@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription, ProductCode, Invoice, ProductCode,
+                           Subscription, Invoice, ProductCode,
                            Proforma)
 
 
@@ -15,6 +15,7 @@ class ProductCodeFactory(factory.django.DjangoModelFactory):
         model = ProductCode
 
     value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
+
 
 class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -116,6 +117,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
