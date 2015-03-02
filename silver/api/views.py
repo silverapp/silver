@@ -4,6 +4,7 @@ from django.http.response import Http404
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
 from silver.api.dateutils import last_date_that_fits
@@ -99,6 +100,14 @@ class SubscriptionList(HPListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         queryset = Subscription.objects.filter(customer__id=customer_pk)
         return queryset.order_by('start_date')
+
+    def post(self, request, *args, **kwargs):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        url = reverse('customer-detail', kwargs={'pk': customer_pk},
+                      request=request)
+        request.data.update({'customer': url})
+
+        return super(SubscriptionList, self).post(request, *args, **kwargs)
 
 
 class SubscriptionDetail(generics.RetrieveAPIView):
