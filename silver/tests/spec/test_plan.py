@@ -6,8 +6,7 @@ from rest_framework.test import APITestCase
 
 from silver.models import ProductCode
 from silver.tests.factories import (AdminUserFactory, ProviderFactory,
-                                    PlanFactory, MeteredFeatureFactory,
-                                    ProductCodeFactory)
+                                    PlanFactory, ProductCodeFactory)
 
 
 class TestPlanEndpoint(APITestCase):
@@ -18,15 +17,9 @@ class TestPlanEndpoint(APITestCase):
     def test_create_plan(self):
         url = reverse('plan-list')
 
-        metered_features = MeteredFeatureFactory.create_batch(3)
-        mf_urls = []
-        for mf in metered_features:
-            mf_urls.append(reverse('metered-feature-detail',
-                                   kwargs={'pk': mf.pk}))
-
+        ProductCodeFactory.create_batch(2)
         feature1_pc = ProductCode.objects.get(id=1).value
-        feature2_pc = ProductCode.objects.get(id=2).value
-        plan_pc = ProductCode.objects.get(id=3).value
+        plan_pc = ProductCode.objects.get(id=2).value
         provider = ProviderFactory.create()
         provider_url = reverse('provider-detail',
                                kwargs={'pk': provider.pk})
@@ -51,7 +44,7 @@ class TestPlanEndpoint(APITestCase):
                 {'name': 'VIP Support',
                  'price_per_unit': 49.99,
                  'included_units': 1,
-                 'product_code': feature2_pc}
+                 'product_code': "1234"}
             ],
             'provider': provider_url
         }), content_type='application/json')
