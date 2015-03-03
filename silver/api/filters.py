@@ -32,10 +32,11 @@ class CustomerFilter(FilterSet):
                                   lookup_type='icontains')
     consolidated_billing = CharFilter(name='consolidated_billing',
                                       lookup_type='icontains')
+    reference = CharFilter(name='customer_reference', lookup_type='icontains')
 
     class Meta:
         model = Customer
-        fields = ['email', 'name', 'company', 'active', 'country',
+        fields = ['email', 'name', 'company', 'active', 'country', 'reference',
                   'sales_tax_name', 'consolidated_billing', 'sales_tax_number']
 
 
