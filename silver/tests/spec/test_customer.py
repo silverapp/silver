@@ -139,7 +139,8 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('url')
+        for e in ['url', 'id', 'subscriptions']:
+            response.data.pop(e)
         for field in response.data:
             if field not in unchanged_fields:
                 self.assertEqual(response.data[field],
@@ -159,7 +160,8 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response.data.pop('url')
+        for e in ['url', 'id', 'subscriptions']:
+            response.data.pop(e)
         for field in response.data:
             if field not in unchanged_fields:
                 self.assertEqual(response.data[field],
