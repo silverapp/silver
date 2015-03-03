@@ -204,7 +204,7 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ('url', 'customer_reference', 'name', 'company', 'email',
+        fields = ('url', 'id', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_number', 'sales_tax_name',
                   'sales_tax_percent', 'subscriptions')
