@@ -10,6 +10,7 @@ from django_fsm import FSMField, transition, TransitionNotAllowed
 from international.models import countries, currencies
 from livefield.models import LiveModel
 import jsonfield
+from pyvat import is_vat_number_format_valid
 
 from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
                                   next_date_after_date)
@@ -429,6 +430,13 @@ class Customer(AbstractBillingEntity):
         super(Customer, self).__init__(*args, **kwargs)
         company_field = self._meta.get_field_by_name("company")[0]
         company_field.help_text = "The company to which the bill is issued."
+
+    def clean(self):
+        if is_vat_number_format_valid(self.sales_tax_number,
+                                      self.country) is False:
+            raise ValidationError(
+                {'sales_tax_number': 'The sales tax number is not valid.'}
+            )
 
     def delete(self):
         subscriptions = Subscription.objects.filter(customer=self)

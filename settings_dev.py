@@ -33,6 +33,7 @@ EXTERNAL_APPS = [
     'rest_framework',
     'django_filters',
     'rest_hooks',
+    'pyvat',
 
     # Dev tools
     'django_extensions',

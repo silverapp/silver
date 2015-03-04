@@ -46,7 +46,8 @@ install_requires = [
     'django-livefield',
     'django-rest-hooks',
     'django-international',
-    'django-jsonfield'
+    'django-jsonfield',
+    'pyvat'
 ]
 
 
