@@ -316,3 +316,53 @@ class TestSubscriptionEndpoint(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'detail': 'Date is out of bounds'})
+
+    def test_subscription_mf_units_log_intervals(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.start_date = datetime.date(year=2015, month=2, day=17)
+        subscription.activate()
+        subscription.save()
+
+        # Monthly
+        subscription.plan.interval = 'month'
+        subscription.plan.interval_count = 1
+        subscription.plan.save()
+
+        subscription.trial_end = (subscription.start_date +
+                                  datetime.timedelta(days=15))
+
+        start_date = subscription.start_date
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=2, day=17))
+
+        end_date = datetime.date(year=2015, month=2, day=28)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=2, day=23))
+
+        start_date = datetime.date(year=2015, month=3, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=3, day=1))
+
+        end_date = datetime.date(year=2015, month=3, day=4)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=3, day=1))
+
+        start_date = datetime.date(year=2015, month=3, day=5)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=3, day=5))
+
+        end_date = datetime.date(year=2015, month=3, day=31)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=3, day=22))
+
+        start_date = datetime.date(year=2015, month=4, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=4, day=5))
+
+        end_date = datetime.date(year=2015, month=4, day=30)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=4, day=22))
