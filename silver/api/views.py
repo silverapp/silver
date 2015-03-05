@@ -21,7 +21,8 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
                                     DocumentEntrySerializer)
-from silver.api.generics import (HPListAPIView, HPListCreateAPIView)
+from silver.api.generics import (HPListAPIView, HPListCreateAPIView,
+                                 HPListBulkCreateAPIView)
 from silver.utils import get_object_or_None
 
 
@@ -352,7 +353,7 @@ class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
     queryset = ProductCode.objects.all()
 
 
-class ProviderListCreate(HPListCreateAPIView):
+class ProviderListCreate(HPListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()

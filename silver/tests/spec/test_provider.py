@@ -1,3 +1,5 @@
+from django.core import serializers
+import simplejson as json
 import pytest
 from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
@@ -125,23 +127,21 @@ class TestProviderEndpoints(APITestCase):
              '<' + full_url + '?page=2>; rel="last", ' +
              '<' + full_url + '?page=1>; rel="first"')
 
-    """
-    #def test_POST_bulk_providers(self):
-        #providers = ProviderFactory.create_batch(5)
+    def test_POST_bulk_providers(self):
+        providers = ProviderFactory.create_batch(5)
 
-        #raw_providers = json.loads(serializers.serialize('json', providers))
+        raw_providers = json.loads(serializers.serialize('json', providers))
 
-        #serialized_providers = []
-        #for item in raw_providers:
-            #serialized_providers.append(item['fields'])
+        serialized_providers = []
+        for item in raw_providers:
+            serialized_providers.append(item['fields'])
 
-        #url = reverse('provider-list')
-        #response = self.client.post(url, data=json.dumps(serialized_providers),
-                                    #content_type='application/json')
+        url = reverse('provider-list')
+        response = self.client.post(url, data=json.dumps(serialized_providers),
+                                    content_type='application/json')
 
-        #assert response.status_code == status.HTTP_201_CREATED
-        #assert len(response.data) == 5
-    """
+        assert response.status_code == status.HTTP_201_CREATED
+        assert len(response.data) == 5
 
     def test_get_provider(self):
         ProviderFactory.reset_sequence(1)
