@@ -366,3 +366,29 @@ class TestSubscriptionEndpoint(APITestCase):
         end_date = datetime.date(year=2015, month=4, day=30)
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=4, day=22))
+
+        # Every 2 weeks
+        subscription.plan.interval = 'week'
+        subscription.plan.interval_count = 2
+        subscription.plan.save()
+
+        subscription.start_date = datetime.date(year=2015, month=5, day=31)
+        subscription.trial_end = (subscription.start_date +
+                                  datetime.timedelta(days=7))
+        subscription.save()
+
+        start_date = datetime.date(year=2015, month=5, day=31)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=6, day=3))
+
+        end_date = datetime.date(year=2015, month=6, day=7)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=6, day=7))
+
+        start_date = datetime.date(year=2015, month=6, day=8)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=6, day=12))
+
+        end_date = datetime.date(year=2015, month=6, day=21)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=6, day=8))

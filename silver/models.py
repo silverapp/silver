@@ -282,6 +282,7 @@ class Subscription(models.Model):
                                                        ignore_trial)
         if not _current_start_date:
             return None
+
         if self.plan.interval == 'month':
             fake_end_date = next_date_after_date(
                 initial_date=_current_start_date,
@@ -293,6 +294,7 @@ class Subscription(models.Model):
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
             ) - datetime.timedelta(days=1)
+
         if (ignore_trial or not self.trial_end) \
                 or self.trial_end >= reference_date:
             if self.trial_end and fake_end_date \
@@ -310,6 +312,7 @@ class Subscription(models.Model):
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
             ) - datetime.timedelta(days=1))
+
         if end_date:
             if self.ended_at:
                 if self.ended_at < end_date:
