@@ -134,8 +134,8 @@ class MeteredFeatureUnitsLog(models.Model):
             raise ValidationError(err_msg)
 
         if not self.id:
-            start_date = self.subscription.bucket_start_date
-            end_date = self.subscription.bucket_end_date
+            start_date = self.subscription.bucket_start_date()
+            end_date = self.subscription.bucket_end_date()
             if get_object_or_None(MeteredFeatureUnitsLog, start_date=start_date,
                                   end_date=end_date,
                                   metered_feature=self.metered_feature,
@@ -148,10 +148,11 @@ class MeteredFeatureUnitsLog(models.Model):
              update_fields=None):
         if not self.id:
             if not self.start_date:
-                self.start_date = self.subscription.bucket_start_date
+                self.start_date = self.subscription.bucket_start_date()
             if not self.end_date:
-                self.end_date = self.subscription.bucket_end_date
-            super(MeteredFeatureUnitsLog, self).save()
+                self.end_date = self.subscription.bucket_end_date()
+            super(MeteredFeatureUnitsLog, self).save(force_insert, force_update,
+                                                     using, update_fields)
 
         if self.id:
             update_fields = []
@@ -220,7 +221,8 @@ class Subscription(models.Model):
         if reference_date is None:
             reference_date = timezone.now().date()
 
-        if self.trial_end > reference_date or ignore_trial:
+        if (ignore_trial or not self.trial_end) \
+                or self.trial_end >= reference_date:
             fake_initial_date = next_date_after_date(
                 initial_date=self.start_date, day=1
             )
@@ -261,20 +263,21 @@ class Subscription(models.Model):
             reference_date = timezone.now().date()
 
         end_date = None
-        if self.trial_end > reference_date or ignore_trial:
+        if (ignore_trial or not self.trial_end) \
+                or self.trial_end >= reference_date:
             fake_end_date = next_date_after_date(
                 initial_date=self._current_start_date(reference_date,
                                                       ignore_trial),
                 day=1
-            )
-            if fake_end_date > self.trial_end:
+            ) - datetime.timedelta(days=1)
+            if self.trial_end and fake_end_date > self.trial_end:
                 return self.trial_end
             else:
                 return fake_end_date
         else:
             end_date_after_trial = next_date_after_date(
                 initial_date=self.trial_end, day=1
-            )
+            ) - datetime.timedelta(days=1)
             if end_date_after_trial:
                 if reference_date < end_date_after_trial:
                     end_date = end_date_after_trial
@@ -284,7 +287,7 @@ class Subscription(models.Model):
                                                       ignore_trial),
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
-            )
+            ) - datetime.timedelta(days=1)
             if end_date:
                 if self.ended_at:
                     if self.ended_at < end_date:
@@ -323,10 +326,11 @@ class Subscription(models.Model):
             self.trial_end = max(self.start_date, trial_end_date)
         else:
             if self.trial_end:
-                self.trial_end = max(self.start_date, self.trial_end_date)
-            else:
+                if self.trial_end < self.start_date:
+                    self.trial_end = None
+            elif self.plan.trial_period_days > 0:
                 self.trial_end = self.start_date + datetime.timedelta(
-                    days=self.plan.trial_period_days
+                    days=self.plan.trial_period_days - 1
                 )
 
     @transition(field=state, source=['active', 'past_due', 'on_trial'],
