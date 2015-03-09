@@ -11,5 +11,3 @@ pytz
 # python-dev is required for xhtml2pdf to work
 xhtml2pdf
 django-xhtml2pdf
-boto
-django-storages

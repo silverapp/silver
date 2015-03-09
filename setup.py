@@ -37,16 +37,18 @@ dev_requires = [
 ]
 
 install_requires = [
+    'python-dateutil',
+    'pytz',
     'django',
     'djangorestframework',
-    'django-rest-hooks',
     'django-filter',
     'djangorestframework-bulk',
     'django-fsm',
     'django-livefield',
-    'django-rest-hooks',
     'django-international',
-    'django-jsonfield'
+    'django-jsonfield',
+    'xhtml2pdf',
+    'django-xhtml2pdf'
 ]
 
 
