@@ -47,7 +47,7 @@ install_requires = [
     'django-livefield',
     'django-international',
     'django-jsonfield',
-    'pyvat'
+    'pyvat',
     'xhtml2pdf',
     'django-xhtml2pdf'
 ]
