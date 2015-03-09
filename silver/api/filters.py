@@ -1,7 +1,7 @@
 from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
                             NumberFilter)
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
-                           Plan, AbstractInvoicingDocument, Invoice, Proforma)
+                           Plan, Invoice, BillingDocument, Proforma)
 
 
 class MeteredFeaturesFilter(FilterSet):
@@ -65,7 +65,7 @@ class PlanFilter(FilterSet):
 
 
 class BillingDocumentFilter(FilterSet):
-    state = CharFilter(name='state', lookup_type='icontains')
+    state = CharFilter(name='state', lookup_type='iexact')
     number = NumberFilter(name='number', lookup_type='iexact')
     customer_name = CharFilter(name='customer__name', lookup_type='icontains')
     customer_company = CharFilter(name='customer__company',
@@ -81,7 +81,6 @@ class BillingDocumentFilter(FilterSet):
     sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
 
     class Meta:
-        model = AbstractInvoicingDocument
         fields = ['state', 'number', 'customer_name', 'customer_company',
                   'issue_date', 'due_date', 'paid_date', 'cancel_date',
                   'currency', 'sales_tax_name']

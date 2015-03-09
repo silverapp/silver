@@ -1,12 +1,17 @@
 import json
+from datetime import timedelta
 
 from django.utils import timezone
+from django.conf import settings
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import Invoice
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, InvoiceFactory)
+                                    ProviderFactory, InvoiceFactory,
+                                    SubscriptionFactory)
+from silver.utils import get_object_or_None
 
 
 class TestInvoiceEndpoints(APITestCase):
@@ -17,8 +22,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_post_invoice_without_invoice_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
-        url = reverse('invoice-list')
+        SubscriptionFactory.create()
 
+        url = reverse('invoice-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
@@ -46,12 +52,15 @@ class TestInvoiceEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "proforma": None,
-            "invoice_entries": []
+            "invoice_entries": [],
+            "total": '0.00'
         }
 
     def test_post_invoice_with_invoice_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
+        SubscriptionFactory.create()
+
         url = reverse('invoice-list')
         data = {
             'provider': 'http://testserver/providers/1/',
@@ -114,7 +123,8 @@ class TestInvoiceEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "proforma": None,
-            "invoice_entries": []
+            "invoice_entries": [],
+            "total": '0.00',
         }
 
     def test_delete_invoice(self):
@@ -141,12 +151,13 @@ class TestInvoiceEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.00'
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -158,12 +169,14 @@ class TestInvoiceEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.00'
+
         }
 
     def test_try_to_get_invoice_entries(self):
@@ -193,12 +206,13 @@ class TestInvoiceEndpoints(APITestCase):
                 'entry_id': cnt + 1,
                 'description': 'Page views',
                 'unit': None,
-                'quantity': '20.0000000000',
-                'unit_price': '10.0000000000',
+                'quantity': '20.00',
+                'unit_price': '10.00',
                 'start_date': None,
                 'end_date': None,
                 'prorated': False,
-                'product_code': None
+                'product_code': None,
+                'total': '200.00'
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -353,9 +367,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -363,6 +378,8 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+        invoice = get_object_or_None(Invoice, pk=1)
 
     def test_issue_invoice_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -375,9 +392,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': '2014-01-01',
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -385,6 +403,8 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+        invoice = get_object_or_None(Invoice, pk=1)
 
     def test_issue_invoice_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -412,6 +432,8 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
+
+        invoice = get_object_or_None(Invoice, pk=1)
 
     def test_issue_invoice_when_in_issued_state(self):
         provider = ProviderFactory.create()
@@ -455,9 +477,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid'
         }
@@ -481,9 +504,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid'
         }
@@ -532,9 +556,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'canceled'
         }
@@ -559,9 +584,10 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': '2014-10-10',
             'state': 'canceled'
         }

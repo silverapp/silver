@@ -1,13 +1,16 @@
 import json
+from datetime import timedelta
 
 from django.utils import timezone
+from django.conf import settings
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from silver.models import Invoice, Proforma
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, ProformaFactory)
+                                    ProviderFactory, ProformaFactory,
+                                    SubscriptionFactory)
 from silver.utils import get_object_or_None
 
 
@@ -19,8 +22,9 @@ class TestProformaEndpoints(APITestCase):
     def test_post_proforma_without_proforma_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
-        url = reverse('proforma-list')
+        SubscriptionFactory.create()
 
+        url = reverse('proforma-list')
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
@@ -30,6 +34,7 @@ class TestProformaEndpoints(APITestCase):
         }
 
         response = self.client.post(url, data=data)
+
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             "id": 1,
@@ -48,12 +53,15 @@ class TestProformaEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "invoice": None,
-            "proforma_entries": []
+            "proforma_entries": [],
+            "total": '0.00',
         }
 
     def test_post_proforma_with_proforma_entries(self):
         CustomerFactory.create()
         ProviderFactory.create()
+        SubscriptionFactory.create()
+
         url = reverse('proforma-list')
         data = {
             'provider': 'http://testserver/providers/1/',
@@ -116,7 +124,8 @@ class TestProformaEndpoints(APITestCase):
             "currency": "RON",
             "state": "draft",
             "invoice": None,
-            "proforma_entries": []
+            "proforma_entries": [],
+            'total': '0.00',
         }
 
     def test_delete_proforma(self):
@@ -143,12 +152,13 @@ class TestProformaEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.00'
         }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -160,12 +170,13 @@ class TestProformaEndpoints(APITestCase):
             'entry_id': 1,
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.0000000000',
-            'unit_price': '10.0000000000',
+            'quantity': '20.00',
+            'unit_price': '10.00',
             'start_date': None,
             'end_date': None,
             'prorated': False,
-            'product_code': None
+            'product_code': None,
+            'total': '200.00'
         }
 
     def test_try_to_get_proforma_entries(self):
@@ -195,12 +206,13 @@ class TestProformaEndpoints(APITestCase):
                 'entry_id': cnt + 1,
                 'description': 'Page views',
                 'unit': None,
-                'quantity': '20.0000000000',
-                'unit_price': '10.0000000000',
+                'quantity': '20.00',
+                'unit_price': '10.00',
                 'start_date': None,
                 'end_date': None,
                 'prorated': False,
-                'product_code': None
+                'product_code': None,
+                'total': '200.00'
             }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -347,7 +359,7 @@ class TestProformaEndpoints(APITestCase):
     def test_issue_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
@@ -355,9 +367,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -366,6 +379,8 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
 
     def test_issue_proforma_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -378,9 +393,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': '2014-01-01',
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
@@ -389,6 +405,8 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
 
     def test_issue_proforma_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -417,6 +435,8 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
+
+        proforma = get_object_or_None(Proforma, pk=1)
 
     def test_issue_proforma_when_in_issued_state(self):
         provider = ProviderFactory.create()
@@ -462,9 +482,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid',
             'invoice': 'http://testserver/invoices/1/'
@@ -477,6 +498,9 @@ class TestProformaEndpoints(APITestCase):
         proforma = get_object_or_None(Proforma, pk=1)
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
+
+        invoice = get_object_or_None(Invoice, proforma=proforma)
+
 
     def test_pay_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -494,9 +518,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid',
             'invoice': 'http://testserver/invoices/1/'
@@ -509,6 +534,8 @@ class TestProformaEndpoints(APITestCase):
         proforma = get_object_or_None(Proforma, pk=1)
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
+
+        invoice = get_object_or_None(Invoice, proforma=proforma)
 
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -552,9 +579,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'canceled'
         }
@@ -580,9 +608,10 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
+        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
-            'due_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'due_date': due_date.strftime('%Y-%m-%d'),
             'cancel_date': '2014-10-10',
             'state': 'canceled'
         }

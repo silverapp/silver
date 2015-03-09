@@ -76,8 +76,8 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
                   'email', 'address_1', 'address_2', 'city', 'state',
-                  'zip_code', 'country', 'extra', 'invoice_starting_number',
-                  'invoice_series', 'proforma_series',
+                  'zip_code', 'country', 'extra', 'invoice_series',
+                  'invoice_starting_number', 'proforma_series',
                   'proforma_starting_number')
 
     def validate(self, data):
@@ -116,9 +116,8 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Plan
         fields = ('name', 'url', 'interval', 'interval_count', 'amount',
-                  'currency', 'trial_period_days', 'due_days', 'generate_after',
-                  'enabled', 'private', 'product_code', 'metered_features',
-                  'provider')
+                  'currency', 'trial_period_days', 'generate_after', 'enabled',
+                  'private', 'product_code', 'metered_features', 'provider')
 
     def validate_metered_features(self, value):
         metered_features = []
@@ -170,20 +169,42 @@ class SubscriptionUrl(serializers.HyperlinkedRelatedField):
         return reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
+class CustomerUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'pk': obj.customer.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     trial_end = serializers.DateField(required=False)
     start_date = serializers.DateField(required=False)
     ended_at = serializers.DateField(read_only=True)
+    customer = CustomerUrl(view_name='customer-detail', source='*',
+                           read_only=True)
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
 
     class Meta:
         model = Subscription
-        fields = ('url', 'plan', 'customer', 'trial_end', 'start_date',
+        fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
                   'ended_at', 'state', 'reference')
         read_only_fields = ('state', )
 
+    def create(self, validated_data):
+        request = self._context['request']
+        customer_pk = request.parser_context['kwargs']['customer_pk']
+        customer = Customer.objects.get(pk=customer_pk)
+        validated_data.update({'customer': customer})
+
+        subscription = Subscription.objects.create(**validated_data)
+        return subscription
+
     def validate(self, attrs):
+        if self.initial_data.get('customer', None):
+            msg = "You cannot add the customer via POST data as it is added"\
+                  " automatically. Remove the field from the body."
+            raise serializers.ValidationError({'customer': msg})
+
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
@@ -204,7 +225,7 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ('url', 'id', 'customer_reference', 'name', 'company', 'email',
+        fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_number', 'sales_tax_name',
                   'sales_tax_percent', 'subscriptions')
@@ -217,14 +238,25 @@ class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
+    product_code = serializers.SlugRelatedField(
+        slug_field='value',
+        read_only=True
+    )
+
     class Meta:
         model = DocumentEntry
-        fields = ('entry_id', 'description', 'unit', 'quantity', 'unit_price',
-                  'start_date', 'end_date', 'prorated', 'product_code')
+        fields = ('entry_id', 'description', 'unit', 'unit_price', 'quantity',
+                  'total', 'start_date', 'end_date', 'prorated', 'product_code')
+
+
+class PDFUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        return obj.pdf.url if obj.pdf else None
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
 
     class Meta:
         model = Invoice
@@ -232,13 +264,16 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'proforma',
-                  'invoice_entries')
-        read_only_fields = ('archived_provider', 'archived_customer')
+                  'invoice_entries', 'total', 'pdf_url')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
         entries = validated_data.pop('invoice_entries', None)
+
+        # Create the new invoice objectj
         invoice = Invoice.objects.create(**validated_data)
 
+        # Add the invoice entries
         for entry in entries:
             entry_dict = dict()
             entry_dict['invoice'] = invoice
@@ -279,6 +314,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
 
     class Meta:
         model = Proforma
@@ -286,11 +322,12 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
                   'sales_tax_percent', 'currency', 'state', 'invoice',
-                  'proforma_entries')
-        read_only_fields = ('archived_provider', 'archived_customer')
+                  'proforma_entries', 'total', 'pdf_url')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
     def create(self, validated_data):
         entries = validated_data.pop('proforma_entries', None)
+
         proforma = Proforma.objects.create(**validated_data)
 
         for entry in entries:

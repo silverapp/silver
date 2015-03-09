@@ -1,5 +1,7 @@
 import datetime
+from decimal import Decimal
 
+from django.core.management import call_command
 from django.http.response import Http404
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
@@ -7,10 +9,6 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
-from silver.api.dateutils import last_date_that_fits
-from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
-                                CustomerFilter, ProviderFilter, PlanFilter,
-                                InvoiceFilter, ProformaFilter)
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma)
@@ -23,7 +21,11 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     DocumentEntrySerializer)
 from silver.api.generics import (HPListAPIView, HPListCreateAPIView,
                                  HPListBulkCreateAPIView)
+from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
+                                CustomerFilter, ProviderFilter, PlanFilter,
+                                InvoiceFilter, ProformaFilter)
 from silver.utils import get_object_or_None
+from silver.api.dateutils import last_date_that_fits
 
 
 class PlanList(HPListCreateAPIView):
@@ -47,10 +49,8 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
         plan = get_object_or_404(Plan.objects, pk=self.kwargs.get('pk', None))
         name = request.data.get('name', None)
         generate_after = request.data.get('generate_after', None)
-        due_days = request.data.get('due_days', None)
         plan.name = name or plan.name
         plan.generate_after = generate_after or plan.generate_after
-        plan.due_days = due_days or plan.due_days
         plan.save()
         return Response(PlanSerializer(plan, context={'request': request}).data,
                         status=status.HTTP_200_OK)
@@ -177,9 +177,12 @@ class SubscriptionDetailCancel(APIView):
         else:
             if when == 'now':
                 sub.cancel()
-                sub.end()
                 sub.save()
-                return Response({"state": sub.state},
+
+                # TODO: remove after refactor
+                call_command('generate_billing_documents', subscription=sub.id)
+
+                return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
                 sub.cancel()
@@ -235,9 +238,8 @@ class MeteredFeatureUnitsLogDetail(APIView):
         mf_product_code = self.kwargs.get('mf_product_code', None)
         subscription_pk = self.kwargs.get('subscription_pk', None)
         date = request.data.get('date', None)
-        consumed_units = request.data.get('count', None)
+        consumed_units = Decimal(request.data.get('count', 0))
         update_type = request.data.get('update_type', None)
-
         subscription = get_object_or_None(Subscription, pk=subscription_pk)
         metered_feature = get_object_or_404(
             subscription.plan.metered_features,
@@ -468,7 +470,7 @@ class DocEntryUpdateDestroy(APIView):
 
         document = get_object_or_404(Model, pk=doc_pk)
         if document.state != 'draft':
-            msg = "{model} entries can be added only when the {model_lower} is"\
+            msg = "{model} entries can be deleted only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
@@ -510,7 +512,7 @@ class InvoiceStateHandler(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         invoice_pk = kwargs.get('pk')
         try:
             invoice = Invoice.objects.get(pk=invoice_pk)
@@ -612,7 +614,7 @@ class ProformaStateHandler(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         proforma_pk = kwargs.get('pk')
         try:
             proforma = Proforma.objects.get(pk=proforma_pk)

@@ -2,6 +2,7 @@ from decimal import Decimal
 import datetime
 
 import factory
+import factory.fuzzy
 from django.contrib.auth import get_user_model
 from international.models import countries
 
@@ -35,6 +36,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = Decimal(1.0)
     sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
+    payment_due_days = 5
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
@@ -43,8 +45,8 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     unit = 'Unit'
-    price_per_unit = factory.Sequence(lambda n: n)
-    included_units = factory.Sequence(lambda n: n)
+    price_per_unit = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
+    included_units = factory.fuzzy.FuzzyDecimal(0.01, 100000.00)
     product_code = factory.SubFactory(ProductCodeFactory)
 
 
@@ -80,7 +82,6 @@ class PlanFactory(factory.django.DjangoModelFactory):
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
     trial_period_days = factory.Sequence(lambda n: n)
-    due_days = factory.Sequence(lambda n: n)
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)
@@ -118,7 +119,6 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
 
-
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Proforma
@@ -127,6 +127,15 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
+
+    @factory.post_generation
+    def subscriptions(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            for subscription in extracted:
+                self.subscriptions.add(subscription)
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):

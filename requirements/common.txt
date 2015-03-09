@@ -6,3 +6,9 @@ djangorestframework-bulk
 django-livefield
 django-jsonfield
 git+git://github.com/PressLabs/django-rest-hooks.git
+python-dateutil
+pytz
+# python-dev is required for xhtml2pdf to work
+xhtml2pdf
+django-xhtml2pdf
+pyvat
