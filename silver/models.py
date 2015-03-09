@@ -573,8 +573,9 @@ class Customer(AbstractBillingEntity):
         company_field.help_text = "The company to which the bill is issued."
 
     def clean(self):
-        if is_vat_number_format_valid(self.sales_tax_number,
-                                      self.country) is False:
+        if (self.sales_tax_number and
+            is_vat_number_format_valid(self.sales_tax_number,
+                                       self.country) is False):
             raise ValidationError(
                 {'sales_tax_number': 'The sales tax number is not valid.'}
             )
