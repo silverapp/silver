@@ -525,11 +525,12 @@ class AbstractBillingEntity(LiveModel):
     class Meta:
         abstract = True
 
+    @property
+    def billing_name(self):
+        return self.company or self.name
+
     def __unicode__(self):
-        display = self.name
-        if self.company:
-            display = '%s (%s)' % (display, self.company)
-        return display
+        return self.billing_name
 
     def get_list_display_fields(self):
         field_names = ['company', 'email', 'address_1', 'city', 'country',
@@ -853,7 +854,7 @@ class BillingDocument(models.Model):
             'entries': entries
         }
         resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf('invoice_pdf_generic.html', context=context,
+        data = generate_pdf('invoice_pdf.html', context=context,
                             file_object=resp)
 
         if data:
@@ -879,6 +880,8 @@ class BillingDocument(models.Model):
 class Invoice(BillingDocument):
     proforma = models.ForeignKey('Proforma', blank=True, null=True,
                                  related_name='related_proforma')
+
+    kind = 'Invoice'
 
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
@@ -924,6 +927,8 @@ def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
 class Proforma(BillingDocument):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_invoice')
+
+    kind = 'Proforma'
 
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
