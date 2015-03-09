@@ -10,6 +10,8 @@ from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from django.utils.module_loading import import_string
+from django.utils.text import slugify
 from django_xhtml2pdf.utils import generate_pdf
 from django.db import models
 from django.db.models import Max
@@ -20,7 +22,6 @@ from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil.rrule import *
-from storages.backends.s3boto import S3BotoStorage
 from pyvat import is_vat_number_format_valid
 
 from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
@@ -33,9 +34,20 @@ UPDATE_TYPES = (
     ('relative', 'Relative')
 )
 
-S3Storage = S3BotoStorage(bucket=settings.INVOICES_S3_BUCKET,
-                          access_key=settings.AWS_KEY,
-                          secret_key=settings.AWS_SECRET)
+_storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
+if _storage:
+    _storage_klass = import_string(_storage[0])
+    _storage = _storage_klass(*_storage[1], **_storage[2])
+
+
+def documents_pdf_path(document, filename):
+    path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
+        company=slugify(document.provider.company or document.provider.name),
+        date=document.issue_date.strftime('%Y/%m'),
+        doc_name=('%ss' % document.__class__.__name__).lower(),
+        prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
+        filename=filename)
+    return path
 
 
 class Plan(models.Model):
@@ -676,14 +688,6 @@ class ProductCode(models.Model):
         return self.value
 
 
-def documents_pdf_path(document, filename):
-    path = '{date}/{doc_name}/{filename}'.format(
-        date=document.issue_date.strftime('/%Y/%m'),
-        doc_name='%ss' % document.__class__.__name__,
-        filename=filename)
-    return path
-
-
 class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
@@ -705,7 +709,7 @@ class BillingDocument(models.Model):
         choices=currencies, max_length=4, default='USD',
         help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
-                           storage=S3Storage, upload_to=documents_pdf_path)
+                           storage=_storage, upload_to=documents_pdf_path)
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name="State", help_text='The state the invoice is in.')
 
