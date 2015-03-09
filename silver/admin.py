@@ -203,7 +203,7 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'number', 'customer_display', 'state',
+    list_display = ['series_number', 'customer_display', 'state',
                     'provider_display', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', 'sales_tax_name', 'sales_tax_percent',
                     'currency']
@@ -227,6 +227,10 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     @property
     def _model(self):
         raise NotImplementedError
+
+    def series_number(self, document):
+        return "%s-%d" % (document.series, document.number)
+    series_number.short_description = 'Invoice number'
 
     @property
     def _model_name(self):
