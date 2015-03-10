@@ -1024,8 +1024,18 @@ class DocumentEntry(models.Model):
 
     @property
     def total_before_tax(self):
+        if self.invoice:
+            sales_tax_percent = self.invoice.sales_tax_percent
+        elif self.proforma:
+            sales_tax_percent = self.proforma.sales_tax_percent
+        else:
+            sales_tax_percent = None
+
+        if not sales_tax_percent:
+            return self.total
+
         initial_unit_price = (self.unit_price * 100.0
-                              / (100.0 + self.invoice.sales_tax_percent))
+                              / (100.0 + sales_tax_percent))
         res = Decimal(self.quantity * initial_unit_price)
         return res.quantize(Decimal('0.00'))
 
