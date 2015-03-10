@@ -911,6 +911,20 @@ class Invoice(BillingDocument):
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
 
+    @property
+    def total_before_tax(self):
+        entries_total = [Decimal(item.total_before_tax)
+                         for item in self.invoice_entries.all()]
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        return res.to_eng_string()
+
+    @property
+    def tax_value(self):
+        entries_total = [Decimal(item.tax_value)
+                         for item in self.invoice_entries.all()]
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        return res.to_eng_string()
+
 
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
@@ -981,6 +995,20 @@ class Proforma(BillingDocument):
     @property
     def total(self):
         entries_total = [Decimal(item.total) for item in self.proforma_entries.all()]
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        return res.to_eng_string()
+
+    @property
+    def total_before_tax(self):
+        entries_total = [Decimal(item.total_before_tax)
+                         for item in self.proforma_entries.all()]
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        return res.to_eng_string()
+
+    @property
+    def tax_value(self):
+        entries_total = [Decimal(item.tax_value)
+                         for item in self.proforma_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res.to_eng_string()
 
