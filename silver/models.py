@@ -1022,6 +1022,13 @@ class DocumentEntry(models.Model):
         res = (self.unit_price * self.quantity)
         return res.quantize(Decimal('0.00')).to_eng_string()
 
+    @property
+    def total_before_tax(self):
+        initial_unit_price = (self.unit_price * 100.0
+                              / (100.0 + self.invoice.sales_tax_percent))
+        res = Decimal(self.quantity * initial_unit_price)
+        return res.quantize(Decimal('0.00'))
+
     def _get_next_entry_id(self, invoice):
         max_id = self.__class__._default_manager.filter(
             invoice=self.invoice,
