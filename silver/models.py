@@ -1029,6 +1029,10 @@ class DocumentEntry(models.Model):
         res = Decimal(self.quantity * initial_unit_price)
         return res.quantize(Decimal('0.00'))
 
+    @property
+    def tax_value(self):
+        return self.total - self.total_before_tax
+
     def _get_next_entry_id(self, invoice):
         max_id = self.__class__._default_manager.filter(
             invoice=self.invoice,
