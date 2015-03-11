@@ -155,8 +155,8 @@ class ProviderAdmin(LiveModelAdmin):
 
 class DocumentEntryInline(admin.TabularInline):
     model = DocumentEntry
-    fields = ('description', 'product_code', 'unit', 'unit_price', 'quantity',
-              'start_date', 'end_date')
+    fields = ('description', 'prorated', 'product_code', 'unit', 'unit_price',
+              'quantity', 'start_date', 'end_date')
 
 
 class BillingDocumentForm(forms.ModelForm):
