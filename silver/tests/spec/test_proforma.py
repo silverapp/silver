@@ -13,6 +13,8 @@ from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     SubscriptionFactory)
 from silver.utils import get_object_or_None
 
+PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
+
 
 class TestProformaEndpoints(APITestCase):
     def setUp(self):
@@ -364,7 +366,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
@@ -390,7 +392,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': '2014-01-01',
             'due_date': due_date.strftime('%Y-%m-%d'),
@@ -479,7 +481,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
@@ -515,7 +517,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
@@ -576,7 +578,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
@@ -605,7 +607,7 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        due_date = timezone.now().date() + timedelta(days=settings.PAYMENT_DUE_DAYS)
+        due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),

@@ -34,6 +34,8 @@ UPDATE_TYPES = (
     ('relative', 'Relative')
 )
 
+PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
+
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
     _storage_klass = import_string(_storage[0])
@@ -546,7 +548,7 @@ class AbstractBillingEntity(LiveModel):
 
 class Customer(AbstractBillingEntity):
     payment_due_days = models.PositiveIntegerField(
-        default=settings.PAYMENT_DUE_DAYS,
+        default=PAYMENT_DUE_DAYS,
         help_text='Due days for generated proforma/invoice.'
     )
     consolidated_billing = models.BooleanField(
@@ -736,7 +738,7 @@ class BillingDocument(models.Model):
         if due_date:
             self.due_date = dt.strptime(due_date, '%Y-%m-%d').date()
         elif not self.due_date and not due_date:
-            delta = datetime.timedelta(days=settings.PAYMENT_DUE_DAYS)
+            delta = datetime.timedelta(days=PAYMENT_DUE_DAYS)
             self.due_date = timezone.now().date() + delta
 
         if not self.sales_tax_name:
