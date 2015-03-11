@@ -130,7 +130,7 @@ class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
-              'sales_tax_percent', 'extra']
+              'sales_tax_percent', 'sales_tax_number', 'extra']
     list_display = ['customer_reference', 'name', 'company', 'email',
                     'complete_address', 'sales_tax_percent', 'sales_tax_name',
                     'consolidated_billing']
