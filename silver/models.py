@@ -257,12 +257,18 @@ class Subscription(models.Model):
         if reference_date is None:
             reference_date = timezone.now().date()
 
+        # if the trial_end date is ignored, it doesn't exist
+        # or it hasn't passed yet: we don't consider it
         if (ignore_trial or not self.trial_end) \
                 or self.trial_end >= reference_date:
+            # now we act depending on the interval type
             if self.plan.interval == 'month':
+                # the fake_initial_date is used to normalize the starting dates
+                # of intervals, by fixing a day
                 fake_initial_date = next_date_after_date(
                     initial_date=self.start_date, day=1
                 )
+                # this returns the appropriate start date
                 return last_date_that_fits(
                     initial_date=fake_initial_date,
                     interval_type=self.plan.interval,
@@ -277,8 +283,12 @@ class Subscription(models.Model):
                     end_date=reference_date
                 )
                 return fake_initial_date
+        # if the trial_end has passed
         else:
+            # now we act depending on the interval type
             if self.plan.interval == 'month':
+                # we get a fake_initial_date based on the trial_end date
+                # and on a fixed day
                 fake_initial_date = next_date_after_date(
                     initial_date=self.trial_end, day=1
                 )
@@ -290,15 +300,15 @@ class Subscription(models.Model):
                     end_date=reference_date
                 ) + datetime.timedelta(days=1)
             if fake_initial_date:
+                # if the fake_initial_date has not arrived or passed yet
                 if reference_date < fake_initial_date:
-                    initial_date = self.trial_end + datetime.timedelta(days=1)
-                else:
-                    initial_date = fake_initial_date
-            else:
-                initial_date = None
+                    # it means the start_date is the next day after trial_end
+                    fake_initial_date = (self.trial_end + 
+                                         datetime.timedelta(days=1))
 
+            # based on the fake_initial_date we return an appropriate start date
             return last_date_that_fits(
-                initial_date=initial_date,
+                initial_date=fake_initial_date,
                 end_date=reference_date,
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
