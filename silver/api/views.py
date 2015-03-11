@@ -106,7 +106,7 @@ class SubscriptionList(HPListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         url = reverse('customer-detail', kwargs={'pk': customer_pk},
                       request=request)
-        request.data.update({'customer': url})
+        request.data.update({unicode('customer'): unicode(url)})
 
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 
