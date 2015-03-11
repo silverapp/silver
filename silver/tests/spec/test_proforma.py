@@ -149,7 +149,6 @@ class TestProformaEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
-            'entry_id': 1,
             'description': 'Page views',
             'unit': None,
             'quantity': '20.00',
@@ -167,7 +166,6 @@ class TestProformaEndpoints(APITestCase):
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 1
         assert invoice_entries[0] == {
-            'entry_id': 1,
             'description': 'Page views',
             'unit': None,
             'quantity': '20.00',
@@ -203,7 +201,6 @@ class TestProformaEndpoints(APITestCase):
 
             assert response.status_code == status.HTTP_201_CREATED
             assert response.data == {
-                'entry_id': cnt + 1,
                 'description': 'Page views',
                 'unit': None,
                 'quantity': '20.00',
@@ -235,7 +232,7 @@ class TestProformaEndpoints(APITestCase):
                              content_type='application/json')
 
         url = reverse('proforma-entry-update', kwargs={'document_pk': 1,
-                                                       'entry_id': 1})
+                                                       'entry_pk': 1})
         response = self.client.delete(url)
         assert response.status_code == status.HTTP_204_NO_CONTENT
 

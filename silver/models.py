@@ -1026,7 +1026,6 @@ def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
 
 
 class DocumentEntry(models.Model):
-    entry_id = models.IntegerField(blank=True)
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.DecimalField(max_digits=8, decimal_places=2)
@@ -1071,22 +1070,9 @@ class DocumentEntry(models.Model):
     def tax_value(self):
         return self.total - self.total_before_tax
 
-    def _get_next_entry_id(self, invoice):
-        max_id = self.__class__._default_manager.filter(
-            invoice=self.invoice,
-        ).aggregate(Max('entry_id'))['entry_id__max']
-        return max_id + 1 if max_id else 1
-
-    def save(self, *args, **kwargs):
-        if not self.entry_id:
-            self.entry_id = self._get_next_entry_id(self.invoice)
-
-        super(DocumentEntry, self).save(*args, **kwargs)
-
     def __unicode__(self):
         s = "{id} - {descr} - {unit} - {unit_price} - {quantity} - {product_code}"
         return s.format(
-            id=self.entry_id,
             descr=self.description,
             unit=self.unit,
             unit_price=self.unit_price,

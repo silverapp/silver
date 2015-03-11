@@ -439,7 +439,7 @@ class DocEntryUpdateDestroy(APIView):
 
     def put(self, request, *args, **kwargs):
         doc_pk = kwargs.get('document_pk')
-        entry_id = kwargs.get('entry_id')
+        entry_pk = kwargs.get('entry_pk')
 
         Model = self.get_model()
         model_name = self.get_model_name()
@@ -451,7 +451,7 @@ class DocEntryUpdateDestroy(APIView):
                                             model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        searched_fields = {model_name.lower(): document, 'pk': entry_pk}
         entry = get_object_or_404(DocumentEntry, **searched_fields)
 
         serializer = DocumentEntrySerializer(entry, data=request.DATA,
@@ -463,7 +463,7 @@ class DocEntryUpdateDestroy(APIView):
 
     def delete(self, request, *args, **kwargs):
         doc_pk = kwargs.get('document_pk')
-        entry_id = kwargs.get('entry_id')
+        entry_pk = kwargs.get('entry_pk')
 
         Model = self.get_model()
         model_name = self.get_model_name()
@@ -475,7 +475,7 @@ class DocEntryUpdateDestroy(APIView):
                                             model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        searched_fields = {model_name.lower(): document, 'entry_id': entry_id}
+        searched_fields = {model_name.lower(): document, 'pk': entry_pk}
         entry = get_object_or_404(DocumentEntry, **searched_fields)
         entry.delete()
 
