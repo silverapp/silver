@@ -28,7 +28,7 @@ class TestCustomerEndpoints(APITestCase):
             "sales_tax_number": "RO5555555",
             "sales_tax_name": "VAT",
             "sales_tax_percent": '3.00',
-            "payment_due_days": 5
+            "payment_due_days": 5,
             "consolidated_billing": False
         }
 

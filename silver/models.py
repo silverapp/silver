@@ -303,7 +303,7 @@ class Subscription(models.Model):
                 # if the fake_initial_date has not arrived or passed yet
                 if reference_date < fake_initial_date:
                     # it means the start_date is the next day after trial_end
-                    fake_initial_date = (self.trial_end + 
+                    fake_initial_date = (self.trial_end +
                                          datetime.timedelta(days=1))
 
             # based on the fake_initial_date we return an appropriate start date
