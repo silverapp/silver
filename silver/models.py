@@ -1071,7 +1071,7 @@ class DocumentEntry(models.Model):
         return self.total - self.total_before_tax
 
     def __unicode__(self):
-        s = "{id} - {descr} - {unit} - {unit_price} - {quantity} - {product_code}"
+        s = "{descr} - {unit} - {unit_price} - {quantity} - {product_code}"
         return s.format(
             descr=self.description,
             unit=self.unit,
