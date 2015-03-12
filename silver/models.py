@@ -999,15 +999,15 @@ class Proforma(BillingDocument):
         invoice_fields = self.fields_for_automatic_invoice_generation
         invoice_fields.update({'proforma': self})
         invoice = Invoice.objects.create(**invoice_fields)
+        # For all the entries in the proforma => add the link to the new
+        # invoice
+        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
         invoice.issue()
         invoice.pay()
         invoice.save()
 
         self.invoice = invoice
 
-        # For all the entries in the proforma => add the link to the new
-        # invoice
-        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
 
     @property
     def series(self):
