@@ -925,21 +925,21 @@ class Invoice(BillingDocument):
     def total(self):
         entries_total = [Decimal(item.total) for item in self.invoice_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        return res
 
 
 @receiver(pre_delete, sender=Invoice)
@@ -1011,22 +1011,22 @@ class Proforma(BillingDocument):
     @property
     def total(self):
         entries_total = [Decimal(item.total) for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
-        return res.to_eng_string()
+        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        return res
 
 
 @receiver(pre_delete, sender=Proforma)
@@ -1063,7 +1063,7 @@ class DocumentEntry(models.Model):
     @property
     def total(self):
         res = (self.unit_price * self.quantity)
-        return res.quantize(Decimal('0.00')).to_eng_string()
+        return res.quantize(Decimal('0.0000'))
 
     @property
     def total_before_tax(self):
@@ -1077,10 +1077,10 @@ class DocumentEntry(models.Model):
         if not sales_tax_percent:
             return self.total
 
-        initial_unit_price = (self.unit_price * 100.0
-                              / (100.0 + sales_tax_percent))
+        initial_unit_price = (self.unit_price * Decimal('100.0000')
+                              / (Decimal('100.0000') + sales_tax_percent))
         res = Decimal(self.quantity * initial_unit_price)
-        return res.quantize(Decimal('0.00'))
+        return res.quantize(Decimal('0.0000'))
 
     @property
     def tax_value(self):
