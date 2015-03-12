@@ -1,5 +1,6 @@
 from django.conf.urls import patterns, url
 
+from silver import views as silver_views
 from silver.api import views
 
 urlpatterns = patterns('',
@@ -45,6 +46,8 @@ urlpatterns = patterns('',
         views.InvoiceEntryUpdateDestroy.as_view(), name='invoice-entry-update'),
     url(r'^invoices/(?P<pk>[0-9]+)/state/$',
         views.InvoiceStateHandler.as_view(), name='invoice-state'),
+    url(r'^invoices/(?P<invoice_id>\d+).pdf$',
+        silver_views.invoice_pdf, name='invoice-pdf'),
     url(r'^proformas/$',
         views.ProformaListCreate.as_view(), name='proforma-list'),
     url(r'^proformas/(?P<pk>[0-9]+)/$',
@@ -55,4 +58,6 @@ urlpatterns = patterns('',
         views.ProformaEntryUpdateDestroy.as_view(), name='proforma-entry-update'),
     url(r'^proformas/(?P<pk>[0-9]+)/state/$',
         views.ProformaStateHandler.as_view(), name='proforma-state'),
+    url(r'^proformas/(?P<proforma_id>\d+).pdf$',
+        silver_views.proforma_pdf, name='proforma-pdf'),
 )

@@ -5,8 +5,6 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.conf.urls.static import static
 
-from silver import views
-
 admin.autodiscover()
 
 urlpatterns = patterns(
@@ -16,8 +14,4 @@ urlpatterns = patterns(
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
 
-    url(r'^invoices/(?P<invoice_id>.*)/rendered-pdf/$',
-        views.invoice_pdf, name='invoice-pdf'),
-    url(r'^proformas/(?P<proforma_id>.*)/rendered-pdf/$',
-        views.proforma_pdf, name='proforma-pdf')
 ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
