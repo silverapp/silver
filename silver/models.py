@@ -771,12 +771,16 @@ class BillingDocument(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
+        self._generate_pdf()
+
     @transition(field=state, source='issued', target='canceled')
     def cancel(self, cancel_date=None):
         if cancel_date:
             self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
+
+        self._generate_pdf()
 
     def clean(self):
         # The only change that is allowed if the document is in issued state
@@ -896,6 +900,9 @@ class BillingDocument(models.Model):
                 series=self.series,
                 number=self.number
             )
+
+            if self.pdf:
+                self.pdf.delete()
             self.pdf.save(filename, pdf_content, False)
         else:
             raise RuntimeError(_('Could not generate invoice pdf.'))
