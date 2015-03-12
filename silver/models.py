@@ -541,6 +541,10 @@ class AbstractBillingEntity(LiveModel):
     def billing_name(self):
         return self.company or self.name
 
+    @property
+    def slug(self):
+        return slugify(self.billing_name)
+
     def __unicode__(self):
         return self.billing_name
 
@@ -866,7 +870,7 @@ class BillingDocument(models.Model):
             'entries': entries
         }
         resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf('invoice_pdf.html', context=context,
+        data = generate_pdf('silver/invoice_pdf.html', context=context,
                             file_object=resp)
 
         if data:

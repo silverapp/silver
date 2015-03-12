@@ -46,6 +46,7 @@
         }
 
         body {
+            font-family: open-sans;
             font-size: 8pt;
             color: #4d4d4d;
         }
@@ -166,6 +167,10 @@
             </td>
             <td width="8cm">
                 <h1>Customer: {{ customer.billing_name }}</h1>
+
+                {% if customer.sales_tax_number %}
+                    <strong>Tax ID</strong>: {{ customer.sales_tax_number }}<br>
+                {% endif %}
 
                 <strong>Address</strong>: {{ customer.address_1 }}<br>
 
