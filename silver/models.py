@@ -130,7 +130,7 @@ class MeteredFeature(models.Model):
         max_length=32,
         help_text='The feature display name.'
     )
-    unit = models.CharField(max_length=20, blank=True, null=True)
+    unit = models.CharField(max_length=20)
     price_per_unit = models.DecimalField(
         max_digits=8, decimal_places=2, help_text='The price per unit.'
     )
