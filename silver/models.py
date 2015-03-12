@@ -855,11 +855,27 @@ class BillingDocument(models.Model):
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
                 'currency']
 
-    def _generate_pdf(self):
+    @property
+    def _entries(self):
+        # entries iterator which replaces the invoice/proforma from the DB with
+        # self. We need this in _generate_pdf so that the data in PDF has the
+        # lastest state for the document. Without this we get in template:
+        #
+        # invoice.issue_date != entry.invoice.issue_date
+        #
+        # which is obviously false.
         document_type_name = self.__class__.__name__  # Invoice or Proforma
         kwargs = {document_type_name.lower(): self}
-
         entries = DocumentEntry.objects.filter(**kwargs)
+        for entry in entries:
+            if document_type_name.lower() == 'invoice':
+                entry.invoice = self
+            if document_type_name.lower() == 'proforma':
+                entry.proforma = self
+            yield(entry)
+
+    def _generate_pdf(self):
+
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
 
@@ -867,7 +883,7 @@ class BillingDocument(models.Model):
             'invoice': self,
             'provider': provider,
             'customer': customer,
-            'entries': entries
+            'entries': self._entries
         }
         resp = HttpResponse(content_type='application/pdf')
         data = generate_pdf('silver/invoice_pdf.html', context=context,
