@@ -8,6 +8,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
+from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
@@ -19,8 +20,6 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
                                     DocumentEntrySerializer)
-from silver.api.generics import (HPListAPIView, HPListCreateAPIView,
-                                 HPListBulkCreateAPIView)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
@@ -28,7 +27,7 @@ from silver.utils import get_object_or_None
 from silver.api.dateutils import last_date_that_fits
 
 
-class PlanList(HPListCreateAPIView):
+class PlanList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
@@ -63,7 +62,7 @@ class PlanDetail(generics.RetrieveDestroyAPIView):
                         status=status.HTTP_200_OK)
 
 
-class PlanMeteredFeatures(HPListAPIView):
+class PlanMeteredFeatures(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     model = MeteredFeature
@@ -73,7 +72,7 @@ class PlanMeteredFeatures(HPListAPIView):
         return plan.metered_features.all() if plan else None
 
 
-class MeteredFeatureList(HPListCreateAPIView):
+class MeteredFeatureList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
@@ -91,7 +90,7 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
         return get_object_or_404(MeteredFeature, pk=pk)
 
 
-class SubscriptionList(HPListCreateAPIView):
+class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
@@ -322,7 +321,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
 
-class CustomerList(HPListCreateAPIView):
+class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
@@ -355,7 +354,7 @@ class ProductCodeRetrieveUpdate(generics.RetrieveUpdateAPIView):
     queryset = ProductCode.objects.all()
 
 
-class ProviderListCreate(HPListBulkCreateAPIView):
+class ProviderListCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
@@ -369,7 +368,7 @@ class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Provider.objects.all()
 
 
-class InvoiceListCreate(HPListCreateAPIView):
+class InvoiceListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
@@ -561,7 +560,7 @@ class InvoiceStateHandler(APIView):
         return Response(serializer.data)
 
 
-class ProformaListCreate(HPListCreateAPIView):
+class ProformaListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()
