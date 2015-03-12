@@ -891,7 +891,11 @@ class BillingDocument(models.Model):
 
         if data:
             pdf_content = ContentFile(data)
-            filename = 'Invoice_%s-%d.pdf' % (self.series, self.number)
+            filename = '{doc_type}_{series}-{number}.pdf'.format(
+                doc_type=self.__class__.__name__,
+                series=self.series,
+                number=self.number
+            )
             self.pdf.save(filename, pdf_content, False)
         else:
             raise RuntimeError(_('Could not generate invoice pdf.'))
