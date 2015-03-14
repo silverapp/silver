@@ -545,6 +545,11 @@ class AbstractBillingEntity(LiveModel):
     def slug(self):
         return slugify(self.billing_name)
 
+    def address(self):
+        return ", ".join(filter(None, [self.address_1, self.city, self.state,
+                                       self.zip_code, self.country]))
+    address.short_description = 'Address'
+
     def __unicode__(self):
         return self.billing_name
 
@@ -617,11 +622,6 @@ class Customer(AbstractBillingEntity):
         fields_dict = {field: getattr(self, field, '') for field in customer_fields}
         base_fields.update(fields_dict)
         return base_fields
-
-    def complete_address(self):
-        return ", ".join(filter(None, [self.address_1, self.city, self.state,
-                                       self.zip_code, self.country]))
-    complete_address.short_description = 'Complete address'
 
 
 class Provider(AbstractBillingEntity):
@@ -837,21 +837,31 @@ class BillingDocument(models.Model):
             return max_existing_number + 1
 
     def __unicode__(self):
-        return '%s-%s-%s' % (self.number, self.customer, self.provider)
+        return '%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
+                                             self.provider.billing_name,
+                                             self.customer.billing_name,
+                                             self.total, self.currency)
+
+    def _entity_display(self, entity):
+        display = '%s (%s, %s)' % (entity.billing_name, entity.name,
+                                   entity.email)
+        return display
 
     def customer_display(self):
         try:
-            return ', '.join(self.customer.get_list_display_fields())
+            return self._entity_display(self.customer)
         except Customer.DoesNotExist:
             return ''
     customer_display.short_description = 'Customer'
+    customer_display.admin_order_field = 'customer'
 
     def provider_display(self):
         try:
-            return ', '.join(self.provider.get_list_display_fields())
+            return self._entity_display(self.provider)
         except Customer.DoesNotExist:
             return ''
     provider_display.short_description = 'Provider'
+    provider_display.admin_order_field = 'provider'
 
     @property
     def updateable_fields(self):

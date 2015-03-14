@@ -131,10 +131,10 @@ class CustomerAdmin(LiveModelAdmin):
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
               'sales_tax_percent', 'sales_tax_number', 'extra']
-    list_display = ['customer_reference', 'name', 'company', 'email',
-                    'complete_address', 'sales_tax_percent', 'sales_tax_name',
-                    'consolidated_billing']
-    list_display_links = list_display
+    list_display = ['name', 'company', 'email', 'address', 'sales_tax_percent',
+                    'sales_tax_name', 'consolidated_billing',
+                    'customer_reference']
+    list_display_links = ['name', 'company']
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email']
@@ -146,9 +146,8 @@ class ProviderAdmin(LiveModelAdmin):
               'state', 'zip_code', 'country', 'flow', 'invoice_series',
               'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra']
-    list_display = ['name', 'company', 'invoice_series', 'email', 'address_1',
-                    'address_2', 'city', 'state', 'zip_code', 'country']
-    list_display_links = list_display
+    list_display = ['name', 'company', 'email', 'address', 'invoice_series']
+    list_display_links = ['name', 'company']
     search_fields = list_display
     exclude = ['live']
 
@@ -207,7 +206,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                     'provider_display', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', 'sales_tax_name', 'sales_tax_percent',
                     'currency']
-    list_display_links = list_display
+
+    list_filter = ('provider__company', 'state')
 
     common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
@@ -216,6 +216,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
     search_fields = customer_search_fields + provider_search_fields
+
+    date_hierarchy = 'issue_date'
 
     fields = (('series', 'number'), 'provider', 'customer', 'issue_date',
               'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
@@ -231,6 +233,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def series_number(self, document):
         return "%s-%d" % (document.series, document.number)
     series_number.short_description = 'Invoice number'
+    series_number.admin_order_field = '-pk'
 
     @property
     def _model_name(self):
