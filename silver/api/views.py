@@ -263,12 +263,12 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     return Response(
                         {'detail': 'An error has been encountered.'},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                if date <= bsd:
+                if subscription.start_date <= date <= bsd:
                     bsdt = datetime.datetime.combine(bsd, datetime.time())
                     allowed_time = datetime.timedelta(
                         seconds=subscription.plan.generate_after)
                     if datetime.datetime.now() < bsdt + allowed_time:
-                        bed = bsd
+                        bed = bsd - datetime.timedelta(days=1)
                         bsd = last_date_that_fits(
                             initial_date=subscription.start_date,
                             end_date=bed,
