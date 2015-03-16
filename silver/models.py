@@ -381,7 +381,9 @@ class Subscription(models.Model):
                                       ignore_trial=False)
 
     def is_on_trial(self):
-        return timezone.now().date() <= self.trial_end and self.state != 'canceled'
+        if self.state == 'active' and self.trial_end:
+            return timezone.now().date() <= self.trial_end
+        return False
 
     def _should_reissue(self, last_billing_date):
         last_billing_date = datetime.datetime(
