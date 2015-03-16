@@ -189,12 +189,10 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
-    metered_features = MeteredFeatureInSubscriptionSerializer(
-        source='plan.metered_features', many=True, read_only=True
-    )
+    plan = PlanSerializer(read_only=True)
 
     class Meta(SubscriptionSerializer.Meta):
-        fields = SubscriptionSerializer.Meta.fields + ('metered_features',)
+        fields = SubscriptionSerializer.Meta.fields + ('plan', )
 
 
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
