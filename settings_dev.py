@@ -69,6 +69,7 @@ MIDDLEWARE_CLASSES = (
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination',
     'PAGINATE_BY': 30,
     'PAGINATE_BY_PARAM': 'per_page',
     'MAX_PAGINATE_BY': 100,
