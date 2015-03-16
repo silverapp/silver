@@ -189,7 +189,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
-    plan = PlanSerializer()
+    plan = PlanSerializer(read_only=True)
 
     class Meta(SubscriptionSerializer.Meta):
         fields = SubscriptionSerializer.Meta.fields + ('plan', )
