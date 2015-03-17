@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.core.management import call_command
 from django.http.response import Http404
-from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
