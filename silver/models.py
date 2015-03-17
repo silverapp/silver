@@ -339,7 +339,7 @@ class Subscription(models.Model):
 
         # we calculate a fake (intermediary) end date depending on the interval
         # type, for the purposes of alignment to a specific day
-        if self.plan.interval == 'month':
+        if self.plan.interval == 'month' and _current_start_date.day != 1:
             fake_end_date = next_date_after_date(
                 initial_date=_current_start_date,
                 day=1
