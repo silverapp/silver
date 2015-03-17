@@ -267,7 +267,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     bsdt = datetime.datetime.combine(bsd, datetime.time())
                     allowed_time = datetime.timedelta(
                         seconds=subscription.plan.generate_after)
-                    if timezone.now() < bsdt + allowed_time:
+                    if datetime.datetime.now() < bsdt + allowed_time:
                         bed = bsd - datetime.timedelta(days=1)
                         bsd = subscription.bucket_start_date(reference_date=bed)
 

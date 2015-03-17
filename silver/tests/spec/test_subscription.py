@@ -242,14 +242,14 @@ class TestSubscriptionEndpoint(APITestCase):
                               'customer_pk': subscription.customer.pk,
                               'mf_product_code': metered_feature.product_code})
 
-        date = str(datetime.date.today() + datetime.timedelta(days=3))
+        date = str(datetime.date.today())
 
         response = self.client.patch(url, json.dumps({
             "count": 150,
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
-
+        print response.data
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'count': 150})
 
