@@ -246,7 +246,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
         )
         if subscription and metered_feature:
             if subscription.state != 'active':
-                return Response({"detail": "Subscription is not active"},
+                return Response({"detail": "Subscription is not active."},
                                 status=status.HTTP_403_FORBIDDEN)
             if date and consumed_units is not None and update_type:
                 try:
@@ -305,14 +305,14 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     return Response({"count": log.consumed_units},
                                     status=status.HTTP_200_OK)
                 else:
-                    return Response({"detail": "Date is out of bounds"},
+                    return Response({"detail": "Date is out of bounds."},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             else:
-                return Response({"detail": "Not enough information provided"},
+                return Response({"detail": "Not enough information provided."},
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"detail": "Not found"},
+            return Response({"detail": "Not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
 
