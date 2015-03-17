@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core.management import call_command
 from django.http.response import Http404
+from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -24,7 +25,6 @@ from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
 from silver.utils import get_object_or_None
-from silver.api.dateutils import last_date_that_fits
 
 
 class PlanList(generics.ListCreateAPIView):
@@ -267,14 +267,9 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     bsdt = datetime.datetime.combine(bsd, datetime.time())
                     allowed_time = datetime.timedelta(
                         seconds=subscription.plan.generate_after)
-                    if datetime.datetime.now() < bsdt + allowed_time:
+                    if timezone.now() < bsdt + allowed_time:
                         bed = bsd - datetime.timedelta(days=1)
-                        bsd = last_date_that_fits(
-                            initial_date=subscription.start_date,
-                            end_date=bed,
-                            interval_type=subscription.plan.interval,
-                            interval_count=subscription.plan.interval_count
-                        )
+                        bsd = subscription.bucket_start_date(reference_date=bed)
 
                 if bsd <= date <= bed:
                     if metered_feature not in \
