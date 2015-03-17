@@ -327,7 +327,7 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription.activate()
         subscription.save()
 
-        # Monthly
+        # Every month, 16 days of trial
         subscription.plan.interval = 'month'
         subscription.plan.interval_count = 1
         subscription.plan.save()
@@ -367,7 +367,57 @@ class TestSubscriptionEndpoint(APITestCase):
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=4, day=22))
 
-        # Every 2 weeks
+        # Every 2 months, 5 months of trial (2015-05-30)
+        subscription.plan.interval = 'month'
+        subscription.plan.interval_count = 2
+        subscription.plan.save()
+
+        subscription.start_date = datetime.date(year=2014, month=12, day=31)
+        subscription.trial_end = (subscription.start_date +
+                                  datetime.timedelta(days=150))
+        subscription.save()
+
+        start_date = datetime.date(year=2014, month=12, day=31)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2014, month=12, day=31))
+
+        end_date = datetime.date(year=2014, month=12, day=31)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2014, month=12, day=31))
+
+        start_date = datetime.date(year=2015, month=1, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=1, day=1))
+
+        end_date = datetime.date(year=2015, month=2, day=28)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=1, day=1))
+
+        start_date = datetime.date(year=2015, month=3, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=3, day=23))
+
+        end_date = datetime.date(year=2015, month=4, day=30)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=4, day=30))
+
+        start_date = datetime.date(year=2015, month=5, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=5, day=23))
+
+        end_date = datetime.date(year=2015, month=5, day=30)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=5, day=30))
+
+        start_date = datetime.date(year=2015, month=6, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=6, day=1))
+
+        end_date = datetime.date(year=2015, month=7, day=31)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=6, day=1))
+
+        # Every 2 weeks, 8 days of trial
         subscription.plan.interval = 'week'
         subscription.plan.interval_count = 2
         subscription.plan.save()
