@@ -249,7 +249,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
-        print response.data
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'count': 150})
 
