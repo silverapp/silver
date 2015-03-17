@@ -293,18 +293,26 @@ class Subscription(models.Model):
                     initial_date=self.trial_end, day=1
                 )
             else:
-                fake_initial_date = last_date_that_fits(
-                    initial_date=self.trial_end,
+                # for any other interval
+                start_date = last_date_that_fits(
+                    initial_date=self.trial_end + datetime.timedelta(days=1),
                     interval_type=self.plan.interval,
                     interval_count=self.plan.interval_count,
                     end_date=reference_date
-                ) + datetime.timedelta(days=1)
+                )
+                return start_date
+
+            # if we reach this point it means we have aligned our intervals
+            # to a specific day (we are using a fake_initial_date)
             if fake_initial_date:
                 # if the fake_initial_date has not arrived or passed yet
+                # (it means it's not the right one to use)
                 if reference_date < fake_initial_date:
-                    # it means the start_date is the next day after trial_end
+                    # then the start_date is equal to the next day after the
+                    # trial_end date
                     fake_initial_date = (self.trial_end +
                                          datetime.timedelta(days=1))
+                    return fake_initial_date
 
             # based on the fake_initial_date we return an appropriate start date
             return last_date_that_fits(
@@ -324,45 +332,42 @@ class Subscription(models.Model):
         end_date = None
         _current_start_date = self._current_start_date(reference_date,
                                                        ignore_trial)
+
+        # we need a current start date in order to compute a current end date
         if not _current_start_date:
             return None
 
-        if self.plan.interval == 'month':
+        # we calculate a fake (intermediary) end date depending on the interval
+        # type, for the purposes of alignment to a specific day
+        if self.plan.interval == 'month' and _current_start_date.day != 1:
             fake_end_date = next_date_after_date(
                 initial_date=_current_start_date,
                 day=1
             ) - datetime.timedelta(days=1)
         else:
+            # there are no rules for other interval types yet
             fake_end_date = next_date_after_period(
                 initial_date=_current_start_date,
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
             ) - datetime.timedelta(days=1)
 
-        if (ignore_trial or not self.trial_end) \
-                or self.trial_end >= reference_date:
-            if self.trial_end and fake_end_date \
-                    and fake_end_date > self.trial_end:
-                end_date = self.trial_end
+        # if the trial_end date is set and we're not ignoring it
+        if self.trial_end and not ignore_trial:
+            # if the fake_end_date is past the trial_end date
+            if (fake_end_date and
+                    fake_end_date > self.trial_end >= reference_date):
+                fake_end_date = self.trial_end
+
+        # check if the fake_end_date is not past the ended_at date
+        if fake_end_date:
+            if self.ended_at:
+                if self.ended_at < fake_end_date:
+                    end_date = self.ended_at
             else:
                 end_date = fake_end_date
-        else:
-            if fake_end_date:
-                if reference_date < fake_end_date:
-                    end_date = fake_end_date
-
-            end_date = end_date or (next_date_after_period(
-                initial_date=_current_start_date,
-                interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
-            ) - datetime.timedelta(days=1))
-
-        if end_date:
-            if self.ended_at:
-                if self.ended_at < end_date:
-                    end_date = self.ended_at
             return end_date
-        return None
+        return self.ended_at or None
 
     @property
     def current_start_date(self):

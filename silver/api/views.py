@@ -24,7 +24,6 @@ from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
 from silver.utils import get_object_or_None
-from silver.api.dateutils import last_date_that_fits
 
 
 class PlanList(generics.ListCreateAPIView):
@@ -246,7 +245,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
         )
         if subscription and metered_feature:
             if subscription.state != 'active':
-                return Response({"detail": "Subscription is not active"},
+                return Response({"detail": "Subscription is not active."},
                                 status=status.HTTP_403_FORBIDDEN)
             if date and consumed_units is not None and update_type:
                 try:
@@ -263,18 +262,13 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     return Response(
                         {'detail': 'An error has been encountered.'},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                if date <= bsd:
+                if subscription.start_date <= date <= bsd:
                     bsdt = datetime.datetime.combine(bsd, datetime.time())
                     allowed_time = datetime.timedelta(
                         seconds=subscription.plan.generate_after)
                     if datetime.datetime.now() < bsdt + allowed_time:
-                        bed = bsd
-                        bsd = last_date_that_fits(
-                            initial_date=subscription.start_date,
-                            end_date=bed,
-                            interval_type=subscription.plan.interval,
-                            interval_count=subscription.plan.interval_count
-                        )
+                        bed = bsd - datetime.timedelta(days=1)
+                        bsd = subscription.bucket_start_date(reference_date=bed)
 
                 if bsd <= date <= bed:
                     if metered_feature not in \
@@ -310,14 +304,14 @@ class MeteredFeatureUnitsLogDetail(APIView):
                     return Response({"count": log.consumed_units},
                                     status=status.HTTP_200_OK)
                 else:
-                    return Response({"detail": "Date is out of bounds"},
+                    return Response({"detail": "Date is out of bounds."},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             else:
-                return Response({"detail": "Not enough information provided"},
+                return Response({"detail": "Not enough information provided."},
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"detail": "Not found"},
+            return Response({"detail": "Not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
 
