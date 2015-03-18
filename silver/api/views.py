@@ -243,77 +243,79 @@ class MeteredFeatureUnitsLogDetail(APIView):
             subscription.plan.metered_features,
             product_code__value=mf_product_code
         )
-        if subscription and metered_feature:
-            if subscription.state != 'active':
-                return Response({"detail": "Subscription is not active."},
-                                status=status.HTTP_403_FORBIDDEN)
-            if date and consumed_units is not None and update_type:
-                try:
-                    date = datetime.datetime.strptime(date,
-                                                      '%Y-%m-%d').date()
-                except TypeError:
-                    return Response({'detail': 'Invalid date format. Please '
-                                    'use the ISO 8601 date format.'},
-                                    status=status.HTTP_400_BAD_REQUEST)
 
-                if date < subscription.start_date:
-                    return Response({"detail": "Date is out of bounds."},
-                                    status=status.HTTP_400_BAD_REQUEST)
-
-                bsd = subscription.bucket_start_date(date)
-                bed = subscription.bucket_end_date(date)
-                if not bsd or not bed:
-                    return Response(
-                        {'detail': 'An error has been encountered.'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-                interval = next(
-                    (i for i in subscription.updateable_buckets()
-                        if i['start_date'] == bsd and i['end_date'] == bed),
-                    None)
-
-                if interval is None:
-                    return Response({"detail": "Date is out of bounds."},
-                                    status=status.HTTP_400_BAD_REQUEST)
-
-                if metered_feature not in \
-                        subscription.plan.metered_features.all():
-                    err = "The metered feature does not belong to the " \
-                          "subscription's plan."
-                    return Response(
-                        {"detail": err},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                log = MeteredFeatureUnitsLog.objects.filter(
-                    start_date=bsd,
-                    end_date=bed,
-                    metered_feature=metered_feature.pk,
-                    subscription=subscription_pk
-                ).first()
-
-                if log is not None:
-                    if update_type == 'absolute':
-                        log.consumed_units = consumed_units
-                    elif update_type == 'relative':
-                        log.consumed_units += consumed_units
-                    log.save()
-                else:
-                    log = MeteredFeatureUnitsLog.objects.create(
-                        metered_feature=metered_feature,
-                        subscription=subscription,
-                        start_date=bsd,
-                        end_date=bed,
-                        consumed_units=consumed_units
-                    )
-                return Response({"count": log.consumed_units},
-                                status=status.HTTP_200_OK)
-            else:
-                return Response({"detail": "Not enough information provided."},
-                                status=status.HTTP_400_BAD_REQUEST)
-        else:
+        if not subscription or not metered_feature:
             return Response({"detail": "Not found."},
                             status=status.HTTP_404_NOT_FOUND)
+
+        if subscription.state != 'active':
+            return Response({"detail": "Subscription is not active."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if not date or not consumed_units or not update_type:
+            return Response({"detail": "Not enough information provided."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            date = datetime.datetime.strptime(date,
+                                              '%Y-%m-%d').date()
+        except TypeError:
+            return Response({'detail': 'Invalid date format. Please '
+                            'use the ISO 8601 date format.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if date < subscription.start_date:
+            return Response({"detail": "Date is out of bounds."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        bsd = subscription.bucket_start_date(date)
+        bed = subscription.bucket_end_date(date)
+        if not bsd or not bed:
+            return Response(
+                {'detail': 'An error has been encountered.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        interval = next(
+            (i for i in subscription.updateable_buckets()
+                if i['start_date'] == bsd and i['end_date'] == bed),
+            None)
+
+        if interval is None:
+            return Response({"detail": "Date is out of bounds."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if metered_feature not in \
+                subscription.plan.metered_features.all():
+            err = "The metered feature does not belong to the " \
+                  "subscription's plan."
+            return Response(
+                {"detail": err},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        log = MeteredFeatureUnitsLog.objects.filter(
+            start_date=bsd,
+            end_date=bed,
+            metered_feature=metered_feature.pk,
+            subscription=subscription_pk
+        ).first()
+
+        if log is not None:
+            if update_type == 'absolute':
+                log.consumed_units = consumed_units
+            elif update_type == 'relative':
+                log.consumed_units += consumed_units
+            log.save()
+        else:
+            log = MeteredFeatureUnitsLog.objects.create(
+                metered_feature=metered_feature,
+                subscription=subscription,
+                start_date=bsd,
+                end_date=bed,
+                consumed_units=consumed_units
+            )
+        return Response({"count": log.consumed_units},
+                        status=status.HTTP_200_OK)
 
 
 class CustomerList(generics.ListCreateAPIView):
