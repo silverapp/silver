@@ -2,6 +2,10 @@ import datetime
 
 
 def get_valid_date(year, month, day):
+    """
+    What does it do.
+    """
+
     if year and month and day:
         if month > 12:
             month = 12
@@ -27,6 +31,15 @@ def get_valid_date(year, month, day):
 
 
 def last_date_that_fits(initial_date, end_date, interval_type, interval_count):
+    """
+    What does it do.
+
+    :param initial_date: description
+    :param end_date: decription
+    :param interval_type: description
+    :param interval_count: description
+    """
+
     if initial_date and end_date:
         if initial_date == end_date:
             return initial_date
@@ -83,6 +96,14 @@ def last_date_that_fits(initial_date, end_date, interval_type, interval_count):
 
 
 def next_date_after_period(initial_date, interval_type, interval_count):
+    """
+    What does it do.
+
+    :param initial_date: description
+    :param interval_type: decription
+    :param interval_count: description
+    """
+
     if initial_date:
         if interval_type == 'year':
             return get_valid_date(
@@ -105,6 +126,14 @@ def next_date_after_period(initial_date, interval_type, interval_count):
 
 
 def next_date_after_date(initial_date, day=None, depth=None):
+    """
+    What does it do.
+
+    :param initial_date: description
+    :param day: decription
+    :param depth: description
+    """
+
     if depth is None:
         depth = 0
     elif depth == 3:
