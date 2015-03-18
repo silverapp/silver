@@ -317,6 +317,37 @@ class TestSubscriptionEndpoint(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'detail': 'Date is out of bounds.'})
 
+    def test_create_subscription_mf_units_log_with_insufficient_data(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        data = {
+            "count": 150,
+            "date": "2008-12-24",
+            "update_type": "absolute"
+        }
+
+        for field in data:
+            data_copy = data.copy()
+            data_copy.pop(field)
+
+            response = self.client.patch(url, json.dumps(data_copy),
+                                         content_type='application/json')
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data,
+                             {'detail': 'Not enough information provided.'})
+
     def test_subscription_mf_units_log_intervals(self):
         subscription = SubscriptionFactory.create()
         metered_feature = MeteredFeatureFactory.create()
