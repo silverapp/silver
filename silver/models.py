@@ -250,9 +250,15 @@ class Subscription(models.Model):
                                   'the subscription start date.'}
                 )
 
-    def _current_start_date(self, reference_date=None, ignore_trial=None):
+    def _current_start_date(self, reference_date=None, ignore_trial=None,
+                            granulate=None):
         ignore_trial_default = False
+        granulate_default = False
+
         ignore_trial = ignore_trial_default or ignore_trial
+        granulate = granulate_default or granulate
+
+        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
@@ -275,14 +281,14 @@ class Subscription(models.Model):
                 return last_date_that_fits(
                     initial_date=fake_initial_date,
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
                 ) or self.start_date
             else:
                 fake_initial_date = last_date_that_fits(
                     initial_date=self.start_date,
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
                 )
                 return fake_initial_date
@@ -300,7 +306,7 @@ class Subscription(models.Model):
                 start_date = last_date_that_fits(
                     initial_date=self.trial_end + datetime.timedelta(days=1),
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
                 )
                 return start_date
@@ -322,19 +328,25 @@ class Subscription(models.Model):
                 initial_date=fake_initial_date,
                 end_date=reference_date,
                 interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
+                interval_count=interval_count
             )
 
-    def _current_end_date(self, reference_date=None, ignore_trial=None):
+    def _current_end_date(self, reference_date=None, ignore_trial=None,
+                          granulate=None):
         ignore_trial_default = False
+        granulate_default = False
+
         ignore_trial = ignore_trial_default or ignore_trial
+        granulate = granulate_default or granulate
+
+        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
 
         end_date = None
         _current_start_date = self._current_start_date(reference_date,
-                                                       ignore_trial)
+                                                       ignore_trial, granulate)
 
         # we need a current start date in order to compute a current end date
         if not _current_start_date:
@@ -352,7 +364,7 @@ class Subscription(models.Model):
             fake_end_date = next_date_after_period(
                 initial_date=_current_start_date,
                 interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
+                interval_count=interval_count
             ) - datetime.timedelta(days=1)
 
         # if the trial_end date is set and we're not ignoring it
@@ -374,19 +386,19 @@ class Subscription(models.Model):
 
     @property
     def current_start_date(self):
-        return self._current_start_date(ignore_trial=True)
+        return self._current_start_date(ignore_trial=True, granulate=False)
 
     @property
     def current_end_date(self):
-        return self._current_end_date(ignore_trial=True)
+        return self._current_end_date(ignore_trial=True, granulate=False)
 
     def bucket_start_date(self, reference_date=None):
         return self._current_start_date(reference_date=reference_date,
-                                        ignore_trial=False)
+                                        ignore_trial=False, granulate=True)
 
     def bucket_end_date(self, reference_date=None):
         return self._current_end_date(reference_date=reference_date,
-                                      ignore_trial=False)
+                                      ignore_trial=False, granulate=True)
 
     def updateable_buckets(self):
         if self.state in ['ended', 'inactive']:
