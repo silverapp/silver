@@ -457,8 +457,14 @@ class Subscription(models.Model):
 
     @property
     def is_billed_first_time(self):
-        qs_count = self.billing_log_entries.all().count()
-        return False if qs_count else True
+        """
+        Checks if this subscription is billed for the first time.
+
+        :returns: True -> the subscription is billed first time
+                  False -> otherwise.
+        """
+
+        return self.billing_log_entries.all().count() == 0
 
     @property
     def last_billing_date(self):
@@ -486,8 +492,7 @@ class Subscription(models.Model):
                     self.trial_end = None
             elif self.plan.trial_period_days > 0:
                 self.trial_end = self.start_date + datetime.timedelta(
-                    days=self.plan.trial_period_days - 1
-                )
+                    days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
@@ -962,7 +967,8 @@ class Invoice(BillingDocument):
 
     @property
     def total(self):
-        entries_total = [Decimal(item.total) for item in self.invoice_entries.all()]
+        entries_total = [Decimal(item.total)
+                         for item in self.invoice_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res
 
@@ -984,10 +990,10 @@ class Invoice(BillingDocument):
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
-        # Delete the invoice's pdf
+        # Delete the invoice's PDF
         instance.pdf.delete(False)
 
-    # If exists, delete the pdf of the related proforma
+    # If exists, delete the PDF of the related proforma
     if instance.proforma:
         if instance.proforma.pdf:
             instance.proforma.pdf.delete(False)
@@ -1031,7 +1037,6 @@ class Proforma(BillingDocument):
 
         self.invoice = invoice
 
-
     @property
     def series(self):
         try:
@@ -1049,7 +1054,8 @@ class Proforma(BillingDocument):
 
     @property
     def total(self):
-        entries_total = [Decimal(item.total) for item in self.proforma_entries.all()]
+        entries_total = [Decimal(item.total)
+                         for item in self.proforma_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
         return res
 
@@ -1071,10 +1077,10 @@ class Proforma(BillingDocument):
 @receiver(pre_delete, sender=Proforma)
 def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
-        # Delete the proforma's pdf
+        # Delete the proforma's PDF
         instance.pdf.delete(False)
 
-    # If exists, delete the pdf of the related invoice
+    # If exists, delete the PDF of the related invoice
     if instance.invoice:
         if instance.invoice.pdf:
             instance.invoice.pdf.delete(False)
