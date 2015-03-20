@@ -243,12 +243,27 @@ class Subscription(models.Model):
     )
 
     def clean(self):
+        errors = dict()
         if self.start_date and self.trial_end:
             if self.trial_end < self.start_date:
-                raise ValidationError(
-                    {'trial_end': 'The trial end date cannot be older than '
-                                  'the subscription start date.'}
+                errors.update(
+                    {'trial_end': "The trial end date cannot be older than "
+                                  "the subscription's start date."}
                 )
+        if self.ended_at:
+            if self.state not in ['canceled', 'ended']:
+                errors.update(
+                    {'ended_at': 'The ended at date cannot be set if the '
+                                 'subscription is not canceled or ended.'}
+                )
+            elif self.ended_at < self.start_date:
+                errors.update(
+                    {'ended_at': "The ended at date cannot be older than the"
+                                 "subscription's start date."}
+                )
+
+        if errors:
+            raise ValidationError(errors)
 
     def _current_start_date(self, reference_date=None, ignore_trial=None,
                             granulate=None):
