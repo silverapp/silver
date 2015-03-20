@@ -40,7 +40,7 @@ class Command(BaseCommand):
         }
 
         # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-        # NOTE (IMPORTANT): this will be a negative interval (e.g.: -1 month,
+        # NOTE (Important): this will be a negative interval (e.g.: -1 month,
         # -1 week, etc.)
         interval_len = relativedelta(**intervals[subscription.plan.interval])
 
@@ -99,6 +99,7 @@ class Command(BaseCommand):
     def _add_plan_entry(self, subscription, now_date, invoice=None,
                   proforma=None):
 
+        # TODO: generalize the process of adding the features
         if subscription.is_billed_first_time:
             if subscription.is_on_trial:
                 # First time billing and on trial => add only the trial entry
@@ -106,9 +107,10 @@ class Command(BaseCommand):
                 self._add_plan_trial(subscription=subscription,
                                      end_date=now_date, invoice=invoice,
                                      proforma=proforma, prorated=True)
-                # TODO: add the mfs for this interval
-                # TODO: add the plan's negative value + the mfs' negative
-                # value with negative
+                # TODO: add the plan's negative value
+
+                # TODO: add the mfs for this interval (_add_metered_features)
+                # TODO: add the mfs with negative value (_add_metered_features)
                 return
             else:
                 intervals = {
@@ -132,23 +134,21 @@ class Command(BaseCommand):
                                          invoice=invoice, proforma=proforma)
                     # TODO: add the plan trial with negative value
 
-                    # TODO: add the mfs for this interval
-                    # + the mfs with negative value
+                    # TODO: add the mfs for this interval (_add_metered_features)
+                    # TODO: add the  mfs with negative value (_add_metered_features)
 
                     end_date2 = subscription.start_date + interval_len
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=subscription.trial_end,
                                             end_date=end_date2,
                                             invoice=invoice, proforma=proforma)
-                    # TODO: add the mfs for this interval
-                    # + the mfs with negative value
+                    # TODO: add the mfs for this interval (_add_metered_features)
 
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=end_date2,
                                             end_date=now_date,
                                             invoice=invoice, proforma=proforma)
-                    # TODO: add the mfs for this interval
-                    # + the mfs with negative value
+                    # TODO: add the mfs for this interval (_add_metered_features)
                 else:
                     # Add prorated entry with dates between trial_end and now
                     # E.g.: start_date = 2015-01-01
@@ -162,12 +162,13 @@ class Command(BaseCommand):
                     self._add_plan_trial(subscription=subscription,
                                          end_date=subscription.trial_end,
                                          invoice=invoice, proforma=proforma)
-                    # TODO: add the mfs for this interval
+                    # TODO: add the mfs for this interval (_add_metered_features)
+
                     self._add_prorated_plan(subscription=subscription,
                                             start_date=subscription.trial_end,
                                             end_date=now_date,
                                             invoice=invoice, proforma=proforma)
-                    # TODO: add the mfs for this interval
+                    # TODO: add the mfs for this interval (_add_metered_features)
 
         else:
             # Was billed before => we use the last_billing_date to determine
@@ -214,6 +215,8 @@ class Command(BaseCommand):
         if included_units - consumed_units >= 0:
             # TODO: ask @toe, is this OK, or should we add all the consumed
             # units with price = 0 since the cunsumed <= included
+            # answer from @toe (20.03.2015) -> add the entry with value 0
+            # KI
             return 0
         return consumed_units - included_units
 
@@ -369,6 +372,76 @@ class Command(BaseCommand):
 
         return document, cached_documents
 
+    def _gen_docs_for_consolidated_billing(self, customer, date=None):
+        """
+        Generates the Invoices/Proformas for all the subscriptions of a customer
+        who uses consolidated billing.
+        """
+
+        # For each provider there will be one invoice or proforma. The cache
+        # is necessary as a certain customer might have more than one
+        # subscription => all the subscriptions that belong to the same
+        # provider will be added on the same invoice/proforma
+        # => they are "cached".
+        cached_documents = {}
+
+        # Process all the active or canceled subscriptions
+        criteria = {'state__in': ['active', 'canceled']}
+        for subscription in customer.subscriptions.filter(**criteria):
+            if not subscription.should_be_billed:
+                continue
+
+            provider = subscription.plan.provider
+            default_doc_state[provider] = provider.default_document_state
+
+            document, cached_documents = self._get_or_create_document(
+                provider, cached_documents)
+
+            # Add the plan's value to the Invoice/Proforma object
+            self._add_plan(document, subscription, date)
+            # Add the
+            self._add_metered_features(document, subscription, date)
+
+            if subscription.state == 'canceled':
+                subscription.end()
+                subscription.save()
+
+        for provider, document in cached_documents.iteritems():
+            if provider.default_document_state == 'issued':
+                document.issue()
+                document.save()
+
+    def _gen_docs_for_non_consolidated_billing(self, customer, date=None):
+        """
+        Generates the Invoices/Proformas for all the subscriptions of a customer
+        who does not use consolidated billing.
+        """
+
+        # The user does not use consolidated_billing => add each
+        # subscription on a separate document (Invoice/Proforma)
+        criteria = {'state__in': ['active', 'canceled']}
+        for subscription in customer.subscriptions.filter(**criteria):
+            if not subscription.should_be_billed:
+                continue
+
+            provider = subscription.plan.provider
+            document = self._create_document(provider, customer,
+                                             subscription, now)
+            self._print_status_to_stdout(subscription, created=True)
+
+            # Add plan to invoice/proforma
+            self._add_plan(document, subscription, now)
+            # Add mf units to proforma/invoice
+            self._add_metered_features(document, subscription, now)
+
+            if subscription.state == 'canceled':
+                subscription.end()
+                subscription.save()
+
+            if provider.default_document_state == 'issued':
+                document.issue()
+                document.save()
+
     def handle(self, *args, **options):
         # Use the same exact date for all the generated documents
         now = timezone.now().date()
@@ -379,60 +452,6 @@ class Command(BaseCommand):
 
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
-                # For each provider there will be one invoice or proforma.
-                # The cache is necessary as a certain customer might have more
-                # than one subscription => all the subscriptions that belong
-                # to the same provider will be added on the same
-                # invoice/proforma => they are "cached".
-                cached_documents = {}
-
-                # Process all the active or canceled subscriptions
-                criteria = {'state__in': ['active', 'canceled']}
-                for subscription in customer.subscriptions.filter(**criteria):
-                    if not subscription.should_be_billed:
-                        continue
-
-                    provider = subscription.plan.provider
-                    default_doc_state[provider] = provider.default_document_state
-
-                    document, cached_documents = self._get_or_create_document(
-                        provider, cached_documents)
-
-                    # Add the plan's value to the Invoice/Proforma object
-                    self._add_plan(document, subscription, now)
-                    # Add the
-                    self._add_metered_features(document, subscription, now)
-
-                    if subscription.state == 'canceled':
-                        subscription.end()
-                        subscription.save()
-
-                for provider, document in cached_documents.iteritems():
-                    if provider.default_document_state == 'issued':
-                        document.issue()
-                        document.save()
+                self._gen_docs_for_consolidated_billing(customer, date=now)
             else:
-                # The user does not use consolidated_billing => add each
-                # subscription on a separate document (Invoice/Proforma)
-                criteria = {'state__in': ['active', 'canceled']}
-                for subscription in customer.subscriptions.filter(**criteria):
-                    if not subscription.should_be_billed:
-                        continue
-
-                    provider = subscription.plan.provider
-                    document = self._create_document(provider, customer,
-                                                     subscription, now)
-                    self._print_status_to_stdout(subscription, created=True)
-
-                    # Add plan to invoice/proforma
-                    self._add_plan(document, subscription, now)
-                    # Add mf units to proforma/invoice
-                    self._add_metered_features(document, subscription, now)
-
-                    if subscription.state == 'canceled':
-                        subscription.end()
-                        subscription.save()
-
-                    if provider.default_document_state == 'issued':
-                        document.issue()
-                        document.save()
+                self._gen_docs_for_non_consolidated_billing(customer, date=now)
