@@ -548,8 +548,23 @@ class Subscription(models.Model):
 
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
-        # XXX: shouldn't the trial_end date be set to now()?
-        pass
+        canceled_at_date = timezone.now().date()
+        bsd = self.bucket_start_date()
+        bed = self.bucket_end_date()
+        for metered_feature in self.plan.metered_features.all():
+            log = MeteredFeatureUnitsLog.objects.filter(
+                start_date=bsd,
+                end_date=bed,
+                metered_feature=metered_feature.pk,
+                subscription=self.pk
+            ).first()
+            if log:
+                log.end_date = canceled_at_date
+                log.save()
+
+        if self.trial_end and self.trial_end > canceled_at_date:
+            self.trial_end = canceled_at_date
+            self.save()
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
