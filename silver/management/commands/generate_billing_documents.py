@@ -397,6 +397,9 @@ class Command(BaseCommand):
             document, cached_documents = self._get_or_create_document(
                 provider, cached_documents)
 
+            # add_subscription_to_document(document, subscription, date) ->
+            # adds the value of the plan and of the metered features to the
+            # document
             # Add the plan's value to the Invoice/Proforma object
             self._add_plan(document, subscription, date)
             # Add the
