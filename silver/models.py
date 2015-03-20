@@ -243,19 +243,43 @@ class Subscription(models.Model):
     )
 
     def clean(self):
+        errors = dict()
         if self.start_date and self.trial_end:
             if self.trial_end < self.start_date:
-                raise ValidationError(
-                    {'trial_end': 'The trial end date cannot be older than '
-                                  'the subscription start date.'}
+                errors.update(
+                    {'trial_end': "The trial end date cannot be older than "
+                                  "the subscription's start date."}
+                )
+        if self.ended_at:
+            if self.state not in ['canceled', 'ended']:
+                errors.update(
+                    {'ended_at': 'The ended at date cannot be set if the '
+                                 'subscription is not canceled or ended.'}
+                )
+            elif self.ended_at < self.start_date:
+                errors.update(
+                    {'ended_at': "The ended at date cannot be older than the"
+                                 "subscription's start date."}
                 )
 
-    def _current_start_date(self, reference_date=None, ignore_trial=None):
+        if errors:
+            raise ValidationError(errors)
+
+    def _current_start_date(self, reference_date=None, ignore_trial=None,
+                            granulate=None):
         ignore_trial_default = False
+        granulate_default = False
+
         ignore_trial = ignore_trial_default or ignore_trial
+        granulate = granulate_default or granulate
+
+        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
+
+        if not self.start_date or reference_date < self.start_date:
+            return None
 
         # if the trial_end date is ignored, it doesn't exist
         # or it hasn't passed yet: we don't consider it
@@ -272,14 +296,14 @@ class Subscription(models.Model):
                 return last_date_that_fits(
                     initial_date=fake_initial_date,
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
                 ) or self.start_date
             else:
                 fake_initial_date = last_date_that_fits(
                     initial_date=self.start_date,
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
                 )
                 return fake_initial_date
@@ -293,92 +317,125 @@ class Subscription(models.Model):
                     initial_date=self.trial_end, day=1
                 )
             else:
-                fake_initial_date = last_date_that_fits(
-                    initial_date=self.trial_end,
+                # for any other interval
+                start_date = last_date_that_fits(
+                    initial_date=self.trial_end + datetime.timedelta(days=1),
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count,
+                    interval_count=interval_count,
                     end_date=reference_date
-                ) + datetime.timedelta(days=1)
+                )
+                return start_date
+
+            # if we reach this point it means we have aligned our intervals
+            # to a specific day (we are using a fake_initial_date)
             if fake_initial_date:
                 # if the fake_initial_date has not arrived or passed yet
+                # (it means it's not the right one to use)
                 if reference_date < fake_initial_date:
-                    # it means the start_date is the next day after trial_end
+                    # then the start_date is equal to the next day after the
+                    # trial_end date
                     fake_initial_date = (self.trial_end +
                                          datetime.timedelta(days=1))
+                    return fake_initial_date
 
             # based on the fake_initial_date we return an appropriate start date
             return last_date_that_fits(
                 initial_date=fake_initial_date,
                 end_date=reference_date,
                 interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
+                interval_count=interval_count
             )
 
-    def _current_end_date(self, reference_date=None, ignore_trial=None):
+    def _current_end_date(self, reference_date=None, ignore_trial=None,
+                          granulate=None):
         ignore_trial_default = False
+        granulate_default = False
+
         ignore_trial = ignore_trial_default or ignore_trial
+        granulate = granulate_default or granulate
+
+        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
 
         end_date = None
         _current_start_date = self._current_start_date(reference_date,
-                                                       ignore_trial)
+                                                       ignore_trial, granulate)
+
+        # we need a current start date in order to compute a current end date
         if not _current_start_date:
             return None
 
-        if self.plan.interval == 'month':
+        # we calculate a fake (intermediary) end date depending on the interval
+        # type, for the purposes of alignment to a specific day
+        if self.plan.interval == 'month' and _current_start_date.day != 1:
             fake_end_date = next_date_after_date(
                 initial_date=_current_start_date,
                 day=1
             ) - datetime.timedelta(days=1)
         else:
+            # there are no rules for other interval types yet
             fake_end_date = next_date_after_period(
                 initial_date=_current_start_date,
                 interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
+                interval_count=interval_count
             ) - datetime.timedelta(days=1)
 
-        if (ignore_trial or not self.trial_end) \
-                or self.trial_end >= reference_date:
-            if self.trial_end and fake_end_date \
-                    and fake_end_date > self.trial_end:
-                end_date = self.trial_end
+        # if the trial_end date is set and we're not ignoring it
+        if self.trial_end and not ignore_trial:
+            # if the fake_end_date is past the trial_end date
+            if (fake_end_date and
+                    fake_end_date > self.trial_end >= reference_date):
+                fake_end_date = self.trial_end
+
+        # check if the fake_end_date is not past the ended_at date
+        if fake_end_date:
+            if self.ended_at:
+                if self.ended_at < fake_end_date:
+                    end_date = self.ended_at
             else:
                 end_date = fake_end_date
-        else:
-            if fake_end_date:
-                if reference_date < fake_end_date:
-                    end_date = fake_end_date
-
-            end_date = end_date or (next_date_after_period(
-                initial_date=_current_start_date,
-                interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count
-            ) - datetime.timedelta(days=1))
-
-        if end_date:
-            if self.ended_at:
-                if self.ended_at < end_date:
-                    end_date = self.ended_at
             return end_date
-        return None
+        return self.ended_at or None
 
     @property
     def current_start_date(self):
-        return self._current_start_date(ignore_trial=True)
+        return self._current_start_date(ignore_trial=True, granulate=False)
 
     @property
     def current_end_date(self):
-        return self._current_end_date(ignore_trial=True)
+        return self._current_end_date(ignore_trial=True, granulate=False)
 
     def bucket_start_date(self, reference_date=None):
         return self._current_start_date(reference_date=reference_date,
-                                        ignore_trial=False)
+                                        ignore_trial=False, granulate=True)
 
     def bucket_end_date(self, reference_date=None):
         return self._current_end_date(reference_date=reference_date,
-                                      ignore_trial=False)
+                                      ignore_trial=False, granulate=True)
+
+    def updateable_buckets(self):
+        if self.state in ['ended', 'inactive']:
+            return None
+        buckets = list()
+        start_date = self.bucket_start_date()
+        end_date = self.bucket_end_date()
+        if start_date is None or end_date is None:
+            return buckets
+        buckets.append({'start_date': start_date, 'end_date': end_date})
+
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
+        while (timezone.now() - generate_after
+                < dt.combine(start_date, dt.min.time()).replace(
+                    tzinfo=timezone.get_current_timezone())):
+            end_date = start_date - datetime.timedelta(days=1)
+            start_date = self.bucket_start_date(end_date)
+            if start_date is None:
+                return buckets
+            buckets.append({'start_date': start_date, 'end_date': end_date})
+
+        return buckets
 
     def is_on_trial(self):
         if self.state == 'active' and self.trial_end:
@@ -496,8 +553,23 @@ class Subscription(models.Model):
 
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
-        # XXX: shouldn't the trial_end date be set to now()?
-        pass
+        canceled_at_date = timezone.now().date()
+        bsd = self.bucket_start_date()
+        bed = self.bucket_end_date()
+        for metered_feature in self.plan.metered_features.all():
+            log = MeteredFeatureUnitsLog.objects.filter(
+                start_date=bsd,
+                end_date=bed,
+                metered_feature=metered_feature.pk,
+                subscription=self.pk
+            ).first()
+            if log:
+                log.end_date = canceled_at_date
+                log.save()
+
+        if self.trial_end and self.trial_end > canceled_at_date:
+            self.trial_end = canceled_at_date
+            self.save()
 
     @transition(field=state, source='canceled', target='ended')
     def end(self):
