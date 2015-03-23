@@ -1,5 +1,6 @@
 import datetime
 import json
+from mock import patch
 
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -420,7 +421,7 @@ class TestSubscriptionEndpoint(APITestCase):
         assert start_date == subscription.bucket_start_date(
             reference_date=datetime.date(year=2015, month=1, day=1))
 
-        end_date = datetime.date(year=2015, month=2, day=28)
+        end_date = datetime.date(year=2015, month=1, day=31)
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=1, day=1))
 
@@ -444,7 +445,7 @@ class TestSubscriptionEndpoint(APITestCase):
         assert start_date == subscription.bucket_start_date(
             reference_date=datetime.date(year=2015, month=6, day=1))
 
-        end_date = datetime.date(year=2015, month=7, day=31)
+        end_date = datetime.date(year=2015, month=6, day=30)
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=6, day=1))
 
@@ -470,6 +471,125 @@ class TestSubscriptionEndpoint(APITestCase):
         assert start_date == subscription.bucket_start_date(
             reference_date=datetime.date(year=2015, month=6, day=12))
 
-        end_date = datetime.date(year=2015, month=6, day=21)
+        end_date = datetime.date(year=2015, month=6, day=14)
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=6, day=8))
+
+    def test_subscription_billing_cycle_intervals(self):
+        subscription = SubscriptionFactory.create()
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        start_date = datetime.date(year=2015, month=2, day=17)
+
+        subscription.start_date = start_date
+        subscription.activate()
+        subscription.save()
+
+        with patch('silver.models.timezone') as mock_timezone:
+            # Every month, 16 days of trial
+            subscription.plan.interval = 'month'
+            subscription.plan.interval_count = 1
+            subscription.plan.save()
+
+            subscription.trial_end = (subscription.start_date +
+                                      datetime.timedelta(days=15))
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=2, day=28)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=3, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=3, day=31)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=4, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=4, day=30)
+            assert end_date == subscription.current_end_date
+
+            # Every 2 months, 5 months of trial (2015-05-30)
+            subscription.plan.interval = 'month'
+            subscription.plan.interval_count = 2
+            subscription.plan.save()
+
+            subscription.start_date = datetime.date(year=2014, month=12, day=31)
+            subscription.trial_end = (subscription.start_date +
+                                      datetime.timedelta(days=150))
+            subscription.save()
+
+            start_date = subscription.start_date
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2014, month=12, day=31)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=1, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=2, day=28)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=3, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=4, day=30)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=5, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=6, day=30)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=7, day=1)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=8, day=31)
+            assert end_date == subscription.current_end_date
+
+            # Every 2 weeks, 8 days of trial
+            subscription.plan.interval = 'week'
+            subscription.plan.interval_count = 2
+            subscription.plan.save()
+
+            subscription.start_date = datetime.date(year=2015, month=5, day=31)
+            subscription.trial_end = (subscription.start_date +
+                                      datetime.timedelta(days=7))
+            subscription.save()
+
+            start_date = subscription.start_date
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=6, day=13)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=6, day=14)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=6, day=27)
+            assert end_date == subscription.current_end_date
