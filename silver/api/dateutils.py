@@ -3,7 +3,7 @@ import datetime
 
 def get_valid_date(year, month, day):
     """
-    What does it do.
+    Returns a valid date <= date(year, month, day) if all arguments are provided
     """
 
     if year and month and day:
@@ -32,12 +32,21 @@ def get_valid_date(year, month, day):
 
 def last_date_that_fits(initial_date, end_date, interval_type, interval_count):
     """
-    What does it do.
+    Returns the end date of the last sub-interval (defined by interval_type and
+    interval_count) that fits into an interval (defined by initial_date and
+    end_date)
 
-    :param initial_date: description
-    :param end_date: decription
-    :param interval_type: description
-    :param interval_count: description
+     __main interval__
+    |                 |
+    <----|----|----|-->
+         |____|    ^
+           ^    returned date
+      sub-interval
+
+    :param initial_date: the start date of the main interval
+    :param end_date: the end date of the the main interval
+    :param interval_type: the sub-interval type ('year, 'month', 'week', 'day')
+    :param interval_count: the sub-interval length (e.g.: 2 (months, weeks ...))
     """
 
     if initial_date and end_date:
@@ -97,11 +106,14 @@ def last_date_that_fits(initial_date, end_date, interval_type, interval_count):
 
 def next_date_after_period(initial_date, interval_type, interval_count):
     """
-    What does it do.
+    Returns the relative date obtained by adding a period (defined by
+    interval_type and interval_count) to an initial_date
+    e.g.: initial_date='2015-01-01', interval_type='month', interval_count=2
+          returned date: '2015-02-28'
 
-    :param initial_date: description
-    :param interval_type: decription
-    :param interval_count: description
+    :param initial_date: the initial date to which the period is added
+    :param interval_type: the interval type ('year, 'month', 'week', 'day')
+    :param interval_count: the interval length (e.g.: 2 (months, weeks ...))
     """
 
     if initial_date:
@@ -125,18 +137,21 @@ def next_date_after_period(initial_date, interval_type, interval_count):
             return initial_date + datetime.timedelta(days=interval_count)
 
 
-def next_date_after_date(initial_date, day=None, depth=None):
+def next_date_after_date(initial_date, day=None, _depth=None):
     """
-    What does it do.
+    Returns the next date after an initial date with various constraints:
+        - for the moment being the only constraint is the day of the month
 
-    :param initial_date: description
-    :param day: decription
-    :param depth: description
+    e.g.: initial_date='2015-02-01', day=31
+          returned date: '2015-03-31'
+
+    :param initial_date: the initial date
+    :param day: the desired day of the returned date
     """
 
-    if depth is None:
-        depth = 0
-    elif depth == 3:
+    if _depth is None:
+        _depth = 0
+    elif _depth == 3:
         return None
     if initial_date:
         year = initial_date.year
@@ -164,7 +179,7 @@ def next_date_after_date(initial_date, day=None, depth=None):
                         year = initial_date.year
                     date = get_valid_date(year=year, month=month, day=1)
                     return next_date_after_date(initial_date=date, day=day,
-                                                depth=depth + 1)
+                                                _depth=_depth + 1)
 
             return date
 
