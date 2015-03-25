@@ -61,7 +61,7 @@ class Plan(models.Model):
     )
 
     name = models.CharField(
-        max_length=20, help_text='Display name of the plan.'
+        max_length=200, help_text='Display name of the plan.'
     )
     interval = models.CharField(
         choices=INTERVALS, max_length=12, default=INTERVALS[2][0],
@@ -127,7 +127,7 @@ class Plan(models.Model):
 
 class MeteredFeature(models.Model):
     name = models.CharField(
-        max_length=32,
+        max_length=200,
         help_text='The feature display name.'
     )
     unit = models.CharField(max_length=20)
