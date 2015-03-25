@@ -24,7 +24,7 @@ from dateutil.relativedelta import *
 from dateutil.rrule import *
 from pyvat import is_vat_number_format_valid
 
-from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
+from silver.utils.dateutils import (last_date_that_fits, next_date_after_period,
                                   next_date_after_date)
 from silver.utils import get_object_or_None
 
@@ -1102,7 +1102,6 @@ class Proforma(BillingDocument):
         invoice.save()
 
         self.invoice = invoice
-
 
     @property
     def series(self):
