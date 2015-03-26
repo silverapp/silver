@@ -24,8 +24,7 @@ from dateutil.relativedelta import *
 from dateutil.rrule import *
 from pyvat import is_vat_number_format_valid
 
-from silver.utils.dateutils import (last_date_that_fits, next_date_after_period,
-                                  next_date_after_date)
+from silver.utils.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
 
 
@@ -289,9 +288,14 @@ class Subscription(models.Model):
             if self.plan.interval == 'month':
                 # the fake_initial_date is used to normalize the starting dates
                 # of intervals, by fixing a day
-                fake_initial_date = next_date_after_date(
-                    initial_date=self.start_date, day=1
-                )
+                fake_initial_date = list(
+                    rrule(MONTHLY,
+                          count=1,
+                          bymonthday=1,
+                          dtstart=self.start_date)
+                )[-1].date()
+
+                print fake_initial_date
                 # this returns the appropriate start date
                 return last_date_that_fits(
                     initial_date=fake_initial_date,
@@ -313,9 +317,13 @@ class Subscription(models.Model):
             if self.plan.interval == 'month':
                 # we get a fake_initial_date based on the trial_end date
                 # and on a fixed day
-                fake_initial_date = next_date_after_date(
-                    initial_date=self.trial_end, day=1
-                )
+                fake_initial_date = list(
+                    rrule(MONTHLY,
+                          count=1,
+                          bymonthday=1,
+                          dtstart=self.trial_end)
+                )[-1].date()
+
             else:
                 # for any other interval
                 start_date = last_date_that_fits(
@@ -370,10 +378,12 @@ class Subscription(models.Model):
         # we calculate a fake (intermediary) end date depending on the interval
         # type, for the purposes of alignment to a specific day
         if self.plan.interval == 'month' and _current_start_date.day != 1:
-            fake_end_date = next_date_after_date(
-                initial_date=_current_start_date,
-                day=1
-            ) - datetime.timedelta(days=1)
+            fake_end_date = list(
+                rrule(MONTHLY,
+                      count=1,
+                      bymonthday=1,
+                      dtstart=_current_start_date)
+            )[0].date() - datetime.timedelta(days=1)
         else:
             # there are no rules for other interval types yet
             fake_end_date = next_date_after_period(
