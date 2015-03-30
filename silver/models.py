@@ -137,7 +137,7 @@ class MeteredFeature(models.Model):
         help_text='The price per unit.',
     )
     included_units = models.DecimalField(
-        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
+        max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
     )
     product_code = models.ForeignKey(
@@ -151,7 +151,7 @@ class MeteredFeature(models.Model):
 class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
     subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
-    consumed_units = models.DecimalField(max_digits=8, decimal_places=2,
+    consumed_units = models.DecimalField(max_digits=19, decimal_places=2,
                                          validators=[MinValueValidator(0.0)])
     start_date = models.DateField(editable=False)
     end_date = models.DateField(editable=False)
@@ -1160,7 +1160,7 @@ def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
 class DocumentEntry(models.Model):
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20, blank=True, null=True)
-    quantity = models.DecimalField(max_digits=8, decimal_places=2,
+    quantity = models.DecimalField(max_digits=19, decimal_places=2,
                                    validators=[MinValueValidator(0.0)])
     unit_price = models.DecimalField(max_digits=8, decimal_places=2,
                                      validators=[MinValueValidator(0.0)])
