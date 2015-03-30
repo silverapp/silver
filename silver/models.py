@@ -294,15 +294,20 @@ class Subscription(models.Model):
 
         # we calculate a fake (intermediary) start date depending on the
         # interval type, for the purposes of alignment to a specific day
-        bymonthday = byweekday = None
+        bymonth = bymonthday = byweekday = None
         if self.plan.interval == 'month':
             bymonthday = 1  # first day of the month
         elif self.plan.interval == 'week':
             byweekday = 0  # first day of the week (Monday)
+        elif self.plan.interval == 'year':
+            # first day of the first month (1 Jan)
+            bymonth = 1
+            bymonthday = 1
 
         fake_initial_date = list(
             rrule(_INTERVALS_CODES[self.plan.interval],
                   count=1,
+                  bymonth=bymonth,
                   bymonthday=bymonthday,
                   byweekday=byweekday,
                   dtstart=relative_start_date)
@@ -341,13 +346,18 @@ class Subscription(models.Model):
 
         # we calculate a fake (intermediary) end date depending on the interval
         # type, for the purposes of alignment to a specific day
-        bymonthday = byweekday = None
+        bymonth = bymonthday = byweekday = None
         count = 1
         interval_count = 1
         if self.plan.interval == 'month' and _current_start_date.day != 1:
             bymonthday = 1  # first day of the month
         elif self.plan.interval == 'week' and _current_start_date.weekday() != 0:
             byweekday = 0  # first day of the week (Monday)
+        elif (self.plan.interval == 'year' and _current_start_date.month != 1
+              and _current_start_date.day != 1):
+            # first day of the first month (1 Jan)
+            bymonth = 1
+            bymonthday = 1
         else:
             count = 2
             if not granulate:
@@ -357,6 +367,7 @@ class Subscription(models.Model):
             rrule(_INTERVALS_CODES[self.plan.interval],
                   interval=interval_count,
                   count=count,
+                  bymonth=bymonth,
                   bymonthday=bymonthday,
                   byweekday=byweekday,
                   dtstart=_current_start_date)
