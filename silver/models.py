@@ -24,7 +24,6 @@ from dateutil.relativedelta import *
 from dateutil.rrule import *
 from pyvat import is_vat_number_format_valid
 
-from silver.utils.dateutils import last_date_that_fits, next_date_after_period
 from silver.utils import get_object_or_None
 
 
