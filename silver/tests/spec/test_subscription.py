@@ -461,19 +461,35 @@ class TestSubscriptionEndpoint(APITestCase):
 
         start_date = datetime.date(year=2015, month=5, day=31)
         assert start_date == subscription.bucket_start_date(
-            reference_date=datetime.date(year=2015, month=6, day=3))
+            reference_date=datetime.date(year=2015, month=5, day=31))
+
+        end_date = datetime.date(year=2015, month=5, day=31)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=5, day=31))
+
+        start_date = datetime.date(year=2015, month=6, day=1)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=6, day=1))
 
         end_date = datetime.date(year=2015, month=6, day=7)
         assert end_date == subscription.bucket_end_date(
-            reference_date=datetime.date(year=2015, month=6, day=7))
+            reference_date=datetime.date(year=2015, month=6, day=1))
 
         start_date = datetime.date(year=2015, month=6, day=8)
         assert start_date == subscription.bucket_start_date(
-            reference_date=datetime.date(year=2015, month=6, day=12))
+            reference_date=datetime.date(year=2015, month=6, day=8))
 
         end_date = datetime.date(year=2015, month=6, day=14)
         assert end_date == subscription.bucket_end_date(
             reference_date=datetime.date(year=2015, month=6, day=8))
+
+        start_date = datetime.date(year=2015, month=6, day=15)
+        assert start_date == subscription.bucket_start_date(
+            reference_date=datetime.date(year=2015, month=6, day=15))
+
+        end_date = datetime.date(year=2015, month=6, day=28)
+        assert end_date == subscription.bucket_end_date(
+            reference_date=datetime.date(year=2015, month=6, day=28))
 
     def test_subscription_billing_cycle_intervals(self):
         subscription = SubscriptionFactory.create()
@@ -583,13 +599,21 @@ class TestSubscriptionEndpoint(APITestCase):
                 start_date, datetime.datetime.min.time())
             assert start_date == subscription.current_start_date
 
-            end_date = datetime.date(year=2015, month=6, day=13)
+            end_date = datetime.date(year=2015, month=5, day=31)
             assert end_date == subscription.current_end_date
 
-            start_date = datetime.date(year=2015, month=6, day=14)
+            start_date = datetime.date(year=2015, month=6, day=1)
             mock_timezone.now.return_value = datetime.datetime.combine(
                 start_date, datetime.datetime.min.time())
             assert start_date == subscription.current_start_date
 
-            end_date = datetime.date(year=2015, month=6, day=27)
+            end_date = datetime.date(year=2015, month=6, day=14)
+            assert end_date == subscription.current_end_date
+
+            start_date = datetime.date(year=2015, month=6, day=15)
+            mock_timezone.now.return_value = datetime.datetime.combine(
+                start_date, datetime.datetime.min.time())
+            assert start_date == subscription.current_start_date
+
+            end_date = datetime.date(year=2015, month=6, day=28)
             assert end_date == subscription.current_end_date
