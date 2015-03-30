@@ -33,6 +33,13 @@ UPDATE_TYPES = (
     ('relative', 'Relative')
 )
 
+_INTERVALS_CODES = {
+    'year': 0,
+    'month': 1,
+    'week': 2,
+    'day': 3
+}
+
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
@@ -280,84 +287,37 @@ class Subscription(models.Model):
         if not self.start_date or reference_date < self.start_date:
             return None
 
-        # if the trial_end date is ignored, it doesn't exist
-        # or it hasn't passed yet: we don't consider it
         if (ignore_trial or not self.trial_end) \
                 or self.trial_end >= reference_date:
-            # now we act depending on the interval type
-            if self.plan.interval == 'month':
-                # the fake_initial_date is used to normalize the starting dates
-                # of intervals, by fixing a day
-                fake_initial_date = list(
-                    rrule(MONTHLY,
-                          count=1,
-                          bymonthday=1,  # first day of the month (1)
-                          dtstart=self.start_date)
-                )[-1].date()
-            elif self.plan.interval == 'week':
-                fake_initial_date = list(
-                    rrule(WEEKLY,
-                          count=1,
-                          byweekday=0,  # first day of the week (monday)
-                          dtstart=self.start_date)
-                )[-1].date()
-            else:
-                fake_initial_date = self.start_date
-
-            return last_date_that_fits(
-                initial_date=fake_initial_date,
-                interval_type=self.plan.interval,
-                interval_count=interval_count,
-                end_date=reference_date
-            ) or self.start_date
-        # if the trial_end has passed
+            relative_start_date = self.start_date
         else:
-            # now we act depending on the interval type
-            if self.plan.interval == 'month':
-                # we get a fake_initial_date based on the trial_end date
-                # and on a fixed day
-                fake_initial_date = list(
-                    rrule(MONTHLY,
-                          count=1,
-                          bymonthday=1,
-                          dtstart=self.trial_end)
-                )[-1].date()
-            elif self.plan.interval == 'week':
-                fake_initial_date = list(
-                    rrule(WEEKLY,
-                          count=1,
-                          byweekday=0,  # first day of the week (monday)
-                          dtstart=self.trial_end)
-                )[-1].date()
-            else:
-                # for any other interval
-                start_date = last_date_that_fits(
-                    initial_date=self.trial_end + datetime.timedelta(days=1),
-                    interval_type=self.plan.interval,
-                    interval_count=interval_count,
-                    end_date=reference_date
-                )
-                return start_date
+            relative_start_date = self.trial_end + datetime.timedelta(days=1)
 
-            # if we reach this point it means we have aligned our intervals
-            # to a specific day (we are using a fake_initial_date)
-            if fake_initial_date:
-                # if the fake_initial_date has not arrived or passed yet
-                # (it means it's not the right one to use)
-                if reference_date < fake_initial_date:
-                    # then the start_date is equal to the next day after the
-                    # trial_end date
-                    fake_initial_date = (self.trial_end +
-                                         datetime.timedelta(days=1))
-                    return fake_initial_date
+        bymonthday = byweekday = None
+        if self.plan.interval == 'month':
+            bymonthday = 1  # first day of the month
+        elif self.plan.interval == 'week':
+            byweekday = 0  # first day of the week (Monday)
 
-            # based on the fake_initial_date we return an appropriate start date
-            return last_date_that_fits(
-                initial_date=fake_initial_date,
-                end_date=reference_date,
-                interval_type=self.plan.interval,
-                interval_count=interval_count
+        fake_initial_date = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  count=1,
+                  bymonthday=bymonthday,
+                  byweekday=byweekday,
+                  dtstart=relative_start_date)
+        )[-1].date()
+
+        if fake_initial_date > reference_date:
+            fake_initial_date = relative_start_date
+
+        dates = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  dtstart=fake_initial_date,
+                  interval=interval_count,
+                  until=reference_date)
             )
+
+        return fake_initial_date if not dates else dates[-1].date()
 
     def _current_end_date(self, reference_date=None, ignore_trial=None,
                           granulate=None):
