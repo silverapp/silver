@@ -72,7 +72,7 @@ class Plan(models.Model):
         help_text='The number of intervals between each subscription billing'
     )
     amount = models.DecimalField(
-        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0), ],
+        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The amount in the specified currency to be charged on the '
                   'interval specified.'
     )
@@ -133,11 +133,11 @@ class MeteredFeature(models.Model):
     )
     unit = models.CharField(max_length=20)
     price_per_unit = models.DecimalField(
-        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0), ],
+        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The price per unit.',
     )
     included_units = models.DecimalField(
-        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0), ],
+        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
     )
     product_code = models.ForeignKey(
@@ -152,7 +152,7 @@ class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
     subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
     consumed_units = models.DecimalField(max_digits=8, decimal_places=2,
-                                         validators=[MinValueValidator(0.0), ])
+                                         validators=[MinValueValidator(0.0)])
     start_date = models.DateField(editable=False)
     end_date = models.DateField(editable=False)
 
@@ -658,7 +658,7 @@ class Customer(AbstractBillingEntity):
     sales_tax_number = models.CharField(max_length=64, blank=True, null=True)
     sales_tax_percent = models.DecimalField(
         max_digits=4, decimal_places=2, null=True, blank=True,
-        validators=[MinValueValidator(0.0), ],
+        validators=[MinValueValidator(0.0)],
         help_text="Whenever to add sales tax. "
                   "If null, it won't show up on the invoice."
     )
@@ -1161,9 +1161,9 @@ class DocumentEntry(models.Model):
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.DecimalField(max_digits=8, decimal_places=2,
-                                   validators=[MinValueValidator(0.0), ])
+                                   validators=[MinValueValidator(0.0)])
     unit_price = models.DecimalField(max_digits=8, decimal_places=2,
-                                     validators=[MinValueValidator(0.0), ])
+                                     validators=[MinValueValidator(0.0)])
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
                                      related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
