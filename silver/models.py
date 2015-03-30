@@ -293,6 +293,8 @@ class Subscription(models.Model):
         else:
             relative_start_date = self.trial_end + datetime.timedelta(days=1)
 
+        # we calculate a fake (intermediary) start date depending on the
+        # interval type, for the purposes of alignment to a specific day
         bymonthday = byweekday = None
         if self.plan.interval == 'month':
             bymonthday = 1  # first day of the month
@@ -327,8 +329,6 @@ class Subscription(models.Model):
         ignore_trial = ignore_trial_default or ignore_trial
         granulate = granulate_default or granulate
 
-        interval_count = 1 if granulate else self.plan.interval_count
-
         if reference_date is None:
             reference_date = timezone.now().date()
 
@@ -342,44 +342,26 @@ class Subscription(models.Model):
 
         # we calculate a fake (intermediary) end date depending on the interval
         # type, for the purposes of alignment to a specific day
+        bymonthday = byweekday = None
         count = 1
-        if self.plan.interval == 'month':
-            if _current_start_date.day != 1:
-                interval_count = 1
-                bymonthday = 1
-            else:
-                count = 2
-                bymonthday = None
-
-            fake_end_date = list(
-                rrule(MONTHLY,
-                      interval=interval_count,
-                      count=count,
-                      bymonthday=bymonthday,
-                      dtstart=_current_start_date)
-            )[-1].date() - datetime.timedelta(days=1)
-        elif self.plan.interval == 'week':
-            if _current_start_date.weekday() != 0:
-                interval_count = 1
-                byweekday = 0
-            else:
-                count = 2
-                byweekday = None
-
-            fake_end_date = list(
-                rrule(WEEKLY,
-                      interval=interval_count,
-                      count=count,
-                      byweekday=byweekday,
-                      dtstart=_current_start_date)
-            )[-1].date() - datetime.timedelta(days=1)
+        interval_count = 1
+        if self.plan.interval == 'month' and _current_start_date.day != 1:
+            bymonthday = 1  # first day of the month
+        elif self.plan.interval == 'week' and _current_start_date.weekday() != 0:
+            byweekday = 0  # first day of the week (Monday)
         else:
-            # there are no rules for other interval types yet
-            fake_end_date = next_date_after_period(
-                initial_date=_current_start_date,
-                interval_type=self.plan.interval,
-                interval_count=self.plan.interval_count if not granulate else 1
-            ) - datetime.timedelta(days=1)
+            count = 2
+            if not granulate:
+                interval_count = self.plan.interval_count
+
+        fake_end_date = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  interval=interval_count,
+                  count=count,
+                  bymonthday=bymonthday,
+                  byweekday=byweekday,
+                  dtstart=_current_start_date)
+        )[-1].date() - datetime.timedelta(days=1)
 
         # if the trial_end date is set and we're not ignoring it
         if self.trial_end and not ignore_trial:
