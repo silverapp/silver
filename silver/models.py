@@ -1180,11 +1180,16 @@ class DocumentEntry(models.Model):
 
     @property
     def total(self):
-        res = (self.unit_price * self.quantity)
+        res = self.total_before_tax + self.tax_value
         return res.quantize(Decimal('0.0000'))
 
     @property
     def total_before_tax(self):
+        res = Decimal(self.quantity * self.unit_price)
+        return res.quantize(Decimal('0.0000'))
+
+    @property
+    def tax_value(self):
         if self.invoice:
             sales_tax_percent = self.invoice.sales_tax_percent
         elif self.proforma:
@@ -1193,16 +1198,10 @@ class DocumentEntry(models.Model):
             sales_tax_percent = None
 
         if not sales_tax_percent:
-            return self.total
+            return Decimal(0)
 
-        initial_unit_price = (self.unit_price * Decimal('100.0000')
-                              / (Decimal('100.0000') + sales_tax_percent))
-        res = Decimal(self.quantity * initial_unit_price)
+        res = Decimal(self.total_before_tax * sales_tax_percent / 100)
         return res.quantize(Decimal('0.0000'))
-
-    @property
-    def tax_value(self):
-        return self.total - self.total_before_tax
 
     def __unicode__(self):
         s = "{descr} - {unit} - {unit_price} - {quantity} - {product_code}"
