@@ -2,6 +2,7 @@
 import datetime
 from datetime import datetime as dt
 from decimal import Decimal
+from django.core.validators import MinValueValidator
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -24,8 +25,6 @@ from dateutil.relativedelta import *
 from dateutil.rrule import *
 from pyvat import is_vat_number_format_valid
 
-from silver.api.dateutils import (last_date_that_fits, next_date_after_period,
-                                  next_date_after_date)
 from silver.utils import get_object_or_None
 
 
@@ -33,6 +32,13 @@ UPDATE_TYPES = (
     ('absolute', 'Absolute'),
     ('relative', 'Relative')
 )
+
+_INTERVALS_CODES = {
+    'year': 0,
+    'month': 1,
+    'week': 2,
+    'day': 3
+}
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -44,7 +50,8 @@ if _storage:
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(document.provider.company or document.provider.name),
+        company=slugify(unicode(
+            document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
         prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
@@ -61,7 +68,7 @@ class Plan(models.Model):
     )
 
     name = models.CharField(
-        max_length=20, help_text='Display name of the plan.'
+        max_length=200, help_text='Display name of the plan.'
     )
     interval = models.CharField(
         choices=INTERVALS, max_length=12, default=INTERVALS[2][0],
@@ -71,7 +78,7 @@ class Plan(models.Model):
         help_text='The number of intervals between each subscription billing'
     )
     amount = models.DecimalField(
-        max_digits=8, decimal_places=2,
+        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The amount in the specified currency to be charged on the '
                   'interval specified.'
     )
@@ -127,15 +134,16 @@ class Plan(models.Model):
 
 class MeteredFeature(models.Model):
     name = models.CharField(
-        max_length=32,
+        max_length=200,
         help_text='The feature display name.'
     )
     unit = models.CharField(max_length=20)
     price_per_unit = models.DecimalField(
-        max_digits=8, decimal_places=2, help_text='The price per unit.'
+        max_digits=8, decimal_places=2, validators=[MinValueValidator(0.0)],
+        help_text='The price per unit.',
     )
     included_units = models.DecimalField(
-        max_digits=8, decimal_places=2,
+        max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
     )
     product_code = models.ForeignKey(
@@ -149,7 +157,8 @@ class MeteredFeature(models.Model):
 class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
     subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
-    consumed_units = models.DecimalField(max_digits=8, decimal_places=2)
+    consumed_units = models.DecimalField(max_digits=19, decimal_places=2,
+                                         validators=[MinValueValidator(0.0)])
     start_date = models.DateField(editable=False)
     end_date = models.DateField(editable=False)
 
@@ -281,70 +290,44 @@ class Subscription(models.Model):
         if not self.start_date or reference_date < self.start_date:
             return None
 
-        # if the trial_end date is ignored, it doesn't exist
-        # or it hasn't passed yet: we don't consider it
         if (ignore_trial or not self.trial_end) \
                 or self.trial_end >= reference_date:
-            # now we act depending on the interval type
-            if self.plan.interval == 'month':
-                # the fake_initial_date is used to normalize the starting dates
-                # of intervals, by fixing a day
-                fake_initial_date = next_date_after_date(
-                    initial_date=self.start_date, day=1
-                )
-                # this returns the appropriate start date
-                return last_date_that_fits(
-                    initial_date=fake_initial_date,
-                    interval_type=self.plan.interval,
-                    interval_count=interval_count,
-                    end_date=reference_date
-                ) or self.start_date
-            else:
-                fake_initial_date = last_date_that_fits(
-                    initial_date=self.start_date,
-                    interval_type=self.plan.interval,
-                    interval_count=interval_count,
-                    end_date=reference_date
-                )
-                return fake_initial_date
-        # if the trial_end has passed
+            relative_start_date = self.start_date
         else:
-            # now we act depending on the interval type
-            if self.plan.interval == 'month':
-                # we get a fake_initial_date based on the trial_end date
-                # and on a fixed day
-                fake_initial_date = next_date_after_date(
-                    initial_date=self.trial_end, day=1
-                )
-            else:
-                # for any other interval
-                start_date = last_date_that_fits(
-                    initial_date=self.trial_end + datetime.timedelta(days=1),
-                    interval_type=self.plan.interval,
-                    interval_count=interval_count,
-                    end_date=reference_date
-                )
-                return start_date
+            relative_start_date = self.trial_end + datetime.timedelta(days=1)
 
-            # if we reach this point it means we have aligned our intervals
-            # to a specific day (we are using a fake_initial_date)
-            if fake_initial_date:
-                # if the fake_initial_date has not arrived or passed yet
-                # (it means it's not the right one to use)
-                if reference_date < fake_initial_date:
-                    # then the start_date is equal to the next day after the
-                    # trial_end date
-                    fake_initial_date = (self.trial_end +
-                                         datetime.timedelta(days=1))
-                    return fake_initial_date
+        # we calculate a fake (intermediary) start date depending on the
+        # interval type, for the purposes of alignment to a specific day
+        bymonth = bymonthday = byweekday = None
+        if self.plan.interval == 'month':
+            bymonthday = 1  # first day of the month
+        elif self.plan.interval == 'week':
+            byweekday = 0  # first day of the week (Monday)
+        elif self.plan.interval == 'year':
+            # first day of the first month (1 Jan)
+            bymonth = 1
+            bymonthday = 1
 
-            # based on the fake_initial_date we return an appropriate start date
-            return last_date_that_fits(
-                initial_date=fake_initial_date,
-                end_date=reference_date,
-                interval_type=self.plan.interval,
-                interval_count=interval_count
+        fake_initial_date = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  count=1,
+                  bymonth=bymonth,
+                  bymonthday=bymonthday,
+                  byweekday=byweekday,
+                  dtstart=relative_start_date)
+        )[-1].date()
+
+        if fake_initial_date > reference_date:
+            fake_initial_date = relative_start_date
+
+        dates = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  dtstart=fake_initial_date,
+                  interval=interval_count,
+                  until=reference_date)
             )
+
+        return fake_initial_date if not dates else dates[-1].date()
 
     def _current_end_date(self, reference_date=None, ignore_trial=None,
                           granulate=None):
@@ -353,8 +336,6 @@ class Subscription(models.Model):
 
         ignore_trial = ignore_trial_default or ignore_trial
         granulate = granulate_default or granulate
-
-        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
@@ -369,18 +350,32 @@ class Subscription(models.Model):
 
         # we calculate a fake (intermediary) end date depending on the interval
         # type, for the purposes of alignment to a specific day
+        bymonth = bymonthday = byweekday = None
+        count = 1
+        interval_count = 1
         if self.plan.interval == 'month' and _current_start_date.day != 1:
-            fake_end_date = next_date_after_date(
-                initial_date=_current_start_date,
-                day=1
-            ) - datetime.timedelta(days=1)
+            bymonthday = 1  # first day of the month
+        elif self.plan.interval == 'week' and _current_start_date.weekday() != 0:
+            byweekday = 0  # first day of the week (Monday)
+        elif (self.plan.interval == 'year' and _current_start_date.month != 1
+              and _current_start_date.day != 1):
+            # first day of the first month (1 Jan)
+            bymonth = 1
+            bymonthday = 1
         else:
-            # there are no rules for other interval types yet
-            fake_end_date = next_date_after_period(
-                initial_date=_current_start_date,
-                interval_type=self.plan.interval,
-                interval_count=interval_count
-            ) - datetime.timedelta(days=1)
+            count = 2
+            if not granulate:
+                interval_count = self.plan.interval_count
+
+        fake_end_date = list(
+            rrule(_INTERVALS_CODES[self.plan.interval],
+                  interval=interval_count,
+                  count=count,
+                  bymonth=bymonth,
+                  bymonthday=bymonthday,
+                  byweekday=byweekday,
+                  dtstart=_current_start_date)
+        )[-1].date() - datetime.timedelta(days=1)
 
         # if the trial_end date is set and we're not ignoring it
         if self.trial_end and not ignore_trial:
@@ -437,6 +432,7 @@ class Subscription(models.Model):
 
         return buckets
 
+    @property
     def is_on_trial(self):
         if self.state == 'active' and self.trial_end:
             return timezone.now().date() <= self.trial_end
@@ -660,6 +656,7 @@ class Customer(AbstractBillingEntity):
     sales_tax_number = models.CharField(max_length=64, blank=True, null=True)
     sales_tax_percent = models.DecimalField(
         max_digits=4, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0.0)],
         help_text="Whenever to add sales tax. "
                   "If null, it won't show up on the invoice."
     )
@@ -800,6 +797,7 @@ class BillingDocument(models.Model):
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
     sales_tax_percent = models.DecimalField(max_digits=4, decimal_places=2,
+                                            validators=[MinValueValidator(0.0)],
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
@@ -1161,8 +1159,10 @@ def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
 class DocumentEntry(models.Model):
     description = models.CharField(max_length=255)
     unit = models.CharField(max_length=20, blank=True, null=True)
-    quantity = models.DecimalField(max_digits=8, decimal_places=2)
-    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
+    quantity = models.DecimalField(max_digits=19, decimal_places=2,
+                                   validators=[MinValueValidator(0.0)])
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2,
+                                     validators=[MinValueValidator(0.0)])
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
                                      related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
@@ -1179,11 +1179,16 @@ class DocumentEntry(models.Model):
 
     @property
     def total(self):
-        res = (self.unit_price * self.quantity)
+        res = self.total_before_tax + self.tax_value
         return res.quantize(Decimal('0.0000'))
 
     @property
     def total_before_tax(self):
+        res = Decimal(self.quantity * self.unit_price)
+        return res.quantize(Decimal('0.0000'))
+
+    @property
+    def tax_value(self):
         if self.invoice:
             sales_tax_percent = self.invoice.sales_tax_percent
         elif self.proforma:
@@ -1192,16 +1197,10 @@ class DocumentEntry(models.Model):
             sales_tax_percent = None
 
         if not sales_tax_percent:
-            return self.total
+            return Decimal(0)
 
-        initial_unit_price = (self.unit_price * Decimal('100.0000')
-                              / (Decimal('100.0000') + sales_tax_percent))
-        res = Decimal(self.quantity * initial_unit_price)
+        res = Decimal(self.total_before_tax * sales_tax_percent / 100)
         return res.quantize(Decimal('0.0000'))
-
-    @property
-    def tax_value(self):
-        return self.total - self.total_before_tax
 
     def __unicode__(self):
         s = "{descr} - {unit} - {unit_price} - {quantity} - {product_code}"
