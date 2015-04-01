@@ -191,20 +191,18 @@ class TestSubscriptionEndpoint(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=2>; rel="next", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '?page=2; rel="next">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '; rel="prev">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
@@ -227,7 +225,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {u'detail': u'Not found'})
+        self.assertEqual(response.data, {u'detail': u'Not found.'})
 
     def test_create_subscription_mf_units_log(self):
         subscription = SubscriptionFactory.create()
