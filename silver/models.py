@@ -59,6 +59,52 @@ def documents_pdf_path(document, filename):
     return path
 
 
+class DocumentsGenerator(object):
+    def _generate_for_single_subscription(self, subscription_id):
+        """
+        Generates the billing documents corresponding to a single subscription.
+        Used when a subscription is ended with `when`=`now`
+        """
+
+        pass
+
+    def _generate_for_consolidated_billing(self, customer, date=None):
+        """
+        Generates the billing documents for a customer which uses consolidated
+        billing.
+        """
+
+        pass
+
+    def _generate_for_non_consolidated_billing(self, customer, date=None):
+        """
+        Generates the billing documents for a customer which does not use
+        consolidated billing.
+        """
+
+        pass
+
+    def _generate_all(self):
+        """
+        Generates the invoices/proformas for all the subscriptions that should
+        be billed.
+        """
+
+        now = timezone.now().date()
+
+        for customer in Customer.objects.all():
+            if customer.consolidated_billing:
+                self._generate_for_consolidated_billing(customer, date=now)
+            else:
+                self._generate_for_non_consolidated_billing(customer, date=now)
+
+    def generate(self, subscription_id=None):
+        if subscription_id:
+            self._generate_for_single_subscription(subscription_id)
+        else:
+            self._generate_all()
+
+
 class Plan(models.Model):
     INTERVALS = (
         ('day', 'Day'),
