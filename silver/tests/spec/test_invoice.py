@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from decimal import Decimal
 
 from django.utils import timezone
 from django.conf import settings
@@ -55,7 +56,8 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0.00'
+            'pdf_url': None,
+            "total": Decimal('0.00')
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -82,7 +84,6 @@ class TestInvoiceEndpoints(APITestCase):
         # TODO: Check the body of the response. There were some problems
         # related to the invoice_entries list.
 
-
     def test_get_invoices(self):
         batch_size = 50
         InvoiceFactory.create_batch(batch_size)
@@ -91,14 +92,10 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
 
     def test_get_invoice(self):
         InvoiceFactory.reset_sequence(1)
@@ -126,7 +123,8 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            "total": '0.00',
+            "pdf_url": None,
+            "total": Decimal('0.00'),
         }
 
     def test_delete_invoice(self):
@@ -134,7 +132,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         response = self.client.delete(url)
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": "Method 'DELETE' not allowed."}
+        assert response.data == {"detail": 'Method "DELETE" not allowed.'}
 
     def test_add_single_invoice_entry(self):
         InvoiceFactory.create_batch(10)
@@ -158,7 +156,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.00'
+            'total': Decimal('200.00')
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -175,7 +173,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.00'
+            'total': Decimal('200.00')
 
         }
 
@@ -184,7 +182,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         response = self.client.get(url)
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": "Method 'GET' not allowed."}
+        assert response.data == {"detail": 'Method "GET" not allowed.'}
 
     def test_add_multiple_invoice_entries(self):
         InvoiceFactory.create_batch(10)
@@ -211,7 +209,7 @@ class TestInvoiceEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': '200.00'
+                'total': Decimal('200.00')
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
