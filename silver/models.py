@@ -440,6 +440,7 @@ class Subscription(models.Model):
 
         return buckets
 
+    @property
     def is_on_trial(self):
         if self.state == 'active' and self.trial_end:
             return timezone.now().date() <= self.trial_end
