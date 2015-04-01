@@ -11,7 +11,7 @@ from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, generate_billing_documents)
+                           DocumentEntry, Proforma, DocumentsGenerator)
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
@@ -176,8 +176,7 @@ class SubscriptionDetailCancel(APIView):
                 sub.cancel()
                 sub.save()
 
-                # TODO: remove after refactor
-                generate_billing_documents(subscription_id=sub.id)
+                DocumentsGenerator().generate(subscription_id=sub.id)
 
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
