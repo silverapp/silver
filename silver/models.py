@@ -48,38 +48,11 @@ if _storage:
     _storage = _storage_klass(*_storage[1], **_storage[2])
 
 
-def documents_pdf_path(document, filename):
-    path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(unicode(
-            document.provider.company or document.provider.name)),
-        date=document.issue_date.strftime('%Y/%m'),
-        doc_name=('%ss' % document.__class__.__name__).lower(),
-        prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
-        filename=filename)
-    return path
-
-
 class DocumentsGenerator(object):
     def _generate_for_single_subscription(self, subscription_id):
         """
         Generates the billing documents corresponding to a single subscription.
         Used when a subscription is ended with `when`=`now`
-        """
-
-        pass
-
-    def _generate_for_consolidated_billing(self, customer, date=None):
-        """
-        Generates the billing documents for a customer which uses consolidated
-        billing.
-        """
-
-        pass
-
-    def _generate_for_non_consolidated_billing(self, customer, date=None):
-        """
-        Generates the billing documents for a customer which does not use
-        consolidated billing.
         """
 
         pass
@@ -94,15 +67,47 @@ class DocumentsGenerator(object):
 
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
-                self._generate_for_consolidated_billing(customer, date=now)
+                self._generate_for_user_with_consolidated_billing(customer,
+                                                                  date=now)
             else:
-                self._generate_for_non_consolidated_billing(customer, date=now)
+                self._generate_for_user_without_consolidated_billing(customer,
+                                                                     date=now)
+
+    def _generate_for_user_with_consolidated_billing(self, customer, date=None):
+        """
+        Generates the billing documents for a customer which uses consolidated
+        billing.
+        """
+
+        pass
+
+    def _generate_for_user_without_consolidated_billing(self, customer, date=None):
+        """
+        Generates the billing documents for a customer which does not use
+        consolidated billing.
+        """
+
+        pass
 
     def generate(self, subscription_id=None):
+        """
+        The `public` method called when one wants to generate the invoices.
+        """
         if subscription_id:
             self._generate_for_single_subscription(subscription_id)
         else:
             self._generate_all()
+
+
+def documents_pdf_path(document, filename):
+    path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
+        company=slugify(unicode(
+            document.provider.company or document.provider.name)),
+        date=document.issue_date.strftime('%Y/%m'),
+        doc_name=('%ss' % document.__class__.__name__).lower(),
+        prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
+        filename=filename)
+    return path
 
 
 class Plan(models.Model):
