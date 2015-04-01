@@ -49,13 +49,15 @@ if _storage:
 
 
 class DocumentsGenerator(object):
-    def _generate_for_single_subscription(self, subscription_id):
+    def generate(self, subscription_id=None):
         """
-        Generates the billing documents corresponding to a single subscription.
-        Used when a subscription is ended with `when`=`now`
+        The `public` method called when one wants to generate the billing
+        documents.
         """
-
-        pass
+        if subscription_id:
+            self._generate_for_single_subscription(subscription_id)
+        else:
+            self._generate_all()
 
     def _generate_all(self):
         """
@@ -73,30 +75,83 @@ class DocumentsGenerator(object):
                 self._generate_for_user_without_consolidated_billing(customer,
                                                                      date=now)
 
-    def _generate_for_user_with_consolidated_billing(self, customer, date=None):
+    def _generate_for_single_subscription(self, subscription_id):
         """
-        Generates the billing documents for a customer which uses consolidated
-        billing.
+        Generates the billing documents corresponding to a single subscription.
+        Used when a subscription is ended with `when`=`now`
         """
 
+        pass
+
+    def _generate_for_user_with_consolidated_billing(self, customer, date=None):
+        """
+        Generates the billing documents for all the subscriptions of a customer
+        who uses consolidated billing.
+        """
+
+        # For each provider there will be one invoice or proforma. The cache
+        # is necessary as a certain customer might have more than one
+        # subscription => all the subscriptions that belong to the same
+        # provider will be added on the same invoice/proforma
+        # => they are "cached".
+        cached_documents = {}
+
+        # Select all the active or canceled subscriptions
+        criteria = {'state__in': ['active', 'canceled']}
+        for subscription in customer.subscriptions.filter(**criteria):
+            if not subscription.should_be_billed:
+                continue
+
+            provider = subscription.plan.provider
+            default_doc_state[provider] = provider.default_document_state
+
+            if provider in cached_documents:
+                # The BillingDocument was created beforehand, now just extract it
+                # and add the new entries to the document.
+                document = cached_documents[provider]
+            else:
+                # A BillingDocument instance does not exist for this provider
+                # => create one
+                document = self._create_document(provider, customer,
+                                                subscription, now)
+                cached_documents[provider] = document
+
+            # add_subscription_to_document(document, subscription, date) ->
+            # adds the value of the plan and of the metered features to the
+            # document
+            # Add the plan's value to the Invoice/Proforma object
+            self._add_plan(document, subscription, date)
+            self._add_metered_features(document, subscription, date)
+
+            if subscription.state == 'canceled':
+                subscription.end()
+                subscription.save()
+
+        for provider, document in cached_documents.iteritems():
+            if provider.default_document_state == 'issued':
+                document.issue()
+                document.save()
+
+    def _create_document(self, provider, customer, subscription, now_date):
+        """
+        Creates and returns a BillingDocument object.
+        """
+
+        return None
+
+    def _add_plan(self, document, subscription, now_date):
+        pass
+
+    def _add_metered_features(self, document, subscription, now_date):
         pass
 
     def _generate_for_user_without_consolidated_billing(self, customer, date=None):
         """
-        Generates the billing documents for a customer which does not use
-        consolidated billing.
+        Generates the billing documents for all the subscriptions of a customer
+        who does not use consolidated billing.
         """
 
         pass
-
-    def generate(self, subscription_id=None):
-        """
-        The `public` method called when one wants to generate the invoices.
-        """
-        if subscription_id:
-            self._generate_for_single_subscription(subscription_id)
-        else:
-            self._generate_all()
 
 
 def documents_pdf_path(document, filename):
