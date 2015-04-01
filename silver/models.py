@@ -1,4 +1,3 @@
-"""Models for the silver app."""
 import datetime
 from datetime import datetime as dt
 from decimal import Decimal
@@ -84,14 +83,6 @@ class DocumentsGenerator(object):
 
         pass
 
-    def _add_subscription_to_document(subscription, document, date):
-        self._add_plan(document, subscription, date)
-        self._add_metered_features(document, subscription, date)
-
-        if subscription.state == 'canceled':
-            subscription.end()
-            subscription.save()
-
     def _generate_for_user_with_consolidated_billing(self, customer, date=None):
         """
         Generates the billing documents for all the subscriptions of a customer
@@ -125,25 +116,13 @@ class DocumentsGenerator(object):
                                                  subscription, now)
                 cached_documents[provider] = document
 
-            self._add_subscription_to_document(subscription, document, date)
+            self._add_subscription_to_document(subscription, provider, document,
+                                               date)
 
         for provider, document in cached_documents.iteritems():
             if provider.default_document_state == 'issued':
                 document.issue()
                 document.save()
-
-    def _create_document(self, provider, customer, subscription, now_date):
-        """
-        Creates and returns a BillingDocument object.
-        """
-
-        return None
-
-    def _add_plan(self, document, subscription, now_date):
-        pass
-
-    def _add_metered_features(self, document, subscription, now_date):
-        pass
 
     def _generate_for_user_without_consolidated_billing(self, customer,
                                                         date=None):
@@ -168,6 +147,41 @@ class DocumentsGenerator(object):
             if provider.default_document_state == 'issued':
                 document.issue()
                 document.save()
+
+    def _create_document(self, provider, customer, subscription, now_date):
+        """
+        Creates and returns a BillingDocument object.
+        """
+
+        DocumentModel = provider.model_corresponding_to_default_flow
+
+        payment_due_days = timedelta(days=customer.payment_due_days)
+        due_date = now_date + payment_due_days
+        document = DocumentModel.objects.create(provider=provider,
+                                                customer=customer,
+                                                due_date=due_date)
+
+        return document
+
+    def _add_subscription_to_document(subscription, provider, document, date):
+        args = {
+            'subscription': subscription,
+            'date': date,
+            provider.flow: document,
+        }
+        self._add_plan_entry(**args)
+        self._add_metered_features_entries(**args)
+
+        if subscription.state == 'canceled':
+            subscription.end()
+            subscription.save()
+
+    def _add_plan_entry(self, subscription, date, proforma=None, invoice=None):
+        pass
+
+    def _add_metered_features_entries(self, subscription, date, proforma=None,
+                                      invoice=None):
+        pass
 
 
 def documents_pdf_path(document, filename):
@@ -447,7 +461,7 @@ class Subscription(models.Model):
                   dtstart=fake_initial_date,
                   interval=interval_count,
                   until=reference_date)
-            )
+        )
 
         return fake_initial_date if not dates else dates[-1].date()
 
@@ -892,6 +906,10 @@ class Provider(AbstractBillingEntity):
         base_fields = super(Provider, self).get_archivable_field_values()
         base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
         return base_fields
+
+    @property
+    def model_corresponding_to_default_flow(self):
+        return Proforma if self.flow == 'proforma' else Invoice
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
