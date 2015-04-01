@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Invoice
+from silver.models import Invoice, Customer
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
                                     SubscriptionFactory)
@@ -360,7 +360,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -385,7 +385,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued', 'issue_date': '2014-01-01'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -415,7 +415,7 @@ class TestInvoiceEndpoints(APITestCase):
             'due_date': '2014-01-20'
         }
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -441,7 +441,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
@@ -456,7 +456,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
@@ -470,7 +470,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -497,7 +497,7 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'paid',
             'paid_date': '2014-05-05'
         }
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -520,7 +520,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be paid only if it is in issued state.'}
@@ -535,7 +535,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'An invoice can be paid only if it is in issued state.'}
@@ -549,7 +549,7 @@ class TestInvoiceEndpoints(APITestCase):
 
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -577,7 +577,7 @@ class TestInvoiceEndpoints(APITestCase):
             'cancel_date': '2014-10-10'
         }
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -600,7 +600,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -617,7 +617,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -634,7 +634,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -648,7 +648,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -664,7 +664,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -681,7 +681,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
