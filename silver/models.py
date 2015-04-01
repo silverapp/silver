@@ -50,7 +50,8 @@ if _storage:
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(document.provider.company or document.provider.name),
+        company=slugify(unicode(
+            document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
         prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
