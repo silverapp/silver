@@ -54,6 +54,7 @@ class DocumentsGenerator(object):
         The `public` method called when one wants to generate the billing
         documents.
         """
+
         if subscription_id:
             self._generate_for_single_subscription(subscription_id)
         else:
@@ -82,6 +83,14 @@ class DocumentsGenerator(object):
         """
 
         pass
+
+    def _add_subscription_to_document(subscription, document, date):
+        self._add_plan(document, subscription, date)
+        self._add_metered_features(document, subscription, date)
+
+        if subscription.state == 'canceled':
+            subscription.end()
+            subscription.save()
 
     def _generate_for_user_with_consolidated_billing(self, customer, date=None):
         """
@@ -113,19 +122,10 @@ class DocumentsGenerator(object):
                 # A BillingDocument instance does not exist for this provider
                 # => create one
                 document = self._create_document(provider, customer,
-                                                subscription, now)
+                                                 subscription, now)
                 cached_documents[provider] = document
 
-            # add_subscription_to_document(document, subscription, date) ->
-            # adds the value of the plan and of the metered features to the
-            # document
-            # Add the plan's value to the Invoice/Proforma object
-            self._add_plan(document, subscription, date)
-            self._add_metered_features(document, subscription, date)
-
-            if subscription.state == 'canceled':
-                subscription.end()
-                subscription.save()
+            self._add_subscription_to_document(subscription, document, date)
 
         for provider, document in cached_documents.iteritems():
             if provider.default_document_state == 'issued':
@@ -145,13 +145,29 @@ class DocumentsGenerator(object):
     def _add_metered_features(self, document, subscription, now_date):
         pass
 
-    def _generate_for_user_without_consolidated_billing(self, customer, date=None):
+    def _generate_for_user_without_consolidated_billing(self, customer,
+                                                        date=None):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
         """
 
-        pass
+        # The user does not use consolidated_billing => add each
+        # subscription on a separate document (Invoice/Proforma)
+        criteria = {'state__in': ['active', 'canceled']}
+        for subscription in customer.subscriptions.filter(**criteria):
+            if not subscription.should_be_billed:
+                continue
+
+            provider = subscription.plan.provider
+            document = self._create_document(provider, customer,
+                                             subscription, now)
+
+            self._add_subscription_to_document(subscription, document, date)
+
+            if provider.default_document_state == 'issued':
+                document.issue()
+                document.save()
 
 
 def documents_pdf_path(document, filename):
