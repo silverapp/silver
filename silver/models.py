@@ -814,6 +814,11 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self.__last_state = self.state
 
+    def _get_template_name(self, property_name):
+        return getattr(settings,
+                       property_name,
+                       'silver/invoice_pdf.html')
+
     @transition(field=state, source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
@@ -834,7 +839,8 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self._generate_pdf()
+        template = self._get_template_name('SILVER_TEMPLATE_ISSUED_DOCUMENTS')
+        self._generate_pdf(template)
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -843,7 +849,8 @@ class BillingDocument(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        self._generate_pdf()
+        template = self._get_template_name('SILVER_TEMPLATE_PAID_DOCUMENTS')
+        self._generate_pdf(template)
 
     @transition(field=state, source='issued', target='canceled')
     def cancel(self, cancel_date=None):
@@ -852,7 +859,8 @@ class BillingDocument(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-        self._generate_pdf()
+        template = self._get_template_name('SILVER_TEMPLATE_CANCELED_DOCUMENTS')
+        self._generate_pdf(template)
 
     def clean(self):
         # The only change that is allowed if the document is in issued state
@@ -960,7 +968,7 @@ class BillingDocument(models.Model):
                 entry.proforma = self
             yield(entry)
 
-    def _generate_pdf(self):
+    def _generate_pdf(self, template='silver/invoice_pdf.html'):
 
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
@@ -972,8 +980,7 @@ class BillingDocument(models.Model):
             'entries': self._entries
         }
         resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf('silver/invoice_pdf.html', context=context,
-                            file_object=resp)
+        data = generate_pdf(template, context=context, file_object=resp)
 
         if data:
             pdf_content = ContentFile(data)
