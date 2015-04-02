@@ -103,8 +103,6 @@ class DocumentsGenerator(object):
                 continue
 
             provider = subscription.plan.provider
-            default_doc_state[provider] = provider.default_document_state
-
             if provider in cached_documents:
                 # The BillingDocument was created beforehand, now just extract it
                 # and add the new entries to the document.
@@ -118,6 +116,10 @@ class DocumentsGenerator(object):
 
             self._add_subscription_to_document(subscription, provider, document,
                                                date)
+
+            if subscription.state == 'canceled':
+                subscription.end()
+                subscription.save()
 
         for provider, document in cached_documents.iteritems():
             if provider.default_document_state == 'issued':
@@ -144,6 +146,10 @@ class DocumentsGenerator(object):
 
             self._add_subscription_to_document(subscription, document, date)
 
+            if subscription.state == 'canceled':
+                subscription.end()
+                subscription.save()
+
             if provider.default_document_state == 'issued':
                 document.issue()
                 document.save()
@@ -164,6 +170,11 @@ class DocumentsGenerator(object):
         return document
 
     def _add_subscription_to_document(subscription, provider, document, date):
+        """
+        Adds the total value of the subscription (value(plan) + value(consumed
+        metered features)) to the document.
+        """
+
         args = {
             'subscription': subscription,
             'date': date,
@@ -172,12 +183,210 @@ class DocumentsGenerator(object):
         self._add_plan_entry(**args)
         self._add_metered_features_entries(**args)
 
-        if subscription.state == 'canceled':
-            subscription.end()
-            subscription.save()
+    def _add_plan_value(self, subscription, start_date, end_date, invoice=None,
+                        proforma=None):
+        """
+        Adds to the document the value of the plan.
+        """
 
-    def _add_plan_entry(self, subscription, date, proforma=None, invoice=None):
-        pass
+        # Add plan value
+        interval = '%sly' % subscription.plan.interval
+        # TODO: add template
+        template = "{plan_name} plan {interval} subscription ({start_date} - {end_date})"
+        description = template.format(plan_name=subscription.plan.name,
+                                      interval=interval,
+                                      start_date=start_date,
+                                      end_date=end_date)
+
+        prorated, percent = self._get_proration_status_and_percent(
+            subscription, start_date, end_date)
+
+        # Get the plan's prorated value
+        plan_price = subscription.plan.amount * percent
+
+        unit = '%ss' % subscription.plan.interval
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+            product_code=subscription.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date
+        )
+
+    def _add_plan_trial(self, subscription, start_date, end_date, invoice=None,
+                        proforma=None):
+        """
+        Adds the plan trial to the document, by adding an entry with positive
+        prorated value and one with prorated, negative value which represents
+        the discount for the trial period.
+        """
+
+        prorated, percent = self._get_proration_status_and_percent(
+            subscription, start_date, end_date)
+        plan_price = subscription.plan.amount * percent
+
+        unit = '%ss' % subscription.plan.interval
+        # TODO: add template
+        template = "{plan_name} plan trial subscription ({start_date} - {end_date})"
+        description = template.format(plan_name=subscription.plan.name,
+                                      start_date=start_date,
+                                      end_date=end_date)
+        # Add plan with positive value
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+            product_code=subscription.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date)
+
+        # TODO: add template
+        template = "{plan_name} plan trial discount ({start_date} - {end_date})"
+        description = template.format(plan_name=subscription.plan.name,
+                                      start_date=start_date,
+                                      end_date=end_date)
+        # Add plan with negative value
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=-plan_price, quantity=Decimal('1.00'),
+            product_code=subscription.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date)
+
+    def _get_proration_status_and_percent(self, subscription, start_date, end_date):
+        """
+        Returns the proration percent (how much of the interval will be billed)
+        and the status (if the subscription is prorated or not).
+
+        :param date: the date at which the percent and status are calculated
+        :returns: a tuple containing (Decimal(percent), status) where status
+            can be one of [True, False]. The decimal value will from the
+            interval [0.00; 1.00].
+        :rtype: tuple
+        """
+
+        intervals = {
+            'year': {'years': -subscription.plan.interval_count},
+            'month': {'months': -subscription.plan.interval_count},
+            'week': {'weeks': -subscription.plan.interval_count},
+            'day': {'days': -subscription.plan.interval_count},
+        }
+
+        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
+        # NOTE (Important): this will be a NEGATIVE INTERVAL (e.g.: -1 month,
+        # -1 week, etc.)
+        interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+        if end_date + interval_len >= start_date:
+            # |start_date|---|start_date+interval_len|---|end_date|
+            # => not prorated
+            return False, Decimal('1.0000')
+        else:
+            # |start_date|---|end_date|---|start_date+interval_len|
+            # => prorated
+            interval_start = end_date + interval_len
+            days_in_interval = (end_date - interval_start).days
+            days_since_subscription_start = (end_date - start_date).days
+            percent = 1.0 * days_since_subscription_start / days_in_interval
+            percent = Decimal(percent).quantize(Decimal('0.0000'))
+
+            return True, percent
+
+    def _add_plan_entry(self, subscription, now, proforma=None, invoice=None):
+        if subscription.is_billed_first_time:
+            if subscription.is_on_trial:
+                # First time billing and on trial => add only the trial entry
+                # => add the trial and exit
+                self._add_plan_trial(subscription=subscription,
+                                     start_date=subscription.start_date,
+                                     end_date=now, invoice=invoice,
+                                     proforma=proforma)
+                # TODO: add the mfs for this interval (positive + negative)
+                return
+            else:
+                # First billing, but not on trial anymore
+                intervals = {
+                    'year': {'years': +subscription.plan.interval_count},
+                    'month': {'months': +subscription.plan.interval_count},
+                    'week': {'weeks': +subscription.plan.interval_count},
+                    'day': {'days': +subscription.plan.interval_count},
+                }
+                interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+                if subscription.start_date + interval_len < now:
+                    # |start_date|---|trial_end|---|start_date+interval_len|---|now|
+                    # => 4 entries
+                    # * The trial (+ and -)
+                    # * A prorated entry: [trial_end, start_date + interval_len]
+                    # * A prorated entry: [start_date + interval_len, now]
+                    self._add_plan_trial(subscription=subscription,
+                                         start_date=subscription.start_date,
+                                         end_date=subscription.trial_end,
+                                         invoice=invoice, proforma=proforma)
+                    # TODO: add mfs for this interval (+ and -)
+
+                    interval_end = subscription.start_date + interval_len
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=subscription.trial_end,
+                                         end_date=interval_end,
+                                         invoice=invoice, proforma=proforma)
+                    # TODO: add the mfs for this interval
+
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=interval_end,
+                                         end_date=now, invoice=invoice,
+                                         proforma=proforma)
+                    # TODO: add the mfs for this interval
+                else:
+                    # |start_date|---|trial_end|---|now|---|start_date+interval_len|
+                    # => 3 entries:
+                    # * The trial (+ and -)
+                    # * A prorated entry: [trial_end, now]
+                    self._add_plan_trial(subscription=subscription,
+                                         start_date=subscription.start_date,
+                                         end_date=subscription.trial_end,
+                                         invoice=invoice, proforma=proforma)
+                    # TODO: add mfs for this interval
+
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=subscription.trial_end,
+                                         end_date=now, invoice=invoice,
+                                         proforma=proforma)
+                    # TODO: add mfs for this interval
+        else:
+            # Was billed before => we use the last_billing_date to determine
+            # the current end date
+            last_billing_date = subscription.last_billing_date
+            intervals = {
+                'year': {'years': +subscription.plan.interval_count},
+                'month': {'months': +subscription.plan.interval_count},
+                'week': {'weeks': +subscription.plan.interval_count},
+                'day': {'days': +subscription.plan.interval_count},
+            }
+            interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+            if subscription.state != 'canceled':
+                if last_billing_date + interval_len < now_date:
+                    # |last_billing_date|---|last_billing_date+interval_len|---|now|
+                    # => 2 entries:
+                    # * The full interval: [last_billing_date, last_billing_date+interval_len]
+                    # * The prorated entry: [last_billing_date+interval_len, now]
+
+                    interval_end = last_billing_date + interval_len
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=last_billing_date,
+                                         end_date=interval_end, invoice=invoice,
+                                         proforma=proforma)
+                    # TODO: add mfs for this interval
+
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=interval_end,
+                                         end_date=now, invoice=invoice,
+                                         proforma=proforma)
+                else:
+                    # |last_billing_date|---|now|---|last_billing_date+interval_len|
+                    # => 1 entry: the prorated plan
+                    self._add_plan_value(subscription=subscription,
+                                         start_date=last_billing_date,
+                                         end_date=now, invoice=invoice,
+                                         proforma=proforma)
+                    # TODO: add mfs for this interval
 
     def _add_metered_features_entries(self, subscription, date, proforma=None,
                                       invoice=None):
@@ -1301,8 +1510,7 @@ class DocumentEntry(models.Model):
     unit = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.DecimalField(max_digits=19, decimal_places=2,
                                    validators=[MinValueValidator(0.0)])
-    unit_price = models.DecimalField(max_digits=8, decimal_places=2,
-                                     validators=[MinValueValidator(0.0)])
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
                                      related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
