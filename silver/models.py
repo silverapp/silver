@@ -59,6 +59,14 @@ class DocumentsGenerator(object):
         else:
             self._generate_all()
 
+    def _generate_for_single_subscription(self, subscription_id):
+        """
+        Generates the billing documents corresponding to a single subscription.
+        Used when a subscription is ended with `when`=`now`
+        """
+
+        pass
+
     def _generate_all(self):
         """
         Generates the invoices/proformas for all the subscriptions that should
@@ -74,14 +82,6 @@ class DocumentsGenerator(object):
             else:
                 self._generate_for_user_without_consolidated_billing(customer,
                                                                      date=now)
-
-    def _generate_for_single_subscription(self, subscription_id):
-        """
-        Generates the billing documents corresponding to a single subscription.
-        Used when a subscription is ended with `when`=`now`
-        """
-
-        pass
 
     def _generate_for_user_with_consolidated_billing(self, customer, date=None):
         """
