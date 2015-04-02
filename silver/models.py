@@ -54,10 +54,10 @@ class DocumentsGenerator(object):
         documents.
         """
 
-        if subscription_id:
-            self._generate_for_single_subscription(subscription_id)
-        else:
+        if not subscription_id:
             self._generate_all()
+        else:
+            self._generate_for_single_subscription(subscription_id)
 
     def _generate_for_single_subscription(self, subscription_id):
         """
@@ -288,6 +288,55 @@ class DocumentsGenerator(object):
 
             return True, percent
 
+    def _get_included_units(self, subscription, metered_feature, start_date,
+                            end_date):
+        """
+        Returns the number of items included in the subscription for a
+        particulr metered feature. Useful to determine the number of mfs
+        included in the subscription when a prorated entry is found.
+        """
+
+        pass
+
+    def _add_mfs_for_trial(self, subscription, start_date, end_date,
+                           invoice=None, proforma=None):
+
+        # Add all the metered features between the trial period
+        for metered_feature in subscription.plan.metered_features.all():
+            log = subscription.mf_log_entries.filter(metered_feature=metered_feature,
+                                                     start_date__gte=start_date,
+                                                     end_date__lte=end_date)
+            for log_item in log:
+                # Positive value
+                # TODO: add template
+                template = "{name} ({start_date} - {end_date})."
+                description = template.format(name=metered_feature.name,
+                                              start_date=log_item.start_date,
+                                              end_date=log_item.end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=log_item.consumed_item,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=log_item.start_date, end_date=log_item.end_date)
+
+                # Negative value
+                # TODO: add template
+                template = "{name} ({start_date} - {end_date}) trial discount."
+                description = template.format(name=metered_feature.name,
+                                              start_date=log_item.start_date,
+                                              end_date=log_item.end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=log_item.consumed_item,
+                    unit_price=-metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=log_item.start_date, end_date=log_item.end_date)
+
+    def _add_mfs(self, subscription, start_date, end_date,
+                  invoice=None, proforma=None):
+        pass
+
     def _add_plan_entry(self, subscription, now, proforma=None, invoice=None):
         if subscription.is_billed_first_time:
             if subscription.is_on_trial:
@@ -387,6 +436,9 @@ class DocumentsGenerator(object):
                                          end_date=now, invoice=invoice,
                                          proforma=proforma)
                     # TODO: add mfs for this interval
+            else:
+                # TODO: Handle the case when the subscription was canceled
+                pass
 
     def _add_metered_features_entries(self, subscription, date, proforma=None,
                                       invoice=None):
