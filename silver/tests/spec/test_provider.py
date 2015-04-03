@@ -68,10 +68,14 @@ class TestProviderEndpoints(APITestCase):
             "city": "Timisoara",
             "zip_code": "300300",
             "invoice_series": "TheSeries",
+            "invoice_starting_number": 300,
+            "flow": "proforma",
+            "proforma_series": "TheSecondSeries",
+            "proforma_starting_number": 360,
         }
-        required_fields = ['company', 'address_1', 'country', 'city',
-                           'zip_code', 'flow', 'invoice_series',
-                           'invoice_starting_number']
+        required_fields = ['address_1', 'country', 'city', 'name',
+                           'invoice_series', 'invoice_starting_number',
+                           'proforma_series', 'proforma_starting_number']
 
         for field in required_fields:
             temp_data = complete_data.copy()
@@ -84,11 +88,17 @@ class TestProviderEndpoints(APITestCase):
             response = self.client.post(url, temp_data)
 
             assert response.status_code == 400
+
             for response_item in response.data.iteritems():
                 field_name = response_item[0]
+                if field_name in ['id', 'url']:
+                    continue
+
                 valid_responses = [
                     (field_name, ['This field may not be blank.']),
-                    (field_name, ['This field is required.'])]
+                    (field_name, ['This field is required.']),
+                    (field_name, ['This field is required as the chosen flow '
+                                  'is proforma.'])]
                 assert response_item in valid_responses
 
             qs = self._filter_providers()
@@ -110,22 +120,18 @@ class TestProviderEndpoints(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=2>; rel="next", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '?page=2; rel="next">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '; rel="prev">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
     def test_POST_bulk_providers(self):
         providers = ProviderFactory.create_batch(5)
