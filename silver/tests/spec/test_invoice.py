@@ -146,6 +146,9 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
+        invoice = Invoice.objects.get(pk=1)
+        total = Decimal(200.0) * Decimal(1 + invoice.sales_tax_percent / 100)
+
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             'description': 'Page views',
@@ -156,7 +159,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': Decimal('200.00')
+            'total': total
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -173,8 +176,7 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': Decimal('200.00')
-
+            'total': total
         }
 
     def test_try_to_get_invoice_entries(self):
@@ -194,6 +196,9 @@ class TestInvoiceEndpoints(APITestCase):
             "quantity": 20
         }
 
+        invoice = Invoice.objects.get(pk=1)
+        total = Decimal(200.0) * Decimal(1 + invoice.sales_tax_percent / 100)
+
         entries_count = 10
         for cnt in range(entries_count):
             response = self.client.post(url, data=json.dumps(entry_data),
@@ -209,7 +214,7 @@ class TestInvoiceEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': Decimal('200.00')
+                'total': total
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
