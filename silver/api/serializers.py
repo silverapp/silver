@@ -81,7 +81,8 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'proforma_starting_number')
 
     def validate(self, data):
-        if data['flow'] == 'proforma':
+        flow = data.get('flow', None)
+        if flow == 'proforma':
             if not data.get('proforma_starting_number', None) and\
                not data.get('proforma_series', None):
                 errors = {'proforma_series': "This field is required as the "
