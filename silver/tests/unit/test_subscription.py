@@ -513,8 +513,10 @@ class TestSubscriptionModel(TestCase):
             subscription = SubscriptionFactory.create()
 
             last_billing_date = PropertyMock(return_value=dt.date(2014, 2, 1))
-            with patch('silver.models.Subscription',
-                       last_billing_date=last_billing_date):
+            is_billed_first_time = PropertyMock(return_value=False)
+            with patch.multiple('silver.models.Subscription',
+                       last_billing_date=last_billing_date,
+                       is_billed_first_time=is_billed_first_time):
                 subscription.plan.generate_after = 0
                 subscription.plan.interval = 'year'
                 subscription.plan.interval_count = 1
@@ -577,8 +579,10 @@ class TestSubscriptionModel(TestCase):
 
             last_billing_date = PropertyMock(
                 return_value=dt.date(test_year - 2, 2, 1))
-            with patch('silver.models.Subscription',
-                       last_billing_date=last_billing_date):
+            is_billed_first_time = PropertyMock(return_value=False)
+            with patch.multiple('silver.models.Subscription',
+                       last_billing_date=last_billing_date,
+                       is_billed_first_time=is_billed_first_time):
                 subscription.plan.generate_after = 0
                 subscription.plan.interval = 'year'
                 subscription.plan.interval_count = 2
@@ -645,8 +649,10 @@ class TestSubscriptionModel(TestCase):
 
             last_billing_date = PropertyMock(
                 return_value=dt.date(test_year, test_month - 1, test_day - 1))
-            with patch('silver.models.Subscription',
-                       last_billing_date=last_billing_date):
+            is_billed_first_time = PropertyMock(return_value=False)
+            with patch.multiple('silver.models.Subscription',
+                       last_billing_date=last_billing_date,
+                       is_billed_first_time=is_billed_first_time):
                 subscription.plan.generate_after = 0
                 subscription.plan.interval = 'month'
                 subscription.plan.interval_count = 1
@@ -717,8 +723,10 @@ class TestSubscriptionModel(TestCase):
 
             last_billing_date = PropertyMock(
                 return_value=dt.date(test_year, test_month - 2, test_day - 1))
-            with patch('silver.models.Subscription',
-                       last_billing_date=last_billing_date):
+            is_billed_first_time = PropertyMock(return_value=False)
+            with patch.multiple('silver.models.Subscription',
+                       last_billing_date=last_billing_date,
+                       is_billed_first_time=is_billed_first_time):
                 subscription.plan.generate_after = 0
                 subscription.plan.interval = 'month'
                 subscription.plan.interval_count = 2
@@ -791,8 +799,10 @@ class TestSubscriptionModel(TestCase):
             last_billing_date = PropertyMock(
                 return_value=dt.date(
                     last_issue_year, last_issue_month, last_issue_day))
-            with patch('silver.models.Subscription',
-                       last_billing_date=last_billing_date):
+            is_billed_first_time = PropertyMock(return_value=False)
+            with patch.multiple('silver.models.Subscription',
+                       last_billing_date=last_billing_date,
+                       is_billed_first_time=is_billed_first_time):
                 subscription.plan.generate_after = 0
                 subscription.plan.interval = 'week'
                 subscription.plan.interval_count = 1
