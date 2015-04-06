@@ -543,6 +543,10 @@ class MeteredFeature(models.Model):
         max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
     )
+    included_units_during_trial = models.DecimalField(
+        max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
+        help_text='The number of included units during the trial period.'
+    )
     product_code = models.ForeignKey(
         'ProductCode', help_text='The product code for this plan.'
     )
