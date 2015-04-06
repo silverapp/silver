@@ -20,11 +20,13 @@ class TestInvoiceGenerationCommand(TestCase):
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'))
-        start_date = now + dt.timedelta(days=-9)  # should be 2015-01-29
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
         trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
-        SubscriptionFactory.create(plan=plan, start_date=start_date,
-                                   trial_end=trial_end)
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
 
         mocked_is_on_trial = PropertyMock(return_value=True)
         mocked_should_be_billed = PropertyMock(return_value=True)
@@ -63,11 +65,13 @@ class TestInvoiceGenerationCommand(TestCase):
         plan.provider.default_document_state = 'issued'
         plan.provider.save()
 
-        start_date = now + dt.timedelta(days=-9)  # should be 2015-01-29
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
         trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
-        SubscriptionFactory.create(plan=plan, start_date=start_date,
-                                   trial_end=trial_end)
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
 
         mocked_is_on_trial = PropertyMock(return_value=True)
         mocked_should_be_billed = PropertyMock(return_value=True)
@@ -103,11 +107,13 @@ class TestInvoiceGenerationCommand(TestCase):
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'))
-        start_date = now + dt.timedelta(days=-9)  # should be 2015-01-29
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
         trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
-        SubscriptionFactory.create(plan=plan, start_date=start_date,
-                                   trial_end=trial_end)
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
 
         mocked_is_on_trial = PropertyMock(return_value=True)
         mocked_should_be_billed = PropertyMock(return_value=True)
