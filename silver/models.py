@@ -147,6 +147,7 @@ class MeteredFeature(models.Model):
     )
     included_units_during_trial = models.DecimalField(
         max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
+        blank=True, null=True,
         help_text='The number of included units during the trial period.'
     )
     product_code = models.ForeignKey(
