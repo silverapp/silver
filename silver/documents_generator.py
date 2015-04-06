@@ -258,40 +258,71 @@ class DocumentsGenerator(object):
 
         pass
 
+    def _get_consumed_units_during_trial(self, metered_feature, log_item):
+        if metered_feature.included_units_during_trial:
+            # Limited units during trial.
+            if log_item.consumed_units > metered_feature.included_units_during_trial:
+                return log_item.consumed_units - metered_feature.included_units_during_trial
+        # Unlimited or consumed_units <= included_units_during_trial
+        return 0
+
     def _add_mfs_for_trial(self, subscription, start_date, end_date,
                            invoice=None, proforma=None):
 
-        # Add all the metered features between the trial period
+        # Add all the metered features consumed during the trial period
         for metered_feature in subscription.plan.metered_features.all():
             log = subscription.mf_log_entries.filter(metered_feature=metered_feature,
                                                      start_date__gte=start_date,
                                                      end_date__lte=end_date)
             for log_item in log:
-                # Positive value
-                # TODO: add template
+                # Positive value for the consumed items. TODO: add template
                 template = "{name} ({start_date} - {end_date})."
                 description = template.format(name=metered_feature.name,
                                               start_date=log_item.start_date,
                                               end_date=log_item.end_date)
+
+                extra_consumed_units = self._get_consumed_units_during_trial(
+                    metered_feature, log_item)
+                if extra_consumed_units > 0:
+                    free_units = metered_feature.included_units_during_trial
+                    charged_units = extra_consumed_units
+                else:
+                    free_units = log_item.consumed_units
+                    charged_units = 0
+
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=description,
-                    unit=metered_feature.unit, quantity=log_item.consumed_item,
+                    unit=metered_feature.unit, quantity=free_units,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=log_item.start_date, end_date=log_item.end_date)
 
-                # Negative value
-                # TODO: add template
+                # Negative value for the consumed items. TODO: add template
                 template = "{name} ({start_date} - {end_date}) trial discount."
                 description = template.format(name=metered_feature.name,
                                               start_date=log_item.start_date,
                                               end_date=log_item.end_date)
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=description,
-                    unit=metered_feature.unit, quantity=log_item.consumed_item,
+                    unit=metered_feature.unit, quantity=free_units,
                     unit_price=-metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=log_item.start_date, end_date=log_item.end_date)
+
+                # Extra items consumed items that are not included
+                if charged_units > 0:
+                    # TODO: add template
+                    template = "Extra {name} ({start_date} - {end_date})."
+                    description = template.format(name=metered_feature.name,
+                                                  start_date=log_item.start_date,
+                                                  end_date=log_item.end_date)
+                    DocumentEntry.objects.create(
+                        invoice=invoice, proforma=proforma,
+                        description=description, unit=metered_feature.unit,
+                        quantity=charge_units,
+                        unit_price=metered_feature.price_per_unit,
+                        product_code=metered_feature.product_code,
+                        start_date=log_item.start_date, end_date=log_item.end_date)
 
     def _add_mfs(self, subscription, start_date, end_date,
                  invoice=None, proforma=None):
@@ -399,7 +430,3 @@ class DocumentsGenerator(object):
             else:
                 # TODO: Handle the case when the subscription was canceled
                 pass
-
-    def _add_metered_features_entries(self, subscription, date, proforma=None,
-                                      invoice=None):
-        pass
