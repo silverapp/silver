@@ -11,7 +11,7 @@ from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, DocumentsGenerator)
+                           DocumentEntry, Proforma)
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
@@ -22,6 +22,7 @@ from silver.api.serializers import (MFUnitsLogSerializer,
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
+from silver.documents_generator import DocumentsGenerator
 from silver.utils import get_object_or_None
 
 
