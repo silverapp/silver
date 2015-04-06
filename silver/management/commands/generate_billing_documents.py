@@ -62,7 +62,7 @@ class Command(BaseCommand):
         self._add_prorated_plan(subscription=subscription,
                                 start_date=subscription.start_date,
                                 invoice=invoice, proforma=proforma,
-                                prorated=prorated)
+                                end_date=end_date, prorated=prorated)
 
     def _add_prorated_plan(self, subscription, start_date, end_date,
                            invoice=None, proforma=None, prorated=False):
