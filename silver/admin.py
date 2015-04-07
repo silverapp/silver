@@ -226,6 +226,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
+    ordering = ('-number', )
+
     @property
     def _model(self):
         raise NotImplementedError
