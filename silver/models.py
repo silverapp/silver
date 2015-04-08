@@ -106,7 +106,7 @@ class Plan(models.Model):
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
     product_code = models.OneToOneField(
-        'ProductCode', unique=True, help_text='The product code for this plan.'
+        'ProductCode', help_text='The product code for this plan.',
     )
     provider = models.ForeignKey(
         'Provider', related_name='plans',
