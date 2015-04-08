@@ -92,7 +92,7 @@ class Plan(models.Model):
                   'customer to this plan.'
     )
     metered_features = models.ManyToManyField(
-        'MeteredFeature', blank=True, null=True,
+        'MeteredFeature', blank=True,
         help_text="A list of the plan's metered features."
     )
     generate_after = models.PositiveIntegerField(
@@ -105,7 +105,7 @@ class Plan(models.Model):
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
-    product_code = models.ForeignKey(
+    product_code = models.OneToOneField(
         'ProductCode', unique=True, help_text='The product code for this plan.'
     )
     provider = models.ForeignKey(
