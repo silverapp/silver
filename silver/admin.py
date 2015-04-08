@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin, messages
+from django.core import urlresolvers
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
 
@@ -291,8 +292,8 @@ class InvoiceAdmin(BillingDocumentAdmin):
     list_display = BillingDocumentAdmin.list_display + ['invoice_pdf']
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('proforma', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + ('proforma', )
+    fields = BillingDocumentAdmin.fields + ('proforma_url', )
+    readonly_fields = BillingDocumentAdmin.readonly_fields + ('proforma_url', )
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
 
@@ -316,6 +317,15 @@ class InvoiceAdmin(BillingDocumentAdmin):
             return ''
     invoice_pdf.allow_tags = True
 
+    def proforma_url(self, obj):
+        if obj.proforma:
+            url = urlresolvers.reverse('admin:silver_proforma_change',
+                                       args=(obj.proforma.pk,))
+            return '<a href="%s">%s</a>' % (url, obj.proforma)
+        else:
+            return '(None)'
+    proforma_url.allow_tags = True
+
     @property
     def _model(self):
         return Invoice
@@ -330,8 +340,8 @@ class ProformaAdmin(BillingDocumentAdmin):
     list_display = BillingDocumentAdmin.list_display + ['proforma_pdf']
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('invoice', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + ('invoice',)
+    fields = BillingDocumentAdmin.fields + ('invoice_url', )
+    readonly_fields = BillingDocumentAdmin.readonly_fields + ('invoice_url',)
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
 
@@ -354,6 +364,15 @@ class ProformaAdmin(BillingDocumentAdmin):
         else:
             return ''
     proforma_pdf.allow_tags = True
+
+    def invoice_url(self, obj):
+        if obj.invoice:
+            url = urlresolvers.reverse('admin:silver_invoice_change',
+                                       args=(obj.invoice.pk,))
+            return '<a href="%s">%s</a>' % (url, obj.invoice)
+        else:
+            return '(None)'
+    invoice_url.allow_tags = True
 
     @property
     def _model(self):
