@@ -59,6 +59,10 @@ def documents_pdf_path(document, filename):
     return path
 
 
+class UnsavedForeignKey(models.ForeignKey):
+    allow_unsaved_instance_assignment = True
+
+
 class Plan(models.Model):
     INTERVALS = (
         ('day', 'Day'),
@@ -146,7 +150,7 @@ class MeteredFeature(models.Model):
         max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
     )
-    product_code = models.ForeignKey(
+    product_code = UnsavedForeignKey(
         'ProductCode', help_text='The product code for this plan.'
     )
 
