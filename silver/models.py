@@ -128,7 +128,7 @@ class MeteredFeatureUnitsLog(models.Model):
                 action_type = "create"
             else:
                 action_type = "change"
-            err_msg = 'You cannot %s a metered feature units log belonging to ' \
+            err_msg = 'You cannot %s a metered feature units log belonging to '\
                       'an %s subscription.' % (action_type,
                                                self.subscription.state)
             raise ValidationError(err_msg)
@@ -223,26 +223,39 @@ class Subscription(models.Model):
 
         if (ignore_trial or not self.trial_end) \
                 or self.trial_end >= reference_date:
-            fake_initial_date = next_date_after_date(
-                initial_date=self.start_date, day=1
-            )
-            if fake_initial_date > reference_date:
-                return self.start_date
+            if self.plan.interval == 'month':
+                fake_initial_date = next_date_after_date(
+                    initial_date=self.start_date, day=1
+                )
+                return last_date_that_fits(
+                    initial_date=fake_initial_date,
+                    interval_type=self.plan.interval,
+                    interval_count=self.plan.interval_count,
+                    end_date=reference_date
+                ) or self.start_date
             else:
                 fake_initial_date = last_date_that_fits(
-                    initial_date=fake_initial_date,
-                    end_date=reference_date,
+                    initial_date=self.start_date,
                     interval_type=self.plan.interval,
-                    interval_count=self.plan.interval_count
+                    interval_count=self.plan.interval_count,
+                    end_date=reference_date
                 )
                 return fake_initial_date
         else:
-            fake_initial_date = next_date_after_date(
-                initial_date=self.trial_end, day=1
-            )
+            if self.plan.interval == 'month':
+                fake_initial_date = next_date_after_date(
+                    initial_date=self.trial_end, day=1
+                )
+            else:
+                fake_initial_date = last_date_that_fits(
+                    initial_date=self.trial_end,
+                    interval_type=self.plan.interval,
+                    interval_count=self.plan.interval_count,
+                    end_date=reference_date
+                ) + datetime.timedelta(days=1)
             if fake_initial_date:
                 if reference_date < fake_initial_date:
-                    initial_date = self.trial_end
+                    initial_date = self.trial_end + datetime.timedelta(days=1)
                 else:
                     initial_date = fake_initial_date
             else:
@@ -263,38 +276,44 @@ class Subscription(models.Model):
             reference_date = timezone.now().date()
 
         end_date = None
-        if (ignore_trial or not self.trial_end) \
-                or self.trial_end >= reference_date:
+        _current_start_date = self._current_start_date(reference_date,
+                                                       ignore_trial)
+        if not _current_start_date:
+            return None
+        if self.plan.interval == 'month':
             fake_end_date = next_date_after_date(
-                initial_date=self._current_start_date(reference_date,
-                                                      ignore_trial),
+                initial_date=_current_start_date,
                 day=1
             ) - datetime.timedelta(days=1)
-            if self.trial_end and fake_end_date > self.trial_end:
-                return self.trial_end
-            else:
-                return fake_end_date
         else:
-            end_date_after_trial = next_date_after_date(
-                initial_date=self.trial_end, day=1
-            ) - datetime.timedelta(days=1)
-            if end_date_after_trial:
-                if reference_date < end_date_after_trial:
-                    end_date = end_date_after_trial
-
-            end_date = end_date or next_date_after_period(
-                initial_date=self._current_start_date(reference_date,
-                                                      ignore_trial),
+            fake_end_date = next_date_after_period(
+                initial_date=_current_start_date,
                 interval_type=self.plan.interval,
                 interval_count=self.plan.interval_count
             ) - datetime.timedelta(days=1)
-            if end_date:
-                if self.ended_at:
-                    if self.ended_at < end_date:
-                        return self.ended_at
-                else:
-                    return end_date
-            return None
+        if (ignore_trial or not self.trial_end) \
+                or self.trial_end >= reference_date:
+            if self.trial_end and fake_end_date \
+                    and fake_end_date > self.trial_end:
+                end_date = self.trial_end
+            else:
+                end_date = fake_end_date
+        else:
+            if fake_end_date:
+                if reference_date < fake_end_date:
+                    end_date = fake_end_date
+
+            end_date = end_date or (next_date_after_period(
+                initial_date=_current_start_date,
+                interval_type=self.plan.interval,
+                interval_count=self.plan.interval_count
+            ) - datetime.timedelta(days=1))
+        if end_date:
+            if self.ended_at:
+                if self.ended_at < end_date:
+                    end_date = self.ended_at
+            return end_date
+        return None
 
     @property
     def current_start_date(self):

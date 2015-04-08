@@ -74,6 +74,8 @@ def last_date_that_fits(initial_date, end_date, interval_type, interval_count):
                 else:
                     return None
                 days_to_add *= interval_count
+                if interval_type == 'week':
+                    days_to_add *= 7
                 start_date = initial_date + datetime.timedelta(days=days_to_add)
                 return start_date
     else:
