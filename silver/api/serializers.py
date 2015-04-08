@@ -175,12 +175,13 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     ended_at = serializers.DateField(read_only=True)
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
+    updateable_buckets = serializers.ReadOnlyField()
 
     class Meta:
         model = Subscription
         fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference')
-        read_only_fields = ('state', )
+                  'ended_at', 'state', 'reference', 'updateable_buckets')
+        read_only_fields = ('state', 'updateable_buckets')
 
     def validate(self, attrs):
         instance = Subscription(**attrs)

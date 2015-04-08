@@ -380,6 +380,27 @@ class Subscription(models.Model):
         return self._current_end_date(reference_date=reference_date,
                                       ignore_trial=False)
 
+    def updateable_buckets(self):
+        if self.state in ['ended', 'inactive']:
+            return None
+        buckets = list()
+        start_date = self.bucket_start_date()
+        end_date = self.bucket_end_date()
+        buckets.append({'start_date': start_date, 'end_date': end_date})
+
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
+        while (timezone.now() - generate_after
+                < dt.combine(start_date, dt.min.time()).replace(
+                    tzinfo=timezone.get_current_timezone())):
+            end_date = start_date - datetime.timedelta(days=1)
+            if end_date < self.start_date:
+                return buckets
+            start_date = self.bucket_start_date(end_date)
+            buckets.append({'start_date': start_date, 'end_date': end_date})
+
+        return buckets
+
+
     def is_on_trial(self):
         if self.state == 'active' and self.trial_end:
             return timezone.now().date() <= self.trial_end
