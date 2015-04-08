@@ -503,24 +503,27 @@ class Subscription(models.Model):
 
         return timezone.now() > next_interval_start + generate_after
 
-    @property
-    def should_be_billed(self):
+    def should_be_billed(self, now):
+        """
+        Checks if this subscription should be billed.
+
+        Since different plans might have different `interval` and
+        `interval_count` we have to check if the subscription corresponding to
+        a certain plan should be billed or not at the current billing cycle.
+        """
+
         if self.state == 'canceled':
             return True
 
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
-            return self._should_issue_first_time()
-        return self._should_reissue(self.last_billing_date)
+            interval_end = self._current_end_date(reference_date=self.start_date)
+        else:
+            interval_end = self._current_end_date(reference_date=self.last_billing_date)
+        return now >= interval_end + generate_after
 
     @property
     def is_billed_first_time(self):
-        """
-        Checks if this subscription is billed for the first time.
-
-        :returns: True -> the subscription is billed first time
-                  False -> otherwise.
-        """
-
         return self.billing_log_entries.all().count() == 0
 
     @property

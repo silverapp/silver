@@ -36,12 +36,14 @@ class DocumentsGenerator(object):
         now = timezone.now().date()
 
         for customer in Customer.objects.all():
+            print 'customer: ', customer
             if customer.consolidated_billing:
+                print 'has consolidated billing'
                 self._generate_for_user_with_consolidated_billing(customer,
-                                                                  date=now)
+                                                                  now)
             else:
                 self._generate_for_user_without_consolidated_billing(customer,
-                                                                     date=now)
+                                                                     now)
 
     def _generate_for_user_with_consolidated_billing(self, customer, now):
         """
@@ -59,7 +61,7 @@ class DocumentsGenerator(object):
         # Select all the active or canceled subscriptions
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed:
+            if not subscription.should_be_billed(now):
                 continue
 
             provider = subscription.plan.provider
@@ -100,7 +102,7 @@ class DocumentsGenerator(object):
         # subscription on a separate document (Invoice/Proforma)
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed:
+            if not subscription.should_be_billed(now):
                 continue
 
             provider = subscription.plan.provider
@@ -152,7 +154,10 @@ class DocumentsGenerator(object):
                                      start_date=subscription.start_date,
                                      end_date=now, invoice=invoice,
                                      proforma=proforma)
-                # TODO: add the mfs for this interval (positive + negative)
+                self._add_mfs_for_trial(subscription=subscription,
+                                        start_date=subscription.start_date,
+                                        end_date=now, invoice=invoice,
+                                        proforma=proforma)
                 return
             else:
                 # First billing, but not on trial anymore
@@ -174,7 +179,10 @@ class DocumentsGenerator(object):
                                          start_date=subscription.start_date,
                                          end_date=subscription.trial_end,
                                          invoice=invoice, proforma=proforma)
-                    # TODO: add mfs for this interval (+ and -)
+                    self._add_mfs_for_trial(subscription=subscription,
+                                            start_date=subscription.start_date,
+                                            end_date=subscription.trial_end,
+                                            invoice=invoice, proforma=proforma)
 
                     end_date = subscription.start_date + interval_len
                     self._add_plan_value(subscription=subscription,
@@ -198,6 +206,10 @@ class DocumentsGenerator(object):
                                          start_date=subscription.start_date,
                                          end_date=subscription.trial_end,
                                          invoice=invoice, proforma=proforma)
+                    self._add_mfs_for_trial(subscription=subscription,
+                                            start_date=subscription.start_date,
+                                            end_date=subscription.trial_end,
+                                            invoice=invoice, proforma=proforma)
                     # TODO: add mfs for this interval
 
                     start_date = subscription.trial_end + dt.timedelta(days=1)
@@ -374,14 +386,13 @@ class DocumentsGenerator(object):
 
     def _add_mfs_for_trial(self, subscription, start_date, end_date,
                            invoice=None, proforma=None):
-
         # Add all the metered features consumed during the trial period
         for metered_feature in subscription.plan.metered_features.all():
             log = subscription.mf_log_entries.filter(metered_feature=metered_feature,
                                                      start_date__gte=start_date,
                                                      end_date__lte=end_date)
             for log_item in log:
-                # Positive value for the consumed items. TODO: add template
+                # Positive value for the consumed items. TODO: template
                 template = "{name} ({start_date} - {end_date})."
                 description = template.format(name=metered_feature.name,
                                               start_date=log_item.start_date,
@@ -403,7 +414,7 @@ class DocumentsGenerator(object):
                     product_code=metered_feature.product_code,
                     start_date=log_item.start_date, end_date=log_item.end_date)
 
-                # Negative value for the consumed items. TODO: add template
+                # Negative value for the consumed items. TODO: template
                 template = "{name} ({start_date} - {end_date}) trial discount."
                 description = template.format(name=metered_feature.name,
                                               start_date=log_item.start_date,
@@ -417,7 +428,7 @@ class DocumentsGenerator(object):
 
                 # Extra items consumed items that are not included
                 if charged_units > 0:
-                    # TODO: add template
+                    # TODO: template
                     template = "Extra {name} ({start_date} - {end_date})."
                     description = template.format(name=metered_feature.name,
                                                   start_date=log_item.start_date,
@@ -433,4 +444,3 @@ class DocumentsGenerator(object):
     def _add_mfs(self, subscription, start_date, end_date,
                  invoice=None, proforma=None):
         pass
-
