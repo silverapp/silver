@@ -146,6 +146,8 @@ class DocumentsGenerator(object):
         Adds the total value of the subscription (value(plan) + value(consumed
         metered features)) to the document.
         """
+        # TODO: what happens when a subscription is canceled, during any of
+        # the intervals below.
 
         if subscription.is_billed_first_time:
             print 'is_billed_first_time'
@@ -184,47 +186,45 @@ class DocumentsGenerator(object):
                 self._add_mfs(subscription, start_date, interval_start,
                               invoice=invoice, proforma=proforma)
         else:
+            print 'not is_billed_first_time'
             # Was billed before => we use the last_billing_date to determine
             # the current end date
+            #intervals = {
+                #'year': {'years': +subscription.plan.interval_count},
+                #'month': {'months': +subscription.plan.interval_count},
+                #'week': {'weeks': +subscription.plan.interval_count},
+                #'day': {'days': +subscription.plan.interval_count},
+            #}
+            #interval_len = relativedelta(**intervals[subscription.plan.interval])
+
+            #if last_billing_date + interval_len < now_date:
+                ## |last_billing_date|---|last_billing_date+interval_len|---|now|
+                ## => 2 entries:
+                ## * The full interval: [last_billing_date, last_billing_date+interval_len]
+                ## * The prorated entry: (last_billing_date+interval_len, now]
+
+                #end_date = last_billing_date + interval_len
+                #self._add_plan_value(subscription=subscription,
+                                        #start_date=last_billing_date,
+                                        #end_date=end_date, invoice=invoice,
+                                        #proforma=proforma)
+                ## TODO: add mfs for this interval
+
+                #start_date = end_date + dt.timedelta(days=1)
+                #self._add_plan_value(subscription=subscription,
+                                        #start_date=start_date,
+                                        #end_date=interval_start, invoice=invoice,
+                                        #proforma=proforma)
+            #else:
+                # |last_billing_date|---|now|---|last_billing_date+interval_len|
+                # => 1 entry: the prorated plan
             last_billing_date = subscription.last_billing_date
-            intervals = {
-                'year': {'years': +subscription.plan.interval_count},
-                'month': {'months': +subscription.plan.interval_count},
-                'week': {'weeks': +subscription.plan.interval_count},
-                'day': {'days': +subscription.plan.interval_count},
-            }
-            interval_len = relativedelta(**intervals[subscription.plan.interval])
-
-            if subscription.state != 'canceled':
-                if last_billing_date + interval_len < now_date:
-                    # |last_billing_date|---|last_billing_date+interval_len|---|now|
-                    # => 2 entries:
-                    # * The full interval: [last_billing_date, last_billing_date+interval_len]
-                    # * The prorated entry: (last_billing_date+interval_len, now]
-
-                    end_date = last_billing_date + interval_len
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=last_billing_date,
-                                         end_date=end_date, invoice=invoice,
-                                         proforma=proforma)
-                    # TODO: add mfs for this interval
-
-                    start_date = end_date + dt.timedelta(days=1)
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=start_date,
-                                         end_date=interval_start, invoice=invoice,
-                                         proforma=proforma)
-                else:
-                    # |last_billing_date|---|now|---|last_billing_date+interval_len|
-                    # => 1 entry: the prorated plan
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=last_billing_date,
-                                         end_date=interval_start, invoice=invoice,
-                                         proforma=proforma)
-                    # TODO: add mfs for this interval
-            else:
-                # TODO: Handle the case when the subscription was canceled
-                pass
+            self._add_plan_value(subscription=subscription,
+                                 start_date=last_billing_date,
+                                 end_date=interval_start,
+                                 invoice=invoice, proforma=proforma)
+            self._add_mfs(subscription, last_billing_date, interval_start,
+                          invoice=invoice, proforma=proforma)
 
     def _add_plan_trial(self, subscription, start_date, end_date, invoice=None,
                         proforma=None):
