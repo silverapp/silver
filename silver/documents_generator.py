@@ -34,6 +34,7 @@ class DocumentsGenerator(object):
         """
 
         now = timezone.now().date()
+        now = dt.date(now.year, now.month, 1)
 
         for customer in Customer.objects.all():
             print 'customer: ', customer
@@ -213,7 +214,7 @@ class DocumentsGenerator(object):
                     # TODO: add mfs for this interval
 
                     start_date = subscription.trial_end + dt.timedelta(days=1)
-                    self._add_plan_value(subscription=subscriinterval_endption,
+                    self._add_plan_value(subscription=subscription,
                                          start_date=start_date,
                                          end_date=now, invoice=invoice,
                                          proforma=proforma)
@@ -386,8 +387,12 @@ class DocumentsGenerator(object):
 
     def _add_mfs_for_trial(self, subscription, start_date, end_date,
                            invoice=None, proforma=None):
+        print '_add_mfs_for_trial'
+        print 'start_date: ', start_date
+        print 'end_date: ', end_date
         # Add all the metered features consumed during the trial period
         for metered_feature in subscription.plan.metered_features.all():
+            print 'metered_feature: ', metered_feature
             log = subscription.mf_log_entries.filter(metered_feature=metered_feature,
                                                      start_date__gte=start_date,
                                                      end_date__lte=end_date)
