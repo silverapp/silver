@@ -34,17 +34,17 @@ class DocumentsGenerator(object):
         """
 
         now = timezone.now().date()
-        now = dt.date(now.year, now.month, 1)
+        interval_start = dt.date(now.year, now.month, 1)
 
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
                 self._generate_for_user_with_consolidated_billing(customer,
-                                                                  now)
+                                                                  interval_start)
             else:
                 self._generate_for_user_without_consolidated_billing(customer,
-                                                                     now)
+                                                                     interval_start)
 
-    def _generate_for_user_with_consolidated_billing(self, customer, now):
+    def _generate_for_user_with_consolidated_billing(self, customer, interval_start):
         """
         Generates the billing documents for all the subscriptions of a customer
         who uses consolidated billing.
@@ -60,7 +60,7 @@ class DocumentsGenerator(object):
         # Select all the active or canceled subscriptions
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(now):
+            if not subscription.should_be_billed(interval_start):
                 continue
 
             provider = subscription.plan.provider
@@ -72,12 +72,12 @@ class DocumentsGenerator(object):
                 # A BillingDocument instance does not exist for this provider
                 # => create one
                 document = self._create_document(provider, customer,
-                                                 subscription, now)
+                                                 subscription, interval_start)
                 cached_documents[provider] = document
 
             args = {
                 'subscription': subscription,
-                'now': now,
+                'interval_start': interval_start,
                 provider.flow: document,
             }
             self._add_total_subscription_value_to_document(**args)
@@ -91,7 +91,8 @@ class DocumentsGenerator(object):
                 document.issue()
                 document.save()
 
-    def _generate_for_user_without_consolidated_billing(self, customer, now):
+    def _generate_for_user_without_consolidated_billing(self, customer,
+                                                        interval_start):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
@@ -101,16 +102,16 @@ class DocumentsGenerator(object):
         # subscription on a separate document (Invoice/Proforma)
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(now):
+            if not subscription.should_be_billed(interval_start):
                 continue
 
             provider = subscription.plan.provider
             document = self._create_document(provider, customer,
-                                             subscription, now)
+                                             subscription, interval_start)
 
             args = {
                 'subscription': subscription,
-                'now': now,
+                'interval_start': interval_start,
                 provider.flow: document,
             }
             self._add_total_subscription_value_to_document(**args)
@@ -123,7 +124,7 @@ class DocumentsGenerator(object):
                 document.issue()
                 document.save()
 
-    def _create_document(self, provider, customer, subscription, now):
+    def _create_document(self, provider, customer, subscription, interval_start):
         """
         Creates and returns a BillingDocument object.
         """
@@ -131,14 +132,15 @@ class DocumentsGenerator(object):
         DocumentModel = provider.model_corresponding_to_default_flow
 
         payment_due_days = dt.timedelta(days=customer.payment_due_days)
-        due_date = now + payment_due_days
+        due_date = interval_start + payment_due_days
         document = DocumentModel.objects.create(provider=provider,
                                                 customer=customer,
                                                 due_date=due_date)
 
         return document
 
-    def _add_total_subscription_value_to_document(self, subscription, now,
+    def _add_total_subscription_value_to_document(self, subscription,
+                                                  interval_start,
                                                   invoice=None, proforma=None):
         """
         Adds the total value of the subscription (value(plan) + value(consumed
@@ -146,77 +148,41 @@ class DocumentsGenerator(object):
         """
 
         if subscription.is_billed_first_time:
-            if subscription.was_on_trial(now):
+            print 'is_billed_first_time'
+            if subscription.was_on_trial(interval_start):
+                print 'was_on_trial'
                 # First time billing and on trial => add only the trial entry
                 # => add the trial and exit
                 self._add_plan_trial(subscription=subscription,
                                      start_date=subscription.start_date,
-                                     end_date=now, invoice=invoice,
+                                     end_date=interval_start, invoice=invoice,
                                      proforma=proforma)
                 self._add_mfs_for_trial(subscription=subscription,
                                         start_date=subscription.start_date,
-                                        end_date=now, invoice=invoice,
+                                        end_date=interval_start, invoice=invoice,
                                         proforma=proforma)
                 return
             else:
-                # First billing, but not on trial anymore
-                intervals = {
-                    'year': {'years': +subscription.plan.interval_count},
-                    'month': {'months': +subscription.plan.interval_count},
-                    'week': {'weeks': +subscription.plan.interval_count},
-                    'day': {'days': +subscription.plan.interval_count},
-                }
-                interval_len = relativedelta(**intervals[subscription.plan.interval])
+                # |start_date|---|trial_end|---|now|---|start_date+interval_len|
+                # => 3 entries:
+                # * The trial (+ and -)
+                # * A prorated entry: (trial_end, now]
+                self._add_plan_trial(subscription=subscription,
+                                     start_date=subscription.start_date,
+                                     end_date=subscription.trial_end,
+                                     invoice=invoice, proforma=proforma)
+                self._add_mfs_for_trial(subscription=subscription,
+                                        start_date=subscription.start_date,
+                                        end_date=subscription.trial_end,
+                                        invoice=invoice, proforma=proforma)
 
-                if subscription.start_date + interval_len < now:
-                    # |start_date|---|trial_end|---|start_date+interval_len|---|now|
-                    # => 4 entries
-                    # * The trial (+ and -)
-                    # * A prorated entry: [trial_end, start_date+interval_len]
-                    # * A prorated entry: (start_date+interval_len, now]
-                    self._add_plan_trial(subscription=subscription,
-                                         start_date=subscription.start_date,
-                                         end_date=subscription.trial_end,
-                                         invoice=invoice, proforma=proforma)
-                    self._add_mfs_for_trial(subscription=subscription,
-                                            start_date=subscription.start_date,
-                                            end_date=subscription.trial_end,
-                                            invoice=invoice, proforma=proforma)
-
-                    end_date = subscription.start_date + interval_len
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=subscription.trial_end,
-                                         end_date=end_date,
-                                         invoice=invoice, proforma=proforma)
-                    # TODO: add the mfs for this interval
-
-                    start_date = end_date + dt.timedelta(days=1)
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=start_date,
-                                         end_date=now, invoice=invoice,
-                                         proforma=proforma)
-                    # TODO: add the mfs for this interval
-                else:
-                    # |start_date|---|trial_end|---|now|---|start_date+interval_len|
-                    # => 3 entries:
-                    # * The trial (+ and -)
-                    # * A prorated entry: (trial_end, now]
-                    self._add_plan_trial(subscription=subscription,
-                                         start_date=subscription.start_date,
-                                         end_date=subscription.trial_end,
-                                         invoice=invoice, proforma=proforma)
-                    self._add_mfs_for_trial(subscription=subscription,
-                                            start_date=subscription.start_date,
-                                            end_date=subscription.trial_end,
-                                            invoice=invoice, proforma=proforma)
-                    # TODO: add mfs for this interval
-
-                    start_date = subscription.trial_end + dt.timedelta(days=1)
-                    self._add_plan_value(subscription=subscription,
-                                         start_date=start_date,
-                                         end_date=now, invoice=invoice,
-                                         proforma=proforma)
-                    # TODO: add mfs for this interval
+                start_date = subscription.trial_end + dt.timedelta(days=1)
+                self._add_plan_value(subscription=subscription,
+                                     start_date=start_date,
+                                     end_date=interval_start, invoice=invoice,
+                                     proforma=proforma)
+                self._add_mfs(subscription, start_date, interval_start,
+                              invoice=invoice, proforma=proforma)
         else:
             # Was billed before => we use the last_billing_date to determine
             # the current end date
@@ -246,14 +212,14 @@ class DocumentsGenerator(object):
                     start_date = end_date + dt.timedelta(days=1)
                     self._add_plan_value(subscription=subscription,
                                          start_date=start_date,
-                                         end_date=now, invoice=invoice,
+                                         end_date=interval_start, invoice=invoice,
                                          proforma=proforma)
                 else:
                     # |last_billing_date|---|now|---|last_billing_date+interval_len|
                     # => 1 entry: the prorated plan
                     self._add_plan_value(subscription=subscription,
                                          start_date=last_billing_date,
-                                         end_date=now, invoice=invoice,
+                                         end_date=interval_start, invoice=invoice,
                                          proforma=proforma)
                     # TODO: add mfs for this interval
             else:
@@ -303,17 +269,19 @@ class DocumentsGenerator(object):
         Adds to the document the value of the plan.
         """
 
-        # Add plan value
+        prorated, percent = self._get_proration_status_and_percent(
+            subscription, start_date, end_date)
+
         interval = '%sly' % subscription.plan.interval
         # TODO: add template
-        template = "{plan_name} plan {interval} subscription ({start_date} - {end_date})"
+        if prorated:
+            template = "{plan_name} Plan {interval} Prorated Subscription ({start_date} - {end_date})"
+        else:
+            template = "{plan_name} Plan {interval} Subscription ({start_date} - {end_date})"
         description = template.format(plan_name=subscription.plan.name,
                                       interval=interval,
                                       start_date=start_date,
                                       end_date=end_date)
-
-        prorated, percent = self._get_proration_status_and_percent(
-            subscription, start_date, end_date)
 
         # Get the plan's prorated value
         plan_price = subscription.plan.amount * percent
@@ -403,30 +371,33 @@ class DocumentsGenerator(object):
                 free_units = total_consumed_units
                 charged_units = 0
 
-            template = "{name} ({start_date} - {end_date})."
-            description = template.format(name=metered_feature.name,
-                                          start_date=start_date,
-                                          end_date=end_date)
+            if free_units > 0:
+                template = "{name} ({start_date} - {end_date})."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
 
-            # Positive value for the consumed items. TODO: template
-            DocumentEntry.objects.create(
-                invoice=invoice, proforma=proforma, description=description,
-                unit=metered_feature.unit, quantity=free_units,
-                unit_price=metered_feature.price_per_unit,
-                product_code=metered_feature.product_code,
-                start_date=start_date, end_date=end_date)
+                # Positive value for the consumed items. TODO: template
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=free_units,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date
+                )
 
-            # Negative value for the consumed items. TODO: template
-            template = "{name} ({start_date} - {end_date}) trial discount."
-            description = template.format(name=metered_feature.name,
-                                          start_date=start_date,
-                                          end_date=end_date)
-            DocumentEntry.objects.create(
-                invoice=invoice, proforma=proforma, description=description,
-                unit=metered_feature.unit, quantity=free_units,
-                unit_price=-metered_feature.price_per_unit,
-                product_code=metered_feature.product_code,
-                start_date=start_date, end_date=end_date)
+                # Negative value for the consumed items. TODO: template
+                template = "{name} ({start_date} - {end_date}) trial discount."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=free_units,
+                    unit_price=-metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date
+                )
 
             # Extra items consumed items that are not included
             if charged_units > 0:
@@ -443,6 +414,40 @@ class DocumentsGenerator(object):
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date)
 
-    def _add_mfs(self, subscription, start_date, end_date,
-                 invoice=None, proforma=None):
-        pass
+    def _get_consumed_units(self, subscription, metered_feature,
+                            proration_percent, start_date, end_date):
+        included_units = (proration_percent * metered_feature.included_units)
+
+        qs = subscription.mf_log_entries.filter(metered_feature=metered_feature,
+                                                start_date__gte=start_date,
+                                                end_date__lte=end_date)
+        log = [qs_item.consumed_units for qs_item in qs]
+        total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+
+        if total_consumed_units > included_units:
+            return total_consumed_units - included_units
+        return 0
+
+    def _add_mfs(self, subscription, start_date, end_date, invoice=None,
+                 proforma=None):
+
+        prorated, proration_percent = self._get_proration_status_and_percent(
+            subscription, start_date, end_date)
+
+        for metered_feature in subscription.plan.metered_features.all():
+            consumed_units = self._get_consumed_units(subscription,
+                                                      metered_feature,
+                                                      proration_percent,
+                                                      start_date, end_date)
+            if consumed_units > 0:
+                template = "Extra {name} ({start_date} - {end_date})."
+                description = template.format(name=metered_feature.name,
+                                            start_date=start_date,
+                                            end_date=end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma,
+                    description=description, unit=metered_feature.unit,
+                    quantity=consumed_units, prorated=prorated,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date)
