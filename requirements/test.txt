@@ -4,5 +4,5 @@ flake8
 coverage
 django-coverage
 pytest
-pytest-django
+pytest-django>=2.8.0
 factory_boy
