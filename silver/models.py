@@ -442,6 +442,11 @@ class Subscription(models.Model):
             return timezone.now().date() <= self.trial_end
         return False
 
+    def was_on_trial(self, date):
+        if self.trial_end:
+            return date <= self.trial_end
+        return False
+
     def _should_reissue(self, last_billing_date):
         last_billing_date = datetime.datetime(
             year=last_billing_date.year,
@@ -504,14 +509,6 @@ class Subscription(models.Model):
         return timezone.now() > next_interval_start + generate_after
 
     def should_be_billed(self, now):
-        """
-        Checks if this subscription should be billed.
-
-        Since different plans might have different `interval` and
-        `interval_count` we have to check if the subscription corresponding to
-        a certain plan should be billed or not at the current billing cycle.
-        """
-
         if self.state == 'canceled':
             return True
 
