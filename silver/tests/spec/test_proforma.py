@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from decimal import Decimal
 
 from django.utils import timezone
 from django.conf import settings
@@ -53,10 +54,11 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '1.00',
             "currency": "RON",
+            'pdf_url': None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": '0.00',
+            "total": Decimal('0.00'),
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -92,14 +94,10 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count',
-                                                       str(batch_size))
 
     def test_get_proforma(self):
         ProformaFactory.reset_sequence(1)
@@ -124,10 +122,11 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '1.00',
             "currency": "RON",
+            'pdf_url': None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            'total': '0.00',
+            'total': Decimal('0.00'),
         }
 
     def test_delete_proforma(self):
@@ -135,7 +134,7 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": "Method 'DELETE' not allowed."}
+        assert response.data == {"detail": 'Method "DELETE" not allowed.'}
 
     def test_add_single_proforma_entry(self):
         ProformaFactory.create_batch(10)
@@ -149,6 +148,10 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
+        proforma = Proforma.objects.get(pk=1)
+
+        total = Decimal(200.0) * Decimal(1 + proforma.sales_tax_percent / 100)
+
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
             'description': 'Page views',
@@ -159,7 +162,7 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.00'
+            'total': total
         }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -176,7 +179,7 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': '200.00'
+            'total': total
         }
 
     def test_try_to_get_proforma_entries(self):
@@ -184,7 +187,7 @@ class TestProformaEndpoints(APITestCase):
 
         response = self.client.get(url)
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": "Method 'GET' not allowed."}
+        assert response.data == {"detail": 'Method "GET" not allowed.'}
 
     def test_add_multiple_proforma_entries(self):
         ProformaFactory.create_batch(10)
@@ -202,6 +205,10 @@ class TestProformaEndpoints(APITestCase):
                                         content_type='application/json')
 
             assert response.status_code == status.HTTP_201_CREATED
+
+            proforma = Proforma.objects.get(pk=1)
+            total = Decimal(200.0) * Decimal(1 +
+                                             proforma.sales_tax_percent / 100)
             assert response.data == {
                 'description': 'Page views',
                 'unit': None,
@@ -211,7 +218,7 @@ class TestProformaEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': '200.00'
+                'total': total
             }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -362,7 +369,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -388,7 +395,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued', 'issue_date': '2014-01-01'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -419,7 +426,7 @@ class TestProformaEndpoints(APITestCase):
             'due_date': '2014-01-20'
         }
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -446,7 +453,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
@@ -462,7 +469,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
@@ -477,7 +484,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -513,7 +520,7 @@ class TestProformaEndpoints(APITestCase):
             'state': 'paid',
             'paid_date': '2014-05-05'
         }
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -543,7 +550,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be paid only if it is in issued state.'}
@@ -559,7 +566,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be paid only if it is in issued state.'}
@@ -574,7 +581,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -590,7 +597,7 @@ class TestProformaEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert Invoice.objects.count() == 0
 
-    def test_cancel_invoice_with_provided_date(self):
+    def test_cancel_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
@@ -603,7 +610,7 @@ class TestProformaEndpoints(APITestCase):
             'cancel_date': '2014-10-10'
         }
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
@@ -627,7 +634,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -645,7 +652,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -663,7 +670,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -678,7 +685,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -695,7 +702,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -713,7 +720,7 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-state', kwargs={'pk': 1})
         data = {'state': 'illegal-state'}
 
-        response = self.client.patch(url, data=json.dumps(data),
+        response = self.client.put(url, data=json.dumps(data),
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN

@@ -42,6 +42,7 @@ class TestPlanEndpoint(APITestCase):
                  'product_code': feature1_pc},
                 {'name': 'VIP Support',
                  'price_per_unit': 49.99,
+                 'unit': 1,
                  'included_units': 1,
                  'product_code': "1234"}
             ],
@@ -100,7 +101,7 @@ class TestPlanEndpoint(APITestCase):
         self.assertEqual(response.status_code,
                          status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEqual(response.data,
-                         {u'detail': u"Method 'PUT' not allowed."})
+                         {u'detail': u'Method "PUT" not allowed.'})
 
     def test_get_plan_list(self):
         PlanFactory.create_batch(40)
@@ -119,20 +120,18 @@ class TestPlanEndpoint(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=2>; rel="next", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '?page=2; rel="next">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response._headers['x-result-count'] == ('X-Result-Count', '40')
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=1>; rel="prev", ' +
-             '<' + full_url + '?page=2>; rel="last", ' +
-             '<' + full_url + '?page=1>; rel="first"')
+            ('Link', '<' + full_url + '; rel="prev">, ' +
+             '<' + full_url + '?page=1; rel="first">, ' +
+             '<' + full_url + '?page=2; rel="last">')
 
     def test_get_plan_detail(self):
         plan = PlanFactory.create()
