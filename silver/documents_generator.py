@@ -18,32 +18,6 @@ class DocumentsGenerator(object):
         else:
             self._generate_for_single_subscription_now(subscription)
 
-    def _generate_for_single_subscription_now(self, subscription):
-        """
-        Generates the billing documents corresponding to a single subscription.
-        Used when a subscription is ended with `when`=`now`
-        """
-
-        now = timezone.now().date()
-
-        provider = subscription.plan.provider
-        customer = subscription.customer
-
-        document = self._create_document(provider, customer, subscription, now)
-        args = {
-            'billing_date': now,
-            provider.flow: document,
-        }
-        subscription.add_total_value_to_document(**args)
-
-        if subscription.state == 'canceled':
-            subscription.end()
-            subscription.save()
-
-        if provider.default_document_state == 'issued':
-            document.issue()
-            document.save()
-
     def _generate_all(self):
         """
         Generates the invoices/proformas for all the subscriptions that should
@@ -140,6 +114,32 @@ class DocumentsGenerator(object):
             if provider.default_document_state == 'issued':
                 document.issue()
                 document.save()
+
+    def _generate_for_single_subscription_now(self, subscription):
+        """
+        Generates the billing documents corresponding to a single subscription.
+        Used when a subscription is ended with `when`=`now`
+        """
+
+        now = timezone.now().date()
+
+        provider = subscription.plan.provider
+        customer = subscription.customer
+
+        document = self._create_document(provider, customer, subscription, now)
+        args = {
+            'billing_date': now,
+            provider.flow: document,
+        }
+        subscription.add_total_value_to_document(**args)
+
+        if subscription.state == 'canceled':
+            subscription.end()
+            subscription.save()
+
+        if provider.default_document_state == 'issued':
+            document.issue()
+            document.save()
 
     def _create_document(self, provider, customer, subscription, billing_date):
         """
