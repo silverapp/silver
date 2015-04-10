@@ -150,11 +150,7 @@ class DocumentsGenerator(object):
         # the intervals below.
 
         if subscription.is_billed_first_time:
-            print 'is_billed_first_time'
             if subscription.was_on_trial(interval_start):
-                print 'was_on_trial'
-                # First time billing and on trial => add only the trial entry
-                # => add the trial and exit
                 self._add_plan_trial(subscription=subscription,
                                      start_date=subscription.start_date,
                                      end_date=interval_start, invoice=invoice,
@@ -165,7 +161,7 @@ class DocumentsGenerator(object):
                                         proforma=proforma)
                 return
             else:
-                # |start_date|---|trial_end|---|now|---|start_date+interval_len|
+                # |start_date|---|trial_end|---|interval_end|
                 # => 3 entries:
                 # * The trial (+ and -)
                 # * A prorated entry: (trial_end, now]
@@ -186,38 +182,6 @@ class DocumentsGenerator(object):
                 self._add_mfs(subscription, start_date, interval_start,
                               invoice=invoice, proforma=proforma)
         else:
-            print 'not is_billed_first_time'
-            # Was billed before => we use the last_billing_date to determine
-            # the current end date
-            #intervals = {
-                #'year': {'years': +subscription.plan.interval_count},
-                #'month': {'months': +subscription.plan.interval_count},
-                #'week': {'weeks': +subscription.plan.interval_count},
-                #'day': {'days': +subscription.plan.interval_count},
-            #}
-            #interval_len = relativedelta(**intervals[subscription.plan.interval])
-
-            #if last_billing_date + interval_len < now_date:
-                ## |last_billing_date|---|last_billing_date+interval_len|---|now|
-                ## => 2 entries:
-                ## * The full interval: [last_billing_date, last_billing_date+interval_len]
-                ## * The prorated entry: (last_billing_date+interval_len, now]
-
-                #end_date = last_billing_date + interval_len
-                #self._add_plan_value(subscription=subscription,
-                                        #start_date=last_billing_date,
-                                        #end_date=end_date, invoice=invoice,
-                                        #proforma=proforma)
-                ## TODO: add mfs for this interval
-
-                #start_date = end_date + dt.timedelta(days=1)
-                #self._add_plan_value(subscription=subscription,
-                                        #start_date=start_date,
-                                        #end_date=interval_start, invoice=invoice,
-                                        #proforma=proforma)
-            #else:
-                # |last_billing_date|---|now|---|last_billing_date+interval_len|
-                # => 1 entry: the prorated plan
             last_billing_date = subscription.last_billing_date
             self._add_plan_value(subscription=subscription,
                                  start_date=last_billing_date,
@@ -345,10 +309,8 @@ class DocumentsGenerator(object):
 
     def _get_consumed_units_during_trial(self, metered_feature, consumed_units):
         if metered_feature.included_units_during_trial:
-            # Limited units during trial.
             if consumed_units > metered_feature.included_units_during_trial:
                 return consumed_units - metered_feature.included_units_during_trial
-        # Unlimited or consumed_units <= included_units_during_trial
         return 0
 
     def _add_mfs_for_trial(self, subscription, start_date, end_date,
@@ -402,7 +364,7 @@ class DocumentsGenerator(object):
             # Extra items consumed items that are not included
             if charged_units > 0:
                 # TODO: template
-                template = "Extra {name} ({start_date} - {end_date})."
+                template = "Extra {name} During Trial ({start_date} - {end_date})."
                 description = template.format(name=metered_feature.name,
                                               start_date=start_date,
                                               end_date=end_date)
