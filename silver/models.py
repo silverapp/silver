@@ -538,7 +538,7 @@ class Subscription(models.Model):
                                         end_date=self.trial_end,
                                         invoice=invoice, proforma=proforma)
 
-                start_date = self.trial_end + dt.timedelta(days=1)
+                start_date = self.trial_end + datetime.timedelta(days=1)
                 self._add_plan_value(start_date=start_date,
                                      end_date=billing_date, invoice=invoice,
                                      proforma=proforma)
