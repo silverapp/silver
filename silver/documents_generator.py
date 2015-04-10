@@ -8,24 +8,43 @@ from silver.models import Customer, DocumentEntry
 
 
 class DocumentsGenerator(object):
-    def generate(self, subscription_id=None):
+    def generate(self, subscription=None):
         """
         The `public` method called when one wants to generate the billing
         documents.
         """
 
-        if not subscription_id:
+        if not subscription:
             self._generate_all()
         else:
-            self._generate_for_single_subscription(subscription_id)
+            self._generate_for_single_subscription_now(subscription)
 
-    def _generate_for_single_subscription(self, subscription_id):
+    def _generate_for_single_subscription_now(self, subscription):
         """
         Generates the billing documents corresponding to a single subscription.
         Used when a subscription is ended with `when`=`now`
         """
 
-        pass
+        now = timezone.now().date()
+
+        provider = subscription.plan.provider
+        customer = subscription.customer
+
+        document = self._create_document(provider, customer, subscription, now)
+        args = {
+            'subscription': subscription,
+            'billing_date': now,
+            provider.flow: document,
+        }
+        self._add_total_subscription_value_to_document(**args)
+
+        if subscription.state == 'canceled':
+            subscription.end()
+            subscription.save()
+
+        if provider.default_document_state == 'issued':
+            document.issue()
+            document.save()
 
     def _generate_all(self):
         """
@@ -34,17 +53,19 @@ class DocumentsGenerator(object):
         """
 
         now = timezone.now().date()
-        interval_start = dt.date(now.year, now.month, 1)
+        billing_date = dt.date(now.year, now.month, 1)
+        # billing_date -> the date when the billing documents are issued.
 
         for customer in Customer.objects.all():
             if customer.consolidated_billing:
                 self._generate_for_user_with_consolidated_billing(customer,
-                                                                  interval_start)
+                                                                  billing_date)
             else:
                 self._generate_for_user_without_consolidated_billing(customer,
-                                                                     interval_start)
+                                                                     billing_date)
 
-    def _generate_for_user_with_consolidated_billing(self, customer, interval_start):
+    def _generate_for_user_with_consolidated_billing(self, customer,
+                                                     billing_date):
         """
         Generates the billing documents for all the subscriptions of a customer
         who uses consolidated billing.
@@ -60,7 +81,7 @@ class DocumentsGenerator(object):
         # Select all the active or canceled subscriptions
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(interval_start):
+            if not subscription.should_be_billed(billing_date):
                 continue
 
             provider = subscription.plan.provider
@@ -72,12 +93,12 @@ class DocumentsGenerator(object):
                 # A BillingDocument instance does not exist for this provider
                 # => create one
                 document = self._create_document(provider, customer,
-                                                 subscription, interval_start)
+                                                 subscription, billing_date)
                 cached_documents[provider] = document
 
             args = {
                 'subscription': subscription,
-                'interval_start': interval_start,
+                'billing_date': billing_date,
                 provider.flow: document,
             }
             self._add_total_subscription_value_to_document(**args)
@@ -92,7 +113,7 @@ class DocumentsGenerator(object):
                 document.save()
 
     def _generate_for_user_without_consolidated_billing(self, customer,
-                                                        interval_start):
+                                                        billing_date):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
@@ -102,16 +123,16 @@ class DocumentsGenerator(object):
         # subscription on a separate document (Invoice/Proforma)
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(interval_start):
+            if not subscription.should_be_billed(billing_date):
                 continue
 
             provider = subscription.plan.provider
             document = self._create_document(provider, customer,
-                                             subscription, interval_start)
+                                             subscription, billing_date)
 
             args = {
                 'subscription': subscription,
-                'interval_start': interval_start,
+                'billing_date': billing_date,
                 provider.flow: document,
             }
             self._add_total_subscription_value_to_document(**args)
@@ -124,7 +145,7 @@ class DocumentsGenerator(object):
                 document.issue()
                 document.save()
 
-    def _create_document(self, provider, customer, subscription, interval_start):
+    def _create_document(self, provider, customer, subscription, billing_date):
         """
         Creates and returns a BillingDocument object.
         """
@@ -132,7 +153,7 @@ class DocumentsGenerator(object):
         DocumentModel = provider.model_corresponding_to_default_flow
 
         payment_due_days = dt.timedelta(days=customer.payment_due_days)
-        due_date = interval_start + payment_due_days
+        due_date = billing_date + payment_due_days
         document = DocumentModel.objects.create(provider=provider,
                                                 customer=customer,
                                                 due_date=due_date)
@@ -140,31 +161,25 @@ class DocumentsGenerator(object):
         return document
 
     def _add_total_subscription_value_to_document(self, subscription,
-                                                  interval_start,
-                                                  invoice=None, proforma=None):
+                                                  billing_date, invoice=None,
+                                                  proforma=None):
         """
         Adds the total value of the subscription (value(plan) + value(consumed
         metered features)) to the document.
         """
-        # TODO: what happens when a subscription is canceled, during any of
-        # the intervals below.
 
         if subscription.is_billed_first_time:
-            if subscription.was_on_trial(interval_start):
+            if subscription.was_on_trial(billing_date):
                 self._add_plan_trial(subscription=subscription,
                                      start_date=subscription.start_date,
-                                     end_date=interval_start, invoice=invoice,
+                                     end_date=billing_date, invoice=invoice,
                                      proforma=proforma)
                 self._add_mfs_for_trial(subscription=subscription,
                                         start_date=subscription.start_date,
-                                        end_date=interval_start, invoice=invoice,
+                                        end_date=billing_date, invoice=invoice,
                                         proforma=proforma)
                 return
             else:
-                # |start_date|---|trial_end|---|interval_end|
-                # => 3 entries:
-                # * The trial (+ and -)
-                # * A prorated entry: (trial_end, now]
                 self._add_plan_trial(subscription=subscription,
                                      start_date=subscription.start_date,
                                      end_date=subscription.trial_end,
@@ -177,17 +192,17 @@ class DocumentsGenerator(object):
                 start_date = subscription.trial_end + dt.timedelta(days=1)
                 self._add_plan_value(subscription=subscription,
                                      start_date=start_date,
-                                     end_date=interval_start, invoice=invoice,
+                                     end_date=billing_date, invoice=invoice,
                                      proforma=proforma)
-                self._add_mfs(subscription, start_date, interval_start,
+                self._add_mfs(subscription, start_date, billing_date,
                               invoice=invoice, proforma=proforma)
         else:
             last_billing_date = subscription.last_billing_date
             self._add_plan_value(subscription=subscription,
                                  start_date=last_billing_date,
-                                 end_date=interval_start,
+                                 end_date=billing_date,
                                  invoice=invoice, proforma=proforma)
-            self._add_mfs(subscription, last_billing_date, interval_start,
+            self._add_mfs(subscription, last_billing_date, billing_date,
                           invoice=invoice, proforma=proforma)
 
     def _add_plan_trial(self, subscription, start_date, end_date, invoice=None,
