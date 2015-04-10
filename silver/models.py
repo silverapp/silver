@@ -508,7 +508,7 @@ class Subscription(models.Model):
 
         return timezone.now() > next_interval_start + generate_after
 
-    def should_be_billed(self, now):
+    def should_be_billed(self, date):
         if self.state == 'canceled':
             return True
 
@@ -517,7 +517,7 @@ class Subscription(models.Model):
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
             interval_end = self._current_end_date(reference_date=self.last_billing_date)
-        return now >= interval_end + generate_after
+        return date >= interval_end + generate_after
 
     @property
     def is_billed_first_time(self):
@@ -526,7 +526,7 @@ class Subscription(models.Model):
     @property
     def last_billing_date(self):
         try:
-            return self.billing_log_entries.all()[:1].get().last_billing_date
+            return self.billing_log_entries.all()[:1].get().billing_date
         except BillingLog.DoesNotExist:
             # It should never get here.
             return None
