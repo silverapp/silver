@@ -556,7 +556,8 @@ class Subscription(models.Model):
             self._add_mfs(last_billing_date, billing_date, invoice=invoice,
                           proforma=proforma)
 
-    def _add_plan_trial(self, start_date, end_date, invoice=None, proforma=None):
+    def _add_plan_trial(self, start_date, end_date, invoice=None,
+                        proforma=None):
         """
         Adds the plan trial to the document, by adding an entry with positive
         prorated value and one with prorated, negative value which represents
@@ -569,7 +570,8 @@ class Subscription(models.Model):
 
         unit = '%ss' % self.plan.interval
         # TODO: add template
-        template = "{plan_name} plan trial subscription ({start_date} - {end_date})"
+        template = "{plan_name} plan trial subscription ({start_date}"\
+                   " - {end_date})"
         description = template.format(plan_name=self.plan.name,
                                       start_date=start_date,
                                       end_date=end_date)
@@ -649,7 +651,8 @@ class Subscription(models.Model):
             # Extra items consumed items that are not included
             if charged_units > 0:
                 # TODO: template
-                template = "Extra {name} During Trial ({start_date} - {end_date})."
+                template = "Extra {name} During Trial ({start_date} -"\
+                           " {end_date})."
                 description = template.format(name=metered_feature.name,
                                               start_date=start_date,
                                               end_date=end_date)
@@ -673,9 +676,11 @@ class Subscription(models.Model):
         interval = '%sly' % self.plan.interval
         # TODO: add template
         if prorated:
-            template = "{plan_name} Plan {interval} Prorated Subscription ({start_date} - {end_date})"
+            template = "{plan_name} Plan {interval} Prorated Subscription"\
+                       " ({start_date} - {end_date})"
         else:
-            template = "{plan_name} Plan {interval} Subscription ({start_date} - {end_date})"
+            template = "{plan_name} Plan {interval} Subscription ({start_date}"\
+                       " - {end_date})"
         description = template.format(plan_name=self.plan.name,
                                       interval=interval, start_date=start_date,
                                       end_date=end_date)
@@ -708,8 +713,7 @@ class Subscription(models.Model):
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date
-        )
+                                                                   end_date)
 
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(metered_feature,

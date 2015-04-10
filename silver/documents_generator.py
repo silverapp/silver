@@ -142,10 +142,6 @@ class DocumentsGenerator(object):
             document.save()
 
     def _create_document(self, provider, customer, subscription, billing_date):
-        """
-        Creates and returns a BillingDocument object.
-        """
-
         DocumentModel = provider.model_corresponding_to_default_flow
 
         payment_due_days = dt.timedelta(days=customer.payment_due_days)
