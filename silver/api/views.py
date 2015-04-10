@@ -177,7 +177,7 @@ class SubscriptionDetailCancel(APIView):
                 sub.cancel()
                 sub.save()
 
-                DocumentsGenerator().generate(subscription_id=sub.id)
+                DocumentsGenerator().generate(subscription=sub)
 
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
@@ -657,3 +657,10 @@ class ProformaStateHandler(APIView):
 
         serializer = ProformaSerializer(proforma, context={'request': request})
         return Response(serializer.data)
+
+
+class DocsGenerator(APIView):
+    def get(self, request, format=None, **kwargs):
+        DocumentsGenerator().generate()
+
+        return Response('Done')
