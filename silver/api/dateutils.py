@@ -109,7 +109,6 @@ def next_date_after_date(initial_date, day=None, depth=None):
         return None
     if initial_date:
         year = initial_date.year
-        print 1
         if day:
             if day <= initial_date.day:
                 month = initial_date.month + 1
@@ -120,14 +119,19 @@ def next_date_after_date(initial_date, day=None, depth=None):
                 month = initial_date.month
 
             date = get_valid_date(year=year, month=month, day=day)
-            print date
         else:
             date = initial_date + datetime.timedelta(days=1)
 
         if date:
             if day:
                 if date.day != day:
-                    print 2
+                    month = initial_date.month + 1
+                    if month == 13:
+                        month = 1
+                        year = initial_date.year + 1
+                    else:
+                        year = initial_date.year
+                    date = get_valid_date(year=year, month=month, day=1)
                     return next_date_after_date(initial_date=date, day=day,
                                                 depth=depth + 1)
 

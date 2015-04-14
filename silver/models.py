@@ -199,10 +199,13 @@ class Subscription(models.Model):
             fake_initial_date = next_date_after_date(
                 initial_date=self.trial_end, day=1
             )
-            if timezone.now().date() < fake_initial_date:
-                initial_date = self.trial_end
+            if fake_initial_date:
+                if timezone.now().date() < fake_initial_date:
+                    initial_date = self.trial_end
+                else:
+                    initial_date = fake_initial_date
             else:
-                initial_date = fake_initial_date
+                initial_date = None
 
         return last_date_that_fits(
             initial_date=initial_date,
@@ -220,8 +223,9 @@ class Subscription(models.Model):
             end_date_after_trial = next_date_after_date(
                 initial_date=self.trial_end, day=1
             )
-            if timezone.now().date() < end_date_after_trial:
-                end_date = end_date_after_trial
+            if end_date_after_trial:
+                if timezone.now().date() < end_date_after_trial:
+                    end_date = end_date_after_trial
 
         end_date = end_date or next_date_after_period(
             initial_date=self.current_start_date,
