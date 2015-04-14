@@ -11,6 +11,9 @@ class DocumentsGenerator(object):
         """
         The `public` method called when one wants to generate the billing
         documents.
+
+        .. warning:: For now, the generator works only for plans with single
+        month intervals.
         """
 
         if not subscription:
