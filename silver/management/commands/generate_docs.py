@@ -20,7 +20,7 @@ class Command(BaseCommand):
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
             try:
-                subscription = Subscription.objects.get(id=subscription_id)
+                subscription = Subscription.objects.get(id=options['subscription_id'])
                 docs_generator.generate(subscription)
                 self.stdout.write('Done. You can have a Club-Mate now. :)')
             except Subscription.DoesNotExist:
