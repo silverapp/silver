@@ -1,7 +1,6 @@
 import datetime
 from decimal import Decimal
 
-from django.core.management import call_command
 from django.http.response import Http404
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
@@ -23,6 +22,7 @@ from silver.api.serializers import (MFUnitsLogSerializer,
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
+from silver.documents_generator import DocumentsGenerator
 from silver.utils import get_object_or_None
 
 
@@ -177,8 +177,7 @@ class SubscriptionDetailCancel(APIView):
                 sub.cancel()
                 sub.save()
 
-                # TODO: remove after refactor
-                call_command('generate_billing_documents', subscription=sub.id)
+                DocumentsGenerator().generate(subscription=sub)
 
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
@@ -658,3 +657,10 @@ class ProformaStateHandler(APIView):
 
         serializer = ProformaSerializer(proforma, context={'request': request})
         return Response(serializer.data)
+
+
+class DocsGenerator(APIView):
+    def get(self, request, format=None, **kwargs):
+        DocumentsGenerator().generate()
+
+        return Response('Done')

@@ -1,4 +1,3 @@
-"""Models for the silver app."""
 import datetime
 from datetime import datetime as dt
 from decimal import Decimal
@@ -149,6 +148,11 @@ class MeteredFeature(models.Model):
     included_units = models.DecimalField(
         max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
         help_text='The number of included units per plan interval.'
+    )
+    included_units_during_trial = models.DecimalField(
+        max_digits=19, decimal_places=2, validators=[MinValueValidator(0.0)],
+        blank=True, null=True,
+        help_text='The number of included units during the trial period.'
     )
     product_code = UnsavedForeignKey(
         'ProductCode', help_text='The product code for this plan.'
@@ -329,7 +333,7 @@ class Subscription(models.Model):
                   dtstart=fake_initial_date,
                   interval=interval_count,
                   until=reference_date)
-            )
+        )
 
         return fake_initial_date if not dates else dates[-1].date()
 
@@ -442,85 +446,30 @@ class Subscription(models.Model):
             return timezone.now().date() <= self.trial_end
         return False
 
-    def _should_reissue(self, last_billing_date):
-        last_billing_date = datetime.datetime(
-            year=last_billing_date.year,
-            month=last_billing_date.month,
-            day=last_billing_date.day,
-            tzinfo=timezone.get_current_timezone()
-        )
-        intervals = {
-            'year': {'years': +self.plan.interval_count},
-            'month': {'months': +self.plan.interval_count},
-            'week': {'weeks': +self.plan.interval_count},
-            'day': {'days': +self.plan.interval_count}
-        }
+    def was_on_trial(self, date):
+        if self.trial_end:
+            return date <= self.trial_end
+        return False
 
-        # generate one object of 'year', 'month', 'week, ...
-        interval_length = relativedelta(**intervals[self.plan.interval])
-        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
-        interval_end = last_billing_date + interval_length + generate_after
-
-        return timezone.now() > interval_end
-
-    def _should_issue_first_time(self):
-        # Get the datetime object for the next interval
-        # yearly plans - first day of next year + generate_after
-        # monthly plans - first day of next month + generate_after
-        # weekly plans - next monday + generate_after
-        # daily plans - next day (start_date + 1) + generate_after
-        if self.plan.interval == 'year':
-            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
-            next_interval_start = list(rrule(YEARLY,
-                                             interval=self.plan.interval_count,
-                                             byyearday=1,
-                                             count=count,
-                                             dtstart=self.start_date))[-1]
-        elif self.plan.interval == 'month':
-            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
-            next_interval_start = list(rrule(MONTHLY,
-                                             interval=self.plan.interval_count,
-                                             count=count,
-                                             bymonthday=1,
-                                             dtstart=self.start_date))[-1]
-        elif self.plan.interval == 'week':
-            count = 2 if self.start_date.month == self.start_date.day == 1 else 1
-            next_interval_start = list(rrule(WEEKLY,
-                                             interval=self.plan.interval_count,
-                                             count=count,
-                                             byweekday=MO,
-                                             dtstart=self.start_date))[-1]
-        elif self.plan.interval == 'day':
-            days = self.plan.interval_count
-            next_interval_start = self.start_date + datetime.timedelta(days=days)
-            next_interval_start = dt(year=next_interval_start.year,
-                                     month=next_interval_start.month,
-                                     day=next_interval_start.day)
-
-        current_timezone = timezone.get_current_timezone()
-        next_interval_start = current_timezone.localize(next_interval_start)
-        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
-
-        return timezone.now() > next_interval_start + generate_after
-
-    @property
-    def should_be_billed(self):
+    def should_be_billed(self, date):
         if self.state == 'canceled':
             return True
 
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
-            return self._should_issue_first_time()
-        return self._should_reissue(self.last_billing_date)
+            interval_end = self._current_end_date(reference_date=self.start_date)
+        else:
+            interval_end = self._current_end_date(reference_date=self.last_billing_date)
+        return date >= interval_end + generate_after
 
     @property
     def is_billed_first_time(self):
-        qs_count = self.billing_log_entries.all().count()
-        return False if qs_count else True
+        return self.billing_log_entries.all().count() == 0
 
     @property
     def last_billing_date(self):
         try:
-            return self.billing_log_entries.all()[:1].get().last_billing_date
+            return self.billing_log_entries.all()[:1].get().billing_date
         except BillingLog.DoesNotExist:
             # It should never get here.
             return None
@@ -543,8 +492,7 @@ class Subscription(models.Model):
                     self.trial_end = None
             elif self.plan.trial_period_days > 0:
                 self.trial_end = self.start_date + datetime.timedelta(
-                    days=self.plan.trial_period_days - 1
-                )
+                    days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
@@ -569,6 +517,268 @@ class Subscription(models.Model):
     @transition(field=state, source='canceled', target='ended')
     def end(self):
         self.ended_at = timezone.now().date()
+
+    def _add_trial_value(self, start_date, end_date, invoice=None,
+                         proforma=None):
+        self._add_plan_trial(start_date=start_date, end_date=end_date,
+                             invoice=invoice, proforma=proforma)
+        self._add_mfs_for_trial(start_date=start_date, end_date=end_date,
+                                invoice=invoice, proforma=proforma)
+
+    def _add_non_trial_value(self, start_date, end_date, invoice=None,
+                             proforma=None):
+        self._add_plan_value(start_date=start_date, end_date=end_date,
+                             invoice=invoice, proforma=proforma)
+        self._add_mfs(start_date, end_date, invoice=invoice, proforma=proforma)
+
+    def add_total_value_to_document(self, billing_date, invoice=None,
+                                    proforma=None):
+        """
+        Adds the total value of the subscription (value(plan) + value(consumed
+        metered features)) to the document.
+        """
+
+        if self.is_billed_first_time:
+            if self.was_on_trial(billing_date):
+                self._add_trial_value(self.start_date, billing_date,
+                                      invoice=invoice, proforma=proforma)
+            else:
+                self._add_trial_value(self.start_date, self.trial_end,
+                                      invoice=invoice, proforma=proforma)
+
+                trial_end = self.trial_end + datetime.timedelta(days=1)
+                self._add_non_trial_value(trial_end, billing_date,
+                                          invoice=invoice, proforma=proforma)
+        else:
+            last_billing_date = self.last_billing_date
+            if self.was_on_trial(last_billing_date):
+                self._add_trial_value(last_billing_date, self.trial_end,
+                                      invoice=invoice, proforma=proforma)
+
+                trial_end = self.trial_end + datetime.timedelta(days=1)
+                self._add_non_trial_value(trial_end, billing_date,
+                                          invoice=invoice, proforma=proforma)
+            else:
+                self._add_non_trial_value(last_billing_date, billing_date,
+                                          invoice=invoice, proforma=proforma)
+
+        BillingLog.objects.create(subscription=self, invoice=invoice,
+                                  proforma=proforma, billing_date=billing_date)
+
+    def _add_plan_trial(self, start_date, end_date, invoice=None,
+                        proforma=None):
+        """
+        Adds the plan trial to the document, by adding an entry with positive
+        prorated value and one with prorated, negative value which represents
+        the discount for the trial period.
+        """
+
+        prorated, percent = self._get_proration_status_and_percent(start_date,
+                                                                   end_date)
+        plan_price = self.plan.amount * percent
+
+        unit = '%ss' % self.plan.interval
+        # TODO: add template
+        template = "{plan_name} plan trial subscription ({start_date}"\
+                   " - {end_date})"
+        description = template.format(plan_name=self.plan.name,
+                                      start_date=start_date,
+                                      end_date=end_date)
+        # Add plan with positive value
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+            product_code=self.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date)
+
+        # TODO: add template
+        template = "{plan_name} plan trial discount ({start_date} - {end_date})"
+        description = template.format(plan_name=self.plan.name,
+                                      start_date=start_date,
+                                      end_date=end_date)
+        # Add plan with negative value
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=-plan_price, quantity=Decimal('1.00'),
+            product_code=self.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date)
+
+    def _get_consumed_units_during_trial(self, metered_feature, consumed_units):
+        if metered_feature.included_units_during_trial:
+            if consumed_units > metered_feature.included_units_during_trial:
+                return consumed_units - metered_feature.included_units_during_trial
+        return 0
+
+    def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
+                           proforma=None):
+        # Add all the metered features consumed during the trial period
+        for metered_feature in self.plan.metered_features.all():
+            qs = self.mf_log_entries.filter(metered_feature=metered_feature,
+                                            start_date__gte=start_date,
+                                            end_date__lte=end_date)
+            log = [qs_item.consumed_units for qs_item in qs]
+            total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+
+            extra_consumed_units = self._get_consumed_units_during_trial(
+                metered_feature, total_consumed_units)
+
+            if extra_consumed_units > 0:
+                free_units = metered_feature.included_units_during_trial
+                charged_units = extra_consumed_units
+            else:
+                free_units = total_consumed_units
+                charged_units = 0
+
+            if free_units > 0:
+                template = "{name} ({start_date} - {end_date})."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
+
+                # Positive value for the consumed items. TODO: template
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=free_units,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date
+                )
+
+                # Negative value for the consumed items. TODO: template
+                template = "{name} ({start_date} - {end_date}) trial discount."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma, description=description,
+                    unit=metered_feature.unit, quantity=free_units,
+                    unit_price=-metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date
+                )
+
+            # Extra items consumed items that are not included
+            if charged_units > 0:
+                # TODO: template
+                template = "Extra {name} During Trial ({start_date} -"\
+                           " {end_date})."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma,
+                    description=description, unit=metered_feature.unit,
+                    quantity=charged_units,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date)
+
+    def _add_plan_value(self, start_date, end_date, invoice=None,
+                        proforma=None):
+        """
+        Adds to the document the value of the plan.
+        """
+
+        prorated, percent = self._get_proration_status_and_percent(start_date,
+                                                                   end_date)
+
+        interval = '%sly' % self.plan.interval
+        # TODO: add template
+        if prorated:
+            template = "{plan_name} Plan {interval} Prorated Subscription"\
+                       " ({start_date} - {end_date})"
+        else:
+            template = "{plan_name} Plan {interval} Subscription ({start_date}"\
+                       " - {end_date})"
+        description = template.format(plan_name=self.plan.name,
+                                      interval=interval, start_date=start_date,
+                                      end_date=end_date)
+
+        # Get the plan's prorated value
+        plan_price = self.plan.amount * percent
+
+        unit = '%ss' % self.plan.interval
+        DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma, description=description,
+            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+            product_code=self.plan.product_code, prorated=prorated,
+            start_date=start_date, end_date=end_date
+        )
+
+    def _get_consumed_units(self, metered_feature, proration_percent,
+                            start_date, end_date):
+        included_units = (proration_percent * metered_feature.included_units)
+
+        qs = self.mf_log_entries.filter(metered_feature=metered_feature,
+                                        start_date__gte=start_date,
+                                        end_date__lte=end_date)
+        log = [qs_item.consumed_units for qs_item in qs]
+        total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+
+        if total_consumed_units > included_units:
+            return total_consumed_units - included_units
+        return 0
+
+    def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
+
+        prorated, percent = self._get_proration_status_and_percent(start_date,
+                                                                   end_date)
+
+        for metered_feature in self.plan.metered_features.all():
+            consumed_units = self._get_consumed_units(metered_feature,
+                                                      percent, start_date,
+                                                      end_date)
+            if consumed_units > 0:
+                template = "Extra {name} ({start_date} - {end_date})."
+                description = template.format(name=metered_feature.name,
+                                              start_date=start_date,
+                                              end_date=end_date)
+                DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma,
+                    description=description, unit=metered_feature.unit,
+                    quantity=consumed_units, prorated=prorated,
+                    unit_price=metered_feature.price_per_unit,
+                    product_code=metered_feature.product_code,
+                    start_date=start_date, end_date=end_date)
+
+    def _get_proration_status_and_percent(self, start_date, end_date):
+        """
+        Returns the proration percent (how much of the interval will be billed)
+        and the status (if the subscription is prorated or not).
+
+        :param date: the date at which the percent and status are calculated
+        :returns: a tuple containing (Decimal(percent), status) where status
+            can be one of [True, False]. The decimal value will from the
+            interval [0.00; 1.00].
+        :rtype: tuple
+        """
+
+        intervals = {
+            'year': {'years': -self.plan.interval_count},
+            'month': {'months': -self.plan.interval_count},
+            'week': {'weeks': -self.plan.interval_count},
+            'day': {'days': -self.plan.interval_count},
+        }
+
+        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
+        # NOTE (Important): this will be a NEGATIVE INTERVAL (e.g.: -1 month,
+        # -1 week, etc.)
+        interval_len = relativedelta(**intervals[self.plan.interval])
+
+        if end_date + interval_len >= start_date:
+            # |start_date|---|start_date+interval_len|---|end_date|
+            # => not prorated
+            return False, Decimal('1.0000')
+        else:
+            # |start_date|---|end_date|---|start_date+interval_len|
+            # => prorated
+            interval_start = end_date + interval_len
+            days_in_interval = (end_date - interval_start).days
+            days_since_subscription_start = (end_date - start_date).days
+            percent = 1.0 * days_since_subscription_start / days_in_interval
+            percent = Decimal(percent).quantize(Decimal('0.0000'))
+
+            return True, percent
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
@@ -769,6 +979,10 @@ class Provider(AbstractBillingEntity):
         base_fields = super(Provider, self).get_archivable_field_values()
         base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
         return base_fields
+
+    @property
+    def model_corresponding_to_default_flow(self):
+        return Proforma if self.flow == 'proforma' else Invoice
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
@@ -1043,7 +1257,8 @@ class Invoice(BillingDocument):
 
     @property
     def total(self):
-        entries_total = [Decimal(item.total) for item in self.invoice_entries.all()]
+        entries_total = [Decimal(item.total)
+                         for item in self.invoice_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
         return res
 
@@ -1065,10 +1280,10 @@ class Invoice(BillingDocument):
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
-        # Delete the invoice's pdf
+        # Delete the invoice's PDF
         instance.pdf.delete(False)
 
-    # If exists, delete the pdf of the related proforma
+    # If exists, delete the PDF of the related proforma
     if instance.proforma:
         if instance.proforma.pdf:
             instance.proforma.pdf.delete(False)
@@ -1129,7 +1344,8 @@ class Proforma(BillingDocument):
 
     @property
     def total(self):
-        entries_total = [Decimal(item.total) for item in self.proforma_entries.all()]
+        entries_total = [Decimal(item.total)
+                         for item in self.proforma_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
         return res
 
@@ -1151,10 +1367,10 @@ class Proforma(BillingDocument):
 @receiver(pre_delete, sender=Proforma)
 def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
-        # Delete the proforma's pdf
+        # Delete the proforma's PDF
         instance.pdf.delete(False)
 
-    # If exists, delete the pdf of the related invoice
+    # If exists, delete the PDF of the related invoice
     if instance.invoice:
         if instance.invoice.pdf:
             instance.invoice.pdf.delete(False)
@@ -1165,8 +1381,7 @@ class DocumentEntry(models.Model):
     unit = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.DecimalField(max_digits=19, decimal_places=2,
                                    validators=[MinValueValidator(0.0)])
-    unit_price = models.DecimalField(max_digits=8, decimal_places=2,
-                                     validators=[MinValueValidator(0.0)])
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
                                      related_name='invoices')
     start_date = models.DateField(null=True, blank=True)
