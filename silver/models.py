@@ -3,7 +3,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 from django.core.validators import MinValueValidator
-from django.template.loader import select_template, get_template
+from django.template.loader import select_template
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django_xhtml2pdf.utils import generate_pdf
+from django_xhtml2pdf.utils import generate_pdf_template_object
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
@@ -976,22 +976,23 @@ class BillingDocument(models.Model):
             'entries': self._entries
         }
 
-        provider_template = (self.kind + '_' + self.provider.name +
-                             '_' + state + '.html').lower()
-        generic_template = (self.kind + '_' + state + '.html').lower()
+        provider_template = '{kind}_{provider}_{state}.html'.format(
+            kind=self.kind, provider=self.provider.name, state=state).lower()
+        generic_template = '{kind}_{state}.html'.format(
+            kind=self.kind, state=state).lower()
         _templates = [provider_template, generic_template, default_template]
 
         templates = []
         for t in _templates:
             templates.append('billing_documents/' + t)
 
-        template = select_template(templates).origin
+        template = select_template(templates)
 
-        resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf(template, context=context, file_object=resp)
+        file_object = HttpResponse(content_type='application/pdf')
+        generate_pdf_template_object(template, file_object, context)
 
-        if data:
-            pdf_content = ContentFile(data)
+        if file_object:
+            pdf_content = ContentFile(file_object)
             filename = '{doc_type}_{series}-{number}.pdf'.format(
                 doc_type=self.__class__.__name__,
                 series=self.series,
