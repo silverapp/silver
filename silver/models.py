@@ -843,9 +843,8 @@ class AbstractBillingEntity(LiveModel):
         return [getattr(self, field, '') for field in field_names]
 
     def get_archivable_field_values(self):
-        field_names = ['name', 'company', 'email', 'address_1', 'address_1',
-                       'city', 'country', 'city', 'zip_code', 'zip_code',
-                       'extra']
+        field_names = ['name', 'company', 'email', 'address_1', 'address_2',
+                       'city', 'country', 'city', 'state', 'zip_code', 'extra']
         return {field: getattr(self, field, '') for field in field_names}
 
 
@@ -903,8 +902,10 @@ class Customer(AbstractBillingEntity):
     def get_archivable_field_values(self):
         base_fields = super(Customer, self).get_archivable_field_values()
         customer_fields = ['customer_reference', 'consolidated_billing',
-                          'payment_due_days']
-        fields_dict = {field: getattr(self, field, '') for field in customer_fields}
+                           'payment_due_days', 'sales_tax_number',
+                           'sales_tax_percent']
+        fields_dict = {field: getattr(self, field, '') for field in
+                       customer_fields}
         base_fields.update(fields_dict)
         return base_fields
 
