@@ -1118,14 +1118,13 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).save(*args, **kwargs)
 
     def _generate_number(self):
-        """Generates the number for a proforma/invoice. To be implemented
-        in the corresponding subclass."""
+        """Generates the number for a proforma/invoice."""
 
         if not self.__class__._default_manager.filter(
             provider=self.provider,
         ).exists():
-            # An invoice with this provider does not exist
-            return self.provider.invoice_starting_number
+            # An invoice/proforma with this provider does not exist
+            return self._starting_number
         else:
             # An invoice with this provider already exists
             max_existing_number = self.__class__._default_manager.filter(
@@ -1249,6 +1248,10 @@ class Invoice(BillingDocument):
         super(Invoice, self).issue(issue_date, due_date)
 
     @property
+    def _starting_number(self):
+        return self.provider.invoice_starting_number
+
+    @property
     def series(self):
         try:
             return self.provider.invoice_series
@@ -1326,6 +1329,10 @@ class Proforma(BillingDocument):
         invoice.save()
 
         self.invoice = invoice
+
+    @property
+    def _starting_number(self):
+        return self.provider.proforma_starting_number
 
     @property
     def series(self):
