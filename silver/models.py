@@ -1384,8 +1384,8 @@ def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
 
 
 class DocumentEntry(models.Model):
-    description = models.CharField(max_length=255)
-    unit = models.CharField(max_length=20, blank=True, null=True)
+    description = models.CharField(max_length=1024)
+    unit = models.CharField(max_length=1024, blank=True, null=True)
     quantity = models.DecimalField(max_digits=19, decimal_places=2,
                                    validators=[MinValueValidator(0.0)])
     unit_price = models.DecimalField(max_digits=8, decimal_places=2)

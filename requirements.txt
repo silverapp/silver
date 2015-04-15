@@ -1,0 +1,14 @@
+-e .
+
+# development
+django-extensions
+Werkzeug
+
+# testing
+mock
+flake8
+coverage
+django-coverage
+pytest
+pytest-django
+factory_boy
