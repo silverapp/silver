@@ -1105,6 +1105,9 @@ class BillingDocument(models.Model):
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
     def save(self, *args, **kwargs):
+        if not self.series:
+            self.series = self.default_series
+
         # Generate the number
         if not self.number:
             self.number = self._generate_number()
@@ -1120,18 +1123,19 @@ class BillingDocument(models.Model):
 
     def _generate_number(self):
         """Generates the number for a proforma/invoice."""
-
         if not self.__class__._default_manager.filter(
-            provider=self.provider,
+            provider=self.provider, series=self.series
         ).exists():
-            # An invoice/proforma with this provider does not exist
-            return self._starting_number
+            # An invoice/proforma with this provider and series does not exist
+            if self.series == self.default_series:
+                return self._starting_number
+            else:
+                return 1
         else:
-            # An invoice with this provider already exists
+            # An invoice with this provider and series already exists
             max_existing_number = self.__class__._default_manager.filter(
-                provider=self.provider,
+                provider=self.provider, series=self.series,
             ).aggregate(Max('number'))['number__max']
-
             return max_existing_number + 1
 
     def __unicode__(self):
@@ -1253,7 +1257,7 @@ class Invoice(BillingDocument):
         return self.provider.invoice_starting_number
 
     @property
-    def series(self):
+    def default_series(self):
         try:
             return self.provider.invoice_series
         except Provider.DoesNotExist:
@@ -1336,7 +1340,7 @@ class Proforma(BillingDocument):
         return self.provider.proforma_starting_number
 
     @property
-    def series(self):
+    def default_series(self):
         try:
             return self.provider.proforma_series
         except Provider.DoesNotExist:
