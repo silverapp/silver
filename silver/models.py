@@ -1000,7 +1000,7 @@ class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
-
+    series = models.CharField(max_length=20, blank=True, null=True)
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
