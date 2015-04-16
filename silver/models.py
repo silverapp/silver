@@ -1026,8 +1026,8 @@ class BillingDocument(models.Model):
 
     class Meta:
         abstract = True
-        unique_together = ('provider', 'number')
-        ordering = ('-issue_date', 'number')
+        unique_together = ('provider', 'series', 'number')
+        ordering = ('-issue_date', 'series', 'number')
 
     def __init__(self, *args, **kwargs):
         super(BillingDocument, self).__init__(*args, **kwargs)
