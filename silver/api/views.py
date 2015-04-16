@@ -234,9 +234,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
     def patch(self, request, *args, **kwargs):
         mf_product_code = self.kwargs.get('mf_product_code', None)
         subscription_pk = self.kwargs.get('subscription_pk', None)
-        date = request.data.get('date', None)
-        consumed_units = request.data.get('count', None)
-        update_type = request.data.get('update_type', None)
+
         subscription = get_object_or_None(Subscription, pk=subscription_pk)
         metered_feature = get_object_or_404(
             subscription.plan.metered_features,
@@ -251,9 +249,26 @@ class MeteredFeatureUnitsLogDetail(APIView):
             return Response({"detail": "Subscription is not active."},
                             status=status.HTTP_403_FORBIDDEN)
 
-        if not date or consumed_units is None or not update_type:
-            return Response({"detail": "Not enough information provided."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        required_fields = ['date', 'count', 'update_type']
+        provided_fields = {}
+        errors = {}
+        for field in required_fields:
+            try:
+                provided_fields[field] = request.data[field]
+            except KeyError:
+                errors[field] = ["This field is required."]
+
+        for key in provided_fields:
+            if not provided_fields[key]:
+                errors[key] = ["This field may not be blank."]
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        date = request.data['date']
+        consumed_units = request.data['count']
+        update_type = request.data['update_type']
+
         consumed_units = Decimal(consumed_units)
 
         try:
