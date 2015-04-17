@@ -129,13 +129,15 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['email', 'address_2', 'meta']
+
+        unchanged_fields = ['email', 'address_2']
         for field in unchanged_fields:
             changed_data.pop(field)
 
         url = reverse('customer-detail', kwargs={'pk': 1})
 
-        response = self.client.put(url, data=changed_data)
+        response = self.client.put(url, data=json.dumps(changed_data),
+                                   content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -151,13 +153,14 @@ class TestCustomerEndpoints(APITestCase):
 
         changed_data = self.complete_data.copy()
         unchanged_fields = ['email', 'zip_code', 'company',
-                            'payment_due_days', 'meta']
+                            'payment_due_days']
         for field in unchanged_fields:
             changed_data.pop(field)
 
         url = reverse('customer-detail', kwargs={'pk': 1})
 
-        response = self.client.patch(url, data=changed_data)
+        response = self.client.patch(url, data=json.dumps(changed_data),
+                                   content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
