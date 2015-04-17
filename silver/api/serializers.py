@@ -75,7 +75,7 @@ class JSONSerializerField(serializers.Field):
     def to_internal_value(self, data):
         if not data:
             return data
-        data = json.loads(data)
+
         if (data is not None and not isinstance(data, dict)
                 and not isinstance(data, list)):
                     raise ValidationError("Invalid JSON <{}>".format(data))
@@ -86,7 +86,7 @@ class JSONSerializerField(serializers.Field):
 
 
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
-    meta = JSONSerializerField()
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Provider
@@ -193,7 +193,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
-    meta = JSONSerializerField()
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Subscription
@@ -218,7 +218,7 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
     subscriptions = SubscriptionUrl(view_name='subscription-detail', many=True,
                                     read_only=True)
-    meta = JSONSerializerField()
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Customer
