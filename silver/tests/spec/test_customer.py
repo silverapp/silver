@@ -29,7 +29,8 @@ class TestCustomerEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '3.00',
             "payment_due_days": 5,
-            "consolidated_billing": False
+            "consolidated_billing": False,
+            "meta": {'water': ['plants', '5']}
         }
 
     def test_create_post_customer(self):
@@ -128,7 +129,7 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['email', 'address_2']
+        unchanged_fields = ['email', 'address_2', 'meta']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -150,7 +151,7 @@ class TestCustomerEndpoints(APITestCase):
 
         changed_data = self.complete_data.copy()
         unchanged_fields = ['email', 'zip_code', 'company',
-                            'payment_due_days']
+                            'payment_due_days', 'meta']
         for field in unchanged_fields:
             changed_data.pop(field)
 
