@@ -1,3 +1,4 @@
+import json
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -72,6 +73,12 @@ class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
 
 class JSONSerializerField(serializers.Field):
     def to_internal_value(self, data):
+        if not data:
+            return data
+        data = json.loads(data)
+        if (data is not None and not isinstance(data, dict)
+                and not isinstance(data, list)):
+                    raise ValidationError("Invalid JSON <{}>".format(data))
         return data
 
     def to_representation(self, value):
