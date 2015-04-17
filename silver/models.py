@@ -258,6 +258,7 @@ class Subscription(models.Model):
         choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     def clean(self):
         errors = dict()
@@ -817,6 +818,7 @@ class AbstractBillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     class Meta:
         abstract = True
