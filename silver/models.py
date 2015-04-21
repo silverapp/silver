@@ -460,7 +460,13 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
+            last_billing_date = self.last_billing_date + datetime.timedelta(days=1)
             interval_end = self._current_end_date(reference_date=self.last_billing_date)
+        print '-------------'
+        print 'interval_end: ', interval_end
+        print 'date: ', date
+        print 'generate_after: ', generate_after
+        print '--------------'
         return date >= interval_end + generate_after
 
     @property
@@ -533,15 +539,22 @@ class Subscription(models.Model):
         metered features)) to the document.
         """
 
-        current_interval_start = billing_date + datetime.timedelta(days=1)
+        current_interval_start = billing_date
         current_interval_end = self._current_end_date(
-            reference_date=self.current_interval_start
-        )
+            reference_date=current_interval_start)
 
+        last_day_to_bill = billing_date - datetime.timedelta(days=1)
+
+        print 'billing_date: ', billing_date
+        print 'current_interval_start: ', current_interval_start
+        print 'current_interval_end: ', current_interval_end
+        print 'trial_end: ', self.trial_end
         if self.is_billed_first_time:
-            if self.on_trial(billing_date):
+            print 'is_billed_first_time'
+            if self.on_trial(last_day_to_bill):
+                print 'on_trial'
                 self._add_trial_value(start_date=self.start_date,
-                                      end_date=billing_date,
+                                      end_date=last_day_to_bill,
                                       invoice=invoice, proforma=proforma)
                 # Add in advance the value of the plan for the current month
                 if self.on_trial(current_interval_start):
@@ -550,20 +563,23 @@ class Subscription(models.Model):
                                          invoice=invoice, proforma=proforma)
                     trial_end = self.trial_end + datetime.timedelta(days=1)
                     self._add_plan_value(start_date=trial_end,
-                                         end_date=current_interval_end)
+                                         end_date=current_interval_end,
+                                         invoice=invoice, proforma=proforma)
                 else:
                     self._add_plan_value(start_date=current_interval_start,
                                          end_date=current_interval_end,
                                          invoice=invoice, proforma=proforma)
             else:
-                self._add_trial_value(self.start_date, self.trial_end,
+                print 'not on_trial'
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
                 trial_end = self.trial_end + datetime.timedelta(days=1)
                 self._add_plan_value(start_date=trial_end,
-                                     end_date=billing_date,
+                                     end_date=last_day_to_bill,
                                      invoice=invoice, proforma=proforma)
-                self._add_mfs(start_date=trial_end, end_date=billing_date,
+                self._add_mfs(start_date=trial_end, end_date=last_day_to_bill,
                               invoice=invoice, proforma=proforma)
 
                 # Add in advance the value of the plan for the current month
@@ -572,18 +588,20 @@ class Subscription(models.Model):
                                      invoice=invoice, proforma=proforma)
 
         else:
-            last_billing_date = self.last_billing_date + datetime.timedelta(days=1)
-            if self.on_trial(last_billing_date):
-                self._add_mfs_for_trial(start_date=last_billing_date,
+            print 'not is_billed_first_time'
+            if self.on_trial(self.last_billing_date):
+                print 'on_trial'
+                self._add_mfs_for_trial(start_date=self.last_billing_date,
                                         end_date=self.trial_end,
                                         invoice=invoice, proforma=proforma)
 
                 trial_end = self.trial_end + datetime.timedelta(days=1)
-                self._add_mfs(start_date=trial_end, end_date=billing_date,
+                self._add_mfs(start_date=trial_end, end_date=last_day_to_bill,
                               invoice=invoice, proforma=proforma)
             else:
-                self._add_mfs(start_date=last_billing_date,
-                              end_date=billing_date,
+                print 'not on_trial'
+                self._add_mfs(start_date=self.last_billing_date,
+                              end_date=last_day_to_bill,
                               invoice=invoice, proforma=proforma)
 
             # Add in advance the value of the plan for the current month
@@ -659,7 +677,7 @@ class Subscription(models.Model):
                 charged_units = 0
 
             if free_units > 0:
-                template = "{name} ({start_date} - {end_date})."
+                template = "{name} during trial ({start_date} - {end_date})."
                 description = template.format(name=metered_feature.name,
                                               start_date=start_date,
                                               end_date=end_date)
