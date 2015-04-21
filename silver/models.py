@@ -1325,6 +1325,7 @@ class Proforma(BillingDocument):
 
         if not self.invoice:
             self.invoice = self._new_invoice(['issue', 'pay'])
+            self.save()
         else:
             self.invoice.pay()
             self.invoice.save()
@@ -1339,6 +1340,7 @@ class Proforma(BillingDocument):
                              % self.invoice)
 
         self.invoice = self._new_invoice(['issue'])
+        self.save()
 
     def _new_invoice(self, transitions=None):
         # Generate the new invoice based this proforma
