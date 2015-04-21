@@ -1323,7 +1323,11 @@ class Proforma(BillingDocument):
     def pay(self, paid_date=None):
         super(Proforma, self).pay(paid_date)
 
-        self.invoice = self._new_invoice(['issue', 'pay'])
+        if not self.invoice:
+            self.invoice = self._new_invoice(['issue', 'pay'])
+        else:
+            self.invoice.pay()
+            self.invoice.save()
 
     def create_invoice(self):
         if self.state != "issued":
