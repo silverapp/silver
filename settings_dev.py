@@ -49,7 +49,27 @@ INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 ROOT_URLCONF = 'silver.urls'
 PROJECT_ROOT = os.path.dirname(__file__)
 
-TEMPLATE_DIRS = (PROJECT_ROOT + '/templates/',)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'DIRS': [
+            PROJECT_ROOT + '/templates/',
+            PROJECT_ROOT + '/silver/templates/'
+        ],
+        'OPTIONS': {
+            'context_processors': (
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
+                "django.contrib.messages.context_processors.messages"
+            )
+        }
+    }
+]
 
 MEDIA_ROOT = PROJECT_ROOT + '/app_media/'
 MEDIA_URL = '/app_media/'

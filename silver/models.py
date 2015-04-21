@@ -2,6 +2,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 from django.core.validators import MinValueValidator
+from django.template.loader import select_template
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -12,7 +13,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django_xhtml2pdf.utils import generate_pdf
+from django_xhtml2pdf.utils import generate_pdf_template_object
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
@@ -1033,11 +1034,6 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self.__last_state = self.state
 
-    def _get_template_name(self, property_name):
-        return getattr(settings,
-                       property_name,
-                       'silver/invoice_pdf.html')
-
     @transition(field=state, source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
@@ -1058,8 +1054,7 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        template = self._get_template_name('SILVER_TEMPLATE_ISSUED_DOCUMENTS')
-        self._generate_pdf(template)
+        self._generate_pdf(state='issued')
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -1068,8 +1063,7 @@ class BillingDocument(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        template = self._get_template_name('SILVER_TEMPLATE_PAID_DOCUMENTS')
-        self._generate_pdf(template)
+        self._generate_pdf(state='paid')
 
     @transition(field=state, source='issued', target='canceled')
     def cancel(self, cancel_date=None):
@@ -1078,8 +1072,7 @@ class BillingDocument(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-        template = self._get_template_name('SILVER_TEMPLATE_CANCELED_DOCUMENTS')
-        self._generate_pdf(template)
+        self._generate_pdf(state='canceled')
 
     def clean(self):
         # The only change that is allowed if the document is in issued state
@@ -1186,8 +1179,7 @@ class BillingDocument(models.Model):
                 entry.proforma = self
             yield(entry)
 
-    def _generate_pdf(self, template='silver/invoice_pdf.html'):
-
+    def _generate_pdf(self, state=None, default_template='invoice_pdf.html'):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
 
@@ -1197,11 +1189,24 @@ class BillingDocument(models.Model):
             'customer': customer,
             'entries': self._entries
         }
-        resp = HttpResponse(content_type='application/pdf')
-        data = generate_pdf(template, context=context, file_object=resp)
 
-        if data:
-            pdf_content = ContentFile(data)
+        provider_template = '{kind}_{provider}_{state}.html'.format(
+            kind=self.kind, provider=self.provider.name, state=state).lower()
+        generic_template = '{kind}_{state}.html'.format(
+            kind=self.kind, state=state).lower()
+        _templates = [provider_template, generic_template, default_template]
+
+        templates = []
+        for t in _templates:
+            templates.append('billing_documents/' + t)
+
+        template = select_template(templates)
+
+        file_object = HttpResponse(content_type='application/pdf')
+        generate_pdf_template_object(template, file_object, context)
+
+        if file_object:
+            pdf_content = ContentFile(file_object)
             filename = '{doc_type}_{series}-{number}.pdf'.format(
                 doc_type=self.__class__.__name__,
                 series=self.series,
