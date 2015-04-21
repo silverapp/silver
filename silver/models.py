@@ -1336,6 +1336,28 @@ class Proforma(BillingDocument):
 
         self.invoice = invoice
 
+    def create_invoice(self):
+        if self.state != "issued":
+            raise ValueError("You can't create an invoice from a %s proforma, "
+                             "only from an issued one" % self.state)
+
+        if self.invoice:
+            raise ValueError("This proforma already has an invoice { %s }"
+                             % self.invoice)
+
+        # Generate the new invoice based this proforma
+        invoice_fields = self.fields_for_automatic_invoice_generation
+        invoice_fields.update({'proforma': self})
+        invoice = Invoice.objects.create(**invoice_fields)
+
+        # For all the entries in the proforma => add the link to the new
+        # invoice
+        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
+        invoice.issue()
+        invoice.save()
+
+        self.invoice = invoice
+
     @property
     def _starting_number(self):
         return self.provider.proforma_starting_number
