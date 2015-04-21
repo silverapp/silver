@@ -28,7 +28,7 @@ class DocumentsGenerator(object):
         """
 
         now = timezone.now().date()
-        billing_date = dt.date(now.year, now.month, 1) - dt.timedelta(days=1)
+        billing_date = dt.date(now.year, now.month, 1)
         # billing_date -> the date when the billing documents are issued.
 
         for customer in Customer.objects.all():
@@ -56,6 +56,7 @@ class DocumentsGenerator(object):
         # Select all the active or canceled subscriptions
         criteria = {'state__in': ['active', 'canceled']}
         for subscription in customer.subscriptions.filter(**criteria):
+            print 'billing_date: ', billing_date
             if not subscription.should_be_billed(billing_date):
                 continue
 
