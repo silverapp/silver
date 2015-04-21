@@ -1054,7 +1054,7 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self._generate_pdf(state='issued')
+        self._save_pdf(state='issued')
 
     @transition(field=state, source='issued', target='paid')
     def pay(self, paid_date=None):
@@ -1063,7 +1063,7 @@ class BillingDocument(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        self._generate_pdf(state='paid')
+        self._save_pdf(state='paid')
 
     @transition(field=state, source='issued', target='canceled')
     def cancel(self, cancel_date=None):
@@ -1072,7 +1072,7 @@ class BillingDocument(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-        self._generate_pdf(state='canceled')
+        self._save_pdf(state='canceled')
 
     def clean(self):
         # The only change that is allowed if the document is in issued state
@@ -1179,22 +1179,30 @@ class BillingDocument(models.Model):
                 entry.proforma = self
             yield(entry)
 
-    def _generate_pdf(self, state=None, default_template='invoice_pdf.html'):
+    def _generate_pdf(self, state=None):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
+        if state is None:
+            state = self.state
 
         context = {
             'invoice': self,
             'provider': provider,
             'customer': customer,
-            'entries': self._entries
+            'entries': self._entries,
+            'state': state
         }
 
-        provider_template = '{kind}_{provider}_{state}.html'.format(
-            kind=self.kind, provider=self.provider.name, state=state).lower()
-        generic_template = '{kind}_{state}.html'.format(
+        provider_state_template = '{kind}_{provider}_{state}_pdf.html'.format(
+            kind=self.kind, provider=self.provider.slug, state=state).lower()
+        provider_template = '{kind}_{provider}_pdf.html'.format(
+            kind=self.kind, provider=self.provider.slug).lower()
+        generic_state_template = '{kind}_{state}_pdf.html'.format(
             kind=self.kind, state=state).lower()
-        _templates = [provider_template, generic_template, default_template]
+        generic_template = '{kind}_pdf.html'.format(
+            kind=self.kind).lower()
+        _templates = [provider_state_template, provider_template,
+                      generic_state_template, generic_template]
 
         templates = []
         for t in _templates:
@@ -1204,6 +1212,11 @@ class BillingDocument(models.Model):
 
         file_object = HttpResponse(content_type='application/pdf')
         generate_pdf_template_object(template, file_object, context)
+
+        return file_object
+
+    def _save_pdf(self, state=None):
+        file_object = self._generate_pdf(state)
 
         if file_object:
             pdf_content = ContentFile(file_object)
