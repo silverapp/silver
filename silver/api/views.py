@@ -109,7 +109,7 @@ class SubscriptionList(generics.ListCreateAPIView):
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 
 
-class SubscriptionDetail(generics.RetrieveAPIView):
+class SubscriptionDetail(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionDetailSerializer
 
@@ -118,6 +118,31 @@ class SubscriptionDetail(generics.RetrieveAPIView):
         subscription_pk = self.kwargs.get('subscription_pk', None)
         return get_object_or_404(Subscription, customer__id=customer_pk,
                                  pk=subscription_pk)
+
+    def put(self, request, *args, **kwargs):
+        return Response({'detail': 'Method "PUT" not allowed.'},
+                        status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def patch(self, request, *args, **kwargs):
+        sub = get_object_or_404(Subscription.objects,
+                                pk=self.kwargs.get('subscription_pk', None))
+        state = sub.state
+        print request.DATA
+        if state == 'inactive':
+            meta = request.DATA.pop('meta', None)
+            if request.DATA:
+                return Response({"detail": "Only the 'meta' field of a "
+                                           "subscription can be modified."},
+                            status=status.HTTP_400_BAD_REQUEST)
+            request.DATA.clear()
+            request.DATA.update({'meta': meta} if meta else {})
+            return super(SubscriptionDetail, self).patch(request,
+                                                         *args, **kwargs)
+        else:
+            message = "Cannot update a subscription when it's in %s state." \
+                      % state
+            return Response({"detail": message},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubscriptionDetailActivate(APIView):
