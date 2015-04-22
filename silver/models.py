@@ -1324,7 +1324,10 @@ class Proforma(BillingDocument):
         super(Proforma, self).pay(paid_date)
 
         if not self.invoice:
-            self.invoice = self._new_invoice(['issue', 'pay'])
+            self.invoice = self._new_invoice()
+            self.invoice.issue()
+            self.invoice.pay()
+            self.save()
         else:
             self.invoice.pay()
             self.invoice.save()
@@ -1338,9 +1341,12 @@ class Proforma(BillingDocument):
             raise ValueError("This proforma already has an invoice { %s }"
                              % self.invoice)
 
-        self.invoice = self._new_invoice(['issue'])
+        self.invoice = self._new_invoice()
+        self.invoice.issue()
 
-    def _new_invoice(self, transitions=None):
+        self.save()
+
+    def _new_invoice(self):
         # Generate the new invoice based this proforma
         invoice_fields = self.fields_for_automatic_invoice_generation
         invoice_fields.update({'proforma': self})
@@ -1349,12 +1355,6 @@ class Proforma(BillingDocument):
         # For all the entries in the proforma => add the link to the new
         # invoice
         DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
-
-        # Execute given transition for our new invoice
-        for state in transitions:
-            getattr(invoice, state)()
-
-        invoice.save()
         return invoice
 
     @property

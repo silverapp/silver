@@ -265,7 +265,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 failed_actions.append(error.message)
 
         if exist_failed_actions:
-            failed_ids = ' '.join(map(str, failed_changes))
             msg = "\n".join(failed_actions)
             self.message_user(request, msg, level=messages.ERROR)
 
