@@ -625,7 +625,7 @@ class ProformaInvoiceRetrieveCreate(APIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         proforma_pk = kwargs.get('pk')
 
         try:
@@ -636,6 +636,19 @@ class ProformaInvoiceRetrieveCreate(APIView):
 
         if not proforma.invoice:
             proforma.create_invoice()
+
+        serializer = InvoiceSerializer(proforma.invoice,
+                                       context={'request': request})
+        return Response(serializer.data)
+
+    def get(self, request, *args, **kwargs):
+        proforma_pk = kwargs.get('pk')
+
+        try:
+            proforma = Proforma.objects.get(pk=proforma_pk)
+        except Proforma.DoesNotExist:
+            return Response({"detail": "Proforma not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = InvoiceSerializer(proforma.invoice,
                                        context={'request': request})
