@@ -539,16 +539,13 @@ class Subscription(models.Model):
         metered features)) to the document.
         """
 
-        current_interval_start = billing_date
-        current_interval_end = self._current_end_date(
-            reference_date=current_interval_start)
-
         last_day_to_bill = billing_date - datetime.timedelta(days=1)
 
-        print 'billing_date: ', billing_date
-        print 'current_interval_start: ', current_interval_start
-        print 'current_interval_end: ', current_interval_end
-        print 'trial_end: ', self.trial_end
+        current_interval_start = billing_date
+        ONE_MONTH = relativedelta(months=1)
+        ONE_DAY   = datetime.timedelta(days=1)
+        current_interval_end = billing_date + ONE_MONTH - ONE_DAY
+
         if self.is_billed_first_time:
             print 'is_billed_first_time'
             if self.on_trial(last_day_to_bill):
