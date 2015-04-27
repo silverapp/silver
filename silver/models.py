@@ -16,7 +16,7 @@ from django_xhtml2pdf.utils import generate_pdf
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from international.models import countries, currencies
 from livefield.models import LiveModel
@@ -987,6 +987,30 @@ class Provider(AbstractBillingEntity):
 
     def __unicode__(self):
         return " - ".join(filter(None, [self.name, self.company]))
+
+
+@receiver(pre_save, sender=Provider)
+def update_draft_billing_documents(sender, instance, **kwargs):
+    if instance.pk:
+        provider = Provider.objects.get(pk=instance.pk)
+        old_invoice_series = provider.invoice_series
+        old_proforma_series = provider.proforma_series
+
+        if instance.invoice_series != old_invoice_series:
+            for invoice in Invoice.objects.filter(state='draft'):
+                # update the series for draft invoices
+                invoice.series = instance.invoice_series
+                # the number will be automatically updated in the save method
+                invoice.number = None
+                invoice.save()
+
+        if instance.proforma_series != old_proforma_series:
+            for proforma in Proforma.objects.filter(state='draft'):
+                # update the series for draft invoices
+                proforma.series = instance.invoice_series
+                # the number will be automatically updated in the save method
+                proforma.number = None
+                proforma.save()
 
 
 class ProductCode(models.Model):
