@@ -1108,9 +1108,10 @@ class BillingDocument(models.Model):
         self._generate_pdf(template)
 
     def clean(self):
+        super(BillingDocument, self).clean()
+
         # The only change that is allowed if the document is in issued state
         # is the state chage from issued to paid
-
         # !! TODO: If __last_state == 'issued' and self.state == 'paid' || 'canceled'
         # it should also be checked that the other fields are the same bc.
         # right now a document can be in issued state and someone could
@@ -1133,7 +1134,6 @@ class BillingDocument(models.Model):
     def save(self, *args, **kwargs):
         if not self.series:
             self.series = self.default_series
-            super(BillingDocument, self).save(*args, **kwargs)
 
         # Generate the number
         if not self.number:
@@ -1342,10 +1342,17 @@ class Proforma(BillingDocument):
         customer_field.related_name = "proformas"
 
     def clean(self):
-        if not self.series and not self.provider.proforma_series:
-            err_msg = {'series': 'You must either specify the series or set a '
-                                 'default proforma_series for the provider.'}
-            raise ValidationError(err_msg)
+        super(Proforma, self).clean()
+        if not self.series:
+            if not hasattr(self, 'provider'):
+                # the clean method is called even if the clean_fields method
+                # raises exceptions, so we check if the provider was specified
+                pass
+            elif self.provider.proforma_series:
+                err_msg = {'series': 'You must either specify the series or '
+                                     'set a default proforma_series for the '
+                                     'provider.'}
+                raise ValidationError(err_msg)
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
