@@ -997,7 +997,8 @@ def update_draft_billing_documents(sender, instance, **kwargs):
         old_proforma_series = provider.proforma_series
 
         if instance.invoice_series != old_invoice_series:
-            for invoice in Invoice.objects.filter(state='draft'):
+            for invoice in Invoice.objects.filter(state='draft',
+                                                  provider=provider):
                 # update the series for draft invoices
                 invoice.series = instance.invoice_series
                 # the number will be automatically updated in the save method
@@ -1005,9 +1006,10 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                 invoice.save()
 
         if instance.proforma_series != old_proforma_series:
-            for proforma in Proforma.objects.filter(state='draft'):
+            for proforma in Proforma.objects.filter(state='draft',
+                                                    provider=provider):
                 # update the series for draft invoices
-                proforma.series = instance.invoice_series
+                proforma.series = instance.proforma_series
                 # the number will be automatically updated in the save method
                 proforma.number = None
                 proforma.save()
@@ -1131,6 +1133,7 @@ class BillingDocument(models.Model):
     def save(self, *args, **kwargs):
         if not self.series:
             self.series = self.default_series
+            super(BillingDocument, self).save(*args, **kwargs)
 
         # Generate the number
         if not self.number:
@@ -1160,7 +1163,9 @@ class BillingDocument(models.Model):
             max_existing_number = self.__class__._default_manager.filter(
                 provider=self.provider, series=self.series,
             ).aggregate(Max('number'))['number__max']
-            return max_existing_number + 1
+            return max_existing_number + 1 if max_existing_number \
+                else self._starting_number if self._starting_number \
+                else 1
 
     def __unicode__(self):
         return '%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
@@ -1335,6 +1340,12 @@ class Proforma(BillingDocument):
 
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
+
+    def clean(self):
+        if not self.series and not self.provider.proforma_series:
+            err_msg = {'series': 'You must either specify the series or set a '
+                                 'default proforma_series for the provider.'}
+            raise ValidationError(err_msg)
 
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
