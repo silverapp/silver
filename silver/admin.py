@@ -237,8 +237,10 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         raise NotImplementedError
 
     def series_number(self, document):
-        return "%s-%d" % (document.series, document.number)
-    series_number.short_description = 'Invoice number'
+        if document.series and document.number:
+            return "%s-%d" % (document.series, document.number)
+        return None
+    series_number.short_description = 'Series-Number'
     series_number.admin_order_field = '-pk'
 
     @property
