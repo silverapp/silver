@@ -259,6 +259,7 @@ class Subscription(models.Model):
         choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     def clean(self):
         errors = dict()
@@ -818,6 +819,7 @@ class AbstractBillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -845,7 +847,8 @@ class AbstractBillingEntity(LiveModel):
 
     def get_archivable_field_values(self):
         field_names = ['name', 'company', 'email', 'address_1', 'address_2',
-                       'city', 'country', 'city', 'state', 'zip_code', 'extra']
+                       'city', 'country', 'city', 'state', 'zip_code', 'extra',
+                       'meta']
         return {field: getattr(self, field, '') for field in field_names}
 
 

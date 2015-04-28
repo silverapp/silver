@@ -131,7 +131,7 @@ class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
-              'sales_tax_percent', 'sales_tax_number', 'extra']
+              'sales_tax_percent', 'sales_tax_number', 'extra', 'meta']
     list_display = ['name', 'company', 'email', 'address', 'sales_tax_percent',
                     'sales_tax_name', 'consolidated_billing',
                     'customer_reference']
@@ -146,7 +146,8 @@ class ProviderAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
               'state', 'zip_code', 'country', 'flow', 'invoice_series',
               'invoice_starting_number', 'proforma_series',
-              'proforma_starting_number', 'default_document_state', 'extra']
+              'proforma_starting_number', 'default_document_state', 'extra',
+              'meta']
     list_display = ['name', 'company', 'email', 'address', 'invoice_series']
     list_display_links = ['name', 'company']
     search_fields = list_display

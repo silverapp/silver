@@ -1,3 +1,4 @@
+import json
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -70,7 +71,22 @@ class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('consumed_units', 'start_date', 'end_date')
 
 
+class JSONSerializerField(serializers.Field):
+    def to_internal_value(self, data):
+        if not data:
+            return data
+
+        if (data is not None and not isinstance(data, dict)
+                and not isinstance(data, list)):
+                    raise ValidationError("Invalid JSON <{}>".format(data))
+        return data
+
+    def to_representation(self, value):
+        return value
+
+
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Provider
@@ -78,7 +94,7 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'email', 'address_1', 'address_2', 'city', 'state',
                   'zip_code', 'country', 'extra', 'invoice_series',
                   'invoice_starting_number', 'proforma_series',
-                  'proforma_starting_number')
+                  'proforma_starting_number', 'meta')
 
     def validate(self, data):
         flow = data.get('flow', None)
@@ -177,11 +193,13 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Subscription
         fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference', 'updateable_buckets')
+                  'ended_at', 'state', 'reference', 'updateable_buckets',
+                  'meta')
         read_only_fields = ('state', 'updateable_buckets')
 
     def validate(self, attrs):
@@ -200,13 +218,15 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
     subscriptions = SubscriptionUrl(view_name='subscription-detail', many=True,
                                     read_only=True)
+    meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
                   'address_1', 'address_2', 'city', 'state', 'zip_code',
                   'country', 'extra', 'sales_tax_number', 'sales_tax_name',
-                  'sales_tax_percent', 'consolidated_billing', 'subscriptions')
+                  'sales_tax_percent', 'consolidated_billing', 'subscriptions',
+                  'meta')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):

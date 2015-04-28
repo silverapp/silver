@@ -54,6 +54,7 @@ class TestProviderEndpoints(APITestCase):
             "invoice_starting_number": 1,
             "proforma_series": "TestSeries",
             "proforma_starting_number": 1,
+            "meta": None
         }
         qs = self._filter_providers()
         assert qs.count() == 1
@@ -175,7 +176,8 @@ class TestProviderEndpoints(APITestCase):
             'state': 'State1',
             'zip_code': '1',
             'country': u'AL',
-            'extra': 'Extra1'
+            'extra': 'Extra1',
+            'meta': {u'something': [1, 2]}
         }
 
     def test_get_unexisting_provider(self):
@@ -203,8 +205,8 @@ class TestProviderEndpoints(APITestCase):
             'invoice_series': 'NewSeries',
             'invoice_starting_number': 1,
             'proforma_series': 'ProformaSeries',
-            'proforma_starting_number': 1,
-
+            'proforma_starting_number': 1
+            # TODO: add new meta JSON value
         }
 
         response = self.client.put(url, data=new_data)
@@ -229,6 +231,7 @@ class TestProviderEndpoints(APITestCase):
             'invoice_starting_number': 1,
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
+            'meta': {u'something': [1, 2]}
         }
 
     def test_put_provider_without_required_field(self):
@@ -301,7 +304,8 @@ class TestProviderEndpoints(APITestCase):
             'state': 'State1',
             'zip_code': '1',
             'country': u'AL',
-            'extra': 'Extra1'
+            'extra': 'Extra1',
+            'meta': {u'something': [1, 2]}
         }
 
     def test_delete_provider(self):
