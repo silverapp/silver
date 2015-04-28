@@ -1234,9 +1234,9 @@ class BillingDocument(models.Model):
             'state': state
         }
 
-        provider_state_template = '{kind}_{provider}_{state}_pdf.html'.format(
+        provider_state_template = '{provider}/{kind}_{state}_pdf.html'.format(
             kind=self.kind, provider=self.provider.slug, state=state).lower()
-        provider_template = '{kind}_{provider}_pdf.html'.format(
+        provider_template = '{provider}/{kind}_pdf.html'.format(
             kind=self.kind, provider=self.provider.slug).lower()
         generic_state_template = '{kind}_{state}_pdf.html'.format(
             kind=self.kind, state=state).lower()
