@@ -1356,6 +1356,7 @@ class Proforma(BillingDocument):
 
         self.invoice = self._new_invoice()
         self.invoice.issue()
+        self.invoice.save()
 
         self.save()
 
