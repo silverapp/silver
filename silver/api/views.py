@@ -127,22 +127,16 @@ class SubscriptionDetail(generics.RetrieveUpdateAPIView):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('subscription_pk', None))
         state = sub.state
-        print request.DATA
-        if state == 'inactive':
-            meta = request.DATA.pop('meta', None)
-            if request.DATA:
-                return Response({"detail": "Only the 'meta' field of a "
-                                           "subscription can be modified."},
-                            status=status.HTTP_400_BAD_REQUEST)
-            request.DATA.clear()
-            request.DATA.update({'meta': meta} if meta else {})
-            return super(SubscriptionDetail, self).patch(request,
-                                                         *args, **kwargs)
-        else:
+        meta = request.DATA.pop('meta', None)
+        if request.DATA:
             message = "Cannot update a subscription when it's in %s state." \
                       % state
             return Response({"detail": message},
                             status=status.HTTP_400_BAD_REQUEST)
+        request.DATA.clear()
+        request.DATA.update({'meta': meta} if meta else {})
+        return super(SubscriptionDetail, self).patch(request,
+                                                     *args, **kwargs)
 
 
 class SubscriptionDetailActivate(APIView):
