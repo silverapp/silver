@@ -1163,9 +1163,13 @@ class BillingDocument(models.Model):
             max_existing_number = self.__class__._default_manager.filter(
                 provider=self.provider, series=self.series,
             ).aggregate(Max('number'))['number__max']
-            return max_existing_number + 1 if max_existing_number \
-                else self._starting_number if self._starting_number \
-                else 1
+            if max_existing_number:
+                if self._starting_number:
+                    return max(max_existing_number + 1, self._starting_number)
+                else:
+                    return max_existing_number + 1
+            else:
+                return 1
 
     def __unicode__(self):
         return '%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
