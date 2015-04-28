@@ -1150,9 +1150,10 @@ class BillingDocument(models.Model):
 
     def _generate_number(self):
         """Generates the number for a proforma/invoice."""
-        if not self.__class__._default_manager.filter(
+        documents = self.__class__._default_manager.filter(
             provider=self.provider, series=self.series
-        ).exists():
+        )
+        if not documents.exists():
             # An invoice/proforma with this provider and series does not exist
             if self.series == self.default_series:
                 return self._starting_number
@@ -1160,9 +1161,9 @@ class BillingDocument(models.Model):
                 return 1
         else:
             # An invoice with this provider and series already exists
-            max_existing_number = self.__class__._default_manager.filter(
-                provider=self.provider, series=self.series,
-            ).aggregate(Max('number'))['number__max']
+            max_existing_number = documents.aggregate(
+                Max('number')
+            )['number__max']
             if max_existing_number:
                 if self._starting_number:
                     return max(max_existing_number + 1, self._starting_number)
