@@ -461,13 +461,13 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
-            last_billing_date = self.last_billing_date + datetime.timedelta(days=1)
-            interval_end = self._current_end_date(reference_date=self.last_billing_date)
-        print '-------------'
-        print 'interval_end: ', interval_end
-        print 'date: ', date
-        print 'generate_after: ', generate_after
-        print '--------------'
+            last_billing_date = self.last_billing_date
+            if was_on_trial(last_billing_date):
+                if last_billing_date <= self.trial_end:
+                    interval_end = self.trial_end
+            else:
+                interval_end = self._current_end_date(reference_date=last_billing_date)
+
         return date >= interval_end + generate_after
 
     @property
