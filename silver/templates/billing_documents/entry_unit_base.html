@@ -1,0 +1,27 @@
+{% if context == 'plan' %}
+    {{ plan.interval }}s
+
+{% elif context == 'plan-trial' %}
+    {{ plan.interval }}s
+
+{% elif context == 'plan-trial-discount' %}
+    {{ plan.interval }}s
+
+{% elif context == 'mfs' %}
+    {{ metered_feature.unit }}
+
+{% elif context == 'mfs-trial' %}
+    {{ metered_feature.unit }}
+
+{% elif context == 'mfs-trial-discount' %}
+    {{ metered_feature.unit }}
+
+{% elif context == 'mfs-trial-not-discounted' %}
+    {{ metered_feature.unit }}
+
+{% else %}
+    {% if metered_feature %}
+        {{ metered_feature.unit }}
+    {% endif %}
+
+{% endif %}
