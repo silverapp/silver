@@ -1323,7 +1323,7 @@ class BillingDocument(models.Model):
             state = self.state
 
         context = {
-            'invoice': self,
+            'document': self,
             'provider': provider,
             'customer': customer,
             'entries': self._entries,
