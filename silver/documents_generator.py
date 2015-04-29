@@ -27,8 +27,9 @@ class DocumentsGenerator(object):
         be billed.
         """
 
-        now = timezone.now().date()
-        billing_date = dt.date(now.year, now.month, 1)
+        #now = timezone.now().date()
+        #billing_date = dt.date(now.year, now.month, 1)
+        billing_date = timezone.now().date()
         # billing_date -> the date when the billing documents are issued.
 
         for customer in Customer.objects.all():
