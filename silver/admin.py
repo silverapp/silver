@@ -249,7 +249,10 @@ class BillingDocumentAdmin(admin.ModelAdmin):
             return
 
         exist_failed_changes = False
+        exist_failed_actions = False
         failed_changes = []
+        failed_actions = []
+
         for entry in queryset:
             try:
                 method(entry)
@@ -257,6 +260,13 @@ class BillingDocumentAdmin(admin.ModelAdmin):
             except TransitionNotAllowed:
                 exist_failed_changes = True
                 failed_changes.append(entry.number)
+            except ValueError as error:
+                exist_failed_actions = True
+                failed_actions.append(error.message)
+
+        if exist_failed_actions:
+            msg = "\n".join(failed_actions)
+            self.message_user(request, msg, level=messages.ERROR)
 
         if exist_failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
@@ -264,7 +274,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                   "numbers: {ids}".format(model_name=self._model_name.lower(),
                                           ids=failed_ids)
             self.message_user(request, msg, level=messages.ERROR)
-        else:
+
+        if not exist_failed_actions and not exist_failed_changes:
             qs_count = queryset.count()
             msg = 'Successfully changed {count} {model_name}(s).'.format(
                 model_name=self._model_name.lower(), count=qs_count)
@@ -343,11 +354,15 @@ class ProformaAdmin(BillingDocumentAdmin):
     fields = BillingDocumentAdmin.fields + ('invoice_url', )
     readonly_fields = BillingDocumentAdmin.readonly_fields + ('invoice_url',)
     inlines = BillingDocumentAdmin.inlines
-    actions = BillingDocumentAdmin.actions
+    actions = BillingDocumentAdmin.actions + ['create_invoice']
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
     issue.short_description = 'Issue the selected proforma(s)'
+
+    def create_invoice(self, request, queryset):
+        self.perform_action(request, queryset, 'create_invoice')
+    create_invoice.short_description = 'Create invoice from proforma(s)'
 
     def pay(self, request, queryset):
         self.perform_action(request, queryset, 'pay')
