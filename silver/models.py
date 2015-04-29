@@ -17,7 +17,7 @@ from django_xhtml2pdf.utils import generate_pdf_template_object
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from international.models import countries, currencies
 from livefield.models import LiveModel
@@ -259,6 +259,7 @@ class Subscription(models.Model):
         choices=STATES, max_length=12, default=STATES[1][0], protected=True,
         help_text='The state the subscription is in.'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     def clean(self):
         errors = dict()
@@ -861,6 +862,7 @@ class AbstractBillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
+    meta = jsonfield.JSONField(blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -888,7 +890,8 @@ class AbstractBillingEntity(LiveModel):
 
     def get_archivable_field_values(self):
         field_names = ['name', 'company', 'email', 'address_1', 'address_2',
-                       'city', 'country', 'city', 'state', 'zip_code', 'extra']
+                       'city', 'country', 'city', 'state', 'zip_code', 'extra',
+                       'meta']
         return {field: getattr(self, field, '') for field in field_names}
 
 
@@ -1033,6 +1036,32 @@ class Provider(AbstractBillingEntity):
         return " - ".join(filter(None, [self.name, self.company]))
 
 
+@receiver(pre_save, sender=Provider)
+def update_draft_billing_documents(sender, instance, **kwargs):
+    if instance.pk:
+        provider = Provider.objects.get(pk=instance.pk)
+        old_invoice_series = provider.invoice_series
+        old_proforma_series = provider.proforma_series
+
+        if instance.invoice_series != old_invoice_series:
+            for invoice in Invoice.objects.filter(state='draft',
+                                                  provider=provider):
+                # update the series for draft invoices
+                invoice.series = instance.invoice_series
+                # the number will be automatically updated in the save method
+                invoice.number = None
+                invoice.save()
+
+        if instance.proforma_series != old_proforma_series:
+            for proforma in Proforma.objects.filter(state='draft',
+                                                    provider=provider):
+                # update the series for draft invoices
+                proforma.series = instance.proforma_series
+                # the number will be automatically updated in the save method
+                proforma.number = None
+                proforma.save()
+
+
 class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
@@ -1044,7 +1073,7 @@ class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
-
+    series = models.CharField(max_length=20, blank=True, null=True)
     number = models.IntegerField(blank=True, null=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
@@ -1070,8 +1099,8 @@ class BillingDocument(models.Model):
 
     class Meta:
         abstract = True
-        unique_together = ('provider', 'number')
-        ordering = ('-issue_date', 'number')
+        unique_together = ('provider', 'series', 'number')
+        ordering = ('-issue_date', 'series', 'number')
 
     def __init__(self, *args, **kwargs):
         super(BillingDocument, self).__init__(*args, **kwargs)
@@ -1118,9 +1147,10 @@ class BillingDocument(models.Model):
         self._save_pdf(state='canceled')
 
     def clean(self):
+        super(BillingDocument, self).clean()
+
         # The only change that is allowed if the document is in issued state
         # is the state chage from issued to paid
-
         # !! TODO: If __last_state == 'issued' and self.state == 'paid' || 'canceled'
         # it should also be checked that the other fields are the same bc.
         # right now a document can be in issued state and someone could
@@ -1141,6 +1171,9 @@ class BillingDocument(models.Model):
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
     def save(self, *args, **kwargs):
+        if not self.series:
+            self.series = self.default_series
+
         # Generate the number
         if not self.number:
             self.number = self._generate_number()
@@ -1156,19 +1189,27 @@ class BillingDocument(models.Model):
 
     def _generate_number(self):
         """Generates the number for a proforma/invoice."""
-
-        if not self.__class__._default_manager.filter(
-            provider=self.provider,
-        ).exists():
-            # An invoice/proforma with this provider does not exist
-            return self._starting_number
+        documents = self.__class__._default_manager.filter(
+            provider=self.provider, series=self.series
+        )
+        if not documents.exists():
+            # An invoice/proforma with this provider and series does not exist
+            if self.series == self.default_series:
+                return self._starting_number
+            else:
+                return 1
         else:
-            # An invoice with this provider already exists
-            max_existing_number = self.__class__._default_manager.filter(
-                provider=self.provider,
-            ).aggregate(Max('number'))['number__max']
-
-            return max_existing_number + 1
+            # An invoice with this provider and series already exists
+            max_existing_number = documents.aggregate(
+                Max('number')
+            )['number__max']
+            if max_existing_number:
+                if self._starting_number:
+                    return max(max_existing_number + 1, self._starting_number)
+                else:
+                    return max_existing_number + 1
+            else:
+                return 1
 
     def __unicode__(self):
         return '%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
@@ -1314,7 +1355,7 @@ class Invoice(BillingDocument):
         return self.provider.invoice_starting_number
 
     @property
-    def series(self):
+    def default_series(self):
         try:
             return self.provider.invoice_series
         except Provider.DoesNotExist:
@@ -1369,6 +1410,19 @@ class Proforma(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "proformas"
 
+    def clean(self):
+        super(Proforma, self).clean()
+        if not self.series:
+            if not hasattr(self, 'provider'):
+                # the clean method is called even if the clean_fields method
+                # raises exceptions, so we check if the provider was specified
+                pass
+            elif self.provider.proforma_series:
+                err_msg = {'series': 'You must either specify the series or '
+                                     'set a default proforma_series for the '
+                                     'provider.'}
+                raise ValidationError(err_msg)
+
     @transition(field='state', source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
@@ -1399,6 +1453,7 @@ class Proforma(BillingDocument):
 
         self.invoice = self._new_invoice()
         self.invoice.issue()
+        self.invoice.save()
 
         self.save()
 
@@ -1418,7 +1473,7 @@ class Proforma(BillingDocument):
         return self.provider.proforma_starting_number
 
     @property
-    def series(self):
+    def default_series(self):
         try:
             return self.provider.proforma_series
         except Provider.DoesNotExist:

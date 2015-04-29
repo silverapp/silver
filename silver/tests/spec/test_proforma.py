@@ -31,6 +31,7 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'series': "",
             'number': "",
             'currency': 'RON',
             'proforma_entries': []
@@ -70,6 +71,7 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'series': None,
             'number': None,
             'currency': 'RON',
             'proforma_entries': [{

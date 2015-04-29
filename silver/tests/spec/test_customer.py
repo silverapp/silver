@@ -29,7 +29,8 @@ class TestCustomerEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '3.00',
             "payment_due_days": 5,
-            "consolidated_billing": False
+            "consolidated_billing": False,
+            "meta": {'water': ['plants', '5']}
         }
 
     def test_create_post_customer(self):
@@ -128,13 +129,15 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
+
         unchanged_fields = ['email', 'address_2']
         for field in unchanged_fields:
             changed_data.pop(field)
 
         url = reverse('customer-detail', kwargs={'pk': 1})
 
-        response = self.client.put(url, data=changed_data)
+        response = self.client.put(url, data=json.dumps(changed_data),
+                                   content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -156,7 +159,8 @@ class TestCustomerEndpoints(APITestCase):
 
         url = reverse('customer-detail', kwargs={'pk': 1})
 
-        response = self.client.patch(url, data=changed_data)
+        response = self.client.patch(url, data=json.dumps(changed_data),
+                                   content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

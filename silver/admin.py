@@ -131,7 +131,7 @@ class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
-              'sales_tax_percent', 'sales_tax_number', 'extra']
+              'sales_tax_percent', 'sales_tax_number', 'extra', 'meta']
     list_display = ['name', 'company', 'email', 'address', 'sales_tax_percent',
                     'sales_tax_name', 'consolidated_billing',
                     'customer_reference']
@@ -146,7 +146,8 @@ class ProviderAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
               'state', 'zip_code', 'country', 'flow', 'invoice_series',
               'invoice_starting_number', 'proforma_series',
-              'proforma_starting_number', 'default_document_state', 'extra']
+              'proforma_starting_number', 'default_document_state', 'extra',
+              'meta']
     list_display = ['name', 'company', 'email', 'address', 'invoice_series']
     list_display_links = ['name', 'company']
     search_fields = list_display
@@ -165,6 +166,7 @@ class BillingDocumentForm(forms.ModelForm):
         # save() method to see their usefulness.
         instance = kwargs.get('instance')
         self.initial_number = instance.number if instance else None
+        self.initial_series = instance.series if instance else None
         self.provider = instance.provider if instance else None
 
         super(BillingDocumentForm, self).__init__(*args, **kwargs)
@@ -179,7 +181,9 @@ class BillingDocumentForm(forms.ModelForm):
             # If the number input box was just cleaned => place back the
             # old number. This will prevent from having unused numbers.
             if self.initial_number and not obj.number:
-                obj.number = self.initial_number
+                if (obj.series and self.initial_series and
+                        obj.series == self.initial_series):
+                    obj.number = self.initial_number
 
         if commit:
             obj.save()
@@ -223,7 +227,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     fields = (('series', 'number'), 'provider', 'customer', 'issue_date',
               'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
               'sales_tax_percent', 'currency', 'state', 'total')
-    readonly_fields = ('series', 'state', 'total')
+    readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
@@ -234,8 +238,10 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         raise NotImplementedError
 
     def series_number(self, document):
-        return "%s-%d" % (document.series, document.number)
-    series_number.short_description = 'Invoice number'
+        if document.series and document.number:
+            return "%s-%d" % (document.series, document.number)
+        return None
+    series_number.short_description = 'Series-Number'
     series_number.admin_order_field = '-pk'
 
     @property

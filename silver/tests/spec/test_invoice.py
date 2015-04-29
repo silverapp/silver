@@ -31,6 +31,7 @@ class TestInvoiceEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'series': "",
             'number': "",
             'currency': 'RON',
             'invoice_entries': []
@@ -69,6 +70,7 @@ class TestInvoiceEndpoints(APITestCase):
         data = {
             'provider': 'http://testserver/providers/1/',
             'customer': 'http://testserver/customers/1/',
+            'series': None,
             'number': None,
             'currency': 'RON',
             'invoice_entries': [{

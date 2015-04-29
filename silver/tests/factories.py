@@ -32,6 +32,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+    meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = Decimal(1.0)
@@ -64,6 +65,7 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+    meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
     flow = 'proforma'
     invoice_series = 'InvoiceSeries'
@@ -108,6 +110,7 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     trial_end = factory.Sequence(lambda n: datetime.date.today() +
                                  datetime.timedelta(days=n))
     start_date = datetime.date.today()
+    meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
 
 class InvoiceFactory(factory.django.DjangoModelFactory):
