@@ -1,3 +1,4 @@
+{% spaceless %}
 {% if context == 'plan' %}
     {% if prorated %}
         {{ name }} Plan {{ plan.interval }} Prorated Subscription ({{ start_date }} - {{ end_date }})
@@ -27,3 +28,4 @@
     {{ name }} ({{ start_date }} - {{ end_date }}).
 
 {% endif %}
+{% endspaceless %}
