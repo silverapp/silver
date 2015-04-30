@@ -24,7 +24,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        translation.activate(settings.LANGUAGE_CODE)
+        translation.activate('en-us')
 
         date = None
         if options['billing_date']:
