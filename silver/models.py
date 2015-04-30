@@ -584,7 +584,6 @@ class Subscription(models.Model):
                     self._add_plan_value(start_date=current_bucket_start_date,
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)
-
             elif self.on_trial(billing_date):
                 # Next month after the subscription has started with trial
                 # spanning over multiple months
@@ -595,9 +594,13 @@ class Subscription(models.Model):
                                       invoice=invoice, proforma=proforma)
             else:
                 # First bucket after interval end
+
+                # Add the value of the plan + the value of the consumed mfs
                 self._add_trial_value(start_date=self.start_date,
                                       end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
+
+                # Add the prorated plan's value for the rest of the month
                 trial_end = self.trial_end + ONE_DAY
                 self._add_plan_value(start_date=trial_end,
                                      end_date=billing_date,
@@ -620,7 +623,8 @@ class Subscription(models.Model):
             else:
                 if self.trial_end and self.trial_end.month == billing_date.month - 1:
                     # Last month a prorated plan value was billed, now add the
-                    # corresponding metered features that were consumed.
+                    # corresponding metered features that were consumed during
+                    # that time.
                     trial_end = self.trial_end + ONE_DAY
                     mfs_start_date = self._current_start_date(reference_date=trial_end)
                     mfs_end_date   = self._current_end_date(reference_date=trial_end)
