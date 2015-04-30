@@ -608,13 +608,13 @@ class Subscription(models.Model):
         }
 
         unit_template_path = field_template_path(
-            field='entry_unit', provider=self.plan.provider.billing_name
+            field='entry_unit', provider=self.plan.provider.slug
         )
 
         unit = render_to_string(unit_template_path, context)
 
         description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.billing_name
+            field='entry_description', provider=self.plan.provider.slug
         )
 
         description = render_to_string(description_template_path, context)
@@ -662,11 +662,11 @@ class Subscription(models.Model):
         }
 
         unit_template_path = field_template_path(
-            field='entry_unit', provider=self.plan.provider.billing_name
+            field='entry_unit', provider=self.plan.provider.slug
         )
 
         description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.billing_name
+            field='entry_description', provider=self.plan.provider.slug
         )
 
         # Add all the metered features consumed during the trial period
@@ -695,7 +695,7 @@ class Subscription(models.Model):
             if free_units > 0:
                 description_template_path = field_template_path(
                     field='entry_description',
-                    provider=self.plan.provider.billing_name
+                    provider=self.plan.provider.slug
                 )
 
                 description = render_to_string(
@@ -770,7 +770,7 @@ class Subscription(models.Model):
         }
 
         description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.billing_name
+            field='entry_description', provider=self.plan.provider.slug
         )
 
         description = render_to_string(description_template_path, context)
@@ -820,7 +820,7 @@ class Subscription(models.Model):
         }
 
         description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.billing_name
+            field='entry_description', provider=self.plan.provider.slug
         )
 
         for metered_feature in self.plan.metered_features.all():
