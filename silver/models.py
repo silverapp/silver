@@ -533,6 +533,13 @@ class Subscription(models.Model):
         self._add_mfs_for_trial(start_date=start_date, end_date=end_date,
                                 invoice=invoice, proforma=proforma)
 
+
+    def _should_add_prorated_trial_value(self, last_billing_date, billing_date):
+        return self.trial_end and\
+               (self.trial_end.month == billing_date.month - 1 or
+                self.trial_end.month == billing_date.month) and\
+               last_billing_date <= self.trial_end
+
     def add_total_value_to_document(self, billing_date, invoice=None,
                                     proforma=None):
         """
@@ -540,12 +547,13 @@ class Subscription(models.Model):
         metered features)) to the document.
         """
         ONE_DAY = datetime.timedelta(days=1)
+        # TODO: check and handle edge cases
 
         if self.is_billed_first_time:
             if not self.trial_end:  # has no trial
                 # Generate first invoice, when the subscription starts
                 # Add the prorated value of the plan for the current month
-                bucket_end_date = self._current_end_date(reference_date=billing_date)
+                bucket_end_date = self._current_end_date(reference_date=self.billing_date)
                 self._add_plan_value(start_date=billing_date,
                                      end_date=bucket_end_date,
                                      invoice=invoice, proforma=proforma)
@@ -564,8 +572,8 @@ class Subscription(models.Model):
                                      invoice=invoice, proforma=proforma)
         else:
             last_billing_date = self.last_billing_date
-            if self.trial_end and self.trial_end.month == billing_date.month and\
-               last_billing_date <= self.trial_end:
+            if self._should_add_prorated_trial_value(last_billing_date,
+                                                     billing_date):
                 # First invoice after trial end
                 self._add_trial_value(start_date=self.start_date,
                                       end_date=self.trial_end,
@@ -576,11 +584,23 @@ class Subscription(models.Model):
                 self._add_plan_value(start_date=trial_end,
                                      end_date=bucket_end_date,
                                      invoice=invoice, proforma=proforma)
-            elif self.trial_end and self.trial_end.month == billing_date.month - 1 and\
-                 last_billing_date <= self.trial_end:
-                self._add_trial_value(start_date=self.start_date,
-                                      end_date=self.trial_end,
-                                      invoice=invoice, proforma=proforma)
+            else:
+                if self.trial_end and self.trial_end.month == billing_date.month - 1:
+                    mfs_start_date = self.trial_end + ONE_DAY
+                    mfs_end_date   = self._current_end_date(reference_date=mfs_start_date)
+                else:
+                    mfs_start_date = self._current_start_date(reference_date=last_billing_date)
+                    mfs_end_date   = self._current_end_date(reference_date=last_billing_date)
+
+                bucket_start_date = self._current_start_date(reference_date=billing_date)
+                bucket_end_date = self._current_end_date(reference_date=billing_date)
+
+                # Add mfs for the last month
+                self._add_mfs(start_date=mfs_start_date, end_date=mfs_end_date,
+                              invoice=invoice, proforma=proforma)
+                self._add_plan_value(start_date=bucket_start_date,
+                                     end_date=bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
 
 
 
@@ -699,6 +719,8 @@ class Subscription(models.Model):
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
+        # TODO: review how these are added since the trial can span more than
+        # one billing cycle
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
