@@ -653,7 +653,6 @@ class Subscription(models.Model):
             'plan': self.plan,
             'provider': self.plan.provider,
             'customer': self.customer,
-            'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
@@ -672,7 +671,8 @@ class Subscription(models.Model):
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
             context.update({'metered-feature': metered_feature,
-                            'name': metered_feature.name})
+                            'name': metered_feature.name,
+                            'product_code': metered_feature.product_code})
 
             unit = render_to_string(unit_template_path, context)
 
@@ -806,12 +806,10 @@ class Subscription(models.Model):
                                                                    end_date)
 
         context = {
-            'name': self.plan.name,
             'subscription': self,
             'plan': self.plan,
             'provider': self.plan.provider,
             'customer': self.customer,
-            'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
@@ -827,6 +825,11 @@ class Subscription(models.Model):
             consumed_units = self._get_consumed_units(metered_feature,
                                                       percent, start_date,
                                                       end_date)
+
+            context.update({'metered-feature': metered_feature,
+                            'name': metered_feature.name,
+                            'product_code': metered_feature.product_code})
+
             if consumed_units > 0:
                 description = render_to_string(
                     description_template_path, context)
