@@ -593,8 +593,7 @@ class Subscription(models.Model):
                                                                    end_date)
         plan_price = self.plan.amount * percent
 
-        context = self._base_entry_context
-        context.update({
+        context = self._build_entry_context({
             'name': self.plan.name,
             'unit': self.plan.interval,
             'product_code': self.plan.product_code,
@@ -640,8 +639,7 @@ class Subscription(models.Model):
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
-        context = self._base_entry_context
-        context.update({
+        context = self._build_entry_context({
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
@@ -734,8 +732,7 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
-        context = self._base_entry_context
-        context.update({
+        context = self._build_entry_context({
             'name': self.plan.name,
             'unit': self.plan.interval,
             'product_code': self.plan.product_code,
@@ -778,8 +775,7 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
-        context = self._base_entry_context
-        context.update({
+        context = self._build_entry_context({
             'name': self.plan.name,
             'unit': self.plan.interval,
             'product_code': self.plan.product_code,
@@ -880,6 +876,12 @@ class Subscription(models.Model):
             'metered_feature': None,
             'context': None
         }
+    
+    def _build_entry_context(self, context):
+        base_context = self._base_entry_context
+        base_context.update(context)
+        
+        return base_context
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
