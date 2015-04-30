@@ -593,31 +593,21 @@ class Subscription(models.Model):
                                                                    end_date)
         plan_price = self.plan.amount * percent
 
-        context = {
+        context = self._base_entry_context
+        context.update({
             'name': self.plan.name,
-            'subscription': self,
-            'plan': self.plan,
-            'provider': self.plan.provider,
-            'customer': self.customer,
+            'unit': self.plan.interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': percent,
             'context': 'plan-trial'
-        }
+        })
 
-        unit_template_path = field_template_path(
-            field='entry_unit', provider=self.plan.provider.slug
-        )
+        unit = self._entry_unit(context)
 
-        unit = render_to_string(unit_template_path, context)
-
-        description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.slug
-        )
-
-        description = render_to_string(description_template_path, context)
+        description = self._entry_description(context)
 
         # Add plan with positive value
         DocumentEntry.objects.create(
@@ -626,9 +616,11 @@ class Subscription(models.Model):
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date)
 
-        context['context'] = 'plan-trial-discount'
+        context.update({
+            'context': 'plan-trial-discount'
+        })
 
-        description = render_to_string(description_template_path, context)
+        description = self._entry_description(context)
 
         # Add plan with negative value
         DocumentEntry.objects.create(
@@ -648,33 +640,24 @@ class Subscription(models.Model):
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
-        context = {
-            'subscription': self,
-            'plan': self.plan,
-            'provider': self.plan.provider,
-            'customer': self.customer,
+        context = self._base_entry_context
+        context.update({
+            'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': percent,
-            'context': 'mfs-trial',
-        }
-
-        unit_template_path = field_template_path(
-            field='entry_unit', provider=self.plan.provider.slug
-        )
-
-        description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.slug
-        )
+            'context': 'metered-feature-trial'
+        })
 
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
-            context.update({'metered-feature': metered_feature,
+            context.update({'metered_feature': metered_feature,
+                            'unit': metered_feature.unit,
                             'name': metered_feature.name,
                             'product_code': metered_feature.product_code})
 
-            unit = render_to_string(unit_template_path, context)
+            unit = self._entry_unit(context)
 
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
                                             start_date__gte=start_date,
@@ -698,9 +681,7 @@ class Subscription(models.Model):
                     provider=self.plan.provider.slug
                 )
 
-                description = render_to_string(
-                    description_template_path, context
-                )
+                description = self._entry_description(context)
 
                 # Positive value for the consumed items.
                 DocumentEntry.objects.create(
@@ -712,12 +693,10 @@ class Subscription(models.Model):
                 )
 
                 context.update({
-                    'context': 'mfs-trial-discount'
+                    'context': 'metered-feature-trial-discount'
                 })
 
-                description = render_to_string(
-                    description_template_path, context
-                )
+                description = self._entry_description(context)
 
                 # Negative value for the consumed items.
                 DocumentEntry.objects.create(
@@ -731,7 +710,7 @@ class Subscription(models.Model):
             # Extra items consumed items that are not included
             if charged_units > 0:
                 context.update({
-                    'context': 'mfs-trial-not-discounted'
+                    'context': 'metered-feature-trial-not-discounted'
                 })
 
                 description = render_to_string(
@@ -755,30 +734,24 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
-        context = {
+        context = self._base_entry_context
+        context.update({
             'name': self.plan.name,
-            'subscription': self,
-            'plan': self.plan,
-            'provider': self.plan.provider,
-            'customer': self.customer,
+            'unit': self.plan.interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': percent,
             'context': 'plan'
-        }
-
-        description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.slug
-        )
-
-        description = render_to_string(description_template_path, context)
+        })
+        description = self._entry_description(context)
 
         # Get the plan's prorated value
         plan_price = self.plan.amount * percent
 
-        unit = '%ss' % self.plan.interval
+        unit = self._entry_unit(context)
+
         DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
             unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
@@ -805,38 +778,35 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
-        context = {
-            'subscription': self,
-            'plan': self.plan,
-            'provider': self.plan.provider,
-            'customer': self.customer,
+        context = self._base_entry_context
+        context.update({
+            'name': self.plan.name,
+            'unit': self.plan.interval,
+            'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': percent,
-            'context': 'mfs'
-        }
-
-        description_template_path = field_template_path(
-            field='entry_description', provider=self.plan.provider.slug
-        )
+            'context': 'metered-feature'
+        })
 
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(metered_feature,
                                                       percent, start_date,
                                                       end_date)
 
-            context.update({'metered-feature': metered_feature,
+            context.update({'metered_feature': metered_feature,
+                            'unit': metered_feature.unit,
                             'name': metered_feature.name,
                             'product_code': metered_feature.product_code})
 
             if consumed_units > 0:
-                description = render_to_string(
-                    description_template_path, context)
+                description = self._entry_description(context)
+                unit = self._entry_unit(context)
 
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
-                    description=description, unit=metered_feature.unit,
+                    description=description, unit=unit,
                     quantity=consumed_units, prorated=prorated,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
@@ -880,6 +850,36 @@ class Subscription(models.Model):
             percent = Decimal(percent).quantize(Decimal('0.0000'))
 
             return True, percent
+
+    def _entry_unit(self, context):
+        unit_template_path = field_template_path(
+            field='entry_unit', provider=self.plan.provider.slug
+        )
+        return render_to_string(unit_template_path, context)
+
+    def _entry_description(self, context):
+        description_template_path = field_template_path(
+            field='entry_description', provider=self.plan.provider.slug
+        )
+        return render_to_string(description_template_path, context)
+
+    @property
+    def _base_entry_context(self):
+        return {
+            'name': None,
+            'unit': 1,
+            'subscription': self,
+            'plan': self.plan,
+            'provider': self.plan.provider,
+            'customer': self.customer,
+            'product_code': None,
+            'start_date': None,
+            'end_date': None,
+            'prorated': None,
+            'proration_percentage': None,
+            'metered_feature': None,
+            'context': None
+        }
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)

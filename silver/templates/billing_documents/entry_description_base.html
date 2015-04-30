@@ -12,16 +12,16 @@
 {% elif context == 'plan-trial-discount' %}
     {{ name }} plan trial discount ({{ start_date }} - {{ end_date }})
 
-{% elif context == 'mfs' %}
+{% elif context == 'metered-feature' %}
     Extra {{ name }} ({{ start_date }} - {{ end_date }}).
 
-{% elif context == 'mfs-trial' %}
+{% elif context == 'metered-feature-trial' %}
     {{ name }} ({{ start_date }} - {{ end_date }}).
 
-{% elif context == 'mfs-trial-discount' %}
+{% elif context == 'metered-feature-trial-discount' %}
     {{ name }} ({{ start_date }} - {{ end_date }}) trial discount.
 
-{% elif context == 'mfs-trial-not-discounted' %}
+{% elif context == 'metered-feature-trial-not-discounted' %}
     Extra {{ name }} During Trial ({{ start_date }} - {{ end_date }})
 
 {% else %}

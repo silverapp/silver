@@ -1,29 +1,27 @@
 {% spaceless %}
 {% if context == 'plan' %}
-    {{ plan.interval }}s
+    {{ unit }}s
 
 {% elif context == 'plan-trial' %}
-    {{ plan.interval }}s
+    {{ unit }}s
 
 {% elif context == 'plan-trial-discount' %}
-    {{ plan.interval }}s
+    {{ unit }}s
 
-{% elif context == 'mfs' %}
-    {{ metered_feature.unit }}
+{% elif context == 'metered-feature' %}
+    {{ unit }}
 
-{% elif context == 'mfs-trial' %}
-    {{ metered_feature.unit }}
+{% elif context == 'metered-feature-trial' %}
+    {{ unit }}
 
-{% elif context == 'mfs-trial-discount' %}
-    {{ metered_feature.unit }}
+{% elif context == 'metered-feature-trial-discount' %}
+    {{ unit }}
 
-{% elif context == 'mfs-trial-not-discounted' %}
-    {{ metered_feature.unit }}
+{% elif context == 'metered-feature-trial-not-discounted' %}
+    {{ unit }}
 
 {% else %}
-    {% if metered_feature %}
-        {{ metered_feature.unit }}
-    {% endif %}
+    {{ unit }}
 
 {% endif %}
 {% endspaceless %}
