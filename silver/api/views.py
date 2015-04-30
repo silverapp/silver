@@ -254,14 +254,20 @@ class MeteredFeatureUnitsLogDetail(APIView):
         mf_product_code = self.kwargs.get('mf_product_code', None)
         subscription_pk = self.kwargs.get('subscription_pk', None)
 
-        subscription = get_object_or_None(Subscription, pk=subscription_pk)
-        metered_feature = get_object_or_404(
+        try:
+            subscription = Subscription.objects.get(pk=subscription_pk)
+        except Subscription.DoesNotExist:
+            return Response({"detail": "Subscription Not found."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        # TODO: change this to try-except
+        metered_feature = get_object_or_None(
             subscription.plan.metered_features,
             product_code__value=mf_product_code
         )
 
-        if not subscription or not metered_feature:
-            return Response({"detail": "Not found."},
+        if not metered_feature:
+            return Response({"detail": "Metered Feature Not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
         if subscription.state != 'active':
