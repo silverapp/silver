@@ -1,10 +1,7 @@
 import datetime
 from datetime import datetime as dt
 from decimal import Decimal
-from django.core.validators import MinValueValidator
-from django.template import TemplateDoesNotExist
-from django.template.loader import select_template, get_template, \
-    render_to_string
+import calendar
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -21,6 +18,12 @@ from django.db.models import Max
 from django.conf import settings
 from django.db.models.signals import pre_delete, pre_save
 from django.dispatch.dispatcher import receiver
+from django.core.validators import MinValueValidator
+from django.template.loader import select_template
+from django.core.validators import MinValueValidator
+from django.template import TemplateDoesNotExist
+from django.template.loader import (select_template, get_template,
+                                    render_to_string)
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
@@ -472,7 +475,7 @@ class Subscription(models.Model):
             return timezone.now().date() <= self.trial_end
         return False
 
-    def was_on_trial(self, date):
+    def on_trial(self, date):
         if self.trial_end:
             return date <= self.trial_end
         return False
@@ -485,8 +488,14 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
-            interval_end = self._current_end_date(reference_date=self.last_billing_date)
-        return date >= interval_end + generate_after
+            last_billing_date = self.last_billing_date
+            if self.on_trial(last_billing_date):
+                if last_billing_date <= self.trial_end:
+                    interval_end = self.trial_end
+            else:
+                interval_end = self._current_end_date(reference_date=last_billing_date)
+
+        return date > interval_end + generate_after
 
     @property
     def is_billed_first_time(self):
@@ -520,6 +529,16 @@ class Subscription(models.Model):
                 self.trial_end = self.start_date + datetime.timedelta(
                     days=self.plan.trial_period_days - 1)
 
+    def activate_and_issue_billing_doc(self, start_date=None,
+                                       trial_end_date=None):
+        from silver.documents_generator import DocumentsGenerator
+
+        self.activate(start_date=start_date,
+                      trial_end_date=trial_end_date)
+        self.save()
+        if not self.trial_end:
+            DocumentsGenerator().generate(subscription=self)
+
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
         canceled_at_date = timezone.now().date()
@@ -551,11 +570,12 @@ class Subscription(models.Model):
         self._add_mfs_for_trial(start_date=start_date, end_date=end_date,
                                 invoice=invoice, proforma=proforma)
 
-    def _add_non_trial_value(self, start_date, end_date, invoice=None,
-                             proforma=None):
-        self._add_plan_value(start_date=start_date, end_date=end_date,
-                             invoice=invoice, proforma=proforma)
-        self._add_mfs(start_date, end_date, invoice=invoice, proforma=proforma)
+
+    def _should_add_prorated_trial_value(self, last_billing_date, billing_date):
+        return self.trial_end and\
+               (self.trial_end.month == billing_date.month or
+                self.trial_end.month == billing_date.month - 1) and\
+               last_billing_date <= self.trial_end
 
     def add_total_value_to_document(self, billing_date, invoice=None,
                                     proforma=None):
@@ -563,30 +583,165 @@ class Subscription(models.Model):
         Adds the total value of the subscription (value(plan) + value(consumed
         metered features)) to the document.
         """
+        ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
-            if self.was_on_trial(billing_date):
-                self._add_trial_value(self.start_date, billing_date,
+            if not self.trial_end:  # has no trial,
+                if billing_date.month == self.start_date.month:
+                    # The same month as when the subscription started
+                    # Generate first invoice, when the subscription starts
+                    # => add the prorated value of the plan for the current month
+                    bucket_end_date = self._current_end_date(
+                        reference_date=billing_date
+                    )
+                    self._add_plan_value(start_date=billing_date,
+                                         end_date=bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
+                else:
+                    # Silver went down right after issuing the invoice and
+                    # it came back only next month
+
+                    # Add the prorated value for the previous month
+                    previous_bucket_end_date = self._current_end_date(
+                        reference_date=self.start_date
+                    )
+                    self._add_plan_value(start_date=self.start_date,
+                                         end_date=previous_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
+
+                    # Add the mfs consumed during the last month
+                    self._add_mfs(start_date=self.start_date,
+                                  end_date=previous_bucket_end_date,
+                                  invoice=invoice, proforma=proforma)
+
+                    # Add the plan's value for the current month
+                    current_bucket_start_date = self._current_start_date(
+                        reference_date=billing_date
+                    )
+                    current_bucket_end_date = self._current_end_date(
+                        reference_date=billing_date
+                    )
+                    self._add_plan_value(start_date=current_bucket_start_date,
+                                         end_date=current_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
+            elif self.on_trial(billing_date):
+                # Next month after the subscription has started with trial
+                # spanning over 2 months
+                last_day_to_bill = self._current_end_date(
+                    reference_date=self.start_date
+                )
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=last_day_to_bill,
                                       invoice=invoice, proforma=proforma)
             else:
-                self._add_trial_value(self.start_date, self.trial_end,
+                # First bucket after trial end
+
+                # Add the value of the plan + the value of the consumed mfs
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
-                trial_end = self.trial_end + datetime.timedelta(days=1)
-                self._add_non_trial_value(trial_end, billing_date,
-                                          invoice=invoice, proforma=proforma)
+                # Add the prorated plan's value for the rest of the month
+                current_bucket_start_date = self._current_start_date(
+                    reference_date=billing_date
+                )
+                current_bucket_end_date = self._current_end_date(
+                    reference_date=billing_date
+                )
+                self._add_plan_value(start_date=current_bucket_start_date,
+                                     end_date=current_bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
         else:
-            last_billing_date = self.last_billing_date + datetime.timedelta(days=1)
-            if self.was_on_trial(last_billing_date):
-                self._add_trial_value(last_billing_date, self.trial_end,
+            # TODO: add value for trial which spans over >2 months
+            last_billing_date = self.last_billing_date
+            if self._should_add_prorated_trial_value(last_billing_date,
+                                                     billing_date):
+                # First invoice after trial end
+                # Add trial value
+                bucket_start_date = self._current_start_date(
+                    reference_date=last_billing_date
+                )
+                bucket_end_date = self._current_end_date(
+                    reference_date=last_billing_date
+                )
+                self._add_trial_value(start_date=bucket_start_date,
+                                      end_date=bucket_end_date,
                                       invoice=invoice, proforma=proforma)
 
-                trial_end = self.trial_end + datetime.timedelta(days=1)
-                self._add_non_trial_value(trial_end, billing_date,
-                                          invoice=invoice, proforma=proforma)
+                # Add the plan's value for the period after the trial
+                trial_end = self.trial_end + ONE_DAY
+                bucket_start_date = self._current_start_date(
+                    reference_date=trial_end
+                )
+                bucket_end_date = self._current_end_date(
+                    reference_date=trial_end
+                )
+                self._add_plan_value(start_date=bucket_start_date,
+                                     end_date=bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
+
+                if trial_end.month == billing_date.month - 1:
+                    # Add consumed metered features in the interval right after
+                    # the trial
+                    bucket_start_date = self._current_start_date(
+                        reference_date=trial_end
+                    )
+                    bucket_end_date = self._current_end_date(
+                        reference_date=trial_end
+                    )
+                    self._add_mfs(start_date=bucket_start_date,
+                                  end_date=bucket_end_date,
+                                  invoice=invoice, proforma=proforma)
+
+                    # Add the plan's value ahead
+                    current_bucket_start_date = self._current_start_date(
+                        reference_date=billing_date
+                    )
+                    current_bucket_end_date = self._current_end_date(
+                        reference_date=billing_date
+                    )
+                    self._add_plan_value(start_date=current_bucket_start_date,
+                                         end_date=current_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
+
             else:
-                self._add_non_trial_value(last_billing_date, billing_date,
-                                          invoice=invoice, proforma=proforma)
+                if (self.trial_end and
+                    self.trial_end.month == billing_date.month - 1):
+                    # Last month a prorated plan value was billed, now add the
+                    # corresponding metered features that were consumed during
+                    # that time.
+                    trial_end = self.trial_end + ONE_DAY
+                    mfs_start_date = self._current_start_date(
+                        reference_date=trial_end
+                    )
+                    mfs_end_date   = self._current_end_date(
+                        reference_date=trial_end
+                    )
+                else:
+                    # The subscription either did not have a trial at all or
+                    # the trial ended in a month < than the last one => add
+                    # all the consumed metered features for the last month.
+                    mfs_start_date = self._current_start_date(
+                        reference_date=last_billing_date
+                    )
+                    mfs_end_date = self._current_end_date(
+                        reference_date=last_billing_date
+                    )
+
+                # Add mfs for the last month
+                self._add_mfs(start_date=mfs_start_date, end_date=mfs_end_date,
+                              invoice=invoice, proforma=proforma)
+
+                # Add the plan's value for the next month
+                current_bucket_start_date = self._current_start_date(
+                    reference_date=billing_date
+                )
+                current_bucket_end_date = self._current_end_date(
+                    reference_date=billing_date
+                )
+                self._add_plan_value(start_date=current_bucket_start_date,
+                                     end_date=current_bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
 
         BillingLog.objects.create(subscription=self, invoice=invoice,
                                   proforma=proforma, billing_date=billing_date)
@@ -638,11 +793,57 @@ class Subscription(models.Model):
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date)
 
-    def _get_consumed_units_during_trial(self, metered_feature, consumed_units):
+    def _get_consumed_units_from_total_included_in_trial(self, metered_feature,
+                                                         consumed_units):
+        """
+        :returns: (consumed_units, free_units)
+        """
+
         if metered_feature.included_units_during_trial:
-            if consumed_units > metered_feature.included_units_during_trial:
-                return consumed_units - metered_feature.included_units_during_trial
-        return 0
+            included_units_during_trial = metered_feature.included_units_during_trial
+            if consumed_units > included_units_during_trial:
+                extra_consumed = consumed_units - included_units_during_trial
+                return extra_consumed, included_units_during_trial
+            else:
+                return 0, consumed_units
+        return 0, 0
+
+    def _get_extra_consumed_units_during_trial(self, metered_feature,
+                                               consumed_units):
+        if self.is_billed_first_time:
+            return self._get_consumed_units_from_total_included_in_trial(
+                metered_feature, consumed_units)
+        else:
+            # Get how much has consumed at the last billing cycle
+            last_log_entry = self.billing_log_entries.all()[:1].get()
+            if last_log_entry.proforma:
+                qs = last_log_entry.proforma.proforma_entries.filter(
+                    product_code=metered_feature.product_code)
+            else:
+                qs = last_log_entry.invoice.invoice_entries.filter(
+                    product_code=metered_feature.product_code)
+
+            if not qs.exists():
+                return self._get_consumed_units_from_total_included_in_trial(
+                    metered_feature, consumed_units)
+
+            consumed = [qs_item.quantity
+                        for qs_item in qs if qs_item.unit_price >= 0]
+            total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
+
+
+            if metered_feature.included_units_during_trial:
+                included_during_trial = metered_feature.included_units_during_trial
+                if total_consumed_so_far > included_during_trial:
+                    return consumed_units, 0
+                else:
+                    remaining = included_during_trial - total_consumed_so_far
+                    if consumed_units > remaining:
+                        return consumed_units - remaining, remaining
+                    else:
+                        return 0, consumed_units
+            return 0, 0
+
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
@@ -673,12 +874,12 @@ class Subscription(models.Model):
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
-            extra_consumed_units = self._get_consumed_units_during_trial(
+            extra_consumed, free = self._get_extra_consumed_units_during_trial(
                 metered_feature, total_consumed_units)
 
-            if extra_consumed_units > 0:
-                free_units = metered_feature.included_units_during_trial
-                charged_units = extra_consumed_units
+            if extra_consumed > 0:
+                charged_units = extra_consumed
+                free_units = free
             else:
                 free_units = total_consumed_units
                 charged_units = 0
@@ -823,36 +1024,24 @@ class Subscription(models.Model):
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
 
-        :param date: the date at which the percent and status are calculated
         :returns: a tuple containing (Decimal(percent), status) where status
             can be one of [True, False]. The decimal value will from the
             interval [0.00; 1.00].
         :rtype: tuple
         """
 
-        intervals = {
-            'year': {'years': -self.plan.interval_count},
-            'month': {'months': -self.plan.interval_count},
-            'week': {'weeks': -self.plan.interval_count},
-            'day': {'days': -self.plan.interval_count},
-        }
+        first_day_of_month = datetime.date(start_date.year, start_date.month, 1)
+        last_day_index = calendar.monthrange(start_date.year,
+                                             start_date.month)[1]
+        last_day_of_month = datetime.date(start_date.year, start_date.month,
+                                          last_day_index)
 
-        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-        # NOTE (Important): this will be a NEGATIVE INTERVAL (e.g.: -1 month,
-        # -1 week, etc.)
-        interval_len = relativedelta(**intervals[self.plan.interval])
-
-        if end_date + interval_len >= start_date:
-            # |start_date|---|start_date+interval_len|---|end_date|
-            # => not prorated
+        if start_date == first_day_of_month and end_date == last_day_of_month:
             return False, Decimal('1.0000')
         else:
-            # |start_date|---|end_date|---|start_date+interval_len|
-            # => prorated
-            interval_start = end_date + interval_len
-            days_in_interval = (end_date - interval_start).days
-            days_since_subscription_start = (end_date - start_date).days
-            percent = 1.0 * days_since_subscription_start / days_in_interval
+            days_in_full_interval = (last_day_of_month - first_day_of_month).days + 1
+            days_in_interval = (end_date - start_date).days + 1
+            percent = 1.0 * days_in_interval / days_in_full_interval
             percent = Decimal(percent).quantize(Decimal('0.0000'))
 
             return True, percent

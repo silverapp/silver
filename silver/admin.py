@@ -124,14 +124,17 @@ class SubscriptionAdmin(admin.ModelAdmin):
                     'start_date', 'ended_at', 'state', metadata]
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
-    actions = ['activate', 'cancel', 'end', ]
+    actions = ['activate', 'reactivate', 'cancel', 'end']
     search_fields = ['customer__name', 'customer__company', 'plan__name',
                      'meta']
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
         method = None
-        if action == 'activate':
+        if action == 'activate_and_issue_billing_doc':
+            method = Subscription.activate_and_issue_billing_doc
+            print method
+        if action == 'reactivate':
             method = Subscription.activate
         elif action == 'cancel':
             method = Subscription.cancel
@@ -159,13 +162,20 @@ class SubscriptionAdmin(admin.ModelAdmin):
                               queryset_count)
 
     def activate(self, request, queryset):
-        self.perform_action(request, 'activate', queryset)
+        self.perform_action(request, 'activate_and_issue_billing_doc', queryset)
+    activate.short_description = 'Activate the selected Subscription(s) '
+
+    def reactivate(self, request, queryset):
+        self.perform_action(request, 'reactivate', queryset)
+    reactivate.short_description = 'Reactivate the selected Subscription(s) '
 
     def cancel(self, request, queryset):
         self.perform_action(request, 'cancel', queryset)
+    cancel.short_description = 'Cancel the selected Subscription(s) '
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)
+    end.short_description = 'End the selected Subscription(s) '
 
 
 class CustomerAdmin(LiveModelAdmin):
