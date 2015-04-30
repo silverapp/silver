@@ -462,7 +462,7 @@ class Subscription(models.Model):
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
             last_billing_date = self.last_billing_date
-            if was_on_trial(last_billing_date):
+            if self.on_trial(last_billing_date):
                 if last_billing_date <= self.trial_end:
                     interval_end = self.trial_end
             else:
@@ -610,8 +610,13 @@ class Subscription(models.Model):
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
                 # First invoice after trial end
-                self._add_trial_value(start_date=self.start_date,
-                                      end_date=self.trial_end,
+                bucket_start_date = self._current_start_date(
+                    reference_date=last_billing_date)
+                bucket_end_date = self._current_end_date(
+                    reference_date=last_billing_date
+                )
+                self._add_trial_value(start_date=bucket_start_date,
+                                      end_date=bucket_end_date,
                                       invoice=invoice, proforma=proforma)
 
                 trial_end = self.trial_end + ONE_DAY
@@ -689,10 +694,18 @@ class Subscription(models.Model):
 
     def _get_consumed_units_from_total_included_in_trial(self, metered_feature,
                                                          consumed_units):
+        """
+        :returns: (consumed_units, free_units)
+        """
+
         if metered_feature.included_units_during_trial:
-            if consumed_units > metered_feature.included_units_during_trial:
-                return consumed_units - metered_feature.included_units_during_trial
-        return 0
+            included_units_during_trial = metered_feature.included_units_during_trial
+            if consumed_units > included_units_during_trial:
+                extra_consumed = consumed_units - included_units_during_trial
+                return extra_consumed, included_units_during_trial
+            else:
+                return 0, consumed_units
+        return 0, 0
 
     def _get_extra_consumed_units_during_trial(self, metered_feature,
                                                consumed_units):
@@ -713,18 +726,22 @@ class Subscription(models.Model):
                 return self._get_consumed_units_from_total_included_in_trial(
                     metered_feature, consumed_units)
 
-            consumed = [qs_item.quantity for qs_item in qs if qs_item.price >= 0]
+            consumed = [qs_item.quantity
+                        for qs_item in qs if qs_item.unit_price >= 0]
             total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
+
 
             if metered_feature.included_units_during_trial:
                 included_during_trial = metered_feature.included_units_during_trial
                 if total_consumed_so_far > included_during_trial:
-                    return consumed_units
+                    return consumed_units, 0
                 else:
                     remaining = included_during_trial - total_consumed_so_far
                     if consumed_units > remaining:
-                        return consumed_units - remaining
-            return 0
+                        return consumed_units - remaining, remaining
+                    else:
+                        return 0, consumed_units
+            return 0, 0
 
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
@@ -737,12 +754,15 @@ class Subscription(models.Model):
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
-            extra_consumed_units = self._get_extra_consumed_units_during_trial(
+
+
+            extra_consumed, free = self._get_extra_consumed_units_during_trial(
                 metered_feature, total_consumed_units)
 
-            if extra_consumed_units > 0:
-                free_units = metered_feature.included_units_during_trial
-                charged_units = extra_consumed_units
+
+            if extra_consumed > 0:
+                charged_units = extra_consumed
+                free_units = free
             else:
                 free_units = total_consumed_units
                 charged_units = 0
@@ -864,7 +884,6 @@ class Subscription(models.Model):
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
 
-        :param date: the date at which the percent and status are calculated
         :returns: a tuple containing (Decimal(percent), status) where status
             can be one of [True, False]. The decimal value will from the
             interval [0.00; 1.00].
