@@ -655,16 +655,48 @@ class Subscription(models.Model):
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date)
 
-    def _get_consumed_units_during_trial(self, metered_feature, consumed_units):
+    def _get_consumed_units_from_total_included_in_trial(self, metered_feature,
+                                                         consumed_units):
         if metered_feature.included_units_during_trial:
             if consumed_units > metered_feature.included_units_during_trial:
                 return consumed_units - metered_feature.included_units_during_trial
         return 0
 
+    def _get_extra_consumed_units_during_trial(self, metered_feature,
+                                               consumed_units):
+        if self.is_billed_first_time:
+            return self._get_consumed_units_from_total_included_in_trial(
+                metered_feature, consumed_units)
+        else:
+            # Get how much has consumed at the last billing cycle
+            last_log_entry = self.billing_log_entries.all()[:1].get()
+            if last_log_entry.proforma:
+                qs = last_log_entry.proforma.proforma_entries.filter(
+                    product_code=metered_feature.product_code)
+            else:
+                qs = last_log_entry.invoice.invoice_entries.filter(
+                    product_code=metered_feature.product_code)
+
+            if not qs.exists():
+                return self._get_consumed_units_from_total_included_in_trial(
+                    metered_feature, consumed_units)
+
+            consumed = [qs_item.quantity for qs_item in qs if qs_item.price >= 0]
+            total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
+
+            if metered_feature.included_units_during_trial:
+                included_during_trial = metered_feature.included_units_during_trial
+                if total_consumed_so_far > included_during_trial:
+                    return consumed_units
+                else:
+                    remaining = included_during_trial - total_consumed_so_far
+                    if consumed_units > remaining:
+                        return consumed_units - remaining
+            return 0
+
+
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
-        # TODO: review how these are added since the trial can span more than
-        # one billing cycle
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
@@ -673,7 +705,7 @@ class Subscription(models.Model):
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
-            extra_consumed_units = self._get_consumed_units_during_trial(
+            extra_consumed_units = self._get_extra_consumed_units_during_trial(
                 metered_feature, total_consumed_units)
 
             if extra_consumed_units > 0:
