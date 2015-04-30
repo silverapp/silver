@@ -468,7 +468,7 @@ class Subscription(models.Model):
             else:
                 interval_end = self._current_end_date(reference_date=last_billing_date)
 
-        return date >= interval_end + generate_after
+        return date > interval_end + generate_after
 
     @property
     def is_billed_first_time(self):
@@ -601,9 +601,12 @@ class Subscription(models.Model):
                                       invoice=invoice, proforma=proforma)
 
                 # Add the prorated plan's value for the rest of the month
-                trial_end = self.trial_end + ONE_DAY
-                self._add_plan_value(start_date=trial_end,
-                                     end_date=billing_date,
+                current_bucket_start_date = self._current_start_date(
+                    reference_date=billing_date)
+                current_bucket_end_date = self._current_end_date(
+                    reference_date=billing_date)
+                self._add_plan_value(start_date=current_bucket_start_date,
+                                     end_date=current_bucket_end_date,
                                      invoice=invoice, proforma=proforma)
         else:
             last_billing_date = self.last_billing_date
@@ -639,6 +642,9 @@ class Subscription(models.Model):
                     # all the consumed metered features for the last month.
                     mfs_start_date = self._current_start_date(reference_date=last_billing_date)
                     mfs_end_date   = self._current_end_date(reference_date=last_billing_date)
+
+                print 'mfs_start_date: ', mfs_start_date
+                print 'mfs_end_date: ', mfs_end_date
 
                 # Add mfs for the last month
                 self._add_mfs(start_date=mfs_start_date, end_date=mfs_end_date,
@@ -746,15 +752,20 @@ class Subscription(models.Model):
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
+        print '---------------------'
+        print '_add_mfs_for_trial'
+        print 'start_date: ', start_date
+        print 'end_date: ', end_date
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
                                             start_date__gte=start_date,
                                             end_date__lte=end_date)
+            print 'qs: ', qs
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
-
+            print 'total_consumed_units: ', total_consumed_units
 
             extra_consumed, free = self._get_extra_consumed_units_during_trial(
                 metered_feature, total_consumed_units)
