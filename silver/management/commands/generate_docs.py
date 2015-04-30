@@ -2,6 +2,8 @@ from optparse import make_option
 from datetime import datetime as dt
 
 from django.core.management.base import BaseCommand
+from django.utils import translation
+from django.conf import settings
 from dateutil.relativedelta import *
 
 from silver.documents_generator import DocumentsGenerator
@@ -22,6 +24,8 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
+        translation.activate(settings.LANGUAGE_CODE)
+
         date = None
         if options['billing_date']:
             billing_date = dt.strptime(options['billing_date'], '%Y-%m-%d').date()
