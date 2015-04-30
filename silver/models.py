@@ -1545,7 +1545,7 @@ class BillingDocument(models.Model):
 
             if self.pdf:
                 self.pdf.delete()
-            self.pdf.save(filename, pdf_content, False)
+            self.pdf.save(filename, pdf_content, True)
         else:
             raise RuntimeError(_('Could not generate invoice pdf.'))
 
