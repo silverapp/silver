@@ -62,15 +62,15 @@ def documents_pdf_path(document, filename):
 
 
 def field_template_path(field, provider=None):
-    if not provider:
-        provider = ''
-    provider_template_path = 'billing_documents/{provider}/{field}.html'.\
-        format(provider=provider, field=field)
-    try:
-        get_template(provider_template_path)
-        return provider_template_path
-    except TemplateDoesNotExist:
-        return 'billing_documents/{field}.html'.format(field=field)
+    if provider:
+        provider_template_path = 'billing_documents/{provider}/{field}.html'.\
+            format(provider=provider, field=field)
+        try:
+            get_template(provider_template_path)
+            return provider_template_path
+        except TemplateDoesNotExist:
+            pass
+    return 'billing_documents/{field}.html'.format(field=field)
 
 
 class UnsavedForeignKey(models.ForeignKey):
