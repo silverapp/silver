@@ -187,7 +187,9 @@ class MeteredFeature(models.Model):
         ordering = ('name',)
 
     def __unicode__(self):
-        return self.name
+        fmt = '{name} ({price:.2f}$, {included:.2f} included)'
+        return fmt.format(name=self.name, price=self.price_per_unit,
+                          included=self.included_units)
 
 
 class MeteredFeatureUnitsLog(models.Model):
