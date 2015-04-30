@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{% if invoice.state == 'canceled' %} Canceled {% endif %}{{ invoice.kind }} {{ invoice.series }}-{{ invoice.number }}</title>
+    <title>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}</title>
     <style type="text/css">
         @page {
             size: a4;
@@ -108,23 +108,23 @@
     <table>
         <tr>
             <td class="title">
-                <h1>{% if invoice.state == 'canceled' %} Canceled {% endif %}{{ invoice.kind }} {{ invoice.series }}-{{ invoice.number }}</h1>
+                <h1>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}</h1>
                 <table>
                     <tr>
                         <td width="48mm"><strong>Issue date</strong></td>
-                        <td>{{ invoice.issue_date|date:"d M. Y" }}</td>
+                        <td>{{ document.issue_date|date:"d M. Y" }}</td>
                     </tr>
                     <tr>
                         <td width="48mm"><strong>Due date</strong></td>
-                        <td>{{ invoice.due_date|date:"d M. Y" }}</td>
+                        <td>{{ document.due_date|date:"d M. Y" }}</td>
                     </tr>
-                    {% if invoice.sales_tax_percent %}
+                    {% if document.sales_tax_percent %}
                     <tr>
                         <td width="48mm" style="vertical-align: top;">
-                            <strong> {% if invoice.sales_tax_name %} {{ invoice.sales_tax_name }} {% else %} Tax {% endif %} </strong>
+                            <strong> {% if document.sales_tax_name %} {{ document.sales_tax_name }} {% else %} Tax {% endif %} </strong>
                         </td>
                         <td>
-                            {{ invoice.sales_tax_percent }}%
+                            {{ document.sales_tax_percent }}%
                         </td>
                     </tr>
                     {% endif %}
@@ -161,8 +161,8 @@
                 {% endif %}
 
                 {% if provider.extra %}
-                    <br><br>
-                    <strong>Extra:</strong> {{ provider.extra }}<br>
+                <br>
+                    {{ provider.extra|linebreaksbr }}<br>
                 {% endif %}
             </td>
             <td width="8cm">
@@ -202,8 +202,8 @@
                 {% endif %}
 
                 {% if customer.extra %}
-                    <br><br>
-                    <strong>Extra:</strong> {{ extra.extra }}
+                <br>
+                    {{ customer.extra|linebreaksbr }}
                 {% endif %}
             </td>
         </tr>
@@ -248,10 +248,10 @@
                         {{ entry.quantity|floatformat:-2 }}
                     </td>
                     <td class="unit_price">
-                        {{ entry.unit_price|floatformat:2 }} {{ invoice.currency }}
+                        {{ entry.unit_price|floatformat:2 }} {{ document.currency }}
                     </td>
                     <td class="price">
-                        {{ entry.total|floatformat:2 }} {{ invoice.currency }}
+                        {{ entry.total|floatformat:2 }} {{ document.currency }}
                     </td>
                 </tr>
             {% endfor %}
@@ -260,7 +260,7 @@
             <tr>
                     <td colspan="5" class="total">Total</td>
                     <td class="total_amount">
-                        {{ invoice.total|floatformat:2 }} {{ invoice.currency }}
+                        {{ document.total|floatformat:2 }} {{ document.currency }}
                     </td>
             </tr>
         </tfoot>

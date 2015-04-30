@@ -1,0 +1,27 @@
+{% spaceless %}
+{% if context == 'plan' %}
+    {{ unit }}s
+
+{% elif context == 'plan-trial' %}
+    {{ unit }}s
+
+{% elif context == 'plan-trial-discount' %}
+    {{ unit }}s
+
+{% elif context == 'metered-feature' %}
+    {{ unit }}
+
+{% elif context == 'metered-feature-trial' %}
+    {{ unit }}
+
+{% elif context == 'metered-feature-trial-discount' %}
+    {{ unit }}
+
+{% elif context == 'metered-feature-trial-not-discounted' %}
+    {{ unit }}
+
+{% else %}
+    {{ unit }}
+
+{% endif %}
+{% endspaceless %}

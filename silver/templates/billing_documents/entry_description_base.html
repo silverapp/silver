@@ -1,0 +1,31 @@
+{% spaceless %}
+{% if context == 'plan' %}
+    {% if prorated %}
+        {{ name }} Plan {{ plan.interval }} Prorated Subscription ({{ start_date }} - {{ end_date }})
+    {% else %}
+        {{ name }} Plan {{ plan.interval }} Subscription ({{ start_date }} - {{ end_date }})
+    {% endif %}
+
+{% elif context == 'plan-trial' %}
+    {{ name }} plan trial subscription ({{ start_date }} - {{ end_date }})
+
+{% elif context == 'plan-trial-discount' %}
+    {{ name }} plan trial discount ({{ start_date }} - {{ end_date }})
+
+{% elif context == 'metered-feature' %}
+    Extra {{ name }} ({{ start_date }} - {{ end_date }}).
+
+{% elif context == 'metered-feature-trial' %}
+    {{ name }} ({{ start_date }} - {{ end_date }}).
+
+{% elif context == 'metered-feature-trial-discount' %}
+    {{ name }} ({{ start_date }} - {{ end_date }}) trial discount.
+
+{% elif context == 'metered-feature-trial-not-discounted' %}
+    Extra {{ name }} During Trial ({{ start_date }} - {{ end_date }})
+
+{% else %}
+    {{ name }} ({{ start_date }} - {{ end_date }}).
+
+{% endif %}
+{% endspaceless %}
