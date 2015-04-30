@@ -86,7 +86,8 @@ class Plan(models.Model):
     )
 
     name = models.CharField(
-        max_length=200, help_text='Display name of the plan.'
+        max_length=200, help_text='Display name of the plan.',
+        db_index=True
     )
     interval = models.CharField(
         choices=INTERVALS, max_length=12, default=INTERVALS[2][0],
@@ -131,6 +132,9 @@ class Plan(models.Model):
         help_text='The provider which provides the plan.'
     )
 
+    class Meta:
+        ordering = ('name',)
+
     @staticmethod
     def validate_metered_features(metered_features):
         product_codes = dict()
@@ -153,7 +157,8 @@ class Plan(models.Model):
 class MeteredFeature(models.Model):
     name = models.CharField(
         max_length=200,
-        help_text='The feature display name.'
+        help_text='The feature display name.',
+        db_index=True,
     )
     unit = models.CharField(max_length=20)
     price_per_unit = models.DecimalField(
@@ -172,6 +177,9 @@ class MeteredFeature(models.Model):
     product_code = UnsavedForeignKey(
         'ProductCode', help_text='The product code for this plan.'
     )
+
+    class Meta:
+        ordering = ('name',)
 
     def __unicode__(self):
         return self.name
@@ -876,11 +884,10 @@ class Subscription(models.Model):
             'metered_feature': None,
             'context': None
         }
-    
+
     def _build_entry_context(self, context):
         base_context = self._base_entry_context
         base_context.update(context)
-        
         return base_context
 
     def __unicode__(self):
@@ -924,6 +931,8 @@ class AbstractBillingEntity(LiveModel):
 
     class Meta:
         abstract = True
+        index_together = (('name', 'company'),)
+        ordering = ['name', 'company']
 
     @property
     def billing_name(self):
@@ -938,9 +947,6 @@ class AbstractBillingEntity(LiveModel):
                                        self.zip_code, self.country]))
     address.short_description = 'Address'
 
-    def __unicode__(self):
-        return self.billing_name
-
     def get_list_display_fields(self):
         field_names = ['company', 'email', 'address_1', 'city', 'country',
                        'zip_code']
@@ -951,6 +957,10 @@ class AbstractBillingEntity(LiveModel):
                        'city', 'country', 'city', 'state', 'zip_code', 'extra',
                        'meta']
         return {field: getattr(self, field, '') for field in field_names}
+
+    def __unicode__(self):
+        return ('%s (%s)' % (self.name, self.company) if self.company
+                else self.name)
 
 
 class Customer(AbstractBillingEntity):
@@ -1000,9 +1010,6 @@ class Customer(AbstractBillingEntity):
             except TransitionNotAllowed:
                 pass
         super(Customer, self).delete()
-
-    def __unicode__(self):
-        return " - ".join(filter(None, [self.name, self.company]))
 
     def get_archivable_field_values(self):
         base_fields = super(Customer, self).get_archivable_field_values()
@@ -1090,9 +1097,6 @@ class Provider(AbstractBillingEntity):
     def model_corresponding_to_default_flow(self):
         return Proforma if self.flow == 'proforma' else Invoice
 
-    def __unicode__(self):
-        return " - ".join(filter(None, [self.name, self.company]))
-
 
 @receiver(pre_save, sender=Provider)
 def update_draft_billing_documents(sender, instance, **kwargs):
@@ -1131,14 +1135,15 @@ class BillingDocument(models.Model):
     states = ['draft', 'issued', 'paid', 'canceled']
     STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
                           for state in states)
-    series = models.CharField(max_length=20, blank=True, null=True)
-    number = models.IntegerField(blank=True, null=True)
+    series = models.CharField(max_length=20, blank=True, null=True,
+                              db_index=True)
+    number = models.IntegerField(blank=True, null=True, db_index=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
     archived_customer = jsonfield.JSONField()
     archived_provider = jsonfield.JSONField()
     due_date = models.DateField(null=True, blank=True)
-    issue_date = models.DateField(null=True, blank=True)
+    issue_date = models.DateField(null=True, blank=True, db_index=True)
     paid_date = models.DateField(null=True, blank=True)
     cancel_date = models.DateField(null=True, blank=True)
     sales_tax_percent = models.DecimalField(max_digits=4, decimal_places=2,
@@ -1274,27 +1279,6 @@ class BillingDocument(models.Model):
                                              self.provider.billing_name,
                                              self.customer.billing_name,
                                              self.total, self.currency)
-
-    def _entity_display(self, entity):
-        display = '%s (%s, %s)' % (entity.billing_name, entity.name,
-                                   entity.email)
-        return display
-
-    def customer_display(self):
-        try:
-            return self._entity_display(self.customer)
-        except Customer.DoesNotExist:
-            return ''
-    customer_display.short_description = 'Customer'
-    customer_display.admin_order_field = 'customer'
-
-    def provider_display(self):
-        try:
-            return self._entity_display(self.provider)
-        except Customer.DoesNotExist:
-            return ''
-    provider_display.short_description = 'Provider'
-    provider_display.admin_order_field = 'provider'
 
     @property
     def updateable_fields(self):

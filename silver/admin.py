@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
 from django.core import urlresolvers
+from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
 
@@ -11,6 +12,22 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
 from django.contrib.admin.actions import delete_selected as delete_selected_
 
 from django.utils.translation import ugettext_lazy
+
+
+def metadata(obj):
+    d = u'(None)'
+    if obj.meta:
+        d = u''
+        for key, value in obj.meta.iteritems():
+            d += u'%s: <code>%s</code><br>' % (escape(key), escape(value))
+    return d
+metadata.allow_tags = True
+
+
+def tax(obj):
+    return ("{} {:.2f}%".format(obj.sales_tax_name, obj.sales_tax_percent)
+            if obj.sales_tax_percent > 0 else '')
+tax.admin_order_field = 'sales_tax_percent'
 
 
 class LiveModelAdmin(admin.ModelAdmin):
@@ -53,7 +70,8 @@ class PlanForm(forms.ModelForm):
 
 class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'generate_after', 'enabled', 'private']
+                    'trial_period_days', 'generate_after', 'enabled',
+                    'private']
     search_fields = ['name']
     form = PlanForm
 
@@ -76,16 +94,18 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
                     'plan': self.parent_obj.plan
                 })
         return super(MeteredFeatureUnitsLogInLine,
-                     self).formfield_for_foreignkey(db_field, request, **kwargs)
+                     self).formfield_for_foreignkey(db_field, request,
+                                                    **kwargs)
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ['customer', 'plan', 'last_billing_date', 'trial_end',
-                    'start_date', 'ended_at', 'state']
+                    'start_date', 'ended_at', 'state', metadata]
     list_filter = ['plan', 'state']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel', 'end', ]
-    search_fields = ['customer__name', 'customer__company', 'plan__name', ]
+    search_fields = ['customer__name', 'customer__company', 'plan__name',
+                     'meta']
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
@@ -132,15 +152,12 @@ class CustomerAdmin(LiveModelAdmin):
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
               'sales_tax_percent', 'sales_tax_number', 'extra', 'meta']
-    list_display = ['name', 'company', 'email', 'address', 'sales_tax_percent',
-                    'sales_tax_name', 'consolidated_billing',
-                    'customer_reference']
-    list_display_links = ['name', 'company']
+    list_display = ['__unicode__', 'customer_reference',
+                    tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email']
+                     'email', 'meta']
     exclude = ['live']
-
 
 class ProviderAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
@@ -148,10 +165,21 @@ class ProviderAdmin(LiveModelAdmin):
               'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra',
               'meta']
-    list_display = ['name', 'company', 'email', 'address', 'invoice_series']
-    list_display_links = ['name', 'company']
-    search_fields = list_display
+    list_display = ['__unicode__', 'invoice_series_list_display',
+                    'proforma_series_list_display', metadata]
+    search_fields = ['customer_reference', 'name', 'company', 'address_1',
+                     'address_2', 'city', 'zip_code', 'country', 'state',
+                     'email', 'meta']
     exclude = ['live']
+
+    def invoice_series_list_display(self, obj):
+        return '{}-{}'.format(obj.invoice_series, obj.invoice_starting_number)
+    invoice_series_list_display.short_description = 'Invoice series starting number'
+
+    def proforma_series_list_display(self, obj):
+        return '{}-{}'.format(obj.proforma_series,
+                              obj.proforma_starting_number)
+    proforma_series_list_display.short_description = 'Proforma series starting number'
 
 
 class DocumentEntryInline(admin.TabularInline):
@@ -207,10 +235,9 @@ class ProformaForm(BillingDocumentForm):
 
 
 class BillingDocumentAdmin(admin.ModelAdmin):
-    list_display = ['series_number', 'customer_display', 'state',
-                    'provider_display', 'issue_date', 'due_date', 'paid_date',
-                    'cancel_date', 'sales_tax_name', 'sales_tax_percent',
-                    'currency']
+    list_display = ['series_number', 'customer', 'state',
+                    'provider', 'issue_date', 'due_date', 'paid_date',
+                    'cancel_date', tax, 'total']
 
     list_filter = ('provider__company', 'state')
 
@@ -220,7 +247,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                               for field in common_fields]
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields]
-    search_fields = customer_search_fields + provider_search_fields
+    search_fields = (customer_search_fields + provider_search_fields +
+                     ['series', 'number'])
 
     date_hierarchy = 'issue_date'
 
@@ -231,8 +259,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel']
 
-    ordering = ('-number', )
-
     @property
     def _model(self):
         raise NotImplementedError
@@ -241,8 +267,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         if document.series and document.number:
             return "%s-%d" % (document.series, document.number)
         return None
-    series_number.short_description = 'Series-Number'
-    series_number.admin_order_field = '-pk'
+    series_number.short_description = 'Number'
 
     @property
     def _model_name(self):
@@ -300,8 +325,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         return actions
 
     def total(self, obj):
-        return '{value} {currency}'.format(value=str(obj.total),
-                                           currency=obj.currency)
+        return '{:.2f} {currency}'.format(obj.total,
+                                          currency=obj.currency)
 
 
 class InvoiceAdmin(BillingDocumentAdmin):
@@ -329,7 +354,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def invoice_pdf(self, invoice):
         if invoice.pdf:
             url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
-            return '<a href="{url}">{url}</a>'.format(url=url)
+            return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
             return ''
     invoice_pdf.allow_tags = True
@@ -381,7 +406,7 @@ class ProformaAdmin(BillingDocumentAdmin):
     def proforma_pdf(self, proforma):
         if proforma.pdf:
             url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
-            return '<a href="{url}">{url}</a>'.format(url=url)
+            return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
             return ''
     proforma_pdf.allow_tags = True
