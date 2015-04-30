@@ -161,8 +161,8 @@
                 {% endif %}
 
                 {% if provider.extra %}
-                    <br><br>
-                    <strong>Extra:</strong> {{ provider.extra }}<br>
+                <br>
+                    {{ provider.extra|linebreaksbr }}<br>
                 {% endif %}
             </td>
             <td width="8cm">
@@ -202,8 +202,8 @@
                 {% endif %}
 
                 {% if customer.extra %}
-                    <br><br>
-                    <strong>Extra:</strong> {{ extra.extra }}
+                <br>
+                    {{ customer.extra|linebreaksbr }}
                 {% endif %}
             </td>
         </tr>
