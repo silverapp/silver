@@ -539,12 +539,55 @@ class Subscription(models.Model):
         Adds the total value of the subscription (value(plan) + value(consumed
         metered features)) to the document.
         """
+        ONE_DAY = datetime.timedelta(days=1)
+
+        if self.is_billed_first_time:
+            if not self.trial_end:  # has no trial
+                # Generate first invoice, when the subscription starts
+                # Add the prorated value of the plan for the current month
+                bucket_end_date = self._current_end_date(reference_date=billing_date)
+                self._add_plan_value(start_date=billing_date,
+                                     end_date=bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
+            elif self.on_trial(billing_date):
+                last_day_to_bill = self._current_end_date(reference_date=self.start_date)
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=last_day_to_bill,
+                                      invoice=invoice, proforma=proforma)
+            else:
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=self.trial_end,
+                                      invoice=invoice, proforma=proforma)
+                trial_end = self.trial_end + ONE_DAY
+                self._add_plan_value(start_date=trial_end,
+                                     end_date=billing_date,
+                                     invoice=invoice, proforma=proforma)
+        else:
+            last_billing_date = self.last_billing_date
+            if self.trial_end and self.trial_end.month == billing_date.month and\
+               last_billing_date <= self.trial_end:
+                # First invoice after trial end
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=self.trial_end,
+                                      invoice=invoice, proforma=proforma)
+
+                trial_end = self.trial_end + ONE_DAY
+                bucket_end_date = self._current_end_date(reference_date=billing_date)
+                self._add_plan_value(start_date=trial_end,
+                                     end_date=bucket_end_date,
+                                     invoice=invoice, proforma=proforma)
+            elif self.trial_end and self.trial_end.month == billing_date.month - 1 and\
+                 last_billing_date <= self.trial_end:
+                self._add_trial_value(start_date=self.start_date,
+                                      end_date=self.trial_end,
+                                      invoice=invoice, proforma=proforma)
+
+
 
         last_day_to_bill = billing_date - datetime.timedelta(days=1)
 
         current_interval_start = billing_date
         ONE_MONTH = relativedelta(months=1)
-        ONE_DAY   = datetime.timedelta(days=1)
         current_interval_end = billing_date + ONE_MONTH - ONE_DAY
 
         if self.is_billed_first_time:
