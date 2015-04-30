@@ -1,6 +1,7 @@
 import datetime
 from datetime import datetime as dt
 from decimal import Decimal
+import calendar
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -914,32 +915,55 @@ class Subscription(models.Model):
         :rtype: tuple
         """
 
-        intervals = {
-            'year': {'years': -self.plan.interval_count},
-            'month': {'months': -self.plan.interval_count},
-            'week': {'weeks': -self.plan.interval_count},
-            'day': {'days': -self.plan.interval_count},
-        }
+        first_day_of_month = datetime.date(start_date.year, start_date.month, 1)
+        last_day_index = calendar.monthrange(start_date.year,
+                                             start_date.month)[1]
+        last_day_of_month = datetime.date(start_date.year, start_date.month,
+                                          last_day_index)
 
-        # This will be UTC, which implies a max difference of 27 hours ~= 1 day
-        # NOTE (Important): this will be a NEGATIVE INTERVAL (e.g.: -1 month,
-        # -1 week, etc.)
-        interval_len = relativedelta(**intervals[self.plan.interval])
-
-        if end_date + interval_len >= start_date:
-            # |start_date|---|start_date+interval_len|---|end_date|
-            # => not prorated
+        if start_date == first_day_of_month and end_date == last_day_of_month:
             return False, Decimal('1.0000')
         else:
-            # |start_date|---|end_date|---|start_date+interval_len|
-            # => prorated
-            interval_start = end_date + interval_len
-            days_in_interval = (end_date - interval_start).days
-            days_since_subscription_start = (end_date - start_date).days
-            percent = 1.0 * days_since_subscription_start / days_in_interval
+            days_in_full_interval = (last_day_of_month - first_day_of_month).days + 1
+            days_in_interval = (end_date - start_date).days + 1
+            percent = 1.0 * days_in_interval / days_in_full_interval
             percent = Decimal(percent).quantize(Decimal('0.0000'))
 
             return True, percent
+
+        #intervals = {
+            #'year': {'years': +self.plan.interval_count},
+            #'month': {'months': +self.plan.interval_count},
+            #'week': {'weeks': +self.plan.interval_count},
+            #'day': {'days': +self.plan.interval_count},
+        #}
+        #interval_len = relativedelta(**intervals[self.plan.interval])
+
+
+        ## This will be UTC, which implies a max difference of 27 hours ~= 1 day
+        ## NOTE (Important): this will be a NEGATIVE INTERVAL (e.g.: -1 month,
+        ## -1 week, etc.)
+        #interval_len = relativedelta(**intervals[self.plan.interval])
+
+        #print 'start_date: ', start_date
+        #print 'end_date: ', end_date
+        #print 'interval_len: ', interval_len
+        #print 'end_date + interval_len: ', end_date + interval_len
+
+        #if end_date + interval_len >= start_date:
+            ## |start_date|---|start_date+interval_len|---|end_date|
+            ## => not prorated
+            #return False, Decimal('1.0000')
+        #else:
+            ## |start_date|---|end_date|---|start_date+interval_len|
+            ## => prorated
+            #interval_start = end_date + interval_len
+            #days_in_interval = (end_date - interval_start).days
+            #days_since_subscription_start = (end_date - start_date).days
+            #percent = 1.0 * days_since_subscription_start / days_in_interval
+            #percent = Decimal(percent).quantize(Decimal('0.0000'))
+
+            #return True, percent
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
