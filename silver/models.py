@@ -620,6 +620,7 @@ class Subscription(models.Model):
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
                 # First invoice after trial end
+                # Add trial value
                 bucket_start_date = self._current_start_date(
                     reference_date=last_billing_date
                 )
@@ -630,16 +631,42 @@ class Subscription(models.Model):
                                       end_date=bucket_end_date,
                                       invoice=invoice, proforma=proforma)
 
+                # Add the plan's value for the period after the trial
                 trial_end = self.trial_end + ONE_DAY
                 bucket_start_date = self._current_start_date(
-                    reference_date=billing_date
+                    reference_date=trial_end
                 )
                 bucket_end_date = self._current_end_date(
-                    reference_date=billing_date
+                    reference_date=trial_end
                 )
                 self._add_plan_value(start_date=bucket_start_date,
                                      end_date=bucket_end_date,
                                      invoice=invoice, proforma=proforma)
+
+                if trial_end.month == billing_date.month - 1:
+                    # Add consumed metered features in the interval right after
+                    # the trial
+                    bucket_start_date = self._current_start_date(
+                        reference_date=trial_end
+                    )
+                    bucket_end_date = self._current_end_date(
+                        reference_date=trial_end
+                    )
+                    self._add_mfs(start_date=bucket_start_date,
+                                  end_date=bucket_end_date,
+                                  invoice=invoice, proforma=proforma)
+
+                    # Add the plan's value ahead
+                    current_bucket_start_date = self._current_start_date(
+                        reference_date=billing_date
+                    )
+                    current_bucket_end_date = self._current_end_date(
+                        reference_date=billing_date
+                    )
+                    self._add_plan_value(start_date=current_bucket_start_date,
+                                        end_date=current_bucket_end_date,
+                                        invoice=invoice, proforma=proforma)
+
             else:
                 if (self.trial_end and
                     self.trial_end.month == billing_date.month - 1):
