@@ -626,7 +626,7 @@ class Subscription(models.Model):
                                          invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
                 # Next month after the subscription has started with trial
-                # spanning over multiple months
+                # spanning over 2 months
                 last_day_to_bill = self._current_end_date(
                     reference_date=self.start_date
                 )
@@ -652,7 +652,7 @@ class Subscription(models.Model):
                                      end_date=current_bucket_end_date,
                                      invoice=invoice, proforma=proforma)
         else:
-            # TODO: add value for trial which spans over multiple months
+            # TODO: add value for trial which spans over >2 months
             last_billing_date = self.last_billing_date
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
@@ -701,8 +701,8 @@ class Subscription(models.Model):
                         reference_date=billing_date
                     )
                     self._add_plan_value(start_date=current_bucket_start_date,
-                                        end_date=current_bucket_end_date,
-                                        invoice=invoice, proforma=proforma)
+                                         end_date=current_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
 
             else:
                 if (self.trial_end and
