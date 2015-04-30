@@ -7,7 +7,7 @@ from silver.models import Customer
 
 
 class DocumentsGenerator(object):
-    def generate(self, subscription=None):
+    def generate(self, subscription=None, billing_date=None):
         """
         The `public` method called when one wants to generate the billing
         documents.
@@ -17,17 +17,17 @@ class DocumentsGenerator(object):
         """
 
         if not subscription:
-            self._generate_all()
+            self._generate_all(billing_date=billing_date)
         else:
             self._generate_for_single_subscription_now(subscription)
 
-    def _generate_all(self):
+    def _generate_all(self, billing_date=None):
         """
         Generates the invoices/proformas for all the subscriptions that should
         be billed.
         """
 
-        billing_date = timezone.now().date()
+        billing_date = billing_date or timezone.now().date()
         # billing_date -> the date when the billing documents are issued.
 
         for customer in Customer.objects.all():
