@@ -171,11 +171,15 @@ class SubscriptionDetailActivate(APIView):
                             {'detail': 'Invalid trial_end date format. Please '
                                        'use the ISO 8601 date format.'},
                             status=status.HTTP_400_BAD_REQUEST)
-                sub.activate(start_date=start_date, trial_end_date=trial_end)
-                sub.save()
+                sub.activate_and_issue_billing_doc(
+                    start_date=start_date, trial_end_date=trial_end
+                )
+                #sub.activate(start_date=start_date, trial_end_date=trial_end)
+                #sub.save()
             else:
-                sub.activate()
-                sub.save()
+                sub.activate_and_issue_billing_doc()
+                #sub.activate()
+                #sub.save()
             return Response({"state": sub.state},
                             status=status.HTTP_200_OK)
 

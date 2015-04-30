@@ -19,7 +19,8 @@ class DocumentsGenerator(object):
         if not subscription:
             self._generate_all(billing_date=billing_date)
         else:
-            self._generate_for_single_subscription_now(subscription)
+            self._generate_for_single_subscription(subscription=subscription,
+                                                   billing_date=billing_date)
 
     def _generate_all(self, billing_date=None):
         """
@@ -117,20 +118,23 @@ class DocumentsGenerator(object):
                 document.issue()
                 document.save()
 
-    def _generate_for_single_subscription_now(self, subscription):
+    def _generate_for_single_subscription(self, subscription=None,
+                                          billing_date=None):
+        print '_generate_for_single_subscription'
         """
         Generates the billing documents corresponding to a single subscription.
         Used when a subscription is ended with `when`=`now`
         """
 
-        now = timezone.now().date()
+        billing_date = billing_date or timezone.now().date()
 
         provider = subscription.plan.provider
         customer = subscription.customer
 
-        document = self._create_document(provider, customer, subscription, now)
+        document = self._create_document(provider, customer, subscription,
+                                         billing_date)
         args = {
-            'billing_date': now,
+            'billing_date': billing_date,
             provider.flow: document,
         }
         subscription.add_total_value_to_document(**args)

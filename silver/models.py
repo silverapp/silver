@@ -503,6 +503,16 @@ class Subscription(models.Model):
                 self.trial_end = self.start_date + datetime.timedelta(
                     days=self.plan.trial_period_days - 1)
 
+    def activate_and_issue_billing_doc(self, start_date=None,
+                                       trial_end_date=None):
+        from silver.documents_generator import DocumentsGenerator
+
+        self.activate(start_date=start_date,
+                      trial_end_date=trial_end_date)
+        self.save()
+        if not self.trial_end:
+            DocumentsGenerator().generate(subscription=self)
+
     @transition(field=state, source=['active'], target='canceled')
     def cancel(self):
         canceled_at_date = timezone.now().date()
@@ -556,7 +566,7 @@ class Subscription(models.Model):
                     # Generate first invoice, when the subscription starts
                     # => add the prorated value of the plan for the current month
                     bucket_end_date = self._current_end_date(
-                        reference_date=self.billing_date
+                        reference_date=billing_date
                     )
                     self._add_plan_value(start_date=billing_date,
                                          end_date=bucket_end_date,
@@ -616,6 +626,7 @@ class Subscription(models.Model):
                                      end_date=current_bucket_end_date,
                                      invoice=invoice, proforma=proforma)
         else:
+            # TODO: add value for trial which spans over multiple months
             last_billing_date = self.last_billing_date
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
@@ -687,7 +698,7 @@ class Subscription(models.Model):
                     mfs_start_date = self._current_start_date(
                         reference_date=last_billing_date
                     )
-                    mfs_end_date   = self._current_end_date(
+                    mfs_end_date = self._current_end_date(
                         reference_date=last_billing_date
                     )
 
