@@ -1374,7 +1374,7 @@ class Proforma(BillingDocument):
                 # the clean method is called even if the clean_fields method
                 # raises exceptions, so we check if the provider was specified
                 pass
-            elif self.provider.proforma_series:
+            elif not self.provider.proforma_series:
                 err_msg = {'series': 'You must either specify the series or '
                                      'set a default proforma_series for the '
                                      'provider.'}
