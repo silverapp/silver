@@ -20,6 +20,10 @@ from django.db.models.signals import pre_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from django.core.validators import MinValueValidator
 from django.template.loader import select_template
+from django.core.validators import MinValueValidator
+from django.template import TemplateDoesNotExist
+from django.template.loader import (select_template, get_template,
+                                    render_to_string)
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
@@ -58,6 +62,18 @@ def documents_pdf_path(document, filename):
         prefix=getattr(settings, 'SILVER_DOCUMENT_PREFIX', ''),
         filename=filename)
     return path
+
+
+def field_template_path(field, provider=None):
+    if provider:
+        provider_template_path = 'billing_documents/{provider}/{field}.html'.\
+            format(provider=provider, field=field)
+        try:
+            get_template(provider_template_path)
+            return provider_template_path
+        except TemplateDoesNotExist:
+            pass
+    return 'billing_documents/{field}.html'.format(field=field)
 
 
 class UnsavedForeignKey(models.ForeignKey):
@@ -732,13 +748,21 @@ class Subscription(models.Model):
                                                                    end_date)
         plan_price = self.plan.amount * percent
 
-        unit = '%ss' % self.plan.interval
-        # TODO: add template
-        template = "{plan_name} plan trial subscription ({start_date}"\
-                   " - {end_date})"
-        description = template.format(plan_name=self.plan.name,
-                                      start_date=start_date,
-                                      end_date=end_date)
+        context = self._build_entry_context({
+            'name': self.plan.name,
+            'unit': self.plan.interval,
+            'product_code': self.plan.product_code,
+            'start_date': start_date,
+            'end_date': end_date,
+            'prorated': prorated,
+            'proration_percentage': percent,
+            'context': 'plan-trial'
+        })
+
+        unit = self._entry_unit(context)
+
+        description = self._entry_description(context)
+
         # Add plan with positive value
         DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
@@ -746,11 +770,12 @@ class Subscription(models.Model):
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date)
 
-        # TODO: add template
-        template = "{plan_name} plan trial discount ({start_date} - {end_date})"
-        description = template.format(plan_name=self.plan.name,
-                                      start_date=start_date,
-                                      end_date=end_date)
+        context.update({
+            'context': 'plan-trial-discount'
+        })
+
+        description = self._entry_description(context)
+
         # Add plan with negative value
         DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
@@ -812,8 +837,27 @@ class Subscription(models.Model):
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
+
+        prorated, percent = self._get_proration_status_and_percent(start_date,
+                                                                   end_date)
+        context = self._build_entry_context({
+            'product_code': self.plan.product_code,
+            'start_date': start_date,
+            'end_date': end_date,
+            'prorated': prorated,
+            'proration_percentage': percent,
+            'context': 'metered-feature-trial'
+        })
+
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
+            context.update({'metered_feature': metered_feature,
+                            'unit': metered_feature.unit,
+                            'name': metered_feature.name,
+                            'product_code': metered_feature.product_code})
+
+            unit = self._entry_unit(context)
+
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
                                             start_date__gte=start_date,
                                             end_date__lte=end_date)
@@ -831,28 +875,32 @@ class Subscription(models.Model):
                 charged_units = 0
 
             if free_units > 0:
-                template = "{name} during trial ({start_date} - {end_date})."
-                description = template.format(name=metered_feature.name,
-                                              start_date=start_date,
-                                              end_date=end_date)
+                description_template_path = field_template_path(
+                    field='entry_description',
+                    provider=self.plan.provider.slug
+                )
 
-                # Positive value for the consumed items. TODO: template
+                description = self._entry_description(context)
+
+                # Positive value for the consumed items.
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=description,
-                    unit=metered_feature.unit, quantity=free_units,
+                    unit=unit, quantity=free_units,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date
                 )
 
-                # Negative value for the consumed items. TODO: template
-                template = "{name} ({start_date} - {end_date}) trial discount."
-                description = template.format(name=metered_feature.name,
-                                              start_date=start_date,
-                                              end_date=end_date)
+                context.update({
+                    'context': 'metered-feature-trial-discount'
+                })
+
+                description = self._entry_description(context)
+
+                # Negative value for the consumed items.
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=description,
-                    unit=metered_feature.unit, quantity=free_units,
+                    unit=unit, quantity=free_units,
                     unit_price=-metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date
@@ -860,15 +908,17 @@ class Subscription(models.Model):
 
             # Extra items consumed items that are not included
             if charged_units > 0:
-                # TODO: template
-                template = "Extra {name} During Trial ({start_date} -"\
-                           " {end_date})."
-                description = template.format(name=metered_feature.name,
-                                              start_date=start_date,
-                                              end_date=end_date)
+                context.update({
+                    'context': 'metered-feature-trial-not-discounted'
+                })
+
+                description = render_to_string(
+                    description_template_path, context
+                )
+
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
-                    description=description, unit=metered_feature.unit,
+                    description=description, unit=unit,
                     quantity=charged_units,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
@@ -883,22 +933,23 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
-        interval = '%sly' % self.plan.interval
-        # TODO: add template
-        if prorated:
-            template = "{plan_name} Plan {interval} Prorated Subscription"\
-                       " ({start_date} - {end_date})"
-        else:
-            template = "{plan_name} Plan {interval} Subscription ({start_date}"\
-                       " - {end_date})"
-        description = template.format(plan_name=self.plan.name,
-                                      interval=interval, start_date=start_date,
-                                      end_date=end_date)
+        context = self._build_entry_context({
+            'name': self.plan.name,
+            'unit': self.plan.interval,
+            'product_code': self.plan.product_code,
+            'start_date': start_date,
+            'end_date': end_date,
+            'prorated': prorated,
+            'proration_percentage': percent,
+            'context': 'plan'
+        })
+        description = self._entry_description(context)
 
         # Get the plan's prorated value
         plan_price = self.plan.amount * percent
 
-        unit = '%ss' % self.plan.interval
+        unit = self._entry_unit(context)
+
         DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
             unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
@@ -925,18 +976,34 @@ class Subscription(models.Model):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
+        context = self._build_entry_context({
+            'name': self.plan.name,
+            'unit': self.plan.interval,
+            'product_code': self.plan.product_code,
+            'start_date': start_date,
+            'end_date': end_date,
+            'prorated': prorated,
+            'proration_percentage': percent,
+            'context': 'metered-feature'
+        })
+
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(metered_feature,
                                                       percent, start_date,
                                                       end_date)
+
+            context.update({'metered_feature': metered_feature,
+                            'unit': metered_feature.unit,
+                            'name': metered_feature.name,
+                            'product_code': metered_feature.product_code})
+
             if consumed_units > 0:
-                template = "Extra {name} ({start_date} - {end_date})."
-                description = template.format(name=metered_feature.name,
-                                              start_date=start_date,
-                                              end_date=end_date)
+                description = self._entry_description(context)
+                unit = self._entry_unit(context)
+
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
-                    description=description, unit=metered_feature.unit,
+                    description=description, unit=unit,
                     quantity=consumed_units, prorated=prorated,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
@@ -968,6 +1035,42 @@ class Subscription(models.Model):
             percent = Decimal(percent).quantize(Decimal('0.0000'))
 
             return True, percent
+
+    def _entry_unit(self, context):
+        unit_template_path = field_template_path(
+            field='entry_unit', provider=self.plan.provider.slug
+        )
+        return render_to_string(unit_template_path, context)
+
+    def _entry_description(self, context):
+        description_template_path = field_template_path(
+            field='entry_description', provider=self.plan.provider.slug
+        )
+        return render_to_string(description_template_path, context)
+
+    @property
+    def _base_entry_context(self):
+        return {
+            'name': None,
+            'unit': 1,
+            'subscription': self,
+            'plan': self.plan,
+            'provider': self.plan.provider,
+            'customer': self.customer,
+            'product_code': None,
+            'start_date': None,
+            'end_date': None,
+            'prorated': None,
+            'proration_percentage': None,
+            'metered_feature': None,
+            'context': None
+        }
+
+    def _build_entry_context(self, context):
+        base_context = self._base_entry_context
+        base_context.update(context)
+
+        return base_context
 
     def __unicode__(self):
         return '%s (%s)' % (self.customer, self.plan)
@@ -1414,16 +1517,16 @@ class BillingDocument(models.Model):
             state = self.state
 
         context = {
-            'invoice': self,
+            'document': self,
             'provider': provider,
             'customer': customer,
             'entries': self._entries,
             'state': state
         }
 
-        provider_state_template = '{kind}_{provider}_{state}_pdf.html'.format(
+        provider_state_template = '{provider}/{kind}_{state}_pdf.html'.format(
             kind=self.kind, provider=self.provider.slug, state=state).lower()
-        provider_template = '{kind}_{provider}_pdf.html'.format(
+        provider_template = '{provider}/{kind}_pdf.html'.format(
             kind=self.kind, provider=self.provider.slug).lower()
         generic_state_template = '{kind}_{state}_pdf.html'.format(
             kind=self.kind, state=state).lower()
