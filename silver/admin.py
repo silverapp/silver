@@ -69,11 +69,32 @@ class PlanForm(forms.ModelForm):
 
 
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ['name', 'interval', 'interval_count', 'amount', 'currency',
-                    'trial_period_days', 'generate_after', 'enabled',
-                    'private']
+    list_display = ['name', 'description', 'interval_display',
+                    'trial_period_days', 'enabled', 'private']
     search_fields = ['name']
     form = PlanForm
+
+    def interval_display(self, obj):
+        return ('{:d} {}s'.format(obj.interval_count, obj.interval)
+                if obj.interval_count != 1
+                else '{:d} {}'.format(obj.interval_count, obj.interval))
+    interval_display.short_description = 'Interval'
+
+    def description(self, obj):
+        d = u'Subscription: <code>{:.2f} {}</code><br>'.format(obj.amount,
+                                                               obj.currency)
+        fmt = u'{name}: <code>{price:.2f} {currency}</code>'
+        for f in obj.metered_features.all():
+            d += fmt.format(
+                name=f.name,
+                price=f.price_per_unit,
+                currency=obj.currency,
+            )
+            if f.included_units > 0:
+                d += u'<code> ({:.2f} included)</code>'.format(f.included_units)
+            d += u'<br>'
+        return d
+    description.allow_tags = True
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):

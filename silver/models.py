@@ -108,8 +108,10 @@ class Plan(models.Model):
     trial_period_days = models.PositiveIntegerField(
         null=True,
         help_text='Number of trial period days granted when subscribing a '
-                  'customer to this plan.'
+                  'customer to this plan.',
+        verbose_name='Trial days'
     )
+
     metered_features = models.ManyToManyField(
         'MeteredFeature', blank=True,
         help_text="A list of the plan's metered features."
