@@ -122,7 +122,7 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ['customer', 'plan', 'last_billing_date', 'trial_end',
                     'start_date', 'ended_at', 'state', metadata]
-    list_filter = ['plan', 'state']
+    list_filter = ['plan', 'state', 'plan__provider', 'customer']
     readonly_fields = ['state', ]
     actions = ['activate', 'reactivate', 'cancel', 'end']
     search_fields = ['customer__name', 'customer__company', 'plan__name',
