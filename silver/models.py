@@ -257,6 +257,9 @@ class Subscription(models.Model):
         if reference_date is None:
             reference_date = timezone.now().date()
 
+        if not self.start_date or reference_date < self.start_date:
+            return None
+
         # if the trial_end date is ignored, it doesn't exist
         # or it hasn't passed yet: we don't consider it
         if (ignore_trial or not self.trial_end) \
@@ -391,6 +394,8 @@ class Subscription(models.Model):
         buckets = list()
         start_date = self.bucket_start_date()
         end_date = self.bucket_end_date()
+        if start_date is None or end_date is None:
+            return buckets
         buckets.append({'start_date': start_date, 'end_date': end_date})
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
@@ -398,13 +403,12 @@ class Subscription(models.Model):
                 < dt.combine(start_date, dt.min.time()).replace(
                     tzinfo=timezone.get_current_timezone())):
             end_date = start_date - datetime.timedelta(days=1)
-            if end_date < self.start_date:
-                return buckets
             start_date = self.bucket_start_date(end_date)
+            if start_date is None:
+                return buckets
             buckets.append({'start_date': start_date, 'end_date': end_date})
 
         return buckets
-
 
     def is_on_trial(self):
         if self.state == 'active' and self.trial_end:
