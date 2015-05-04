@@ -217,6 +217,7 @@ class DocumentEntryInline(admin.TabularInline):
     model = DocumentEntry
     fields = ('description', 'prorated', 'product_code', 'unit', 'unit_price',
               'quantity', 'start_date', 'end_date')
+    extra = 0
 
 
 class BillingDocumentForm(forms.ModelForm):
