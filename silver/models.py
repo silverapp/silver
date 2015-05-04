@@ -1672,10 +1672,12 @@ class Proforma(BillingDocument):
             self.invoice = self._new_invoice()
             self.invoice.issue()
             self.invoice.pay()
-            self.save()
+            self.invoice.save()
         else:
             self.invoice.pay()
             self.invoice.save()
+
+        self.save()
 
     def create_invoice(self):
         if self.state != "issued":
