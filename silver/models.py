@@ -1672,6 +1672,10 @@ class Proforma(BillingDocument):
             self.invoice = self._new_invoice()
             self.invoice.issue()
             self.invoice.pay()
+
+            # if the proforma is paid, the invoice due_date should be issue_date
+            self.invoice.due_date = self.invoice.issue_date
+
             self.invoice.save()
         else:
             self.invoice.pay()
