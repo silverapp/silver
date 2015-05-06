@@ -362,11 +362,15 @@ class BillingDocumentAdmin(admin.ModelAdmin):
 
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
-    list_display = BillingDocumentAdmin.list_display + ['invoice_pdf']
+    list_display = BillingDocumentAdmin.list_display + [
+        'invoice_pdf', 'related_proforma'
+    ]
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('proforma_url', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + ('proforma_url', )
+    fields = BillingDocumentAdmin.fields + ('related_proforma', )
+    readonly_fields = BillingDocumentAdmin.readonly_fields + (
+        'related_proforma',
+    )
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions
 
@@ -390,15 +394,6 @@ class InvoiceAdmin(BillingDocumentAdmin):
             return ''
     invoice_pdf.allow_tags = True
 
-    def proforma_url(self, obj):
-        if obj.proforma:
-            url = urlresolvers.reverse('admin:silver_proforma_change',
-                                       args=(obj.proforma.pk,))
-            return '<a href="%s">%s</a>' % (url, obj.proforma)
-        else:
-            return '(None)'
-    proforma_url.allow_tags = True
-
     @property
     def _model(self):
         return Invoice
@@ -407,14 +402,30 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def _model_name(self):
         return "Invoice"
 
+    def related_proforma(self, obj):
+        if obj.proforma:
+            url = urlresolvers.reverse('admin:silver_proforma_change',
+                                       args=(obj.proforma.pk,))
+            return '<a href="%s">%s</a>' % (
+                url, self.series_number(obj.proforma)
+            )
+        else:
+            return '(None)'
+    related_proforma.short_description = 'Related proforma'
+    related_proforma.allow_tags = True
+
 
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
-    list_display = BillingDocumentAdmin.list_display + ['proforma_pdf']
+    list_display = BillingDocumentAdmin.list_display + [
+        'proforma_pdf', 'related_invoice'
+    ]
     list_display_links = BillingDocumentAdmin.list_display_links
     search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('invoice_url', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + ('invoice_url',)
+    fields = BillingDocumentAdmin.fields + ('related_invoice', )
+    readonly_fields = BillingDocumentAdmin.readonly_fields + (
+        'related_invoice',
+    )
     inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions + ['create_invoice']
 
@@ -442,15 +453,6 @@ class ProformaAdmin(BillingDocumentAdmin):
             return ''
     proforma_pdf.allow_tags = True
 
-    def invoice_url(self, obj):
-        if obj.invoice:
-            url = urlresolvers.reverse('admin:silver_invoice_change',
-                                       args=(obj.invoice.pk,))
-            return '<a href="%s">%s</a>' % (url, obj.invoice)
-        else:
-            return '(None)'
-    invoice_url.allow_tags = True
-
     @property
     def _model(self):
         return Proforma
@@ -459,6 +461,17 @@ class ProformaAdmin(BillingDocumentAdmin):
     def _model_name(self):
         return "Proforma"
 
+    def related_invoice(self, obj):
+        if obj.invoice:
+            url = urlresolvers.reverse('admin:silver_invoice_change',
+                                       args=(obj.invoice.pk,))
+            return '<a href="%s">%s</a>' % (
+                url, self.series_number(obj.invoice)
+            )
+        else:
+            return '(None)'
+    related_invoice.short_description = 'Related invoice'
+    related_invoice.allow_tags = True
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
