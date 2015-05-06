@@ -1617,6 +1617,10 @@ class Invoice(BillingDocument):
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
         return res
 
+    @property
+    def related_document(self):
+        return self.proforma
+
 
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
@@ -1747,6 +1751,10 @@ class Proforma(BillingDocument):
                          for item in self.proforma_entries.all()]
         res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
         return res
+
+    @property
+    def related_document(self):
+        return self.invoice
 
 
 @receiver(pre_delete, sender=Proforma)
