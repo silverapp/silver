@@ -187,7 +187,7 @@ class MeteredFeature(models.Model):
         ordering = ('name',)
 
     def __unicode__(self):
-        fmt = '{name} ({price:.2f}$, {included:.2f} included)'
+        fmt = u'{name} ({price:.2f}$, {included:.2f} included)'
         return fmt.format(name=self.name, price=self.price_per_unit,
                           included=self.included_units)
 
@@ -1084,7 +1084,7 @@ class Subscription(models.Model):
         return base_context
 
     def __unicode__(self):
-        return '%s (%s)' % (self.customer, self.plan)
+        return u'%s (%s)' % (self.customer, self.plan)
 
 
 class BillingLog(models.Model):
@@ -1152,7 +1152,7 @@ class AbstractBillingEntity(LiveModel):
         return {field: getattr(self, field, '') for field in field_names}
 
     def __unicode__(self):
-        return ('%s (%s)' % (self.name, self.company) if self.company
+        return (u'%s (%s)' % (self.name, self.company) if self.company
                 else self.name)
 
 
@@ -1468,10 +1468,10 @@ class BillingDocument(models.Model):
                 return 1
 
     def __unicode__(self):
-        return '%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
-                                             self.provider.billing_name,
-                                             self.customer.billing_name,
-                                             self.total, self.currency)
+        return u'%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
+                                              self.provider.billing_name,
+                                              self.customer.billing_name,
+                                              self.total, self.currency)
 
     @property
     def updateable_fields(self):
@@ -1801,10 +1801,11 @@ class DocumentEntry(models.Model):
         return res.quantize(Decimal('0.0000'))
 
     def __unicode__(self):
-        s = "{descr} - {unit} - {unit_price} - {quantity} - {product_code}"
+        s = u'{descr} - {unit} - {unit_price} - {quantity} - {product_code}'
         return s.format(
             descr=self.description,
             unit=self.unit,
             unit_price=self.unit_price,
             quantity=self.quantity,
-            product_code=self.product_code)
+            product_code=self.product_code
+        )
