@@ -1303,8 +1303,9 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                   provider=provider):
                 # update the series for draft invoices
                 invoice.series = instance.invoice_series
-                # the number will be automatically updated in the save method
-                invoice.number = None
+                invoice.number = invoice._generate_number(
+                    instance.invoice_starting_number
+                )
                 invoice.save()
 
         if instance.proforma_series != old_proforma_series:
@@ -1312,8 +1313,9 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                     provider=provider):
                 # update the series for draft invoices
                 proforma.series = instance.proforma_series
-                # the number will be automatically updated in the save method
-                proforma.number = None
+                proforma.number = proforma._generate_number(
+                    instance.proforma_starting_number
+                )
                 proforma.save()
 
 
@@ -1443,8 +1445,10 @@ class BillingDocument(models.Model):
         self.__last_state = self.state
         super(BillingDocument, self).save(*args, **kwargs)
 
-    def _generate_number(self):
+    def _generate_number(self, default_starting_number=1):
         """Generates the number for a proforma/invoice."""
+        default_starting_number = max(default_starting_number, 1)
+
         documents = self.__class__._default_manager.filter(
             provider=self.provider, series=self.series
         )
@@ -1453,19 +1457,19 @@ class BillingDocument(models.Model):
             if self.series == self.default_series:
                 return self._starting_number
             else:
-                return 1
+                return default_starting_number
         else:
             # An invoice with this provider and series already exists
             max_existing_number = documents.aggregate(
                 Max('number')
             )['number__max']
             if max_existing_number:
-                if self._starting_number:
+                if self._starting_number and self.series == self.default_series:
                     return max(max_existing_number + 1, self._starting_number)
                 else:
                     return max_existing_number + 1
             else:
-                return 1
+                return default_starting_number
 
     def __unicode__(self):
         return u'%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
