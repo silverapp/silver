@@ -19,8 +19,8 @@ class TestMeteredFeatureEndpoint(APITestCase):
         self.complete_data = {
             "name": "Page Views",
             "unit": "100k",
-            "price_per_unit": '0.05',
-            "included_units": '0.00',
+            "price_per_unit": '0.0500',
+            "included_units": '0.0000',
             "product_code": self.product_code.value
         }
 

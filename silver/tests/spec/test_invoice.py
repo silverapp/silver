@@ -155,8 +155,8 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data == {
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.00',
-            'unit_price': '10.00',
+            'quantity': '20.0000',
+            'unit_price': '10.0000',
             'start_date': None,
             'end_date': None,
             'prorated': False,
@@ -172,8 +172,8 @@ class TestInvoiceEndpoints(APITestCase):
         assert invoice_entries[0] == {
             'description': 'Page views',
             'unit': None,
-            'quantity': '20.00',
-            'unit_price': '10.00',
+            'quantity': '20.0000',
+            'unit_price': '10.0000',
             'start_date': None,
             'end_date': None,
             'prorated': False,
@@ -210,8 +210,8 @@ class TestInvoiceEndpoints(APITestCase):
             assert response.data == {
                 'description': 'Page views',
                 'unit': None,
-                'quantity': '20.00',
-                'unit_price': '10.00',
+                'quantity': '20.0000',
+                'unit_price': '10.0000',
                 'start_date': None,
                 'end_date': None,
                 'prorated': False,

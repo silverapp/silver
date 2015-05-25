@@ -275,7 +275,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.patch(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {u'detail': u'Not found.'})
+        self.assertEqual(response.data, {'detail': 'Metered Feature Not found.'})
 
     def test_create_subscription_mf_units_log_with_unactivated_sub(self):
         subscription = SubscriptionFactory.create()
