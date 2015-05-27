@@ -1,0 +1,9 @@
+image: python2.7
+services:
+  - mysql
+script:
+  - pip install -U -r requirements/test.txt
+  - mysql -e 'create database test_db;' -h 127.0.0.1 -u root
+  - python manage.py test -v2
+cache:
+  - /home/ubuntu/virtualenv/python2.7/lib/python2.7/site-packages
