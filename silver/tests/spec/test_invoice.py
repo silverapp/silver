@@ -8,10 +8,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Invoice, Customer
+from silver.models import Invoice
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
-                                    SubscriptionFactory)
+                                    SubscriptionFactory, ProformaFactory)
 from silver.utils import get_object_or_None
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -693,3 +693,16 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
+
+    def test_pay_invoice_related_proforma_state_change_to_paid(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.create_invoice()
+
+        assert proforma.invoice.state == 'issued'
+
+        proforma.invoice.pay()
+        proforma.invoice.save()
+
+        assert proforma.invoice.state == 'paid'
+        assert proforma.state == 'paid'

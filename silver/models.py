@@ -1589,6 +1589,15 @@ class Invoice(BillingDocument):
 
         super(Invoice, self).issue(issue_date, due_date)
 
+    @transition(field='state', source='issued', target='paid')
+    def pay(self, paid_date=None, affect_related_document=True):
+        super(Invoice, self).pay(paid_date)
+
+        if self.proforma and affect_related_document:
+            self.proforma.pay(paid_date=paid_date,
+                              affect_related_document=False)
+            self.proforma.save()
+
     @property
     def _starting_number(self):
         return self.provider.invoice_starting_number
@@ -1673,23 +1682,25 @@ class Proforma(BillingDocument):
         super(Proforma, self).issue(issue_date, due_date)
 
     @transition(field='state', source='issued', target='paid')
-    def pay(self, paid_date=None):
+    def pay(self, paid_date=None, affect_related_document=True):
         super(Proforma, self).pay(paid_date)
 
         if not self.invoice:
             self.invoice = self._new_invoice()
             self.invoice.issue()
-            self.invoice.pay()
+            self.invoice.pay(paid_date=paid_date,
+                             affect_related_document=False)
 
             # if the proforma is paid, the invoice due_date should be issue_date
             self.invoice.due_date = self.invoice.issue_date
 
             self.invoice.save()
-        else:
-            self.invoice.pay()
-            self.invoice.save()
+            self.save()
 
-        self.save()
+        elif affect_related_document:
+            self.invoice.pay(paid_date=paid_date,
+                             affect_related_document=False)
+            self.invoice.save()
 
     def create_invoice(self):
         if self.state != "issued":
