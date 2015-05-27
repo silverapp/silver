@@ -728,3 +728,14 @@ class TestProformaEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
         assert Invoice.objects.count() == 1
+
+    def test_pay_proforma_related_invoice_state_change_to_paid(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.create_invoice()
+
+        proforma.pay()
+        proforma.save()
+
+        assert proforma.invoice.state == 'paid'
+        assert proforma.state == 'paid'
