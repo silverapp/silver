@@ -1695,12 +1695,12 @@ class Proforma(BillingDocument):
             self.invoice.due_date = self.invoice.issue_date
 
             self.invoice.save()
+            self.save()
+
         elif affect_related_document:
             self.invoice.pay(paid_date=paid_date,
                              affect_related_document=False)
             self.invoice.save()
-
-        self.save()
 
     def create_invoice(self):
         if self.state != "issued":
