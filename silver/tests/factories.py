@@ -8,7 +8,7 @@ from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
-                           Proforma)
+                           Proforma, MeteredFeatureUnitsLog)
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -113,6 +113,14 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
 
+class MeteredFeatureUnitsLogFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = MeteredFeatureUnitsLog
+    metered_feature = factory.SubFactory(MeteredFeatureFactory)
+    subscription = factory.SubFactory(SubscriptionFactory)
+    consumed_units = factory.fuzzy.FuzzyDecimal(0.01, 50000.00)
+
+
 class InvoiceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Invoice
@@ -121,6 +129,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -139,13 +148,6 @@ class ProformaFactory(factory.django.DjangoModelFactory):
         if extracted:
             for subscription in extracted:
                 self.subscriptions.add(subscription)
-
-
-class ProductCodeFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = ProductCode
-
-    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
 
 
 class AdminUserFactory(factory.django.DjangoModelFactory):
