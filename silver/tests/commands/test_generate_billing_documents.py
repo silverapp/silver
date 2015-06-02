@@ -5,12 +5,14 @@ from django.core.management import call_command
 from django.test import TestCase
 # from django.utils.six import StringIO
 from django.utils import timezone
-from mock import MagicMock, patch, PropertyMock
+from mock import patch, PropertyMock
 
-from silver.models import Proforma, DocumentEntry, Invoice
+from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
+    Customer)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
-                                    MeteredFeatureUnitsLogFactory)
+                                    MeteredFeatureUnitsLogFactory,
+                                    CustomerFactory)
 from silver.utils import get_object_or_None
 
 
@@ -153,146 +155,188 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_full_month_without_consumed_units(self):
         assert True
 
-    def test_gen_for_consolidated_billing(self):
-        assert True
-
     def test_gen_for_non_consolidated_billing(self):
-        assert True
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-02-09'
+
+        customer = CustomerFactory.create(consolidated_billing=False)
+
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+
+        SubscriptionFactory.create_batch(
+            3, plan=plan, start_date=start_date, trial_end=trial_end,
+            customer=customer)
+
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command('generate_docs', billing_date=billing_date)
+
+            assert Proforma.objects.all().count() == 3
+            assert Invoice.objects.all().count() == 0
 
     def test_gen_for_single_canceled_subscription(self):
-        assert True
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-02-09'
+
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.cancel()
+        subscription.save()
+
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command(
+                'generate_docs', subscription=1, billing_date=billing_date
+            )
+
+            assert Subscription.objects.filter(state='ended').count() == 1
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
 
     def test_gen_active_and_canceled_selection(self):
-        assert True
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-02-09'
 
-    #def test_on_trial_subscription_without_metered_features_to_draft(self):
-        #now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
-        #plan = PlanFactory.create(interval='month', interval_count=1,
-                                  #generate_after=120, enabled=True,
-                                  #trial_period_days=7, amount=Decimal('200.00'))
-        #start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
-        #trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+        SubscriptionFactory.create_batch(
+            5, plan=plan, start_date=start_date, trial_end=trial_end)
+        for subscription in Subscription.objects.all():
+            subscription.activate()
+            subscription.save()
+        for subscription in Subscription.objects.filter(id__gte=2, id__lte=4):
+            subscription.cancel()
+            subscription.save()
 
-        #subscription = SubscriptionFactory.create(
-            #plan=plan, start_date=start_date, trial_end=trial_end)
-        #subscription.activate()
-        #subscription.save()
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command('generate_docs', billing_date=billing_date)
 
-        #mocked_is_on_trial = PropertyMock(return_value=True)
-        #mocked_should_be_billed = PropertyMock(return_value=True)
-        #with patch.multiple('silver.models.Subscription',
-                            #is_on_trial=mocked_is_on_trial,
-                            #should_be_billed=mocked_should_be_billed):
-            #mocked_timezone_now = MagicMock()
-            #mocked_timezone_now.return_value.date.return_value = dt.date(2015, 2, 9)
-            #with patch('silver.management.commands.generate_billing_documents.timezone.now',
-                    #mocked_timezone_now):
-                #call_command('generate_billing_documents')
+            # Expect 5 Proformas (2 active Subs, 3 canceled)
+            assert Proforma.objects.all().count() == 5
+            assert Invoice.objects.all().count() == 0
 
-                ## Expect one Proforma
-                #assert Proforma.objects.all().count() == 1
-                #assert Invoice.objects.all().count() == 0
+            assert Subscription.objects.filter(state='ended').count() == 3
 
-                ## In draft state
-                #assert Proforma.objects.get(id=1).state == 'draft'
+            Proforma.objects.all().delete()
 
-                ## The only entry will be the plan
-                #assert DocumentEntry.objects.all().count() == 1
-                #doc = get_object_or_None(DocumentEntry, id=1)
+            call_command('generate_docs', billing_date=billing_date)
 
-                ## With price 0, as it is in trial period
-                #assert doc.unit_price == Decimal('0.00')
+            # Expect 2 Proformas (2 active Subs, 3 ended)
+            assert Proforma.objects.all().count() == 2
 
-                ## And quantity 1
-                #assert doc.quantity == 1
+    def test_on_trial_subscription_without_metered_features_to_draft(self):
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-02-09'
 
-    #def test_on_trial_subscription_without_metered_features_to_issued(self):
-        #now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
 
-        #plan = PlanFactory.create(interval='month', interval_count=1,
-                                  #generate_after=120, enabled=True,
-                                  #trial_period_days=7, amount=Decimal('200.00'))
-        #plan.provider.default_document_state = 'issued'
-        #plan.provider.save()
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
-        #start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
-        #trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
 
-        #subscription = SubscriptionFactory.create(
-            #plan=plan, start_date=start_date, trial_end=trial_end)
-        #subscription.activate()
-        #subscription.save()
+        print "subscription start-date", subscription.start_date
 
-        #mocked_is_on_trial = PropertyMock(return_value=True)
-        #mocked_should_be_billed = PropertyMock(return_value=True)
-        #with patch.multiple('silver.models.Subscription',
-                            #is_on_trial=mocked_is_on_trial,
-                            #should_be_billed=mocked_should_be_billed):
-            #mocked_timezone_now = MagicMock()
-            #mocked_timezone_now.return_value.date.return_value = dt.date(2015, 2, 9)
-            #with patch('silver.management.commands.generate_billing_documents.timezone.now',
-                    #mocked_timezone_now):
-                #call_command('generate_billing_documents')
+        Customer.objects.get(id=1).sales_tax_percent = Decimal('0.00')
 
-                ## Expect only one Proforma
-                #assert Proforma.objects.all().count() == 1
-                #assert Invoice.objects.all().count() == 0
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command('generate_docs', billing_date=billing_date)
 
-                ## In draft state
-                #assert Proforma.objects.get(id=1).state == 'issued'
+            # Expect one Proforma
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
 
-                ## The only entry will be the plan
-                #assert DocumentEntry.objects.all().count() == 1
-                #doc = get_object_or_None(DocumentEntry, id=1)
+            # In draft state
+            assert Proforma.objects.get(id=1).state == 'draft'
 
-                ## With price 0, as it is in trial period
-                #assert doc.unit_price == Decimal('0.00')
+            # Expect 3 entries: Plan, Plan Discount, Plan Prorated
+            assert DocumentEntry.objects.all().count() == 3
 
-                ## And quantity 1
-                #assert doc.quantity == 1
+            doc = get_object_or_None(DocumentEntry, id=1)
+            assert doc.unit_price == Decimal('69.35')  # (3 / 31 + 7 / 28) * 200
 
-    #def test_on_trial_subscription_with_metered_features_to_draft(self):
-        #now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+            doc = get_object_or_None(DocumentEntry, id=2)
+            assert doc.unit_price == Decimal('-69.35')
 
-        #plan = PlanFactory.create(interval='month', interval_count=1,
-                                  #generate_after=120, enabled=True,
-                                  #trial_period_days=7, amount=Decimal('200.00'))
-        #start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
-        #trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+            doc = get_object_or_None(DocumentEntry, id=3)
+            assert doc.unit_price == Decimal('164.2800')  # 23/28*200
 
-        #subscription = SubscriptionFactory.create(
-            #plan=plan, start_date=start_date, trial_end=trial_end)
-        #subscription.activate()
-        #subscription.save()
+            # And quantity 1
+            assert doc.quantity == 1
 
-        #mocked_is_on_trial = PropertyMock(return_value=True)
-        #mocked_should_be_billed = PropertyMock(return_value=True)
-        #with patch.multiple('silver.models.Subscription',
-                            #is_on_trial=mocked_is_on_trial,
-                            #should_be_billed=mocked_should_be_billed):
-            #mocked_timezone_now = MagicMock()
-            #mocked_timezone_now.return_value.date.return_value = dt.date(2015, 2, 9)
-            #with patch('silver.management.commands.generate_billing_documents.timezone.now',
-                    #mocked_timezone_now):
-                #call_command('generate_billing_documents')
+    def test_on_trial_subscription_without_metered_features_to_issued(self):
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-02-09'
 
-                ## Expect one Proforma
-                #assert Proforma.objects.all().count() == 1
-                #assert Invoice.objects.all().count() == 0
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
+        plan.provider.default_document_state = 'issued'
+        plan.provider.save()
 
-                ## In draft state
-                #assert Proforma.objects.get(id=1).state == 'draft'
+        start_date = now.date() + dt.timedelta(days=-9)  # should be 2015-01-29
+        trial_end = start_date + dt.timedelta(
+            days=plan.trial_period_days)  # should be 2015-02-07
 
-                ## The only entry will be the plan
-                #assert DocumentEntry.objects.all().count() == 1
-                #doc = get_object_or_None(DocumentEntry, id=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
 
-                ## With price 0, as it is in trial period
-                #assert doc.unit_price == Decimal('0.00')
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command('generate_docs', billing_date=billing_date)
 
-                ## And quantity 1
-                #assert doc.quantity == 1
+            # Expect only one Proforma
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            # In draft state
+            assert Proforma.objects.get(id=1).state == 'issued'
+
+            # Expect 3 entries: Plan Trial (+-), Plan Prorated (+)
+            print "ENTRIES", DocumentEntry.objects.all()
+            assert DocumentEntry.objects.all().count() == 3
+
+            doc = get_object_or_None(DocumentEntry, id=1)
+            assert doc.unit_price == Decimal('69.35')  # (3 / 31 + 7 / 28) * 200
+
+            doc = get_object_or_None(DocumentEntry, id=2)
+            assert doc.unit_price == Decimal('-69.35')
+
+            doc = get_object_or_None(DocumentEntry, id=3)
+            assert doc.unit_price == Decimal('150.0000') # 21 / 28 * 200
+
+            # And quantity 1
+            assert doc.quantity == 1
 
     def test_on_trial_subscription_with_metered_features_to_draft(self):
         now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
