@@ -721,8 +721,9 @@ class Subscription(models.Model):
                                          invoice=invoice, proforma=proforma)
 
             else:
+                last_month = billing_date.month - 1 or 12
                 if (self.trial_end and
-                    self.trial_end.month == billing_date.month - 1):
+                    self.trial_end.month == last_month):
                     # Last month a prorated plan value was billed, now add the
                     # corresponding metered features that were consumed during
                     # that time.
@@ -730,7 +731,7 @@ class Subscription(models.Model):
                     mfs_start_date = self._current_start_date(
                         reference_date=trial_end
                     )
-                    mfs_end_date   = self._current_end_date(
+                    mfs_end_date = self._current_end_date(
                         reference_date=trial_end
                     )
                 else:
@@ -755,9 +756,10 @@ class Subscription(models.Model):
                 current_bucket_end_date = self._current_end_date(
                     reference_date=billing_date
                 )
-                self._add_plan_value(start_date=current_bucket_start_date,
-                                     end_date=current_bucket_end_date,
-                                     invoice=invoice, proforma=proforma)
+                if self.state == 'active':
+                    self._add_plan_value(start_date=current_bucket_start_date,
+                                         end_date=current_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
 
         BillingLog.objects.create(subscription=self, invoice=invoice,
                                   proforma=proforma, billing_date=billing_date)
