@@ -1,16 +1,17 @@
-#import datetime as dt
-#from decimal import Decimal
+import datetime as dt
+from decimal import Decimal
 
-#from django.core.management import call_command
+from django.core.management import call_command
 from django.test import TestCase
-##from django.utils.six import StringIO
-#from django.utils import timezone
-#from mock import MagicMock, patch, PropertyMock
+# from django.utils.six import StringIO
+from django.utils import timezone
+from mock import MagicMock, patch, PropertyMock
 
-#from silver.models import Proforma, DocumentEntry, Invoice
-#from silver.tests.factories import (SubscriptionFactory, PlanFactory,
-                                    #MeteredFeatureFactory)
-#from silver.utils import get_object_or_None
+from silver.models import Proforma, DocumentEntry, Invoice
+from silver.tests.factories import (SubscriptionFactory, PlanFactory,
+                                    MeteredFeatureFactory,
+                                    MeteredFeatureUnitsLogFactory)
+from silver.utils import get_object_or_None
 
 
 class TestInvoiceGenerationCommand(TestCase):
@@ -179,3 +180,75 @@ class TestInvoiceGenerationCommand(TestCase):
 
                 ## And quantity 1
                 #assert doc.quantity == 1
+
+    def test_on_trial_subscription_with_metered_features_to_draft(self):
+        now = dt.datetime(2015, 2, 7, tzinfo=timezone.get_current_timezone())
+        billing_date = '2015-03-01'
+
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'),
+                                  metered_features=[metered_feature])
+        start_date = now.date() + dt.timedelta(days=-6)  # should be 2015-02-01
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.save()
+
+        mf_units_log_during_trial = MeteredFeatureUnitsLogFactory(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=start_date, end_date=trial_end
+        )
+
+        mf_units_log_after_trial = MeteredFeatureUnitsLogFactory(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=trial_end + dt.timedelta(days=1),
+            end_date=dt.datetime(2015, 2, 28)
+        )
+
+        mocked_is_on_trial = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_on_trial=mocked_is_on_trial):
+            call_command('generate_docs', billing_date=billing_date)
+
+            # Expect one Proforma
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            # In draft state
+            assert Proforma.objects.get(id=1).state == 'draft'
+
+            # Expect 7 entries:
+            # Plan Trial (+-), Plan Trial Metered Feature (+-), Plan After Trial (+)
+            # Metered Features After Trial (+), Plan for next month (+)
+            assert DocumentEntry.objects.all().count() == 7
+
+            doc = get_object_or_None(DocumentEntry, id=1)
+            assert doc.unit_price == Decimal('57.14')
+
+            doc = get_object_or_None(DocumentEntry, id=2)
+            assert doc.unit_price == Decimal('-57.14')
+
+            doc = get_object_or_None(DocumentEntry, id=3)
+            assert doc.unit_price == metered_feature.price_per_unit
+            assert doc.quantity == mf_units_log_during_trial.consumed_units
+
+            doc = get_object_or_None(DocumentEntry, id=4)
+            assert doc.unit_price == - metered_feature.price_per_unit
+            assert doc.quantity == mf_units_log_during_trial.consumed_units
+
+            doc = get_object_or_None(DocumentEntry, id=5)
+            assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
+
+            doc = get_object_or_None(DocumentEntry, id=6)
+            assert doc.unit_price == metered_feature.price_per_unit
+            assert doc.quantity == mf_units_log_after_trial.consumed_units
+
+            doc = get_object_or_None(DocumentEntry, id=7)
+            assert doc.unit_price == Decimal('200.00')
+
+            # And quantity 1
+            assert doc.quantity == 1
