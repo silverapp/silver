@@ -656,17 +656,17 @@ class Subscription(models.Model):
                 self._add_mfs(start_date=start_date_after_trial,
                               end_date=end_date_after_trial,
                               invoice=invoice, proforma=proforma)
-
-                # Add the prorated plan's value for the next month
-                current_bucket_start_date = self._current_start_date(
-                    reference_date=billing_date
-                )
-                current_bucket_end_date = self._current_end_date(
-                    reference_date=billing_date
-                )
-                self._add_plan_value(start_date=current_bucket_start_date,
-                                     end_date=current_bucket_end_date,
-                                     invoice=invoice, proforma=proforma)
+                if self.state == 'active':
+                    # Add the prorated plan's value for the next month
+                    current_bucket_start_date = self._current_start_date(
+                        reference_date=billing_date
+                    )
+                    current_bucket_end_date = self._current_end_date(
+                        reference_date=billing_date
+                    )
+                    self._add_plan_value(start_date=current_bucket_start_date,
+                                         end_date=current_bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
         else:
             # TODO: add value for trial which spans over >2 months
             last_billing_date = self.last_billing_date
