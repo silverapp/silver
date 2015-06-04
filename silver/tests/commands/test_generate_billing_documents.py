@@ -107,13 +107,13 @@ class TestInvoiceGenerationCommand(TestCase):
             end_date=dt.datetime(2015, 2, 24)
         )
 
-        mocked_is_on_trial = PropertyMock(return_value=False)
+        mocked_on_trial = PropertyMock(return_value=False)
         mocked_last_billing_date = PropertyMock(
             return_value=dt.date(2015, 2, 1)
         )
         mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
-                            is_on_trial=mocked_is_on_trial,
+                            on_trial=mocked_on_trial,
                             last_billing_date=mocked_last_billing_date,
                             is_billed_first_time=mocked_is_billed_first_time):
             call_command('generate_docs', billing_date=billing_date)
