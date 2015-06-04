@@ -61,8 +61,6 @@ class TestInvoiceGenerationCommand(TestCase):
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
             # Plan After Trial (+),  Metered Features After Trial (+)
-            for doc in DocumentEntry.objects.all():
-                print doc
             assert DocumentEntry.objects.all().count() == 6
 
             doc = get_object_or_None(DocumentEntry, id=1)
@@ -249,17 +247,15 @@ class TestInvoiceGenerationCommand(TestCase):
 
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
-                                  trial_period_days=7, amount=Decimal('200.00'))
+                                  trial_period_days=15, amount=Decimal('200.00'))
 
-        start_date = dt.date(2015, 1, 29)
-        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+        start_date = dt.date(2015, 2, 4)
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days - 1)
 
         subscription = SubscriptionFactory.create(
             plan=plan, start_date=start_date, trial_end=trial_end)
         subscription.activate()
         subscription.save()
-
-        print "subscription start-date", subscription.start_date
 
         Customer.objects.get(id=1).sales_tax_percent = Decimal('0.00')
 
@@ -280,16 +276,16 @@ class TestInvoiceGenerationCommand(TestCase):
             assert DocumentEntry.objects.all().count() == 4
 
             doc = get_object_or_None(DocumentEntry, id=1)
-            assert doc.unit_price == Decimal('69.35')  # (3 / 31 + 7 / 28) * 200
+            assert doc.unit_price == Decimal('107.1400')  # (15 / 28) * 200
 
             doc = get_object_or_None(DocumentEntry, id=2)
-            assert doc.unit_price == Decimal('-69.35')
+            assert doc.unit_price == Decimal('-107.1400')
 
             doc = get_object_or_None(DocumentEntry, id=3)
-            assert doc.unit_price == Decimal('150.0000') # 21 / 28 * 200
+            assert doc.unit_price == Decimal('71.4200') # (10 / 28) * 200
 
             doc = get_object_or_None(DocumentEntry, id=4)
-            assert doc.unit_price == Decimal('200.0000') # 21 / 28 * 200
+            assert doc.unit_price == Decimal('200.0000')
 
             # And quantity 1
             assert doc.quantity == 1
