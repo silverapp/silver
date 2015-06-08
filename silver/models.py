@@ -1420,6 +1420,24 @@ class BillingDocument(models.Model):
 
         self._save_pdf(state='canceled')
 
+    def clone_into_draft(self):
+        clone = self
+        clone.pk = None
+        clone.state = 'draft'
+        clone.series = None
+        clone.number = None
+        clone.issue_date = None
+        clone.due_date = None
+        clone.paid_date = None
+        clone.cancel_date = None
+
+        if clone.pdf:
+            clone.pdf.delete()
+
+        clone.save()
+
+        return clone
+
     def clean(self):
         super(BillingDocument, self).clean()
 
@@ -1614,6 +1632,13 @@ class Invoice(BillingDocument):
                               affect_related_document=False)
             self.proforma.save()
 
+    def clone_into_draft(self):
+        clone = super(Invoice, self).clone_into_draft()
+        clone.proforma = None
+        clone.save()
+
+        return clone
+
     @property
     def _starting_number(self):
         return self.provider.invoice_starting_number
@@ -1717,6 +1742,13 @@ class Proforma(BillingDocument):
             self.invoice.pay(paid_date=paid_date,
                              affect_related_document=False)
             self.invoice.save()
+
+    def clone_into_draft(self):
+        clone = super(Proforma, self).clone_into_draft()
+        clone.invoice = None
+        clone.save()
+
+        return clone
 
     def create_invoice(self):
         if self.state != "issued":
