@@ -289,7 +289,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
               'sales_tax_percent', 'currency', 'state', 'total')
     readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
-    actions = ['issue', 'pay', 'cancel']
+    actions = ['issue', 'pay', 'cancel', 'clone']
 
     @property
     def _model(self):
@@ -316,9 +316,12 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         failed_changes = []
         failed_actions = []
 
+        results = []
         for entry in queryset:
             try:
-                method(entry)
+                result = method(entry)
+                if result:
+                    results.append(result)
                 entry.save()
             except TransitionNotAllowed:
                 exist_failed_changes = True
@@ -340,8 +343,18 @@ class BillingDocumentAdmin(admin.ModelAdmin):
 
         if not exist_failed_actions and not exist_failed_changes:
             qs_count = queryset.count()
-            msg = 'Successfully changed {count} {model_name}(s).'.format(
-                model_name=self._model_name.lower(), count=qs_count)
+            if action == 'clone_into_draft':
+                results = ', '.join(self.series_number(result)
+                                    for result in results)
+                msg = 'Successfully cloned {count} {model_name}(s) ' \
+                      'into {results}.'.format(
+                          model_name=self._model_name.lower(), count=qs_count,
+                          results=results
+                )
+            else:
+                msg = 'Successfully changed {count} {model_name}(s).'.format(
+                    model_name=self._model_name.lower(), count=qs_count
+                )
             self.message_user(request, msg)
 
     def has_delete_permission(self, request, obj=None):
@@ -386,6 +399,10 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected invoice(s)'
+
+    def clone(self, request, queryset):
+        self.perform_action(request, queryset, 'clone_into_draft')
+    clone.short_description = 'Clone the selected invoice(s) into draft'
 
     def invoice_pdf(self, invoice):
         if invoice.pdf:
@@ -445,6 +462,10 @@ class ProformaAdmin(BillingDocumentAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel')
     cancel.short_description = 'Cancel the selected proforma(s)'
+
+    def clone(self, request, queryset):
+        self.perform_action(request, queryset, 'clone_into_draft')
+    clone.short_description = 'Clone the selected proforma(s) into draft'
 
     def proforma_pdf(self, proforma):
         if proforma.pdf:
