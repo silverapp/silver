@@ -739,3 +739,31 @@ class TestProformaEndpoints(APITestCase):
 
         assert proforma.invoice.state == 'paid'
         assert proforma.state == 'paid'
+
+    def test_clone_proforma_into_draft(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        clone = proforma.clone_into_draft()
+
+        assert clone.state == 'draft'
+        assert clone.paid_date is None
+        assert clone.issue_date is None
+        assert clone.invoice is None
+        assert (clone.series != proforma.series or
+                clone.number != proforma.number)
+        assert clone.sales_tax_percent == proforma.sales_tax_percent
+        assert clone.sales_tax_name == proforma.sales_tax_name
+        assert not clone.archived_customer
+        assert not clone.archived_provider
+        assert clone.customer == proforma.customer
+        assert clone.provider == proforma.provider
+        assert clone.currency == proforma.currency
+        assert clone._last_state == clone.state
+        assert clone.pk != proforma.pk
+        assert clone.id != proforma.id
+        assert not clone.pdf
+
+        assert proforma.state == 'paid'
