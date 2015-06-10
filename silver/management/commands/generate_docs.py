@@ -3,8 +3,6 @@ from datetime import datetime as dt
 
 from django.core.management.base import BaseCommand
 from django.utils import translation
-from django.conf import settings
-from dateutil.relativedelta import *
 
 from silver.documents_generator import DocumentsGenerator
 from silver.models import Subscription
@@ -14,21 +12,22 @@ class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
     option_list = BaseCommand.option_list + (
         make_option('--subscription',
-            action='store',
-            dest='subscription_id',
-            type="int"),
+                    action='store',
+                    dest='subscription_id',
+                    type="int"),
         make_option('--date',
-            action='store',
-            dest='billing_date',
-            type="string"),
+                    action='store',
+                    dest='billing_date',
+                    type="string"),
     )
 
     def handle(self, *args, **options):
         translation.activate('en-us')
 
-        date = None
+        billing_date = dt.now().date()
         if options['billing_date']:
-            billing_date = dt.strptime(options['billing_date'], '%Y-%m-%d').date()
+            billing_date = dt.strptime(options['billing_date'],
+                                       '%Y-%m-%d').date()
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
