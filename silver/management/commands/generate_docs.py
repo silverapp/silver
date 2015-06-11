@@ -24,7 +24,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         translation.activate('en-us')
 
-        billing_date = dt.now().date()
+        billing_date = None
         if options['billing_date']:
             billing_date = dt.strptime(options['billing_date'],
                                        '%Y-%m-%d').date()
