@@ -8,10 +8,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Invoice, Proforma
+from silver.models import Invoice, Proforma, DocumentEntry
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, ProformaFactory,
-                                    SubscriptionFactory)
+                                    SubscriptionFactory, DocumentEntryFactory)
 from silver.utils import get_object_or_None
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -738,4 +738,48 @@ class TestProformaEndpoints(APITestCase):
         proforma.save()
 
         assert proforma.invoice.state == 'paid'
+        assert proforma.state == 'paid'
+
+    def test_clone_proforma_into_draft(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+        proforma.pay()
+        proforma.save()
+
+        entries = DocumentEntryFactory.create_batch(3)
+        proforma.proforma_entries.add(*entries)
+
+        clone = proforma.clone_into_draft()
+
+        assert clone.state == 'draft'
+        assert clone.paid_date is None
+        assert clone.issue_date is None
+        assert clone.invoice is None
+        assert (clone.series != proforma.series or
+                clone.number != proforma.number)
+        assert clone.sales_tax_percent == proforma.sales_tax_percent
+        assert clone.sales_tax_name == proforma.sales_tax_name
+
+        assert not clone.archived_customer
+        assert not clone.archived_provider
+        assert clone.customer == proforma.customer
+        assert clone.provider == proforma.provider
+
+        assert clone.currency == proforma.currency
+        assert clone._last_state == clone.state
+        assert clone.pk != proforma.pk
+        assert clone.id != proforma.id
+        assert not clone.pdf
+
+        assert clone.proforma_entries.count() == 3
+        assert proforma.proforma_entries.count() == 3
+
+        entry_fields = [entry.name for entry in DocumentEntry._meta.get_fields()]
+        for clone_entry, original_entry in zip(clone.proforma_entries.all(),
+                                               proforma.proforma_entries.all()):
+            for entry in entry_fields:
+                if entry not in ('id', 'proforma', 'invoice'):
+                    assert getattr(clone_entry, entry) == \
+                        getattr(original_entry, entry)
+
         assert proforma.state == 'paid'

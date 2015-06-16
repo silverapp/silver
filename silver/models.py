@@ -1369,7 +1369,7 @@ class BillingDocument(models.Model):
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=states[0],
         verbose_name="State", help_text='The state the invoice is in.')
 
-    __last_state = None
+    _last_state = None
 
     class Meta:
         abstract = True
@@ -1378,7 +1378,7 @@ class BillingDocument(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(BillingDocument, self).__init__(*args, **kwargs)
-        self.__last_state = self.state
+        self._last_state = self.state
 
     @transition(field=state, source='draft', target='issued')
     def issue(self, issue_date=None, due_date=None):
@@ -1420,27 +1420,54 @@ class BillingDocument(models.Model):
 
         self._save_pdf(state='canceled')
 
+    def clone_into_draft(self):
+        copied_fields = {
+            'customer': self.customer,
+            'provider': self.provider,
+            'currency': self.currency,
+            'sales_tax_percent': self.sales_tax_percent,
+            'sales_tax_name': self.sales_tax_name
+        }
+
+        clone = self.__class__._default_manager.create(**copied_fields)
+        clone.state = 'draft'
+        clone.save()
+
+        # clone entries too
+        for entry in self._entries:
+            entry.pk = None
+            entry.id = None
+            if self.__class__.__name__.lower() == 'proforma':
+                entry.proforma = clone
+                entry.invoice = None
+            elif self.__class__.__name__.lower() == 'invoice':
+                entry.invoice = clone
+                entry.proforma = None
+            entry.save()
+
+        return clone
+
     def clean(self):
         super(BillingDocument, self).clean()
 
         # The only change that is allowed if the document is in issued state
         # is the state chage from issued to paid
-        # !! TODO: If __last_state == 'issued' and self.state == 'paid' || 'canceled'
+        # !! TODO: If _last_state == 'issued' and self.state == 'paid' || 'canceled'
         # it should also be checked that the other fields are the same bc.
         # right now a document can be in issued state and someone could
         # send a request which contains the state = 'paid' and also send
         # other changed fields and the request would be accepted bc. only
         # the state is verified.
-        if self.__last_state == 'issued' and self.state not in ['paid', 'canceled']:
+        if self._last_state == 'issued' and self.state not in ['paid', 'canceled']:
             msg = 'You cannot edit the document once it is in issued state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
-        if self.__last_state == 'canceled':
+        if self._last_state == 'canceled':
             msg = 'You cannot edit the document once it is in canceled state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
         # If it's in paid state => don't allow any changes
-        if self.__last_state == 'paid':
+        if self._last_state == 'paid':
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
@@ -1458,7 +1485,7 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
-        self.__last_state = self.state
+        self._last_state = self.state
         super(BillingDocument, self).save(*args, **kwargs)
 
     def _generate_number(self, default_starting_number=1):

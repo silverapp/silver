@@ -8,7 +8,7 @@ from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
-                           Proforma, MeteredFeatureUnitsLog)
+                           Proforma, MeteredFeatureUnitsLog, DocumentEntry)
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -130,6 +130,16 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
 
+    @factory.post_generation
+    def invoice_entries(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            # A list of groups were passed in, use them
+            for invoice_entry in extracted:
+                self.proforma_entries.add(invoice_entry)
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -148,6 +158,32 @@ class ProformaFactory(factory.django.DjangoModelFactory):
         if extracted:
             for subscription in extracted:
                 self.subscriptions.add(subscription)
+
+    @factory.post_generation
+    def proforma_entries(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            # A list of groups were passed in, use them
+            for proforma_entry in extracted:
+                self.proforma_entries.add(proforma_entry)
+
+
+class DocumentEntryFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = DocumentEntry
+
+    description = factory.Sequence(lambda n: 'Description{cnt}'.format(cnt=n))
+    unit = factory.Sequence(lambda n: 'Unit{cnt}'.format(cnt=n))
+    quantity = factory.fuzzy.FuzzyDecimal(0.00, 50000.00)
+    unit_price = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
+    product_code = factory.SubFactory(ProductCodeFactory)
+    end_date = factory.Sequence(
+        lambda n: datetime.date.today() + datetime.timedelta(days=n)
+    )
+    start_date = datetime.date.today()
+    prorated = factory.Sequence(lambda n: n % 2 == 1)
 
 
 class AdminUserFactory(factory.django.DjangoModelFactory):
