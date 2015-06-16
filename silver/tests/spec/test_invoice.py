@@ -8,10 +8,11 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Invoice
+from silver.models import Invoice, DocumentEntry
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
-                                    SubscriptionFactory, ProformaFactory)
+                                    SubscriptionFactory, ProformaFactory,
+                                    DocumentEntryFactory)
 from silver.utils import get_object_or_None
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -713,6 +714,9 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
+        entries = DocumentEntryFactory.create_batch(3)
+        invoice.invoice_entries.add(*entries)
+
         clone = invoice.clone_into_draft()
 
         assert clone.state == 'draft'
@@ -723,14 +727,26 @@ class TestInvoiceEndpoints(APITestCase):
                 clone.number != invoice.number)
         assert clone.sales_tax_percent == invoice.sales_tax_percent
         assert clone.sales_tax_name == invoice.sales_tax_name
+
         assert not clone.archived_customer
         assert not clone.archived_provider
         assert clone.customer == invoice.customer
         assert clone.provider == invoice.provider
+
         assert clone.currency == invoice.currency
         assert clone._last_state == clone.state
         assert clone.pk != invoice.pk
         assert clone.id != invoice.id
         assert not clone.pdf
 
+        assert clone.invoice_entries.count() == 3
+        assert invoice.invoice_entries.count() == 3
+
+        entry_fields = [entry.name for entry in DocumentEntry._meta.get_fields()]
+        for clone_entry, original_entry in zip(clone.invoice_entries.all(),
+                                               invoice.invoice_entries.all()):
+            for entry in entry_fields:
+                if entry not in ('id', 'proforma', 'invoice'):
+                    assert getattr(clone_entry, entry) == \
+                        getattr(original_entry, entry)
         assert invoice.state == 'paid'

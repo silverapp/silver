@@ -764,7 +764,7 @@ class TestProformaEndpoints(APITestCase):
         assert not clone.archived_provider
         assert clone.customer == proforma.customer
         assert clone.provider == proforma.provider
-        
+
         assert clone.currency == proforma.currency
         assert clone._last_state == clone.state
         assert clone.pk != proforma.pk
