@@ -1421,26 +1421,29 @@ class BillingDocument(models.Model):
         self._save_pdf(state='canceled')
 
     def clone_into_draft(self):
-        clone = self.__class__._default_manager.get(
-            pk=self.pk
-        )
-        clone.pk = None
-        clone.id = None
-        clone.state = 'draft'
-        clone.series = None
-        clone.number = None
-        clone.issue_date = None
-        clone.due_date = None
-        clone.paid_date = None
-        clone.cancel_date = None
-        clone.archived_customer = {}
-        clone.archived_provider = {}
-        if clone.pdf:
-            clone.pdf.delete()
+        copied_fields = {
+            'customer': self.customer,
+            'provider': self.provider,
+            'currency': self.currency,
+            'sales_tax_percent': self.sales_tax_percent,
+            'sales_tax_name': self.sales_tax_name
+        }
 
+        clone = self.__class__._default_manager.create(**copied_fields)
+        clone.state = 'draft'
         clone.save()
 
-        clone._last_state = 'draft'
+        # clone entries too
+        for entry in self._entries:
+            entry.pk = None
+            entry.id = None
+            if self.__class__.__name__.lower() == 'proforma':
+                entry.proforma = clone
+                entry.invoice = None
+            elif self.__class__.__name__.lower() == 'invoice':
+                entry.invoice = clone
+                entry.proforma = None
+            entry.save()
 
         return clone
 
@@ -1638,13 +1641,6 @@ class Invoice(BillingDocument):
                               affect_related_document=False)
             self.proforma.save()
 
-    def clone_into_draft(self):
-        clone = super(Invoice, self).clone_into_draft()
-        clone.proforma = None
-        clone.save()
-
-        return clone
-
     @property
     def _starting_number(self):
         return self.provider.invoice_starting_number
@@ -1748,13 +1744,6 @@ class Proforma(BillingDocument):
             self.invoice.pay(paid_date=paid_date,
                              affect_related_document=False)
             self.invoice.save()
-
-    def clone_into_draft(self):
-        clone = super(Proforma, self).clone_into_draft()
-        clone.invoice = None
-        clone.save()
-
-        return clone
 
     def create_invoice(self):
         if self.state != "issued":
