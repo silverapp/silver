@@ -74,13 +74,16 @@ class PlanAdmin(admin.ModelAdmin):
     search_fields = ['name']
     form = PlanForm
 
-    def interval_display(self, obj):
+    @staticmethod
+    def interval_display(obj):
+        setattr(PlanAdmin.interval_display, 'short_description', 'Interval')
         return ('{:d} {}s'.format(obj.interval_count, obj.interval)
                 if obj.interval_count != 1
                 else '{:d} {}'.format(obj.interval_count, obj.interval))
-    interval_display.short_description = 'Interval'
 
-    def description(self, obj):
+    @staticmethod
+    def description(obj):
+        setattr(PlanAdmin.description, 'allow_tags', True)
         d = u'Subscription: <code>{:.2f} {}</code><br>'.format(obj.amount,
                                                                obj.currency)
         fmt = u'{name}: <code>{price:.2f} {currency}</code>'
@@ -94,7 +97,6 @@ class PlanAdmin(admin.ModelAdmin):
                 d += u'<code> ({:.2f} included)</code>'.format(f.included_units)
             d += u'<br>'
         return d
-    description.allow_tags = True
 
 
 class MeteredFeatureUnitsLogInLine(admin.TabularInline):
@@ -203,14 +205,18 @@ class ProviderAdmin(LiveModelAdmin):
                      'email', 'meta']
     exclude = ['live']
 
-    def invoice_series_list_display(self, obj):
+    @staticmethod
+    def invoice_series_list_display(obj):
+        setattr(ProviderAdmin.invoice_series_list_display, 'short_description',
+                'Invoice series starting number')
         return '{}-{}'.format(obj.invoice_series, obj.invoice_starting_number)
-    invoice_series_list_display.short_description = 'Invoice series starting number'
 
-    def proforma_series_list_display(self, obj):
+    @staticmethod
+    def proforma_series_list_display(obj):
+        setattr(ProviderAdmin.proforma_series_list_display, 'short_description',
+                'Proforma series starting number')
         return '{}-{}'.format(obj.proforma_series,
                               obj.proforma_starting_number)
-    proforma_series_list_display.short_description = 'Proforma series starting number'
 
 
 class DocumentEntryInline(admin.TabularInline):
@@ -295,11 +301,13 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def _model(self):
         raise NotImplementedError
 
-    def series_number(self, document):
+    @staticmethod
+    def series_number(document):
+        setattr(BillingDocumentAdmin.series_number, 'short_description',
+                'Number')
         if document.series and document.number:
             return "%s-%d" % (document.series, document.number)
         return None
-    series_number.short_description = 'Number'
 
     @property
     def _model_name(self):
@@ -369,7 +377,8 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 del actions['delete_selected']
         return actions
 
-    def total(self, obj):
+    @staticmethod
+    def total(obj):
         return '{:.2f} {currency}'.format(obj.total,
                                           currency=obj.currency)
 
@@ -404,13 +413,14 @@ class InvoiceAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'clone_into_draft')
     clone.short_description = 'Clone the selected invoice(s) into draft'
 
-    def invoice_pdf(self, invoice):
+    @staticmethod
+    def invoice_pdf(invoice):
+        setattr(InvoiceAdmin.invoice_pdf, 'allow_tags', True)
         if invoice.pdf:
             url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
             return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
             return ''
-    invoice_pdf.allow_tags = True
 
     @property
     def _model(self):
@@ -420,17 +430,19 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def _model_name(self):
         return "Invoice"
 
-    def related_proforma(self, obj):
+    @staticmethod
+    def related_proforma(obj):
+        setattr(InvoiceAdmin.related_proforma, 'short_description',
+                'Related proforma')
+        setattr(InvoiceAdmin.related_proforma, 'allow_tags', True)
         if obj.proforma:
             url = urlresolvers.reverse('admin:silver_proforma_change',
                                        args=(obj.proforma.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.proforma)
+                url, InvoiceAdmin.series_number(obj.proforma)
             )
         else:
             return '(None)'
-    related_proforma.short_description = 'Related proforma'
-    related_proforma.allow_tags = True
 
 
 class ProformaAdmin(BillingDocumentAdmin):
@@ -467,13 +479,14 @@ class ProformaAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'clone_into_draft')
     clone.short_description = 'Clone the selected proforma(s) into draft'
 
-    def proforma_pdf(self, proforma):
+    @staticmethod
+    def proforma_pdf(proforma):
+        setattr(ProformaAdmin.proforma_pdf, 'allow_tags', True)
         if proforma.pdf:
             url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
             return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
             return ''
-    proforma_pdf.allow_tags = True
 
     @property
     def _model(self):
@@ -483,17 +496,20 @@ class ProformaAdmin(BillingDocumentAdmin):
     def _model_name(self):
         return "Proforma"
 
-    def related_invoice(self, obj):
+    @staticmethod
+    def related_invoice(obj):
+        setattr(ProformaAdmin.related_invoice, 'short_description',
+                'Related invoice')
+        setattr(ProformaAdmin.related_invoice, 'allow_tags', True)
         if obj.invoice:
             url = urlresolvers.reverse('admin:silver_invoice_change',
                                        args=(obj.invoice.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.invoice)
+                url, ProformaAdmin.series_number(obj.invoice)
             )
         else:
             return '(None)'
-    related_invoice.short_description = 'Related invoice'
-    related_invoice.allow_tags = True
+
 
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
