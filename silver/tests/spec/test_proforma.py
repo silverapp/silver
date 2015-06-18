@@ -783,3 +783,15 @@ class TestProformaEndpoints(APITestCase):
                         getattr(original_entry, entry)
 
         assert proforma.state == 'paid'
+
+    def test_cancel_issued_proforma_with_related_invoice(self):
+        proforma = ProformaFactory.create()
+        proforma.issue()
+
+        if not proforma.invoice:
+            proforma.create_invoice()
+
+        proforma.cancel()
+        proforma.save()
+
+        assert proforma.state == proforma.invoice.state == 'canceled'
