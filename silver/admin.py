@@ -338,8 +338,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         if not exist_failed_actions and not exist_failed_changes:
             qs_count = queryset.count()
             if action == 'clone_into_draft':
-                results = ', '.join(self.series_number(result)
-                                    for result in results)
+                results = ', '.join(result.series_number() for result in results)
                 msg = 'Successfully cloned {count} {model_name}(s) ' \
                       'into {results}.'.format(
                           model_name=self._model_name.lower(), count=qs_count,
