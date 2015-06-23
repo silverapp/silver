@@ -1514,6 +1514,12 @@ class BillingDocument(models.Model):
             else:
                 return default_starting_number
 
+    def series_number(self):
+        if self.series and self.number:
+            return "%s-%d" % (self.series, self.number)
+        return None
+    series_number.short_description = 'Number'
+
     def __unicode__(self):
         return u'%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
                                               self.provider.billing_name,

@@ -295,12 +295,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def _model(self):
         raise NotImplementedError
 
-    def series_number(self, document):
-        if document.series and document.number:
-            return "%s-%d" % (document.series, document.number)
-        return None
-    series_number.short_description = 'Number'
-
     @property
     def _model_name(self):
         raise NotImplementedError
@@ -425,7 +419,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
             url = urlresolvers.reverse('admin:silver_proforma_change',
                                        args=(obj.proforma.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.proforma)
+                url, obj.proforma.series_number()
             )
         else:
             return '(None)'
@@ -488,7 +482,7 @@ class ProformaAdmin(BillingDocumentAdmin):
             url = urlresolvers.reverse('admin:silver_invoice_change',
                                        args=(obj.invoice.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.invoice)
+                url, obj.invoice.series_number()
             )
         else:
             return '(None)'
