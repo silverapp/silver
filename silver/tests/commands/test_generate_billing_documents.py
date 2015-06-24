@@ -8,7 +8,7 @@ from django.utils import timezone
 from mock import patch, PropertyMock, MagicMock
 
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
-                           Customer)
+                           Customer, MeteredFeatureUnitsLog)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
@@ -23,11 +23,13 @@ class TestInvoiceGenerationCommand(TestCase):
         * canceled subscription w/a trial
         * canceled subscription w trial underflow
         * canceled subscription w trial overflow
-        * consolidated billing
-        * non-consolidated billing
+        * consolidated billing w/ included units
+        * consolidated billing w/a included units
+        * non-consolidated billing w/ included units
+        * non-consolidated billing w/a included units
         * draft, issued (still TODO) state for billing documents
         * trial over multiple months
-        * variations
+        * variations for non-canceled subscriptions
     """
 
     def __init__(self, *args, **kwargs):
@@ -336,33 +338,54 @@ class TestInvoiceGenerationCommand(TestCase):
         assert True
 
     def test_gen_for_non_consolidated_billing(self):
-        billing_date = '2015-02-09'
+        billing_date = '2015-03-09'
 
         customer = CustomerFactory.create(consolidated_billing=False)
 
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'))
         start_date = dt.date(2015, 1, 3)
+        trial_end = start_date + dt.timedelta(days=7)
 
         SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
-                                         customer=customer)
+                                         trial_end=trial_end, customer=customer)
 
-        # TODO: add metered features logs for each subscription + test if
-        # they are added ok to the doc.
-
+        consumed_mfs = Decimal('50.00')
         for subscription in Subscription.objects.all():
             subscription.activate()
             subscription.save()
 
+            MeteredFeatureUnitsLogFactory.create(
+                subscription=subscription, metered_feature=metered_feature,
+                start_date=dt.date(2015, 02, 01),
+                end_date=dt.date(2015, 02, 28),
+                consumed_units=consumed_mfs)
+
         mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 1)
+        )
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial):
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
             assert Proforma.objects.all().count() == 3
             assert Invoice.objects.all().count() == 0
+
+            assert DocumentEntry.objects.all().count() == 6
+
+            for proforma in Proforma.objects.all():
+                entries = proforma.proforma_entries.all()
+                assert entries[0].quantity == 1
+                assert entries[0].unit_price == Decimal('200.00')
+                assert entries[1].quantity == consumed_mfs
+                assert entries[1].unit_price == metered_feature.price_per_unit
 
     def test_gen_consolidated_billing(self):
         billing_date = '2015-02-09'
