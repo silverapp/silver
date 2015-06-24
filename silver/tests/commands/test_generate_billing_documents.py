@@ -221,6 +221,83 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.unit_price == metered_feature.price_per_unit
             assert doc.quantity == mf_units_log_after_trial.consumed_units
 
+    def test_canceled_subscription_with_trial_and_trial_overflow(self):
+        billing_date = '2015-03-01'
+
+        units_included_during_trial = Decimal('5.00')
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('0.00'),
+            included_units_during_trial=units_included_during_trial)
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'),
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 02, 01)
+        trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription.activate()
+        subscription.cancel()
+        subscription.save()
+
+        units_consumed_during_trial = Decimal('7.00')
+        mf_units_log_during_trial = MeteredFeatureUnitsLogFactory(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=start_date, end_date=trial_end,
+            consumed_units=units_consumed_during_trial)
+
+        mf_units_log_after_trial = MeteredFeatureUnitsLogFactory(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=trial_end + dt.timedelta(days=1),
+            # canceled 4 days before the end of the month
+            end_date=dt.datetime(2015, 2, 24)
+        )
+
+        mocked_on_trial = MagicMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            # Expect one Proforma
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            # In draft state
+            assert Proforma.objects.get(id=1).state == 'draft'
+
+            # Expect 7 entries:
+            # Plan Trial (+-), Plan Trial Metered Feature (+-),
+            # Extra consumed mf
+            # Plan After Trial (+),  Metered Features After Trial (+)
+            assert DocumentEntry.objects.all().count() == 7
+
+            doc = get_object_or_None(DocumentEntry, id=1) # Plan trial (+)
+            assert doc.unit_price == Decimal('57.14')
+
+            doc = get_object_or_None(DocumentEntry, id=2) # Plan trial (-)
+            assert doc.unit_price == Decimal('-57.14')
+
+            doc = get_object_or_None(DocumentEntry, id=3) # Consumed mf (+)
+            assert doc.unit_price == metered_feature.price_per_unit
+            assert doc.quantity == units_included_during_trial
+
+            doc = get_object_or_None(DocumentEntry, id=4) # Consumed mf (-)
+            assert doc.unit_price == - metered_feature.price_per_unit
+            assert doc.quantity == units_included_during_trial
+
+            doc = get_object_or_None(DocumentEntry, id=5) # Consumed mf (-)
+            assert doc.unit_price == metered_feature.price_per_unit
+            assert doc.quantity == units_consumed_during_trial - units_included_during_trial
+
+            doc = get_object_or_None(DocumentEntry, id=6) # Plan after trial end
+            assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
+
+            doc = get_object_or_None(DocumentEntry, id=7) # Consumed mf after trial
+            assert doc.unit_price == metered_feature.price_per_unit
+            assert doc.quantity == mf_units_log_after_trial.consumed_units
+
     def test_on_trial_without_consumed_units(self):
         assert True
 
