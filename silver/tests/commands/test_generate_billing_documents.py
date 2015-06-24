@@ -17,6 +17,19 @@ from silver.utils import get_object_or_None
 
 
 class TestInvoiceGenerationCommand(TestCase):
+    """
+    Tests:
+        * canceled subscription w/ trial
+        * canceled subscription w/a trial
+        * canceled subscription w trial underflow
+        * canceled subscription w trial overflow
+        * consolidated billing
+        * non-consolidated billing
+        * draft, issued (still TODO) state for billing documents
+        * trial over multiple months
+        * variations
+    """
+
     def __init__(self, *args, **kwargs):
         super(TestInvoiceGenerationCommand, self).__init__(*args, **kwargs)
         self.output = StringIO()
@@ -335,6 +348,9 @@ class TestInvoiceGenerationCommand(TestCase):
         SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
                                          customer=customer)
 
+        # TODO: add metered features logs for each subscription + test if
+        # they are added ok to the doc.
+
         for subscription in Subscription.objects.all():
             subscription.activate()
             subscription.save()
@@ -360,6 +376,9 @@ class TestInvoiceGenerationCommand(TestCase):
 
         SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
                                          customer=customer)
+
+        # TODO: add metered features logs for each subscription + test if
+        # they are added ok to the docs.
 
         for subscription in Subscription.objects.all():
             subscription.activate()
