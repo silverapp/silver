@@ -22,7 +22,15 @@ class TestInvoiceGenerationCommand(TestCase):
         self.output = StringIO()
 
     def test_canceled_subscription_with_trial_and_consumed_metered_features_draft(self):
-        """"""
+        """
+        Subscription with consumed mfs both during trial and afterwards,
+        cancceled in the same month it started.
+
+        start_date = 2015-02-01
+        trial_end  = 2015-02-08 -- has consumed units during trial period
+        end_date   = 2015-02-24 -- has consumed units between trial and end_date
+        """
+
         billing_date = '2015-03-01'
 
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
@@ -91,6 +99,12 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.quantity == mf_units_log_after_trial.consumed_units
 
     def test_canceled_subscription_with_metered_features_to_draft(self):
+        """
+        start_date        = 2015-01-01
+        trial_end         = 2015-01-08
+        last_billing_date = 2015-02-01
+        """
+
         billing_date = '2015-03-01'
 
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
@@ -129,9 +143,14 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
+            print DocumentEntry.objects.all()
+
             # Expect 1 entry:
             # Extra Metered Features (+)
             assert DocumentEntry.objects.all().count() == 1
+
+            # !! THIS SHOUDL BE 2 !!
+            # It does not add the subscription for the next month.
 
             doc = get_object_or_None(DocumentEntry, id=1)
             assert doc.unit_price == metered_feature.price_per_unit
