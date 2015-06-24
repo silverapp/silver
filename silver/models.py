@@ -828,11 +828,23 @@ class Subscription(models.Model):
 
     def _get_extra_consumed_units_during_trial(self, metered_feature,
                                                consumed_units):
+        """
+        :returns: (extra_consumed, free_units)
+            extra_consumed - units consumed extra during trial that will be
+                billed
+            free_units - the units included in trial
+        """
+
         if self.is_billed_first_time:
+            # It's on trial and is billed first time
             return self._get_consumed_units_from_total_included_in_trial(
                 metered_feature, consumed_units)
         else:
-            # Get how much has consumed at the last billing cycle
+            # It's still on trial but has been billed before
+            # The following part tries so handle the case when the trial
+            # spans over 2 months and the subscription has been already billed
+            # once => this month it is still on trial but it only
+            # has remaining = consumed_last_cycle - included_during_trial
             last_log_entry = self.billing_log_entries.all()[:1].get()
             if last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
@@ -849,7 +861,6 @@ class Subscription(models.Model):
                         for qs_item in qs if qs_item.unit_price >= 0]
             total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
 
-
             if metered_feature.included_units_during_trial:
                 included_during_trial = metered_feature.included_units_during_trial
                 if total_consumed_so_far > included_during_trial:
@@ -858,9 +869,9 @@ class Subscription(models.Model):
                     remaining = included_during_trial - total_consumed_so_far
                     if consumed_units > remaining:
                         return consumed_units - remaining, remaining
-                    else:
+                    elif consumed_units <= remaining:
                         return 0, consumed_units
-            return 0, 0
+            return 0, consumed_units
 
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
