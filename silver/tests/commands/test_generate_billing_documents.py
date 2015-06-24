@@ -104,7 +104,6 @@ class TestInvoiceGenerationCommand(TestCase):
         trial_end         = 2015-01-08
         last_billing_date = 2015-02-01
         """
-
         billing_date = '2015-03-01'
 
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
@@ -143,14 +142,9 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
-            print DocumentEntry.objects.all()
-
             # Expect 1 entry:
             # Extra Metered Features (+)
             assert DocumentEntry.objects.all().count() == 1
-
-            # !! THIS SHOUDL BE 2 !!
-            # It does not add the subscription for the next month.
 
             doc = get_object_or_None(DocumentEntry, id=1)
             assert doc.unit_price == metered_feature.price_per_unit
