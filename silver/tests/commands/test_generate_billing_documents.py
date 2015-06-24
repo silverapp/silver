@@ -332,8 +332,8 @@ class TestInvoiceGenerationCommand(TestCase):
                                   trial_period_days=7, amount=Decimal('200.00'))
         start_date = dt.date(2015, 1, 3)
 
-        SubscriptionFactory.create_batch(
-            3, plan=plan, start_date=start_date, customer=customer)
+        SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
+                                         customer=customer)
 
         for subscription in Subscription.objects.all():
             subscription.activate()
@@ -346,6 +346,32 @@ class TestInvoiceGenerationCommand(TestCase):
                          stdout=self.output)
 
             assert Proforma.objects.all().count() == 3
+            assert Invoice.objects.all().count() == 0
+
+    def test_gen_consolidated_billing(self):
+        billing_date = '2015-02-09'
+
+        customer = CustomerFactory.create(consolidated_billing=True)
+
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  trial_period_days=7, amount=Decimal('200.00'))
+        start_date = dt.date(2015, 1, 3)
+
+        SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
+                                         customer=customer)
+
+        for subscription in Subscription.objects.all():
+            subscription.activate()
+            subscription.save()
+
+        mocked_on_trial = MagicMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
     def test_gen_for_single_canceled_subscription(self):
