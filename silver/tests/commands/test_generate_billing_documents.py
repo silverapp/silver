@@ -19,14 +19,16 @@ from silver.utils import get_object_or_None
 class TestInvoiceGenerationCommand(TestCase):
     """
     Tests:
-        * canceled subscription w/ trial
+        * canceled subscription w/ trial --
         * canceled subscription w/a trial
-        * canceled subscription w trial underflow
-        * canceled subscription w trial overflow
+        * canceled subscription w trial underflow --
+        * canceled subscription w trial overflow --
         * consolidated billing w/ included units
-        * consolidated billing w/a included units
+        * consolidated billing w/a included units  --
+        * consolidated billing w/ proration
         * non-consolidated billing w/ included units
-        * non-consolidated billing w/a included units
+        * non-consolidated billing w/a included units --
+        * non-consolidated billing w/ proration
         * draft, issued (still TODO) state for billing documents
         * trial over multiple months
         * variations for non-canceled subscriptions
