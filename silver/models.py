@@ -2,6 +2,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 import calendar
+import logging
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -32,6 +33,8 @@ from pyvat import is_vat_number_format_valid
 
 from silver.utils import get_object_or_None
 
+logger = logging.getLogger(__name__)
+debug = logger.debug
 
 UPDATE_TYPES = (
     ('absolute', 'Absolute'),
@@ -588,6 +591,7 @@ class Subscription(models.Model):
         ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
+            debug('is_billed_first_time')
             if not self.trial_end:  # has no trial,
                 if billing_date.month == self.start_date.month:
                     # The same month as when the subscription started
@@ -668,10 +672,12 @@ class Subscription(models.Model):
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)
         else:
+            debug('not is_billed_first_time')
             # TODO: add value for trial which spans over >2 months
             last_billing_date = self.last_billing_date
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
+                debug('should_add_prorated_trial_value')
                 # First invoice after trial end
                 # Add trial value
                 bucket_start_date = self._current_start_date(
@@ -721,6 +727,7 @@ class Subscription(models.Model):
                                          invoice=invoice, proforma=proforma)
 
             else:
+                debug('not should_add_prorated_trial_value')
                 last_month = billing_date.month - 1 or 12
                 if (self.trial_end and
                     self.trial_end.month == last_month):
@@ -738,12 +745,16 @@ class Subscription(models.Model):
                     # The subscription either did not have a trial at all or
                     # the trial ended in a month < than the last one => add
                     # all the consumed metered features for the last month.
+                    debug('add mfs for last month')
                     mfs_start_date = self._current_start_date(
                         reference_date=last_billing_date
                     )
                     mfs_end_date = self._current_end_date(
                         reference_date=last_billing_date
                     )
+
+                debug('mfs_start_date: %s' % mfs_start_date)
+                debug('mfs_end_date: %s' % mfs_end_date)
 
                 # Add mfs for the last month
                 self._add_mfs(start_date=mfs_start_date, end_date=mfs_end_date,
@@ -757,6 +768,7 @@ class Subscription(models.Model):
                     reference_date=billing_date
                 )
                 if self.state == 'active':
+                    debug('self.state == active')
                     self._add_plan_value(start_date=current_bucket_start_date,
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)

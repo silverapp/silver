@@ -104,22 +104,35 @@ SILVER_DOCUMENT_STORAGE = None
 
 from django.utils.log import DEFAULT_LOGGING as LOGGING
 
-LOGGING['loggers']['xhtml2pdf'] = {
+#LOGGING['loggers']['xhtml2pdf'] = {
+    #'level': 'DEBUG',
+    #'handlers': ['console']
+#}
+
+#LOGGING['loggers']['pisa'] = {
+    #'level': 'DEBUG',
+    #'handlers': ['console']
+#}
+
+#LOGGING['loggers']['django'] = {
+    #'level': 'DEBUG',
+    #'handlers': ['console']
+#}
+
+#LOGGING['loggers']['django.security'] = {
+    #'level': 'DEBUG',
+    #'handlers': ['console']
+#}
+
+import sys
+
+LOGGING['loggers']['silver'] = {
     'level': 'DEBUG',
     'handlers': ['console']
 }
 
-LOGGING['loggers']['pisa'] = {
-    'level': 'DEBUG',
-    'handlers': ['console']
+LOGGING['handlers']['console'] = {
+    'class': 'logging.StreamHandler',
+    'stream': sys.stdout,
 }
 
-LOGGING['loggers']['django'] = {
-    'level': 'DEBUG',
-    'handlers': ['console']
-}
-
-LOGGING['loggers']['django.security'] = {
-    'level': 'DEBUG',
-    'handlers': ['console']
-}
