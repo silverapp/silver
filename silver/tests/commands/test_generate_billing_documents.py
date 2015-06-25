@@ -338,35 +338,38 @@ class TestInvoiceGenerationCommand(TestCase):
         assert True
 
     def test_gen_for_non_consolidated_billing(self):
-        billing_date = '2015-03-09'
+        billing_date = '2015-03-01'
 
         customer = CustomerFactory.create(consolidated_billing=False)
 
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
-                                  trial_period_days=7, amount=Decimal('200.00'))
+                                  amount=Decimal('200.00'),
+                                  metered_features=[metered_feature])
         start_date = dt.date(2015, 1, 3)
-        trial_end = start_date + dt.timedelta(days=7)
 
-        SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
-                                         trial_end=trial_end, customer=customer)
+        # Create 3 subscriptions for the same customer
+        SubscriptionFactory.create_batch(size=3,
+                                         plan=plan, start_date=start_date,
+                                         customer=customer)
 
         consumed_mfs = Decimal('50.00')
         for subscription in Subscription.objects.all():
             subscription.activate()
             subscription.save()
 
+            # For each subscription, add consumed units
             MeteredFeatureUnitsLogFactory.create(
-                subscription=subscription, metered_feature=metered_feature,
-                start_date=dt.date(2015, 02, 01),
-                end_date=dt.date(2015, 02, 28),
+                subscription=subscription,
+                metered_feature=metered_feature,
+                start_date=dt.date(2015, 2, 1),
+                end_date=dt.date(2015, 2, 28),
                 consumed_units=consumed_mfs)
 
         mocked_on_trial = MagicMock(return_value=False)
         mocked_last_billing_date = PropertyMock(
-            return_value=dt.date(2015, 2, 1)
-        )
+            return_value=dt.date(2015, 2, 1))
         mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
                             on_trial=mocked_on_trial,
@@ -382,10 +385,17 @@ class TestInvoiceGenerationCommand(TestCase):
 
             for proforma in Proforma.objects.all():
                 entries = proforma.proforma_entries.all()
-                assert entries[0].quantity == 1
-                assert entries[0].unit_price == Decimal('200.00')
-                assert entries[1].quantity == consumed_mfs
-                assert entries[1].unit_price == metered_feature.price_per_unit
+                if 'plan' in entries[0].description.lower():
+                    plan = entries[0]
+                    units = entries[1]
+                else:
+                    units = entries[0]
+                    plan = entries[1]
+
+                assert plan.quantity == 1
+                assert plan.unit_price == Decimal('200.00')
+                assert units.quantity == consumed_mfs
+                assert units.unit_price == metered_feature.price_per_unit
 
     def test_gen_consolidated_billing(self):
         billing_date = '2015-02-09'
