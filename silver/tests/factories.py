@@ -46,8 +46,10 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     unit = 'Unit'
-    price_per_unit = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
-    included_units = factory.fuzzy.FuzzyDecimal(0.01, 100000.00)
+    price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
+                                                precision=4)
+    included_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=100000.00,
+                                                precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
 
 
@@ -118,7 +120,8 @@ class MeteredFeatureUnitsLogFactory(factory.django.DjangoModelFactory):
         model = MeteredFeatureUnitsLog
     metered_feature = factory.SubFactory(MeteredFeatureFactory)
     subscription = factory.SubFactory(SubscriptionFactory)
-    consumed_units = factory.fuzzy.FuzzyDecimal(0.01, 50000.00)
+    consumed_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=50000.00,
+                                                precision=4)
 
 
 class InvoiceFactory(factory.django.DjangoModelFactory):
@@ -176,8 +179,8 @@ class DocumentEntryFactory(factory.django.DjangoModelFactory):
 
     description = factory.Sequence(lambda n: 'Description{cnt}'.format(cnt=n))
     unit = factory.Sequence(lambda n: 'Unit{cnt}'.format(cnt=n))
-    quantity = factory.fuzzy.FuzzyDecimal(0.00, 50000.00)
-    unit_price = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
+    quantity = factory.fuzzy.FuzzyDecimal(low=0.00, high=50000.00, precision=4)
+    unit_price = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00, precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
     end_date = factory.Sequence(
         lambda n: datetime.date.today() + datetime.timedelta(days=n)
