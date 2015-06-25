@@ -398,33 +398,60 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert units.unit_price == metered_feature.price_per_unit
 
     def test_gen_consolidated_billing(self):
-        billing_date = '2015-02-09'
+        billing_date = '2015-03-09'
+        subscriptions_cnt = 3
+        plan_price = Decimal('200.00')
+        mf_price = Decimal('2.5')
 
-        customer = CustomerFactory.create(consolidated_billing=True)
-
+        customer = CustomerFactory.create(
+            consolidated_billing=True,
+            sales_tax_percent=Decimal('0.00'))
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('0.00'), price_per_unit=mf_price)
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
-                                  trial_period_days=7, amount=Decimal('200.00'))
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
         start_date = dt.date(2015, 1, 3)
 
-        SubscriptionFactory.create_batch(3, plan=plan, start_date=start_date,
-                                         customer=customer)
+        subscriptions = SubscriptionFactory.create_batch(
+            size=subscriptions_cnt, plan=plan, start_date=start_date,
+            customer=customer)
 
-        # TODO: add metered features logs for each subscription + test if
-        # they are added ok to the docs.
-
-        for subscription in Subscription.objects.all():
+        consumed_mfs = Decimal('50.00')
+        for subscription in subscriptions:
             subscription.activate()
             subscription.save()
 
+            # For each subscription, add consumed units
+            MeteredFeatureUnitsLogFactory.create(
+                subscription=subscription,
+                metered_feature=metered_feature,
+                start_date=dt.date(2015, 2, 1),
+                end_date=dt.date(2015, 2, 28),
+                consumed_units=consumed_mfs)
+
         mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 1))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial):
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            # For each doc, expect 2 entries: the plan value and the mfs
+            assert proforma.proforma_entries.all().count() == subscriptions_cnt * 2
+
+            expected_total = (subscriptions_cnt * plan_price +
+                              subscriptions_cnt * (mf_price * consumed_mfs))
+            assert proforma.total == expected_total
 
     def test_gen_for_single_canceled_subscription(self):
         billing_date = '2015-04-03'
