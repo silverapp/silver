@@ -1023,6 +1023,7 @@ class Subscription(models.Model):
         return 0
 
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
+        debug('inside _add_mfs')
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
