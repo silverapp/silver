@@ -1018,6 +1018,9 @@ class Subscription(models.Model):
         log = [qs_item.consumed_units for qs_item in qs]
         total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
+        debug('included_units: %s' % included_units)
+        debug('extra: %s' % (total_consumed_units - included_units))
+
         if total_consumed_units > included_units:
             return total_consumed_units - included_units
         return 0
@@ -1040,26 +1043,26 @@ class Subscription(models.Model):
         })
 
         for metered_feature in self.plan.metered_features.all():
-            consumed_units = self._get_consumed_units(metered_feature,
-                                                      percent, start_date,
-                                                      end_date)
+            consumed_units = self._get_consumed_units(
+                metered_feature, percent, start_date, end_date)
+            if consumed_units == 0:
+                continue
 
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
                             'name': metered_feature.name,
                             'product_code': metered_feature.product_code})
 
-            if consumed_units > 0:
-                description = self._entry_description(context)
-                unit = self._entry_unit(context)
+            description = self._entry_description(context)
+            unit = self._entry_unit(context)
 
-                DocumentEntry.objects.create(
-                    invoice=invoice, proforma=proforma,
-                    description=description, unit=unit,
-                    quantity=consumed_units, prorated=prorated,
-                    unit_price=metered_feature.price_per_unit,
-                    product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date)
+            DocumentEntry.objects.create(
+                invoice=invoice, proforma=proforma,
+                description=description, unit=unit,
+                quantity=consumed_units, prorated=prorated,
+                unit_price=metered_feature.price_per_unit,
+                product_code=metered_feature.product_code,
+                start_date=start_date, end_date=end_date)
 
     def _get_proration_status_and_percent(self, start_date, end_date):
         """
@@ -1085,6 +1088,10 @@ class Subscription(models.Model):
             days_in_interval = (end_date - start_date).days + 1
             percent = 1.0 * days_in_interval / days_in_full_interval
             percent = Decimal(percent).quantize(Decimal('0.0000'))
+
+            debug('days_in_full_interval: %s' % days_in_full_interval)
+            debug('days_in_interval: %s' % days_in_interval)
+            debug('percent: %s' % percent)
 
             return True, percent
 
