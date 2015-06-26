@@ -26,7 +26,7 @@ class TestInvoiceGenerationCommand(TestCase):
             * prorated subscriptions w/ consumed mfs overflow --
             * consolidated -> subscriptions full as well as full trial
             * non-consolidated billing w/ included units --
-            * non-consolidated billing w/a included units
+            * non-consolidated billing w/a included units --
             * non-consolidated billing w/ prorated subscriptions
             * Generate with different default states
                 * draft --
@@ -47,14 +47,14 @@ class TestInvoiceGenerationCommand(TestCase):
     ###########################################################################
     # Non-Canceled
     ###########################################################################
-    def test_gen_for_non_consolidated_billing(self, billing_date=None):
+    def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
         A customer  has 3 subscriptions for which we use the normal case:
             * add consumed mfs for the previous month
             * add the value of the plan for the next month
             => 3 different proformas
         """
-        billing_date = billing_date or '2015-03-01'
+        billing_date = '2015-03-01'
 
         customer = CustomerFactory.create(consolidated_billing=False)
 
@@ -113,6 +113,55 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert plan.unit_price == plan_price
                 assert units.quantity == consumed_mfs
                 assert units.unit_price == metered_feature.price_per_unit
+
+    def test_gen_for_non_consolidated_billing_without_consumed_units(self):
+        """
+        A customer  has 3 subscriptions for which he does not have any
+        consumed units => 3 different proformas, each containing only the
+        plan's value.
+        """
+        billing_date = '2015-03-01'
+
+        customer = CustomerFactory.create(consolidated_billing=False)
+
+        plan_price = Decimal('200.00')
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 1, 3)
+
+        # Create 3 subscriptions for the same customer
+        SubscriptionFactory.create_batch(size=3,
+                                         plan=plan, start_date=start_date,
+                                         customer=customer)
+
+        consumed_mfs = Decimal('50.00')
+        for subscription in Subscription.objects.all():
+            subscription.activate()
+            subscription.save()
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 1))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 3
+            assert Invoice.objects.all().count() == 0
+
+            for proforma in Proforma.objects.all():
+                entries = proforma.proforma_entries.all()
+                assert entries.count() == 1
+                assert entries[0].quantity == 1
+                assert entries[0].unit_price == plan_price
+
 
     def test_gen_consolidated_billing_with_consumed_mfs(self):
         """
