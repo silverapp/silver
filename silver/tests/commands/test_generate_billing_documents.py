@@ -21,8 +21,9 @@ class TestInvoiceGenerationCommand(TestCase):
     Tests:
         * non-canceled
             * consolidated billing w/ included units --
-            * consolidated billing w/a included units
-            * consolidated billing w/ prorated subscriptions
+            * consolidated billing w/a included units --
+            * prorated subscriptions w/ consumed mfs underflow
+            * prorated subscriptions w/ consumed mfs overflow
             * consolidated -> subscriptions full as well as full trial
             * non-consolidated billing w/ included units --
             * non-consolidated billing w/a included units
@@ -113,7 +114,7 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert units.quantity == consumed_mfs
                 assert units.unit_price == metered_feature.price_per_unit
 
-    def test_gen_consolidated_billing(self, billing_date=None):
+    def test_gen_consolidated_billing_with_consumed_mfs(self):
         """
         A customer  has 3 subscriptions for which we use the normal case:
             * add consumed mfs for the previous month for each subscription
@@ -121,7 +122,7 @@ class TestInvoiceGenerationCommand(TestCase):
             => 1 proforma with all the aforementioned data
         """
 
-        billing_date = billing_date or '2015-03-01'
+        billing_date = '2015-03-01'
         subscriptions_cnt = 3
         plan_price = Decimal('200.00')
         mf_price = Decimal('2.5')
@@ -178,7 +179,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_gen_consolidated_billing_without_mfs(self):
         """
-        A customer  has 3 subscriptions for which it does not have any
+        A customer has 3 subscriptions for which it does not have any
         consumed metered features.
         """
 
@@ -226,6 +227,112 @@ class TestInvoiceGenerationCommand(TestCase):
 
             expected_total = subscriptions_cnt * plan_price
             assert proforma.total == expected_total
+
+    def test_prorated_subscription_with_consumed_mfs_underflow(self):
+        """
+        The subscription started last month and it does not have a trial
+        => prorated value for the plan and the consumed_mfs < included_mfs
+        => 1 proforma with 1 single value, corresponding to the plan for the
+        next month
+        """
+
+        billing_date = '2015-03-02'
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(
+            consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 2, 14), end_date=dt.date(2015, 2, 28),
+            consumed_units=Decimal('10.00'))
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 14))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            # Expect 1 entry: the plan for the next month.
+            # The mfs will not be added as the consumed_mfs < included_mfs
+            assert proforma.proforma_entries.all().count() == 1
+            assert proforma.total == plan_price
+
+    def test_prorated_subscription_with_consumed_mfs_overflow(self):
+        """
+        The subscription started last month and it does not have a trial
+        => prorated value for the plan and the consumed_mfs < included_mfs
+        => 1 proforma with 1 single value, corresponding to the plan for the
+        next month
+        """
+
+        billing_date = '2015-03-02'
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(
+            consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'),
+                                                price_per_unit=mf_price)
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 15)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 2, 15), end_date=dt.date(2015, 2, 28),
+            consumed_units=Decimal('12.00'))
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 15))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            # Expect 2 entries: the plan for the next month + the extra consumed
+            # units. extra_mfs = 2, since included_mfs=20 but the plan is
+            # 50% prorated => only 50% of the total included_mfs are included.
+            # The mfs will not be added as the consumed_mfs < included_mfs
+            assert proforma.proforma_entries.all().count() == 2
+
+            assert proforma.total == plan_price + mf_price * 2
 
     def test_subscription_with_trial_without_metered_features_to_draft(self):
         billing_date = '2015-03-02'
