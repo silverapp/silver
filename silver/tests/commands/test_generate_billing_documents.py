@@ -176,6 +176,56 @@ class TestInvoiceGenerationCommand(TestCase):
                               subscriptions_cnt * (mf_price * consumed_mfs))
             assert proforma.total == expected_total
 
+    def test_gen_consolidated_billing_without_mfs(self):
+        """
+        A customer  has 3 subscriptions for which it does not have any
+        consumed metered features.
+        """
+
+        billing_date = '2015-03-01'
+        subscriptions_cnt = 3
+        plan_price = Decimal('200.00')
+        mf_price = Decimal('2.5')
+
+        customer = CustomerFactory.create(
+            consolidated_billing=True,
+            sales_tax_percent=Decimal('0.00'))
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('0.00'), price_per_unit=mf_price)
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 1, 3)
+
+        subscriptions = SubscriptionFactory.create_batch(
+            size=subscriptions_cnt, plan=plan, start_date=start_date,
+            customer=customer)
+
+        for subscription in subscriptions:
+            subscription.activate()
+            subscription.save()
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 1))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            # For each doc, expect 1 entry: the plan value
+            assert proforma.proforma_entries.all().count() == subscriptions_cnt
+
+            expected_total = subscriptions_cnt * plan_price
+            assert proforma.total == expected_total
 
     def test_subscription_with_trial_without_metered_features_to_draft(self):
         billing_date = '2015-03-02'
