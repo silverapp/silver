@@ -30,7 +30,7 @@ class TestInvoiceGenerationCommand(TestCase):
             * non-consolidated billing w/ prorated subscriptions
             * Generate with different default states
                 * draft --
-                * issued
+                * issued --
             * trial over multiple months
             * variations for non-canceled subscriptions. Check the cases paper
         * canceled
@@ -654,7 +654,51 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.get(id=1).state == 'issued'
 
     def test_gen_mixed_states_for_multiple_providers(self):
-        assert True
+        billing_date = '2015-03-02'
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(
+            consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
+        provider_draft = ProviderFactory.create()
+        provider_issued = ProviderFactory.create(default_document_state='issued')
+        plan1 = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, provider=provider_draft,
+                                  metered_features=[metered_feature])
+        plan2 = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, provider=provider_issued,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        # Create the prorated subscription
+        subscription1 = SubscriptionFactory.create(
+            plan=plan1, start_date=start_date, customer=customer)
+        subscription1.activate()
+        subscription1.save()
+
+        subscription2 = SubscriptionFactory.create(
+            plan=plan2, start_date=start_date, customer=customer)
+        subscription2.activate()
+        subscription2.save()
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 14))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 2
+            assert Invoice.objects.all().count() == 0
+
+            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=2).state == 'issued'
 
     # Canceled
     ###########################################################################
