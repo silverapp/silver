@@ -12,7 +12,7 @@ from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
-                                    CustomerFactory)
+                                    CustomerFactory, ProviderFactory)
 from silver.utils import get_object_or_None
 
 
@@ -617,7 +617,45 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_full_month_without_consumed_units(self):
         assert True
 
-    ###########################################################################
+    def test_gen_proforma_to_issued_state_for_one_provider(self):
+        billing_date = '2015-03-02'
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(
+            consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
+        metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
+        provider = ProviderFactory.create(default_document_state='issued')
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        mocked_on_trial = MagicMock(return_value=False)
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 2, 14))
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            on_trial=mocked_on_trial,
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            assert Proforma.objects.get(id=1).state == 'issued'
+
+    def test_gen_mixed_states_for_multiple_providers(self):
+        assert True
+
     # Canceled
     ###########################################################################
     def test_canceled_subscription_with_trial_and_consumed_metered_features_draft(self):
