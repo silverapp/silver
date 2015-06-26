@@ -22,8 +22,8 @@ class TestInvoiceGenerationCommand(TestCase):
         * non-canceled
             * consolidated billing w/ included units --
             * consolidated billing w/a included units --
-            * prorated subscriptions w/ consumed mfs underflow
-            * prorated subscriptions w/ consumed mfs overflow
+            * prorated subscriptions w/ consumed mfs underflow --
+            * prorated subscriptions w/ consumed mfs overflow --
             * consolidated -> subscriptions full as well as full trial
             * non-consolidated billing w/ included units --
             * non-consolidated billing w/a included units
