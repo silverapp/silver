@@ -637,14 +637,9 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.activate()
         subscription.save()
 
-        mocked_on_trial = MagicMock(return_value=False)
-        mocked_last_billing_date = PropertyMock(
-            return_value=dt.date(2015, 2, 14))
-        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        mocked_should_be_billed = MagicMock(return_value=True)
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial,
-                            last_billing_date=mocked_last_billing_date,
-                            is_billed_first_time=mocked_is_billed_first_time):
+                            should_be_billed=mocked_should_be_billed):
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
@@ -700,6 +695,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.get(id=1).state == 'draft'
             assert Proforma.objects.get(id=2).state == 'issued'
 
+    ###########################################################################
     # Canceled
     ###########################################################################
     def test_canceled_subscription_with_trial_and_consumed_metered_features_draft(self):
