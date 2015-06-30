@@ -939,7 +939,8 @@ class Subscription(models.Model):
                     unit=unit, quantity=free_units,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date
+                    start_date=start_date, end_date=end_date,
+                    prorated=prorated
                 )
 
                 context.update({
@@ -954,7 +955,8 @@ class Subscription(models.Model):
                     unit=unit, quantity=free_units,
                     unit_price=-metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date
+                    start_date=start_date, end_date=end_date,
+                    prorated=prorated
                 )
 
             # Extra items consumed items that are not included
