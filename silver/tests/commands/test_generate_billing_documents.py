@@ -38,6 +38,7 @@ class TestInvoiceGenerationCommand(TestCase):
             * canceled subscription w/a trial
             * canceled subscription w trial underflow --
             * canceled subscription w trial overflow --
+        * sales tax percent
     """
 
     def __init__(self, *args, **kwargs):
@@ -593,8 +594,51 @@ class TestInvoiceGenerationCommand(TestCase):
             # And quantity 1
             assert doc.quantity == 1
 
-    def test_on_trial_without_consumed_units(self):
-        assert True
+    def test_on_trial_with_consumed_units_underflow(self):
+        billing_date = '2015-03-02'
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        metered_feature = MeteredFeatureFactory(
+            included_units_during_trial=Decimal('10.00'))
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, trial_period_days=14,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 20)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 2, 20), end_date=dt.date(2015, 2, 28),
+            consumed_units=Decimal('8.00'))
+
+        mocked_is_billed_first_time = PropertyMock(return_value=True)
+        with patch.multiple('silver.models.Subscription',
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', billing_date=billing_date,
+                         stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            # Expect 4 entries:
+            # - prorated subscription
+            # - prorated subscription discount
+            # - consumed mfs
+            # - consumed mfs discount
+            assert proforma.proforma_entries.count() == 4
+            assert all([entry.prorated
+                        for entry in proforma.proforma_entries.all()])
+            assert all([entry.total != Decimal('0.0000')
+                        for entry in proforma.proforma_entries.all()])
+            assert proforma.total == Decimal('0.0000')
 
     def test_on_trial_with_consumed_units(self):
         assert True
