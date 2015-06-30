@@ -925,6 +925,9 @@ class Subscription(models.Model):
                 free_units = total_consumed_units
                 charged_units = 0
 
+            debug('metered_feature: %s, prorated: %s' % (metered_feature,
+                                                         prorated))
+
             if free_units > 0:
                 description_template_path = field_template_path(
                     field='entry_description',
@@ -972,7 +975,7 @@ class Subscription(models.Model):
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
                     description=description, unit=unit,
-                    quantity=charged_units,
+                    quantity=charged_units, prorated=prorated,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date)
@@ -1045,6 +1048,8 @@ class Subscription(models.Model):
         })
 
         for metered_feature in self.plan.metered_features.all():
+            debug('metered_feature: %s, prorated: %s' % (metered_feature, prorated))
+
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
             if consumed_units == 0:
