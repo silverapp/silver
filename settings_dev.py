@@ -21,6 +21,7 @@ DATABASES = {
 EXTERNAL_APPS = [
     # Django core apps
     #'django_admin_bootstrapped',
+    'flat',
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -104,34 +105,34 @@ SILVER_DOCUMENT_STORAGE = None
 
 from django.utils.log import DEFAULT_LOGGING as LOGGING
 
-#LOGGING['loggers']['xhtml2pdf'] = {
-    #'level': 'DEBUG',
-    #'handlers': ['console']
-#}
+LOGGING['loggers']['xhtml2pdf'] = {
+    'level': 'DEBUG',
+    'handlers': ['console']
+}
 
-#LOGGING['loggers']['pisa'] = {
-    #'level': 'DEBUG',
-    #'handlers': ['console']
-#}
+LOGGING['loggers']['pisa'] = {
+    'level': 'DEBUG',
+    'handlers': ['console']
+}
 
-#LOGGING['loggers']['django'] = {
-    #'level': 'DEBUG',
-    #'handlers': ['console']
-#}
+LOGGING['loggers']['django'] = {
+    'level': 'DEBUG',
+    'handlers': ['console']
+}
 
-#LOGGING['loggers']['django.security'] = {
-    #'level': 'DEBUG',
-    #'handlers': ['console']
-#}
+LOGGING['loggers']['django.security'] = {
+    'level': 'DEBUG',
+    'handlers': ['console']
+}
 
 import sys
 
 LOGGING['loggers']['silver'] = {
     'level': 'DEBUG',
-    'handlers': ['console']
+    'handlers': ['dev-test']
 }
 
-LOGGING['handlers']['console'] = {
+LOGGING['handlers']['dev-test'] = {
     'class': 'logging.StreamHandler',
     'stream': sys.stdout,
 }
