@@ -929,11 +929,6 @@ class Subscription(models.Model):
                                                          prorated))
 
             if free_units > 0:
-                description_template_path = field_template_path(
-                    field='entry_description',
-                    provider=self.plan.provider.slug
-                )
-
                 description = self._entry_description(context)
 
                 # Positive value for the consumed items.
@@ -968,9 +963,11 @@ class Subscription(models.Model):
                     'context': 'metered-feature-trial-not-discounted'
                 })
 
+                description_template_path = field_template_path(
+                    field='entry_description',
+                    provider=self.plan.provider.slug)
                 description = render_to_string(
-                    description_template_path, context
-                )
+                    description_template_path, context)
 
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
