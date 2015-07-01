@@ -31,8 +31,12 @@ class TestInvoiceGenerationCommand(TestCase):
             * Generate with different default states
                 * draft --
                 * issued --
-            * trial over multiple months
+            * trial over multiple months --
             * variations for non-canceled subscriptions. Check the cases paper
+            * case:
+                * start_date=2015-06-02
+                * trial_end=2015-06-16
+                * billing_date1=2015-06-18 (3 days after trial_end)
         * canceled
             * canceled subscription w/ trial --
             * canceled subscription w/a trial
@@ -58,9 +62,8 @@ class TestInvoiceGenerationCommand(TestCase):
         billing_date = '2015-03-01'
 
         customer = CustomerFactory.create(consolidated_billing=False)
-
-        plan_price = Decimal('200.00')
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -124,9 +127,8 @@ class TestInvoiceGenerationCommand(TestCase):
         billing_date = '2015-03-01'
 
         customer = CustomerFactory.create(consolidated_billing=False)
-
-        plan_price = Decimal('200.00')
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -174,14 +176,14 @@ class TestInvoiceGenerationCommand(TestCase):
 
         billing_date = '2015-03-01'
         subscriptions_cnt = 3
-        plan_price = Decimal('200.00')
-        mf_price = Decimal('2.5')
 
         customer = CustomerFactory.create(
             consolidated_billing=True,
             sales_tax_percent=Decimal('0.00'))
+        mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(
             included_units=Decimal('0.00'), price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -235,14 +237,14 @@ class TestInvoiceGenerationCommand(TestCase):
 
         billing_date = '2015-03-01'
         subscriptions_cnt = 3
-        plan_price = Decimal('200.00')
-        mf_price = Decimal('2.5')
 
         customer = CustomerFactory.create(
             consolidated_billing=True,
             sales_tax_percent=Decimal('0.00'))
+        mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(
             included_units=Decimal('0.00'), price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -287,11 +289,11 @@ class TestInvoiceGenerationCommand(TestCase):
         """
 
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(
             consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
         metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -337,7 +339,6 @@ class TestInvoiceGenerationCommand(TestCase):
         """
 
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(
             consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
@@ -345,6 +346,7 @@ class TestInvoiceGenerationCommand(TestCase):
         mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'),
                                                 price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
@@ -596,12 +598,12 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_on_trial_with_consumed_units_underflow(self):
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=Decimal('10.00'))
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, trial_period_days=14,
@@ -642,7 +644,6 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_on_trial_with_consumed_units_overflow(self):
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
@@ -651,6 +652,7 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=included_during_trial,
             price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, trial_period_days=14,
@@ -705,13 +707,13 @@ class TestInvoiceGenerationCommand(TestCase):
         ## SETUP ##
         prev_billing_date = '2015-06-01'
         curr_billing_date = '2015-06-04' # First day after trial_end
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
         included_during_trial = Decimal('10.00')
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=included_during_trial)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, trial_period_days=14,
@@ -778,7 +780,6 @@ class TestInvoiceGenerationCommand(TestCase):
         ## SETUP ##
         prev_billing_date = '2015-06-01'
         curr_billing_date = '2015-06-04' # First day after trial_end
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
@@ -787,6 +788,7 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=included_during_trial,
             price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, trial_period_days=14,
@@ -825,7 +827,6 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.get(id=2)
-        print proforma.proforma_entries.all()
         # Expect 4 entries:
         # - prorated subscription
         # - prorated subscription discount
@@ -854,7 +855,6 @@ class TestInvoiceGenerationCommand(TestCase):
         ## SETUP ##
         prev_billing_date = '2015-06-01'
         curr_billing_date = '2015-06-04' # First day after trial_end
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
@@ -863,6 +863,7 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=included_during_trial,
             price_per_unit=mf_price)
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, trial_period_days=14,
@@ -901,11 +902,12 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.get(id=2)
-        print proforma.proforma_entries.all()
-        # Expect 4 entries:
+        # Expect 6 entries:
         # - prorated subscription
         # - prorated subscription discount
-        # - consumed mfs from trial
+        # - prorated consumed units during trial
+        # - prorated consumed units during trial discount
+        # - extra consumed mfs from trial
         # - prorated subscription for the remaining period
         assert proforma.proforma_entries.count() == 6
         assert all([entry.prorated
@@ -916,17 +918,68 @@ class TestInvoiceGenerationCommand(TestCase):
         extra_mfs_during_trial = 10 * mf_price
         assert proforma.total == prorated_plan_value + extra_mfs_during_trial
 
-    def test_on_trial_with_consumed_units(self):
-        assert True
+    def test_2nd_sub_after_prorated_month_without_trial_without_consumed_units(self):
+        # TODO: working on it
+        """
+        The subscription:
+            * start_date=2015-05-20, no trial
+            * first billing_date=2015-05-20 (right after activating
+            the subscription)
+            * second billing_date=2015-06-01 (right after the trial_end)
+        The consumed_during_trial < included_during_trial
+        """
 
-    def test_prorated_month_with_trial_without_consumed_units(self):
-        assert True
+        ## SETUP ##
+        prev_billing_date = '2015-05-20'
+        curr_billing_date = '2015-06-01'
 
-    def test_prorated_month_with_trial_with_consumed_units(self):
-        assert True
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
 
-    def test_prorated_month_without_trial_without_consumed_units(self):
-        assert True
+        metered_feature = MeteredFeatureFactory()
+        plan_price = Decimal('200.00')
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 20)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer, trial_end=None)
+        subscription.activate()
+        subscription.save()
+
+        ## TEST ##
+        call_command('generate_docs', billing_date=prev_billing_date,
+                     subscription=subscription.id, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        print Proforma.objects.get(id=1).proforma_entries.all()
+        prorated_plan_value = (Decimal(12/30.0) * plan_price).quantize(Decimal('0.000'))
+        assert Proforma.objects.get(id=1).total == prorated_plan_value
+
+        #call_command('generate_docs', billing_date=curr_billing_date,
+                        #stdout=self.output)
+
+        #assert Proforma.objects.all().count() == 2
+        #assert Invoice.objects.all().count() == 0
+
+        #proforma = Proforma.objects.get(id=2)
+        ## Expect 5 entries:
+        ## - prorated subscription
+        ## - prorated subscription discount
+        ## - consumed mfs from trial
+        ## - consumed mfs from trial discount
+        ## - prorated subscription for the remaining period
+        #assert proforma.proforma_entries.count() == 5
+        #assert all([entry.prorated
+                    #for entry in proforma.proforma_entries.all()])
+        #assert all([entry.total != Decimal('0.0000')
+                    #for entry in proforma.proforma_entries.all()])
+        #prorated_plan_value = (Decimal(27/30.0) * plan_price).quantize(Decimal('0.000'))
+        #assert proforma.total == prorated_plan_value
 
     def test_prorated_month_without_trial_with_consumed_units(self):
         assert True
@@ -939,12 +992,12 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_gen_proforma_to_issued_state_for_one_provider(self):
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(
             consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
         metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
         provider = ProviderFactory.create(default_document_state='issued')
+        plan_price = Decimal('200.00')
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, provider=provider,
@@ -970,13 +1023,13 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_gen_mixed_states_for_multiple_providers(self):
         billing_date = '2015-03-02'
-        plan_price = Decimal('200.00')
 
         customer = CustomerFactory.create(
             consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
         metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
         provider_draft = ProviderFactory.create()
         provider_issued = ProviderFactory.create(default_document_state='issued')
+        plan_price = Decimal('200.00')
         plan1 = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price, provider=provider_draft,
