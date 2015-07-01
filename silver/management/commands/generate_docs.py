@@ -1,3 +1,4 @@
+import logging
 from optparse import make_option
 from datetime import datetime as dt
 
@@ -7,19 +8,27 @@ from django.utils import translation
 from silver.documents_generator import DocumentsGenerator
 from silver.models import Subscription
 
+logger = logging.getLogger(__name__)
+
+
+def date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        msg = "Not a valid date: '{date_str}'. "\
+              "Expected format: YYYY-MM-DD.".format(date_str=date_str)
+        raise argparse.ArgumentTypeError(msg)
 
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
-    option_list = BaseCommand.option_list + (
-        make_option('--subscription',
-                    action='store',
-                    dest='subscription_id',
-                    type="int"),
-        make_option('--date',
-                    action='store',
-                    dest='billing_date',
-                    type="string"),
-    )
+
+    def add_arguments(self, parser):
+        parser.add_argument('--subscription',
+                            action='store', dest='subscription_id', type=int,
+                            help='The id of ths subscription to be billed.')
+        parser.add_argument( '--date',
+                            action='store', dest='billing_date', type=date,
+                            help='The billing date (format YYYY-MM-DD).')
 
     def handle(self, *args, **options):
         translation.activate('en-us')
@@ -32,12 +41,17 @@ class Command(BaseCommand):
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
             try:
-                subscription = Subscription.objects.get(id=options['subscription_id'])
+                subscription_id = options['subscription_id']
+                logger.info('Generating for subscription with id %s.' % subscription_id)
+
+                subscription = Subscription.objects.get(id=subscription_id)
                 docs_generator.generate(subscription=subscription)
                 self.stdout.write('Done. You can have a Club-Mate now. :)')
             except Subscription.DoesNotExist:
                 msg = 'The subscription with the provided id does not exist.'
                 self.stdout.write(msg)
         else:
+            logger.info('Generating for all the available subscriptions.')
+
             docs_generator.generate(billing_date=billing_date)
             self.stdout.write('Done. You can have a Club-Mate now. :)')
