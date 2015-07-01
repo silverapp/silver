@@ -4,6 +4,7 @@ import datetime
 import factory
 import factory.fuzzy
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
@@ -109,10 +110,20 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
 
     plan = factory.SubFactory(PlanFactory)
     customer = factory.SubFactory(CustomerFactory)
-    trial_end = factory.Sequence(lambda n: datetime.date.today() +
-                                 datetime.timedelta(days=n))
-    start_date = datetime.date.today()
+    start_date = timezone.now()
+    trial_end = factory.LazyAttribute(lambda obj: obj.start_date +\
+        datetime.timedelta(days=obj.plan.trial_period_days))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
+
+    @factory.post_generation
+    def metered_features(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            # A list of groups were passed in, use them
+            for metered_feature in extracted:
+                self.metered_features.add(metered_feature)
 
 
 class MeteredFeatureUnitsLogFactory(factory.django.DjangoModelFactory):
