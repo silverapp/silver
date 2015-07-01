@@ -8,7 +8,7 @@ from django.utils import timezone
 from mock import patch, PropertyMock, MagicMock
 
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
-                           Customer, MeteredFeatureUnitsLog)
+                           Customer, MeteredFeatureUnitsLog, BillingLog)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
@@ -691,6 +691,78 @@ class TestInvoiceGenerationCommand(TestCase):
                         for entry in proforma.proforma_entries.all()])
             extra_during_trial = consumed_during_trial - included_during_trial
             assert proforma.total == extra_during_trial * mf_price
+
+    def test_2nd_sub_after_trial_with_consumed_units_underflow(self):
+        """
+        The subscription:
+            * started in 2015-05-20
+            * has as trial end 2015-06-03
+            * was billed first time in 2015-05-01
+            * is billed in 2015-07-01
+        """
+        prev_billing_date = '2015-06-01'
+        curr_billing_date = '2015-06-04' # First day after trial_end
+        plan_price = Decimal('200.00')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        included_during_trial = Decimal('10.00')
+        metered_feature = MeteredFeatureFactory(
+            included_units_during_trial=included_during_trial)
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, trial_period_days=14,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 20)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+        consumed_during_first_trial_part = Decimal('5.00')
+        consumed_during_second_trial_part = Decimal('5.00')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 5, 20), end_date=dt.date(2015, 5, 31),
+            consumed_units=consumed_during_first_trial_part)
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 3),
+            consumed_units=consumed_during_second_trial_part)
+
+
+        call_command('generate_docs', billing_date=prev_billing_date,
+                        stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        assert Proforma.objects.get(id=1).total == Decimal('0.0000')
+
+        call_command('generate_docs', billing_date=curr_billing_date,
+                        stdout=self.output)
+
+        assert Proforma.objects.all().count() == 2
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.get(id=2)
+        # Expect 5 entries:
+        # - prorated subscription
+        # - prorated subscription discount
+        # - consumed mfs from trial
+        # - consumed mfs from trial discount
+        # - prorated subscription for the remaining period
+        assert proforma.proforma_entries.count() == 5
+        assert all([entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        assert all([entry.total != Decimal('0.0000')
+                    for entry in proforma.proforma_entries.all()])
+        prorated_plan_value = (Decimal(27/30.0) * plan_price).quantize(Decimal('0.000'))
+        assert proforma.total == prorated_plan_value
+
+    def test_2nd_sub_billing_after_trial_with_consumed_units_overflow(self):
+        assert True
 
     def test_on_trial_with_consumed_units(self):
         assert True
