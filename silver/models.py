@@ -34,7 +34,6 @@ from pyvat import is_vat_number_format_valid
 from silver.utils import get_object_or_None
 
 logger = logging.getLogger(__name__)
-debug = logger.debug
 
 UPDATE_TYPES = (
     ('absolute', 'Absolute'),
@@ -591,9 +590,11 @@ class Subscription(models.Model):
         ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
-            debug('is_billed_first_time')
+            logger.debug('is_billed_first_time')
             if not self.trial_end:  # has no trial,
+                logger.debug('not self.trial_end')
                 if billing_date.month == self.start_date.month:
+                    logger.debug('billing_date.month == self.start_date.month')
                     # The same month as when the subscription started
                     # Generate first invoice, when the subscription starts
                     # => add the prorated value of the plan for the current month
@@ -672,12 +673,12 @@ class Subscription(models.Model):
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)
         else:
-            debug('not is_billed_first_time')
+            logger.debug('not is_billed_first_time')
             # TODO: add value for trial which spans over >2 months
             last_billing_date = self.last_billing_date
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
-                debug('should_add_prorated_trial_value')
+                logger.debug('should_add_prorated_trial_value')
                 # First invoice after trial end
                 # Add trial value
                 bucket_start_date = self._current_start_date(
@@ -727,7 +728,7 @@ class Subscription(models.Model):
                                          invoice=invoice, proforma=proforma)
 
             else:
-                debug('not should_add_prorated_trial_value')
+                logger.debug('not should_add_prorated_trial_value')
                 last_month = billing_date.month - 1 or 12
                 if (self.trial_end and
                     self.trial_end.month == last_month):
@@ -745,7 +746,7 @@ class Subscription(models.Model):
                     # The subscription either did not have a trial at all or
                     # the trial ended in a month < than the last one => add
                     # all the consumed metered features for the last month.
-                    debug('add mfs for last month')
+                    logger.debug('add mfs for last month')
                     mfs_start_date = self._current_start_date(
                         reference_date=last_billing_date
                     )
@@ -753,8 +754,8 @@ class Subscription(models.Model):
                         reference_date=last_billing_date
                     )
 
-                debug('mfs_start_date: %s' % mfs_start_date)
-                debug('mfs_end_date: %s' % mfs_end_date)
+                logger.debug('mfs_start_date: %s' % mfs_start_date)
+                logger.debug('mfs_end_date: %s' % mfs_end_date)
 
                 # Add mfs for the last month
                 self._add_mfs(start_date=mfs_start_date, end_date=mfs_end_date,
@@ -768,7 +769,7 @@ class Subscription(models.Model):
                     reference_date=billing_date
                 )
                 if self.state == 'active':
-                    debug('self.state == active')
+                    logger.debug('self.state == active')
                     self._add_plan_value(start_date=current_bucket_start_date,
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)
@@ -925,8 +926,8 @@ class Subscription(models.Model):
                 free_units = total_consumed_units
                 charged_units = 0
 
-            debug('metered_feature: %s, prorated: %s' % (metered_feature,
-                                                         prorated))
+            logger.debug('metered_feature: %s, prorated: %s' % (metered_feature,
+                                                                prorated))
 
             if free_units > 0:
                 description = self._entry_description(context)
@@ -1020,15 +1021,15 @@ class Subscription(models.Model):
         log = [qs_item.consumed_units for qs_item in qs]
         total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
-        debug('included_units: %s' % included_units)
-        debug('extra: %s' % (total_consumed_units - included_units))
+        logger.debug('included_units: %s' % included_units)
+        logger.debug('extra: %s' % (total_consumed_units - included_units))
 
         if total_consumed_units > included_units:
             return total_consumed_units - included_units
         return 0
 
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
-        debug('inside _add_mfs')
+        logger.debug('Adding the consumed metered features (_add_mfs).')
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
@@ -1045,7 +1046,8 @@ class Subscription(models.Model):
         })
 
         for metered_feature in self.plan.metered_features.all():
-            debug('metered_feature: %s, prorated: %s' % (metered_feature, prorated))
+            logger.debug('metered_feature: %s, prorated: %s' % (metered_feature,
+                                                                prorated))
 
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
@@ -1093,9 +1095,12 @@ class Subscription(models.Model):
             percent = 1.0 * days_in_interval / days_in_full_interval
             percent = Decimal(percent).quantize(Decimal('0.0000'))
 
-            debug('days_in_full_interval: %s' % days_in_full_interval)
-            debug('days_in_interval: %s' % days_in_interval)
-            debug('percent: %s' % percent)
+            msg = "days_in_full_interval: {full}, "\
+                  "days_in_interval: {consumed}, "\
+                  "percent: {percent}".format(
+                      full=days_in_full_interval,
+                      consumed=days_in_interval, percent=percent)
+            logger.debug(msg)
 
             return True, percent
 
