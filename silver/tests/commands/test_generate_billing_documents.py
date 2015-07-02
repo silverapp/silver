@@ -164,7 +164,6 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert entries[0].quantity == 1
                 assert entries[0].unit_price == plan_price
 
-
     def test_gen_consolidated_billing_with_consumed_mfs(self):
         """
         A customer  has 3 subscriptions for which we use the normal case:
@@ -279,7 +278,7 @@ class TestInvoiceGenerationCommand(TestCase):
             expected_total = subscriptions_cnt * plan_price
             assert proforma.total == expected_total
 
-    def ttest_prorated_subscription_with_consumed_mfs_underflowest_prorated_subscription_with_consumed_mfs_underflow(self):
+    def test_prorated_subscription_with_consumed_mfs_underflow(self):
         """
         The subscription started last month and it does not have a trial
         => prorated value for the plan; the consumed_mfs < included_mfs
@@ -1015,7 +1014,6 @@ class TestInvoiceGenerationCommand(TestCase):
             consumed_mfs_value = (consumed_units-included_units)*mf_price
             assert proforma.total == plan_price + consumed_mfs_value
 
-
     def test_full_month_without_consumed_units(self):
         billing_date = '2015-07-01'
 
@@ -1051,7 +1049,6 @@ class TestInvoiceGenerationCommand(TestCase):
             assert all([not entry.prorated
                         for entry in proforma.proforma_entries.all()])
             assert proforma.total == plan_price
-
 
     def test_gen_proforma_to_issued_state_for_one_provider(self):
         billing_date = '2015-03-02'
