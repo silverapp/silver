@@ -295,12 +295,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def _model(self):
         raise NotImplementedError
 
-    def series_number(self, document):
-        if document.series and document.number:
-            return "%s-%d" % (document.series, document.number)
-        return None
-    series_number.short_description = 'Number'
-
     @property
     def _model_name(self):
         raise NotImplementedError
@@ -344,8 +338,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         if not exist_failed_actions and not exist_failed_changes:
             qs_count = queryset.count()
             if action == 'clone_into_draft':
-                results = ', '.join(self.series_number(result)
-                                    for result in results)
+                results = ', '.join(result.series_number() for result in results)
                 msg = 'Successfully cloned {count} {model_name}(s) ' \
                       'into {results}.'.format(
                           model_name=self._model_name.lower(), count=qs_count,
@@ -425,7 +418,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
             url = urlresolvers.reverse('admin:silver_proforma_change',
                                        args=(obj.proforma.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.proforma)
+                url, obj.proforma.series_number()
             )
         else:
             return '(None)'
@@ -488,7 +481,7 @@ class ProformaAdmin(BillingDocumentAdmin):
             url = urlresolvers.reverse('admin:silver_invoice_change',
                                        args=(obj.invoice.pk,))
             return '<a href="%s">%s</a>' % (
-                url, self.series_number(obj.invoice)
+                url, obj.invoice.series_number()
             )
         else:
             return '(None)'
