@@ -550,7 +550,7 @@ class Subscription(models.Model):
                 self._add_non_trial_value(trial_end, billing_date,
                                           invoice=invoice, proforma=proforma)
         else:
-            last_billing_date = self.last_billing_date
+            last_billing_date = self.last_billing_date + datetime.timedelta(days=1)
             if self.was_on_trial(last_billing_date):
                 self._add_trial_value(last_billing_date, self.trial_end,
                                       invoice=invoice, proforma=proforma)
