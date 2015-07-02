@@ -1016,9 +1016,12 @@ class TestInvoiceGenerationCommand(TestCase):
 
         customer = CustomerFactory.create(
             consolidated_billing=False, sales_tax_percent=Decimal('0.00'))
-        metered_feature = MeteredFeatureFactory(included_units=Decimal('20.00'))
-        provider_draft = ProviderFactory.create()
-        provider_issued = ProviderFactory.create(default_document_state='issued')
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('20.00'))
+        provider_draft = ProviderFactory.create(
+            default_document_state='draft')
+        provider_issued = ProviderFactory.create(
+            default_document_state='issued')
         plan_price = Decimal('200.00')
         plan1 = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
@@ -1045,10 +1048,14 @@ class TestInvoiceGenerationCommand(TestCase):
         mocked_last_billing_date = PropertyMock(
             return_value=dt.date(2015, 2, 14))
         mocked_is_billed_first_time = PropertyMock(return_value=False)
+        mocked_get_consumed_units_during_trial= MagicMock(return_value=(0, 0))
         with patch.multiple('silver.models.Subscription',
                             on_trial=mocked_on_trial,
                             last_billing_date=mocked_last_billing_date,
-                            is_billed_first_time=mocked_is_billed_first_time):
+                            is_billed_first_time=mocked_is_billed_first_time,
+                            _get_extra_consumed_units_during_trial=\
+                            mocked_get_consumed_units_during_trial):
+
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
