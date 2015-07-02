@@ -37,6 +37,7 @@ class Command(BaseCommand):
         if options['billing_date']:
             billing_date = dt.strptime(options['billing_date'],
                                        '%Y-%m-%d').date()
+            print 'Got billing_date: ', billing_date
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
@@ -45,7 +46,8 @@ class Command(BaseCommand):
                 logger.info('Generating for subscription with id %s.' % subscription_id)
 
                 subscription = Subscription.objects.get(id=subscription_id)
-                docs_generator.generate(subscription=subscription)
+                docs_generator.generate(subscription=subscription,
+                                        billing_date=billing_date)
                 self.stdout.write('Done. You can have a Club-Mate now. :)')
             except Subscription.DoesNotExist:
                 msg = 'The subscription with the provided id does not exist.'
