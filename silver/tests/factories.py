@@ -86,7 +86,6 @@ class PlanFactory(factory.django.DjangoModelFactory):
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
-    trial_period_days = factory.Sequence(lambda n: n)
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)
