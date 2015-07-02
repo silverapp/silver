@@ -32,10 +32,10 @@ class TestInvoiceGenerationCommand(TestCase):
                 * draft --
                 * issued --
             * trial over multiple months --
-            * variations for non-canceled subscriptions. Check the cases paper
+            * variations for non-canceled subscriptions. Check the cases paper --
         * canceled
             * canceled subscription w/ trial --
-            * canceled subscription w/a trial
+            * canceled subscription w/a trial --
             * canceled subscription w trial underflow --
             * canceled subscription w trial overflow --
         * sales tax percent
