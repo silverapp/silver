@@ -127,8 +127,10 @@ LOGGING['loggers']['django.security'] = {
 
 import sys
 
+debug = 1
+
 LOGGING['loggers']['silver'] = {
-    'level': 'DEBUG',
+    'level': 'DEBUG' if debug else 'INFO',
     'handlers': ['dev-test']
 }
 
