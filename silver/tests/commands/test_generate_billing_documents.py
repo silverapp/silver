@@ -1,5 +1,5 @@
 import datetime as dt
-from decimal import Decimal
+from decimal import Decimal, ROUND_UP, ROUND_HALF_UP, Context
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -919,14 +919,13 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total == prorated_plan_value + extra_mfs_during_trial
 
     def test_2nd_sub_after_prorated_month_without_trial_without_consumed_units(self):
-        # TODO: working on it
         """
         The subscription:
             * start_date=2015-05-20, no trial
             * first billing_date=2015-05-20 (right after activating
             the subscription)
             * second billing_date=2015-06-01 (right after the trial_end)
-        The consumed_during_trial < included_during_trial
+        It has 0 consumed units during 2015-05-20 -> 2015-06-01.
         """
 
         ## SETUP ##
@@ -950,36 +949,27 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.save()
 
         ## TEST ##
-        call_command('generate_docs', billing_date=prev_billing_date,
+        call_command('generate_docs', date=prev_billing_date,
                      subscription=subscription.id, stdout=self.output)
 
         assert Proforma.objects.all().count() == 1
         assert Invoice.objects.all().count() == 0
 
-        print Proforma.objects.get(id=1).proforma_entries.all()
-        prorated_plan_value = (Decimal(12/30.0) * plan_price).quantize(Decimal('0.000'))
-        assert Proforma.objects.get(id=1).total == prorated_plan_value
+        percent = Decimal(12/31.0).quantize(Decimal('0.0000'))
+        assert Proforma.objects.get(id=1).total == percent * plan_price
 
-        #call_command('generate_docs', billing_date=curr_billing_date,
-                        #stdout=self.output)
+        call_command('generate_docs', date=curr_billing_date,
+                     subscription=subscription.id, stdout=self.output)
 
-        #assert Proforma.objects.all().count() == 2
-        #assert Invoice.objects.all().count() == 0
+        assert Proforma.objects.all().count() == 2
+        assert Invoice.objects.all().count() == 0
 
-        #proforma = Proforma.objects.get(id=2)
-        ## Expect 5 entries:
-        ## - prorated subscription
-        ## - prorated subscription discount
-        ## - consumed mfs from trial
-        ## - consumed mfs from trial discount
-        ## - prorated subscription for the remaining period
-        #assert proforma.proforma_entries.count() == 5
-        #assert all([entry.prorated
-                    #for entry in proforma.proforma_entries.all()])
-        #assert all([entry.total != Decimal('0.0000')
-                    #for entry in proforma.proforma_entries.all()])
-        #prorated_plan_value = (Decimal(27/30.0) * plan_price).quantize(Decimal('0.000'))
-        #assert proforma.total == prorated_plan_value
+        proforma = Proforma.objects.get(id=2)
+        # Expect 1 entries: the subscription for the next month
+        assert proforma.proforma_entries.count() == 1
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        assert proforma.total == plan_price
 
     def test_prorated_month_without_trial_with_consumed_units(self):
         assert True
