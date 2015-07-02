@@ -1039,6 +1039,7 @@ class Subscription(models.Model):
         total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
         logger.debug('included_units: %s' % included_units)
+        logger.debug('total_consumed_units: %s' % total_consumed_units)
         logger.debug('extra: %s' % (total_consumed_units - included_units))
 
         if total_consumed_units > included_units:
@@ -1068,6 +1069,9 @@ class Subscription(models.Model):
 
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
+
+            logger.debug('consumed_units: %s' % consumed_units)
+
             if consumed_units == 0:
                 continue
 
