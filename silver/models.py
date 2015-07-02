@@ -490,6 +490,8 @@ class Subscription(models.Model):
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
+            if not self.trial_end:
+                return True
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
             last_billing_date = self.last_billing_date
@@ -588,6 +590,10 @@ class Subscription(models.Model):
         metered features)) to the document.
         """
         ONE_DAY = datetime.timedelta(days=1)
+
+        logger.debug('-----------------------------------')
+        logger.debug('INSIDE add_total_value_to_document')
+        logger.debug('billing_date: %s' % billing_date)
 
         if self.is_billed_first_time:
             logger.debug('is_billed_first_time')
@@ -768,6 +774,10 @@ class Subscription(models.Model):
                 current_bucket_end_date = self._current_end_date(
                     reference_date=billing_date
                 )
+
+                logger.debug('current_bucket_start_date: %s' % current_bucket_start_date)
+                logger.debug('current_bucket_end_date: %s' % current_bucket_end_date)
+
                 if self.state == 'active':
                     logger.debug('self.state == active')
                     self._add_plan_value(start_date=current_bucket_start_date,
@@ -776,6 +786,8 @@ class Subscription(models.Model):
 
         BillingLog.objects.create(subscription=self, invoice=invoice,
                                   proforma=proforma, billing_date=billing_date)
+
+        logger.debug('+++++++++++++++++++++++++++++++++++')
 
     def _add_plan_trial(self, start_date, end_date, invoice=None,
                         proforma=None):
@@ -984,8 +996,13 @@ class Subscription(models.Model):
         Adds to the document the value of the plan.
         """
 
+        logger.debug('INSIDE _add_plan_value')
+        logger.debug('start_date: %s, end_date: %s' % (start_date, end_date))
+
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
+
+        logger.debug('prorated: %s, percent: %s' % (prorated, percent))
 
         context = self._build_entry_context({
             'name': self.plan.name,
