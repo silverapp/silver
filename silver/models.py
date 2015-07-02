@@ -1647,6 +1647,15 @@ class Invoice(BillingDocument):
                               affect_related_document=False)
             self.proforma.save()
 
+    @transition(field='state', source='issued', target='canceled')
+    def cancel(self, cancel_date=None, affect_related_document=True):
+        super(Invoice, self).cancel(cancel_date)
+
+        if self.proforma and affect_related_document:
+            self.proforma.cancel(cancel_date=cancel_date,
+                                 affect_related_document=False)
+            self.proforma.save()
+
     @property
     def _starting_number(self):
         return self.provider.invoice_starting_number
@@ -1749,6 +1758,15 @@ class Proforma(BillingDocument):
         elif affect_related_document:
             self.invoice.pay(paid_date=paid_date,
                              affect_related_document=False)
+            self.invoice.save()
+
+    @transition(field='state', source='issued', target='canceled')
+    def cancel(self, cancel_date=None, affect_related_document=True):
+        super(Proforma, self).cancel(cancel_date)
+
+        if self.invoice and affect_related_document:
+            self.invoice.cancel(cancel_date=cancel_date,
+                                affect_related_document=False)
             self.invoice.save()
 
     def create_invoice(self):
