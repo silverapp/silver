@@ -111,7 +111,7 @@ class Plan(models.Model):
         help_text='The currency in which the subscription will be charged.'
     )
     trial_period_days = models.PositiveIntegerField(
-        null=True,
+        null=True, blank=True,
         help_text='Number of trial period days granted when subscribing a '
                   'customer to this plan.',
         verbose_name='Trial days'
