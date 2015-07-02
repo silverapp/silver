@@ -969,14 +969,89 @@ class TestInvoiceGenerationCommand(TestCase):
                     for entry in proforma.proforma_entries.all()])
         assert proforma.total == plan_price
 
-    def test_prorated_month_without_trial_with_consumed_units(self):
-        assert True
-
     def test_full_month_with_consumed_units(self):
-        assert True
+        billing_date = '2015-07-01'
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price=Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan_price = Decimal('200.00')
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 6, 1))  # was billed last month
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', date=billing_date, stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            assert proforma.proforma_entries.all().count() == 2
+            assert all([not entry.prorated
+                        for entry in proforma.proforma_entries.all()])
+            consumed_mfs_value = (consumed_units-included_units)*mf_price
+            assert proforma.total == plan_price + consumed_mfs_value
+
 
     def test_full_month_without_consumed_units(self):
-        assert True
+        billing_date = '2015-07-01'
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        metered_feature = MeteredFeatureFactory()
+        provider = ProviderFactory.create()
+        plan_price = Decimal('200.00')
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=plan_price, provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        mocked_last_billing_date = PropertyMock(
+            return_value=dt.date(2015, 6, 1))  # was billed last month
+        mocked_is_billed_first_time = PropertyMock(return_value=False)
+        with patch.multiple('silver.models.Subscription',
+                            last_billing_date=mocked_last_billing_date,
+                            is_billed_first_time=mocked_is_billed_first_time):
+            call_command('generate_docs', date=billing_date, stdout=self.output)
+
+            assert Proforma.objects.all().count() == 1
+            assert Invoice.objects.all().count() == 0
+
+            proforma = Proforma.objects.get(id=1)
+            assert proforma.proforma_entries.all().count() == 1
+            assert all([not entry.prorated
+                        for entry in proforma.proforma_entries.all()])
+            assert proforma.total == plan_price
+
 
     def test_gen_proforma_to_issued_state_for_one_provider(self):
         billing_date = '2015-03-02'
