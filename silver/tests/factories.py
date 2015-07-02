@@ -195,8 +195,7 @@ class DocumentEntryFactory(factory.django.DjangoModelFactory):
     unit_price = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00, precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
     end_date = factory.Sequence(
-        lambda n: datetime.date.today() + datetime.timedelta(days=n)
-    )
+        lambda n: datetime.date.today() + datetime.timedelta(days=n))
     start_date = datetime.date.today()
     prorated = factory.Sequence(lambda n: n % 2 == 1)
 
