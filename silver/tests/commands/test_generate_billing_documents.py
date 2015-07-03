@@ -1442,8 +1442,8 @@ class TestInvoiceGenerationCommand(TestCase):
                                   trial_period_days=7, amount=Decimal('200.00'))
         start_date = dt.date(2015, 1, 29)
 
-        SubscriptionFactory.create_batch(
-            size=5, plan=plan, start_date=start_date)
+        SubscriptionFactory.create_batch(size=5, plan=plan, start_date=start_date)
+
         for subscription in Subscription.objects.all():
             subscription.activate()
             subscription.save()
