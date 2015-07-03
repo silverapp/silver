@@ -139,7 +139,7 @@ class SubscriptionDetail(generics.RetrieveUpdateAPIView):
                                                      *args, **kwargs)
 
 
-class SubscriptionDetailActivate(APIView):
+class SubscriptionActivate(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -184,7 +184,7 @@ class SubscriptionDetailActivate(APIView):
                             status=status.HTTP_200_OK)
 
 
-class SubscriptionDetailCancel(APIView):
+class SubscriptionCancel(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -213,7 +213,7 @@ class SubscriptionDetailCancel(APIView):
                 return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class SubscriptionDetailReactivate(APIView):
+class SubscriptionReactivate(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
