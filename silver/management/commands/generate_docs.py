@@ -42,8 +42,9 @@ class Command(BaseCommand):
         if options['subscription_id']:
             try:
                 subscription_id = options['subscription_id']
-                logger.info('Generating for subscription with id %s.',
-                            subscription_id)
+                logger.info('Generating for subscription with id=%s; '\
+                            'billing_date=%s.', subscription_id,
+                            billing_date)
 
                 subscription = Subscription.objects.get(id=subscription_id)
                 docs_generator.generate(subscription=subscription,
@@ -53,7 +54,8 @@ class Command(BaseCommand):
                 msg = 'The subscription with the provided id does not exist.'
                 self.stdout.write(msg)
         else:
-            logger.info('Generating for all the available subscriptions.')
+            logger.info('Generating for all the available subscriptions; '\
+                        'billing_date=%s.', billing_date)
 
             docs_generator.generate(billing_date=billing_date)
             self.stdout.write('Done. You can have a Club-Mate now. :)')
