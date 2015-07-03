@@ -36,13 +36,6 @@ from silver.utils import get_object_or_None
 logger = logging.getLogger(__name__)
 
 
-_INTERVALS_CODES = {
-    'year': 0,
-    'month': 1,
-    'week': 2,
-    'day': 3
-}
-
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
@@ -255,6 +248,8 @@ class Subscription(models.Model):
         ('ended', 'Ended')
     )
 
+    _INTERVALS_CODES = {'year': 0, 'month': 1, 'week': 2, 'day': 3}
+
     plan = models.ForeignKey(
         'Plan',
         help_text='The plan the customer is subscribed to.'
@@ -346,7 +341,7 @@ class Subscription(models.Model):
             bymonthday = 1
 
         fake_initial_date = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule(self._INTERVALS_CODES[self.plan.interval],
                   count=1,
                   bymonth=bymonth,
                   bymonthday=bymonthday,
@@ -358,7 +353,7 @@ class Subscription(models.Model):
             fake_initial_date = relative_start_date
 
         dates = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule(self._INTERVALS_CODES[self.plan.interval],
                   dtstart=fake_initial_date,
                   interval=interval_count,
                   until=reference_date)
@@ -405,7 +400,7 @@ class Subscription(models.Model):
                 interval_count = self.plan.interval_count
 
         fake_end_date = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule(self._INTERVALS_CODES[self.plan.interval],
                   interval=interval_count,
                   count=count,
                   bymonth=bymonth,
