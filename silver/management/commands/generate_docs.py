@@ -37,7 +37,6 @@ class Command(BaseCommand):
         if options['billing_date']:
             billing_date = dt.strptime(options['billing_date'],
                                        '%Y-%m-%d').date()
-            print 'Got billing_date: ', billing_date
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
