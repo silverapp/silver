@@ -109,7 +109,7 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
 
     plan = factory.SubFactory(PlanFactory)
     customer = factory.SubFactory(CustomerFactory)
-    start_date = timezone.now()
+    start_date = timezone.now().date()
     trial_end = factory.LazyAttribute(
         lambda obj: obj.start_date +\
                     datetime.timedelta(days=obj.plan.trial_period_days)
