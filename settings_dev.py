@@ -124,18 +124,3 @@ LOGGING['loggers']['django.security'] = {
     'level': 'DEBUG',
     'handlers': ['console']
 }
-
-import sys
-
-debug = 1
-
-LOGGING['loggers']['silver'] = {
-    'level': 'DEBUG' if debug else 'INFO',
-    'handlers': ['dev-test']
-}
-
-LOGGING['handlers']['dev-test'] = {
-    'class': 'logging.StreamHandler',
-    'stream': sys.stdout,
-}
-
