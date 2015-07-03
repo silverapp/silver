@@ -21,7 +21,6 @@ DATABASES = {
 EXTERNAL_APPS = [
     # Django core apps
     #'django_admin_bootstrapped',
-    'flat',
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
