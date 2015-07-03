@@ -533,7 +533,7 @@ class Subscription(models.Model):
         self.activate(start_date=start_date,
                       trial_end_date=trial_end_date)
         self.save()
-        if not self.trial_end:
+        if not self.trial_end and not self.plan.trial_period_days:
             DocumentsGenerator().generate(subscription=self)
 
     @transition(field=state, source=['active'], target='canceled')
