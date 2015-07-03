@@ -42,7 +42,8 @@ class Command(BaseCommand):
         if options['subscription_id']:
             try:
                 subscription_id = options['subscription_id']
-                logger.info('Generating for subscription with id %s.' % subscription_id)
+                logger.info('Generating for subscription with id %s.',
+                            subscription_id)
 
                 subscription = Subscription.objects.get(id=subscription_id)
                 docs_generator.generate(subscription=subscription,
