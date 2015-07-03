@@ -855,14 +855,14 @@ class Subscription(models.Model):
 
             consumed = [qs_item.quantity
                         for qs_item in qs if qs_item.unit_price >= 0]
-            total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
+            consumed_in_last_billing_cyle = reduce(lambda x, y: x + y, consumed, 0)
 
             if metered_feature.included_units_during_trial:
                 included_during_trial = metered_feature.included_units_during_trial
-                if total_consumed_so_far > included_during_trial:
+                if consumed_in_last_billing_cyle > included_during_trial:
                     return consumed_units, 0
                 else:
-                    remaining = included_during_trial - total_consumed_so_far
+                    remaining = included_during_trial - consumed_in_last_billing_cyle
                     if consumed_units > remaining:
                         return consumed_units - remaining, remaining
                     elif consumed_units <= remaining:
