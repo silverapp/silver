@@ -846,7 +846,7 @@ class Subscription(models.Model):
             # spans over 2 months and the subscription has been already billed
             # once => this month it is still on trial but it only
             # has remaining = consumed_last_cycle - included_during_trial
-            last_log_entry = self.billing_log_entries.all()[:1].get()
+            last_log_entry = self.billing_log_entries.all()[0]
             if last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
                     product_code=metered_feature.product_code)
