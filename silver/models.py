@@ -35,10 +35,6 @@ from silver.utils import get_object_or_None
 
 logger = logging.getLogger(__name__)
 
-UPDATE_TYPES = (
-    ('absolute', 'Absolute'),
-    ('relative', 'Relative')
-)
 
 _INTERVALS_CODES = {
     'year': 0,
