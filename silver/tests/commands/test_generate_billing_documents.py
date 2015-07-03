@@ -134,9 +134,8 @@ class TestInvoiceGenerationCommand(TestCase):
         start_date = dt.date(2015, 1, 3)
 
         # Create 3 subscriptions for the same customer
-        SubscriptionFactory.create_batch(size=3,
-                                         plan=plan, start_date=start_date,
-                                         customer=customer)
+        SubscriptionFactory.create_batch(
+            size=3, plan=plan, start_date=start_date, customer=customer)
 
         for subscription in Subscription.objects.all():
             subscription.activate()
