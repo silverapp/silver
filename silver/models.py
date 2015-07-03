@@ -28,7 +28,7 @@ from django.template.loader import (select_template, get_template,
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
-from dateutil.rrule import *
+from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 
 from silver.utils import get_object_or_None
@@ -248,7 +248,12 @@ class Subscription(models.Model):
         ('ended', 'Ended')
     )
 
-    _INTERVALS_CODES = {'year': 0, 'month': 1, 'week': 2, 'day': 3}
+    _INTERVALS_CODES = {
+        'year': rrule.YEARLY,
+        'month': rrule.MONTHLY,
+        'week': rrule.WEEKLY,
+        'day': rrule.DAILY
+    }
 
     plan = models.ForeignKey(
         'Plan',
@@ -341,7 +346,7 @@ class Subscription(models.Model):
             bymonthday = 1
 
         fake_initial_date = list(
-            rrule(self._INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   count=1,
                   bymonth=bymonth,
                   bymonthday=bymonthday,
@@ -353,7 +358,7 @@ class Subscription(models.Model):
             fake_initial_date = relative_start_date
 
         dates = list(
-            rrule(self._INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   dtstart=fake_initial_date,
                   interval=interval_count,
                   until=reference_date)
@@ -400,7 +405,7 @@ class Subscription(models.Model):
                 interval_count = self.plan.interval_count
 
         fake_end_date = list(
-            rrule(self._INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   interval=interval_count,
                   count=count,
                   bymonth=bymonth,
