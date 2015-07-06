@@ -245,6 +245,7 @@ class Subscription(models.Model):
     STATES = Choices(
         ('active', _('Active')),
         ('inactive', _('Inactive')),
+        ('canceling', _('Canceling')),
         ('canceled', _('Canceled')),
         ('ended', _('Ended'))
     )
@@ -542,7 +543,7 @@ class Subscription(models.Model):
         if not self.trial_end and not self.plan.trial_period_days:
             DocumentsGenerator().generate(subscription=self)
 
-    @transition(field=state, source=['active'], target='canceled')
+    @transition(field=state, source='active', target='canceled')
     def cancel(self):
         canceled_at_date = timezone.now().date()
         bsd = self.bucket_start_date()
@@ -552,8 +553,7 @@ class Subscription(models.Model):
                 start_date=bsd,
                 end_date=bed,
                 metered_feature=metered_feature.pk,
-                subscription=self.pk
-            ).first()
+                subscription=self.pk).first()
             if log:
                 log.end_date = canceled_at_date
                 log.save()
@@ -562,7 +562,11 @@ class Subscription(models.Model):
             self.trial_end = canceled_at_date
             self.save()
 
-    @transition(field=state, source='canceled', target='ended')
+    @transition(field=state, source='active', target='canceling')
+    def cancel_at_billing_cycle_end(self):
+        pass
+
+    @transition(field=state, source=['canceling', 'canceled'], target='ended')
     def end(self):
         self.ended_at = timezone.now().date()
 
