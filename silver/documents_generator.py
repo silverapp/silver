@@ -3,7 +3,7 @@ import datetime as dt
 from django.utils import timezone
 from dateutil.relativedelta import *
 
-from silver.models import Customer
+from silver.models import Customer, Subscription, BillingDocument
 
 
 class DocumentsGenerator(object):
@@ -77,12 +77,12 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state == 'canceled':
+            if subscription.state == Subscription.STATES.canceled:
                 subscription.end()
                 subscription.save()
 
         for provider, document in cached_documents.iteritems():
-            if provider.default_document_state == 'issued':
+            if provider.default_document_state == BillingDocument.STATES.issued:
                 document.issue()
                 document.save()
 
@@ -110,11 +110,11 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state == 'canceled':
+            if subscription.state == Subscription.STATES.canceled:
                 subscription.end()
                 subscription.save()
 
-            if provider.default_document_state == 'issued':
+            if provider.default_document_state == BillingDocument.STATES.issued:
                 document.issue()
                 document.save()
 
@@ -138,11 +138,11 @@ class DocumentsGenerator(object):
         }
         subscription.add_total_value_to_document(**args)
 
-        if subscription.state == 'canceled':
+        if subscription.state == Subscription.STATES.canceled:
             subscription.end()
             subscription.save()
 
-        if provider.default_document_state == 'issued':
+        if provider.default_document_state == BillingDocument.STATES.issued:
             document.issue()
             document.save()
 

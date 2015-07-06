@@ -30,6 +30,7 @@ from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
+from model_utils import Choices
 
 from silver.utils import get_object_or_None
 
@@ -241,11 +242,11 @@ class MeteredFeatureUnitsLog(models.Model):
 
 
 class Subscription(models.Model):
-    STATES = (
-        ('active', 'Active'),
-        ('inactive', 'Inactive'),
-        ('canceled', 'Canceled'),
-        ('ended', 'Ended')
+    STATES = Choices(
+        ('active', _('Active')),
+        ('inactive', _('Inactive')),
+        ('canceled', _('Canceled')),
+        ('ended', _('Ended'))
     )
 
     _INTERVALS_CODES = {
@@ -283,8 +284,8 @@ class Subscription(models.Model):
     )
 
     state = FSMField(
-        choices=STATES, max_length=12, default=STATES[1][0], protected=True,
-        help_text='The state the subscription is in.'
+        choices=STATES, max_length=12, default=STATES.inactive,
+        protected=True, help_text='The state the subscription is in.'
     )
     meta = jsonfield.JSONField(blank=True, null=True)
 
@@ -471,7 +472,7 @@ class Subscription(models.Model):
 
     @property
     def is_on_trial(self):
-        if self.state == 'active' and self.trial_end:
+        if self.state == self.STATES.active and self.trial_end:
             return timezone.now().date() <= self.trial_end
         return False
 
@@ -481,7 +482,7 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
-        if self.state == 'canceled':
+        if self.state == self.STATES.canceled:
             return True
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
@@ -656,7 +657,7 @@ class Subscription(models.Model):
                 self._add_mfs(start_date=start_date_after_trial,
                               end_date=end_date_after_trial,
                               invoice=invoice, proforma=proforma)
-                if self.state == 'active':
+                if self.state == self.STATES.active:
                     # Add the prorated plan's value for the next month
                     current_bucket_start_date = self._current_start_date(
                         reference_date=billing_date
@@ -757,7 +758,7 @@ class Subscription(models.Model):
                     reference_date=billing_date
                 )
 
-                if self.state == 'active':
+                if self.state == self.STATES.active:
                     self._add_plan_value(start_date=current_bucket_start_date,
                                          end_date=current_bucket_end_date,
                                          invoice=invoice, proforma=proforma)
@@ -1243,18 +1244,18 @@ class Customer(AbstractBillingEntity):
 
 
 class Provider(AbstractBillingEntity):
-    FLOW_CHOICES = (
-        ('proforma', 'Proforma'),
-        ('invoice', 'Invoice'),
+    FLOW_CHOICES = Choices(
+        ('proforma', _('Proforma')),
+        ('invoice', _('Invoice')),
     )
-    DOCUMENT_DEFAULT_STATE = (
-        ('draft', 'Draft'),
-        ('issued', 'Issued')
+    DOCUMENT_DEFAULT_STATE = Choices(
+        ('draft', _('Draft')),
+        ('issued', _('Issued'))
     )
 
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
-        default=FLOW_CHOICES[0][0],
+        default=FLOW_CHOICES.proforma,
         help_text="One of the available workflows for generating proformas and\
                    invoices (see the documentation for more details)."
     )
@@ -1274,7 +1275,7 @@ class Provider(AbstractBillingEntity):
     )
     default_document_state = models.CharField(
         max_length=10, choices=DOCUMENT_DEFAULT_STATE,
-        default=DOCUMENT_DEFAULT_STATE[0][0],
+        default=DOCUMENT_DEFAULT_STATE.draft,
         help_text="The default state of the auto-generated documents."
     )
 
@@ -1354,9 +1355,12 @@ class ProductCode(models.Model):
 
 
 class BillingDocument(models.Model):
-    states = ['draft', 'issued', 'paid', 'canceled']
-    STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
-                          for state in states)
+    STATES = Choices(
+        ('draft', _('Draft')),
+        ('issued', _('Issued')),
+        ('paid', _('Paid')),
+        ('canceled', _('Canceled'))
+    )
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
     number = models.IntegerField(blank=True, null=True, db_index=True)
@@ -1377,8 +1381,9 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
-    state = FSMField(choices=STATE_CHOICES, max_length=10, default=states[0],
-        verbose_name="State", help_text='The state the invoice is in.')
+    state = FSMField(choices=STATES, max_length=10, default=STATES.draft,
+                     verbose_name="State",
+                     help_text='The state the invoice is in.')
 
     _last_state = None
 
@@ -1469,16 +1474,17 @@ class BillingDocument(models.Model):
         # send a request which contains the state = 'paid' and also send
         # other changed fields and the request would be accepted bc. only
         # the state is verified.
-        if self._last_state == 'issued' and self.state not in ['paid', 'canceled']:
+        if self._last_state == self.STATES.issued and\
+           self.state not in [self.STATES.paid, self.STATES.canceled]:
             msg = 'You cannot edit the document once it is in issued state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
-        if self._last_state == 'canceled':
+        if self._last_state == self.STATES.canceled:
             msg = 'You cannot edit the document once it is in canceled state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
         # If it's in paid state => don't allow any changes
-        if self._last_state == 'paid':
+        if self._last_state == self.STATES.paid:
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 

@@ -404,7 +404,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 4 entries:
             # Plan Trial (+-), Plan Prorated (+), Plan for next month(+)
@@ -467,7 +467,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-), Plan After Trial (+)
@@ -544,7 +544,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1065,7 +1065,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.get(id=1).state == 'issued'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.issued
 
     def test_gen_mixed_states_for_multiple_providers(self):
         billing_date = '2015-03-02'
@@ -1118,8 +1118,8 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 2
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.get(id=1).state == 'draft'
-            assert Proforma.objects.get(id=2).state == 'issued'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=2).state == Proforma.STATES.issued
 
     ###########################################################################
     # Canceled
@@ -1173,7 +1173,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1301,7 +1301,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1373,7 +1373,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == 'draft'
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
