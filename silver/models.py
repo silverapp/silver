@@ -2,6 +2,7 @@ import datetime
 from datetime import datetime as dt
 from decimal import Decimal
 import calendar
+import logging
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -27,23 +28,13 @@ from django.template.loader import (select_template, get_template,
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
-from dateutil.rrule import *
+from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 
 from silver.utils import get_object_or_None
 
+logger = logging.getLogger(__name__)
 
-UPDATE_TYPES = (
-    ('absolute', 'Absolute'),
-    ('relative', 'Relative')
-)
-
-_INTERVALS_CODES = {
-    'year': 0,
-    'month': 1,
-    'week': 2,
-    'day': 3
-}
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -109,7 +100,7 @@ class Plan(models.Model):
         help_text='The currency in which the subscription will be charged.'
     )
     trial_period_days = models.PositiveIntegerField(
-        null=True,
+        null=True, blank=True,
         help_text='Number of trial period days granted when subscribing a '
                   'customer to this plan.',
         verbose_name='Trial days'
@@ -257,6 +248,13 @@ class Subscription(models.Model):
         ('ended', 'Ended')
     )
 
+    _INTERVALS_CODES = {
+        'year': rrule.YEARLY,
+        'month': rrule.MONTHLY,
+        'week': rrule.WEEKLY,
+        'day': rrule.DAILY
+    }
+
     plan = models.ForeignKey(
         'Plan',
         help_text='The plan the customer is subscribed to.'
@@ -348,7 +346,7 @@ class Subscription(models.Model):
             bymonthday = 1
 
         fake_initial_date = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   count=1,
                   bymonth=bymonth,
                   bymonthday=bymonthday,
@@ -360,7 +358,7 @@ class Subscription(models.Model):
             fake_initial_date = relative_start_date
 
         dates = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   dtstart=fake_initial_date,
                   interval=interval_count,
                   until=reference_date)
@@ -407,7 +405,7 @@ class Subscription(models.Model):
                 interval_count = self.plan.interval_count
 
         fake_end_date = list(
-            rrule(_INTERVALS_CODES[self.plan.interval],
+            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
                   interval=interval_count,
                   count=count,
                   bymonth=bymonth,
@@ -488,6 +486,8 @@ class Subscription(models.Model):
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
+            if not self.trial_end:
+                return True
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
             last_billing_date = self.last_billing_date
@@ -538,7 +538,7 @@ class Subscription(models.Model):
         self.activate(start_date=start_date,
                       trial_end_date=trial_end_date)
         self.save()
-        if not self.trial_end:
+        if not self.trial_end and not self.plan.trial_period_days:
             DocumentsGenerator().generate(subscription=self)
 
     @transition(field=state, source=['active'], target='canceled')
@@ -756,6 +756,7 @@ class Subscription(models.Model):
                 current_bucket_end_date = self._current_end_date(
                     reference_date=billing_date
                 )
+
                 if self.state == 'active':
                     self._add_plan_value(start_date=current_bucket_start_date,
                                          end_date=current_bucket_end_date,
@@ -828,12 +829,24 @@ class Subscription(models.Model):
 
     def _get_extra_consumed_units_during_trial(self, metered_feature,
                                                consumed_units):
+        """
+        :returns: (extra_consumed, free_units)
+            extra_consumed - units consumed extra during trial that will be
+                billed
+            free_units - the units included in trial
+        """
+
         if self.is_billed_first_time:
+            # It's on trial and is billed first time
             return self._get_consumed_units_from_total_included_in_trial(
                 metered_feature, consumed_units)
         else:
-            # Get how much has consumed at the last billing cycle
-            last_log_entry = self.billing_log_entries.all()[:1].get()
+            # It's still on trial but has been billed before
+            # The following part tries so handle the case when the trial
+            # spans over 2 months and the subscription has been already billed
+            # once => this month it is still on trial but it only
+            # has remaining = consumed_last_cycle - included_during_trial
+            last_log_entry = self.billing_log_entries.all()[0]
             if last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
                     product_code=metered_feature.product_code)
@@ -847,20 +860,19 @@ class Subscription(models.Model):
 
             consumed = [qs_item.quantity
                         for qs_item in qs if qs_item.unit_price >= 0]
-            total_consumed_so_far = reduce(lambda x, y: x + y, consumed, 0)
-
+            consumed_in_last_billing_cyle = sum(consumed)
 
             if metered_feature.included_units_during_trial:
                 included_during_trial = metered_feature.included_units_during_trial
-                if total_consumed_so_far > included_during_trial:
+                if consumed_in_last_billing_cyle > included_during_trial:
                     return consumed_units, 0
                 else:
-                    remaining = included_during_trial - total_consumed_so_far
+                    remaining = included_during_trial - consumed_in_last_billing_cyle
                     if consumed_units > remaining:
                         return consumed_units - remaining, remaining
-                    else:
+                    elif consumed_units <= remaining:
                         return 0, consumed_units
-            return 0, 0
+            return 0, consumed_units
 
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
@@ -903,11 +915,6 @@ class Subscription(models.Model):
                 charged_units = 0
 
             if free_units > 0:
-                description_template_path = field_template_path(
-                    field='entry_description',
-                    provider=self.plan.provider.slug
-                )
-
                 description = self._entry_description(context)
 
                 # Positive value for the consumed items.
@@ -916,7 +923,8 @@ class Subscription(models.Model):
                     unit=unit, quantity=free_units,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date
+                    start_date=start_date, end_date=end_date,
+                    prorated=prorated
                 )
 
                 context.update({
@@ -931,7 +939,8 @@ class Subscription(models.Model):
                     unit=unit, quantity=free_units,
                     unit_price=-metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date
+                    start_date=start_date, end_date=end_date,
+                    prorated=prorated
                 )
 
             # Extra items consumed items that are not included
@@ -940,14 +949,16 @@ class Subscription(models.Model):
                     'context': 'metered-feature-trial-not-discounted'
                 })
 
+                description_template_path = field_template_path(
+                    field='entry_description',
+                    provider=self.plan.provider.slug)
                 description = render_to_string(
-                    description_template_path, context
-                )
+                    description_template_path, context)
 
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
                     description=description, unit=unit,
-                    quantity=charged_units,
+                    quantity=charged_units, prorated=prorated,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date)
@@ -1000,7 +1011,6 @@ class Subscription(models.Model):
         return 0
 
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
-
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
 
@@ -1016,26 +1026,27 @@ class Subscription(models.Model):
         })
 
         for metered_feature in self.plan.metered_features.all():
-            consumed_units = self._get_consumed_units(metered_feature,
-                                                      percent, start_date,
-                                                      end_date)
+            consumed_units = self._get_consumed_units(
+                metered_feature, percent, start_date, end_date)
+
+            if consumed_units == 0:
+                continue
 
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
                             'name': metered_feature.name,
                             'product_code': metered_feature.product_code})
 
-            if consumed_units > 0:
-                description = self._entry_description(context)
-                unit = self._entry_unit(context)
+            description = self._entry_description(context)
+            unit = self._entry_unit(context)
 
-                DocumentEntry.objects.create(
-                    invoice=invoice, proforma=proforma,
-                    description=description, unit=unit,
-                    quantity=consumed_units, prorated=prorated,
-                    unit_price=metered_feature.price_per_unit,
-                    product_code=metered_feature.product_code,
-                    start_date=start_date, end_date=end_date)
+            DocumentEntry.objects.create(
+                invoice=invoice, proforma=proforma,
+                description=description, unit=unit,
+                quantity=consumed_units, prorated=prorated,
+                unit_price=metered_feature.price_per_unit,
+                product_code=metered_feature.product_code,
+                start_date=start_date, end_date=end_date)
 
     def _get_proration_status_and_percent(self, start_date, end_date):
         """

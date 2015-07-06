@@ -4,6 +4,7 @@ import datetime
 import factory
 import factory.fuzzy
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
@@ -46,8 +47,10 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
     unit = 'Unit'
-    price_per_unit = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
-    included_units = factory.fuzzy.FuzzyDecimal(0.01, 100000.00)
+    price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
+                                                precision=4)
+    included_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=100000.00,
+                                                precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
 
 
@@ -83,7 +86,6 @@ class PlanFactory(factory.django.DjangoModelFactory):
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
-    trial_period_days = factory.Sequence(lambda n: n)
     generate_after = factory.Sequence(lambda n: n)
     enabled = factory.Sequence(lambda n: n % 2 != 0)
     private = factory.Sequence(lambda n: n % 2 != 0)
@@ -107,10 +109,22 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
 
     plan = factory.SubFactory(PlanFactory)
     customer = factory.SubFactory(CustomerFactory)
-    trial_end = factory.Sequence(lambda n: datetime.date.today() +
-                                 datetime.timedelta(days=n))
-    start_date = datetime.date.today()
+    start_date = timezone.now().date()
+    trial_end = factory.LazyAttribute(
+        lambda obj: obj.start_date +\
+                        datetime.timedelta(days=obj.plan.trial_period_days)
+                    if obj.plan.trial_period_days else None)
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
+
+    @factory.post_generation
+    def metered_features(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        if extracted:
+            # A list of groups were passed in, use them
+            for metered_feature in extracted:
+                self.metered_features.add(metered_feature)
 
 
 class MeteredFeatureUnitsLogFactory(factory.django.DjangoModelFactory):
@@ -118,7 +132,8 @@ class MeteredFeatureUnitsLogFactory(factory.django.DjangoModelFactory):
         model = MeteredFeatureUnitsLog
     metered_feature = factory.SubFactory(MeteredFeatureFactory)
     subscription = factory.SubFactory(SubscriptionFactory)
-    consumed_units = factory.fuzzy.FuzzyDecimal(0.01, 50000.00)
+    consumed_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=50000.00,
+                                                precision=4)
 
 
 class InvoiceFactory(factory.django.DjangoModelFactory):
@@ -176,12 +191,11 @@ class DocumentEntryFactory(factory.django.DjangoModelFactory):
 
     description = factory.Sequence(lambda n: 'Description{cnt}'.format(cnt=n))
     unit = factory.Sequence(lambda n: 'Unit{cnt}'.format(cnt=n))
-    quantity = factory.fuzzy.FuzzyDecimal(0.00, 50000.00)
-    unit_price = factory.fuzzy.FuzzyDecimal(0.01, 100.00)
+    quantity = factory.fuzzy.FuzzyDecimal(low=0.00, high=50000.00, precision=4)
+    unit_price = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00, precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
     end_date = factory.Sequence(
-        lambda n: datetime.date.today() + datetime.timedelta(days=n)
-    )
+        lambda n: datetime.date.today() + datetime.timedelta(days=n))
     start_date = datetime.date.today()
     prorated = factory.Sequence(lambda n: n % 2 == 1)
 

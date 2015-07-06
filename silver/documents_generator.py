@@ -120,7 +120,6 @@ class DocumentsGenerator(object):
 
     def _generate_for_single_subscription(self, subscription=None,
                                           billing_date=None):
-        print '_generate_for_single_subscription'
         """
         Generates the billing documents corresponding to a single subscription.
         Used when a subscription is ended with `when`=`now`
