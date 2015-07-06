@@ -133,7 +133,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
         method = None
         if action == 'activate_and_issue_billing_doc':
             method = Subscription.activate_and_issue_billing_doc
-            print method
         if action == 'reactivate':
             method = Subscription.activate
         elif action == 'cancel':
