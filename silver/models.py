@@ -73,11 +73,11 @@ class UnsavedForeignKey(models.ForeignKey):
 
 
 class Plan(models.Model):
-    INTERVALS = (
-        ('day', 'Day'),
-        ('week', 'Week'),
-        ('month', 'Month'),
-        ('year', 'Year')
+    INTERVALS = Choices(
+        ('day', _('Day')),
+        ('week', _('Week')),
+        ('month', _('Month')),
+        ('year', _('Year'))
     )
 
     name = models.CharField(
@@ -85,7 +85,7 @@ class Plan(models.Model):
         db_index=True
     )
     interval = models.CharField(
-        choices=INTERVALS, max_length=12, default=INTERVALS[2][0],
+        choices=INTERVALS, max_length=12, default=INTERVALS.month,
         help_text='The frequency with which a subscription should be billed.'
     )
     interval_count = models.PositiveIntegerField(
@@ -338,11 +338,11 @@ class Subscription(models.Model):
         # we calculate a fake (intermediary) start date depending on the
         # interval type, for the purposes of alignment to a specific day
         bymonth = bymonthday = byweekday = None
-        if self.plan.interval == 'month':
+        if self.plan.interval == self.plan.INTERVALS.month:
             bymonthday = 1  # first day of the month
-        elif self.plan.interval == 'week':
+        elif self.plan.interval == self.plan.INTERVALS.week:
             byweekday = 0  # first day of the week (Monday)
-        elif self.plan.interval == 'year':
+        elif self.plan.interval == self.plan.INTERVALS.year:
             # first day of the first month (1 Jan)
             bymonth = 1
             bymonthday = 1
@@ -392,12 +392,14 @@ class Subscription(models.Model):
         bymonth = bymonthday = byweekday = None
         count = 1
         interval_count = 1
-        if self.plan.interval == 'month' and _current_start_date.day != 1:
+        if self.plan.interval == self.plan.INTERVALS.month and\
+           _current_start_date.day != 1:
             bymonthday = 1  # first day of the month
-        elif self.plan.interval == 'week' and _current_start_date.weekday() != 0:
+        elif self.plan.interval == self.plan.INTERVALS.week and\
+                _current_start_date.weekday() != 0:
             byweekday = 0  # first day of the week (Monday)
-        elif (self.plan.interval == 'year' and _current_start_date.month != 1
-              and _current_start_date.day != 1):
+        elif (self.plan.interval == self.plan.INTERVALS.year and\
+              _current_start_date.month != 1 and _current_start_date.day != 1):
             # first day of the first month (1 Jan)
             bymonth = 1
             bymonthday = 1

@@ -1,5 +1,6 @@
 from decimal import Decimal
 import datetime
+import random
 
 import factory
 import factory.fuzzy
@@ -82,7 +83,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4][0])
+    interval = Plan.INTERVALS.month
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
