@@ -30,6 +30,7 @@ from livefield.models import LiveModel
 from dateutil.relativedelta import *
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
+from model_utils import Choices
 
 from silver.utils import get_object_or_None
 
@@ -241,11 +242,11 @@ class MeteredFeatureUnitsLog(models.Model):
 
 
 class Subscription(models.Model):
-    STATES = (
-        ('active', 'Active'),
-        ('inactive', 'Inactive'),
-        ('canceled', 'Canceled'),
-        ('ended', 'Ended')
+    STATES = Choices(
+        ('active', _('Active')),
+        ('inactive', _('Inactive')),
+        ('canceled', _('Canceled')),
+        ('ended', _('Ended')),
     )
 
     _INTERVALS_CODES = {
@@ -283,7 +284,7 @@ class Subscription(models.Model):
     )
 
     state = FSMField(
-        choices=STATES, max_length=12, default=STATES[1][0], protected=True,
+        choices=STATES, max_length=12, default=STATES.inactive, protected=True,
         help_text='The state the subscription is in.'
     )
     meta = jsonfield.JSONField(blank=True, null=True)
@@ -1243,18 +1244,18 @@ class Customer(AbstractBillingEntity):
 
 
 class Provider(AbstractBillingEntity):
-    FLOW_CHOICES = (
-        ('proforma', 'Proforma'),
-        ('invoice', 'Invoice'),
+    FLOW_CHOICES = Choices(
+        ('proforma', _('Proforma')),
+        ('invoice', _('Invoice')),
     )
-    DOCUMENT_DEFAULT_STATE = (
-        ('draft', 'Draft'),
-        ('issued', 'Issued')
+    DOCUMENT_DEFAULT_STATE = Choices(
+        ('draft', _('Draft')),
+        ('issued', _('Issued')),
     )
 
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
-        default=FLOW_CHOICES[0][0],
+        default=FLOW_CHOICES.proforma,
         help_text="One of the available workflows for generating proformas and\
                    invoices (see the documentation for more details)."
     )
@@ -1274,7 +1275,7 @@ class Provider(AbstractBillingEntity):
     )
     default_document_state = models.CharField(
         max_length=10, choices=DOCUMENT_DEFAULT_STATE,
-        default=DOCUMENT_DEFAULT_STATE[0][0],
+        default=DOCUMENT_DEFAULT_STATE.draft,
         help_text="The default state of the auto-generated documents."
     )
 
@@ -1354,9 +1355,13 @@ class ProductCode(models.Model):
 
 
 class BillingDocument(models.Model):
-    states = ['draft', 'issued', 'paid', 'canceled']
-    STATE_CHOICES = tuple((state, state.replace('_', ' ').title())
-                          for state in states)
+    STATES = Choices(
+        ('draft', _('Draft')),
+        ('issued', _('Issued')),
+        ('paid', _('Paid')),
+        ('canceled', _('Canceled')),
+    )
+
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
     number = models.IntegerField(blank=True, null=True, db_index=True)
@@ -1377,7 +1382,7 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
-    state = FSMField(choices=STATE_CHOICES, max_length=10, default=states[0],
+    state = FSMField(choices=STATES, max_length=10, default=STATES.draft,
         verbose_name="State", help_text='The state the invoice is in.')
 
     _last_state = None
@@ -1736,7 +1741,7 @@ class Proforma(BillingDocument):
         if not self.series:
             if not hasattr(self, 'provider'):
                 # the clean method is called even if the clean_fields method
-                # raises exceptions, so we check if the provider was specified
+                # raises exceptions, to we check if the provider was specified
                 pass
             elif not self.provider.proforma_series:
                 err_msg = {'series': 'You must either specify the series or '
