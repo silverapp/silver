@@ -1564,7 +1564,6 @@ class BillingDocument(models.Model):
         return '<a href="{url}">{display_series}</a>'.format(
             url=url, display_series=self.series_number)
 
-    @property
     def _entries(self):
         # entries iterator which replaces the invoice/proforma from the DB with
         # self. We need this in _generate_pdf so that the data in PDF has the
