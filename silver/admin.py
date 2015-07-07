@@ -1,13 +1,12 @@
 from django import forms
 from django.contrib import admin, messages
-from django.core import urlresolvers
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma)
+                    ProductCode, Proforma, BillingLog)
 
 from django.contrib.admin.actions import delete_selected as delete_selected_
 
@@ -119,6 +118,28 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
                                                     **kwargs)
 
 
+class BillingLogInLine(admin.TabularInline):
+    model = BillingLog
+    fields = ['billing_date', 'proforma_link', 'invoice_link']
+    readonly_fields = ['billing_date', 'proforma_link', 'invoice_link']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def invoice_link(self, obj):
+        return obj.invoice.admin_change_url if obj.invoice else 'None'
+    invoice_link.short_description = 'Invoice'
+    invoice_link.allow_tags = True
+
+    def proforma_link(self, obj):
+        return obj.proforma.admin_change_url if obj.proforma else 'None'
+    proforma_link.short_description = 'Proforma'
+    proforma_link.allow_tags = True
+
+
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ['customer', 'plan', 'last_billing_date', 'trial_end',
                     'start_date', 'ended_at', 'state', metadata]
@@ -127,7 +148,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     actions = ['activate', 'reactivate', 'cancel', 'end']
     search_fields = ['customer__name', 'customer__company', 'plan__name',
                      'meta']
-    inlines = [MeteredFeatureUnitsLogInLine, ]
+    inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
 
     def perform_action(self, request, action, queryset):
         method = None
@@ -149,7 +170,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
             except TransitionNotAllowed:
                 failed_count += 1
         if failed_count:
-            if failed_count == queryset_count:
+            if faieed_count == queryset_count:
                 self.message_user(request, 'Illegal state change attempt.',
                                   level=messages.ERROR)
             else:
@@ -337,7 +358,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         if not exist_failed_actions and not exist_failed_changes:
             qs_count = queryset.count()
             if action == 'clone_into_draft':
-                results = ', '.join(result.series_number() for result in results)
+                results = ', '.join(result.series_number for result in results)
                 msg = 'Successfully cloned {count} {model_name}(s) ' \
                       'into {results}.'.format(
                           model_name=self._model_name.lower(), count=qs_count,
@@ -413,14 +434,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
         return "Invoice"
 
     def related_proforma(self, obj):
-        if obj.proforma:
-            url = urlresolvers.reverse('admin:silver_proforma_change',
-                                       args=(obj.proforma.pk,))
-            return '<a href="%s">%s</a>' % (
-                url, obj.proforma.series_number()
-            )
-        else:
-            return '(None)'
+        return obj.proforma.admin_change_url if obj.proforma else 'None'
     related_proforma.short_description = 'Related proforma'
     related_proforma.allow_tags = True
 
@@ -476,14 +490,7 @@ class ProformaAdmin(BillingDocumentAdmin):
         return "Proforma"
 
     def related_invoice(self, obj):
-        if obj.invoice:
-            url = urlresolvers.reverse('admin:silver_invoice_change',
-                                       args=(obj.invoice.pk,))
-            return '<a href="%s">%s</a>' % (
-                url, obj.invoice.series_number()
-            )
-        else:
-            return '(None)'
+        return obj.invoice.admin_change_url if obj.invoice else 'None'
     related_invoice.short_description = 'Related invoice'
     related_invoice.allow_tags = True
 
