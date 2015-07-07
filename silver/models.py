@@ -1560,9 +1560,7 @@ class BillingDocument(models.Model):
         url_base = 'admin:{app_label}_{klass}_change'.format(
             app_label=self._meta.app_label,
             klass=self.__class__.__name__.lower())
-        print '-- admin_change_url -- url_base: ', url_base
         url = reverse(url_base, args=(self.pk,))
-
         return '<a href="{url}">{display_series}</a>'.format(
             url=url, display_series=self.series_number)
 
