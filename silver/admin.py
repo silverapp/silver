@@ -130,7 +130,14 @@ class SubscriptionAdmin(admin.ModelAdmin):
     inlines = [MeteredFeatureUnitsLogInLine, ]
 
     def perform_action(self, request, action, queryset):
+        # FIXME: fix the action handling to accomodate the new action
         method = None
+        available_methods = {
+            'activate_and_issue_billing_doc': Subscription.activate_and_issue_billing_doc,
+            'reactivate': Subscription.activate,
+            'cancel': Subscription.cancel,
+            'end': Subscription.end
+        }
         if action == 'activate_and_issue_billing_doc':
             method = Subscription.activate_and_issue_billing_doc
         if action == 'reactivate':
@@ -139,6 +146,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
             method = Subscription.cancel
         elif action == 'end':
             method = Subscription.end
+
+        method = getattr(self._model, action, None)
+        if not method:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
 
         failed_count = 0
         queryset_count = queryset.count()
@@ -171,6 +183,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
     def cancel(self, request, queryset):
         self.perform_action(request, 'cancel', queryset)
     cancel.short_description = 'Cancel the selected Subscription(s) '
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, 'cancel_at_end_of_billing_cycle', queryset)
+    cancel.short_description = 'Cancel the selected Subscription(s) at the end '\
+                               ' of the current billing cycle'
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)

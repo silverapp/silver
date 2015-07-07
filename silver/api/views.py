@@ -205,8 +205,8 @@ class SubscriptionCancel(APIView):
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
-                # Move to `canceling` state
-                sub.cancel()
+                # FIXME: fix this
+                sub.cancel_at_end_of_billing_cycle()
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)

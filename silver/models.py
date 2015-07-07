@@ -565,8 +565,12 @@ class Subscription(models.Model):
             self.save()
 
     @transition(field=state, source='active', target='canceling')
-    def cancel_at_billing_cycle_end(self):
-        pass
+    def cancel_at_end_of_billing_cycle(self):
+        # FIXME: come back after fix
+        bucket_end_date = self.bucket_end_date()
+        if self.trial_end and self.trial_end > bucket_end_date:
+            self.trial_end = bucket_end_date
+            self.save()
 
     @transition(field=state, source=['canceling', 'canceled'], target='ended')
     def end(self):
@@ -1084,8 +1088,7 @@ class Subscription(models.Model):
 
     def _entry_unit(self, context):
         unit_template_path = field_template_path(
-            field='entry_unit', provider=self.plan.provider.slug
-        )
+            field='entry_unit', provider=self.plan.provider.slug)
         return render_to_string(unit_template_path, context)
 
     def _entry_description(self, context):
