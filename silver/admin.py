@@ -122,6 +122,8 @@ class BillingLogInLine(admin.TabularInline):
     model = BillingLog
     fields = ['billing_date', 'proforma_link', 'invoice_link']
     readonly_fields = ['billing_date', 'proforma_link', 'invoice_link']
+    verbose_name = 'Automatic billing log'
+    verbose_name_plural = verbose_name
 
     def has_add_permission(self, request):
         return False
