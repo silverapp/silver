@@ -172,7 +172,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
             except TransitionNotAllowed:
                 failed_count += 1
         if failed_count:
-            if faieed_count == queryset_count:
+            if failed_count == queryset_count:
                 self.message_user(request, 'Illegal state change attempt.',
                                   level=messages.ERROR)
             else:
