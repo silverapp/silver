@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
+
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
     _storage_klass = import_string(_storage[0])
@@ -504,11 +505,23 @@ class Subscription(models.Model):
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
+            if self.state == self.STATES.canceling:
+                # a subscription in `canceling` state is billed only the
+                # next month. !!IMPORTANT!!: this works only for us, as we
+                # assume that we have only monthly plans.
+                # TODO: check if date.interval (day, month, etc) is
+                # start_date.interval + 1 => generic
+                return date.month == self.start_date.month+1
+
             if not self.trial_end:
+                # a subscription whose plan does not have a trial => is billed
+                # right after being activated
                 return True
             interval_end = self._current_end_date(reference_date=self.start_date)
         else:
             last_billing_date = self.last_billing_date
+            if self.state == self.STATES.canceling: # TODO: make it generic
+                return date.month == last_billing_date.month+1
             if self.on_trial(last_billing_date):
                 if last_billing_date <= self.trial_end:
                     interval_end = self.trial_end
