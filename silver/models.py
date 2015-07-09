@@ -25,6 +25,7 @@ from django.core.validators import MinValueValidator
 from django.template import TemplateDoesNotExist
 from django.template.loader import (select_template, get_template,
                                     render_to_string)
+from django.core.urlresolvers import reverse
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil.relativedelta import *
@@ -1164,6 +1165,11 @@ class BillingLog(models.Model):
     class Meta:
         ordering = ['-billing_date']
 
+    def __unicode__(self):
+        return '{sub} - {pro} - {inv} - {date}'.format(
+            sub=self.subscription, pro=self.proforma,
+            inv=self.invoice, date=self.billing_date)
+
 
 class AbstractBillingEntity(LiveModel):
     name = models.CharField(
@@ -1586,6 +1592,7 @@ class BillingDocument(models.Model):
             return "%s-%d" % (self.series, self.number)
         return None
     series_number.short_description = 'Number'
+    series_number = property(series_number)
 
     def __unicode__(self):
         return u'%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
@@ -1598,6 +1605,15 @@ class BillingDocument(models.Model):
         return ['customer', 'provider', 'due_date', 'issue_date', 'paid_date',
                 'cancel_date', 'sales_tax_percent', 'sales_tax_name',
                 'currency']
+
+    @property
+    def admin_change_url(self):
+        url_base = 'admin:{app_label}_{klass}_change'.format(
+            app_label=self._meta.app_label,
+            klass=self.__class__.__name__.lower())
+        url = reverse(url_base, args=(self.pk,))
+        return '<a href="{url}">{display_series}</a>'.format(
+            url=url, display_series=self.series_number)
 
     @property
     def _entries(self):
@@ -1763,6 +1779,7 @@ class Invoice(BillingDocument):
         return self.proforma
 
 
+
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
@@ -1795,7 +1812,7 @@ class Proforma(BillingDocument):
         if not self.series:
             if not hasattr(self, 'provider'):
                 # the clean method is called even if the clean_fields method
-                # raises exceptions, so we check if the provider was specified
+                # raises exceptions, to we check if the provider was specified
                 pass
             elif not self.provider.proforma_series:
                 err_msg = {'series': 'You must either specify the series or '
