@@ -73,11 +73,17 @@ class UnsavedForeignKey(models.ForeignKey):
 
 
 class Plan(models.Model):
-    INTERVALS = Choices(
-        ('day', _('Day')),
-        ('week', _('Week')),
-        ('month', _('Month')),
-        ('year', _('Year'))
+    class INTERVALS(object):
+        day = 'day'
+        week = 'week'
+        month = 'month'
+        year = 'year'
+
+    INTERVAL_CHOICES = Choices(
+        (INTERVALS.day, _('Day')),
+        (INTERVALS.week, _('Week')),
+        (INTERVALS.month, _('Month')),
+        (INTERVALS.year, _('Year'))
     )
 
     name = models.CharField(
@@ -85,7 +91,7 @@ class Plan(models.Model):
         db_index=True
     )
     interval = models.CharField(
-        choices=INTERVALS, max_length=12, default=INTERVALS.month,
+        choices=INTERVAL_CHOICES, max_length=12, default=INTERVALS.month,
         help_text='The frequency with which a subscription should be billed.'
     )
     interval_count = models.PositiveIntegerField(
@@ -243,12 +249,19 @@ class MeteredFeatureUnitsLog(models.Model):
 
 
 class Subscription(models.Model):
-    STATES = Choices(
-        ('active', _('Active')),
-        ('inactive', _('Inactive')),
-        ('canceling', _('Canceling')),
-        ('canceled', _('Canceled')),
-        ('ended', _('Ended'))
+    class STATES(object):
+        active = 'active'
+        inactive = 'inactive'
+        canceling = 'canceling'
+        canceled = 'canceled'
+        ended = 'ended'
+
+    STATE_CHOICES = Choices(
+        (STATES.active, _('Active')),
+        (STATES.inactive, _('Inactive')),
+        (STATES.canceling, _('Canceling')),
+        (STATES.canceled, _('Canceled')),
+        (STATES.ended, _('Ended'))
     )
 
     _INTERVALS_CODES = {
@@ -286,7 +299,7 @@ class Subscription(models.Model):
     )
 
     state = FSMField(
-        choices=STATES, max_length=12, default=STATES.inactive,
+        choices=STATE_CHOICES, max_length=12, default=STATES.inactive,
         protected=True, help_text='The state the subscription is in.'
     )
     meta = jsonfield.JSONField(blank=True, null=True)
@@ -1255,18 +1268,26 @@ class Customer(AbstractBillingEntity):
 
 
 class Provider(AbstractBillingEntity):
+    class FLOWS(object):
+        proforma = 'proforma'
+        invoice = 'invoice'
+
     FLOW_CHOICES = Choices(
-        ('proforma', _('Proforma')),
-        ('invoice', _('Invoice')),
+        (FLOWS.proforma, _('Proforma')),
+        (FLOWS.invoice, _('Invoice')),
     )
+
+    class DEFAULT_DOC_STATE(object):
+        draft = 'draft'
+        issued = 'issued'
+
     DOCUMENT_DEFAULT_STATE = Choices(
-        ('draft', _('Draft')),
-        ('issued', _('Issued'))
-    )
+        (DEFAULT_DOC_STATE.draft, _('Draft')),
+        (DEFAULT_DOC_STATE.issued, _('Issued')))
 
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
-        default=FLOW_CHOICES.proforma,
+        default=FLOWS.proforma,
         help_text="One of the available workflows for generating proformas and\
                    invoices (see the documentation for more details)."
     )
@@ -1296,7 +1317,7 @@ class Provider(AbstractBillingEntity):
         company_field.help_text = "The provider issuing the invoice."
 
     def clean(self):
-        if self.flow == self.FLOW_CHOICES.proforma:
+        if self.flow == self.FLOWS.proforma:
             if not self.proforma_starting_number and\
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
@@ -1327,7 +1348,7 @@ class Provider(AbstractBillingEntity):
 
     @property
     def model_corresponding_to_default_flow(self):
-        return Proforma if self.flow == self.FLOW_CHOICES.proforma else Invoice
+        return Proforma if self.flow == self.FLOWS.proforma else Invoice
 
 
 @receiver(pre_save, sender=Provider)
@@ -1366,12 +1387,19 @@ class ProductCode(models.Model):
 
 
 class BillingDocument(models.Model):
-    STATES = Choices(
-        ('draft', _('Draft')),
-        ('issued', _('Issued')),
-        ('paid', _('Paid')),
-        ('canceled', _('Canceled'))
+    class STATES(object):
+        draft = 'draft'
+        issued = 'issued'
+        paid = 'paid'
+        canceled = 'canceled'
+
+    STATE_CHOICES = Choices(
+        (STATES.draft, _('Draft')),
+        (STATES.issued, _('Issued')),
+        (STATES.paid, _('Paid')),
+        (STATES.canceled, _('Canceled'))
     )
+
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
     number = models.IntegerField(blank=True, null=True, db_index=True)
@@ -1392,7 +1420,7 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
-    state = FSMField(choices=STATES, max_length=10, default=STATES.draft,
+    state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.draft,
                      verbose_name="State",
                      help_text='The state the invoice is in.')
 

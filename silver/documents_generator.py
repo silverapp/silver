@@ -3,7 +3,7 @@ import datetime as dt
 from django.utils import timezone
 from dateutil.relativedelta import *
 
-from silver.models import Customer, Subscription, BillingDocument
+from silver.models import Customer, Subscription, Provider
 
 
 class DocumentsGenerator(object):
@@ -83,7 +83,7 @@ class DocumentsGenerator(object):
                 subscription.save()
 
         for provider, document in cached_documents.iteritems():
-            if provider.default_document_state == BillingDocument.STATES.issued:
+            if provider.default_document_state == Provider.DEFAULT_DOC_STATE.issued:
                 document.issue()
                 document.save()
 
@@ -116,7 +116,7 @@ class DocumentsGenerator(object):
                 subscription.end()
                 subscription.save()
 
-            if provider.default_document_state == BillingDocument.STATES.issued:
+            if provider.default_document_state == Provider.DEFAULT_DOC_STATE.issued:
                 document.issue()
                 document.save()
 
@@ -144,7 +144,7 @@ class DocumentsGenerator(object):
             subscription.end()
             subscription.save()
 
-        if provider.default_document_state == BillingDocument.STATES.issued:
+        if provider.default_document_state == Provider.DEFAULT_DOC_STATE.issued:
             document.issue()
             document.save()
 
