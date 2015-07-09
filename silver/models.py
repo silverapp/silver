@@ -198,7 +198,8 @@ class MeteredFeatureUnitsLog(models.Model):
 
     def clean(self):
         super(MeteredFeatureUnitsLog, self).clean()
-        if self.subscription.state in ['ended', 'inactive']:
+        if self.subscription.state in [Subscription.STATES.ended,
+                                       Subscription.STATES.inactive]:
             if not self.id:
                 action_type = "create"
             else:
@@ -299,7 +300,7 @@ class Subscription(models.Model):
                                   "the subscription's start date."}
                 )
         if self.ended_at:
-            if self.state not in ['canceled', 'ended']:
+            if self.state not in [self.STATES.canceled, self.STATES.ended]:
                 errors.update(
                     {'ended_at': 'The ended at date cannot be set if the '
                                  'subscription is not canceled or ended.'}
@@ -515,7 +516,8 @@ class Subscription(models.Model):
             # It should never get here.
             return None
 
-    @transition(field=state, source=['inactive', 'canceled'], target='active')
+    @transition(field=state, source=[STATES.inactive, STATES.canceled],
+                target=STATES.active)
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
             self.start_date = min(timezone.now().date(), start_date)
@@ -545,7 +547,7 @@ class Subscription(models.Model):
         if not self.trial_end and not self.plan.trial_period_days:
             DocumentsGenerator().generate(subscription=self)
 
-    @transition(field=state, source='active', target='canceled')
+    @transition(field=state, source=STATES.active, target=STATES.canceled)
     def cancel(self):
         canceled_at_date = timezone.now().date()
         bsd = self.bucket_start_date()
@@ -564,15 +566,15 @@ class Subscription(models.Model):
             self.trial_end = canceled_at_date
             self.save()
 
-    @transition(field=state, source='active', target='canceling')
+    @transition(field=state, source=STATES.active, target=STATES.canceling)
     def cancel_at_end_of_billing_cycle(self):
         # FIXME: come back after fix
         bucket_end_date = self.bucket_end_date()
         if self.trial_end and self.trial_end > bucket_end_date:
             self.trial_end = bucket_end_date
-            self.save()
 
-    @transition(field=state, source=['canceling', 'canceled'], target='ended')
+    @transition(field=state, source=[STATES.canceling, STATES.canceled],
+                target=STATES.ended)
     def end(self):
         self.ended_at = timezone.now().date()
 
@@ -1294,7 +1296,7 @@ class Provider(AbstractBillingEntity):
         company_field.help_text = "The provider issuing the invoice."
 
     def clean(self):
-        if self.flow == 'proforma':
+        if self.flow == self.FLOW_CHOICES.proforma:
             if not self.proforma_starting_number and\
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
@@ -1325,7 +1327,7 @@ class Provider(AbstractBillingEntity):
 
     @property
     def model_corresponding_to_default_flow(self):
-        return Proforma if self.flow == 'proforma' else Invoice
+        return Proforma if self.flow == self.FLOW_CHOICES.proforma else Invoice
 
 
 @receiver(pre_save, sender=Provider)
@@ -1405,7 +1407,7 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self._last_state = self.state
 
-    @transition(field=state, source='draft', target='issued')
+    @transition(field=state, source=STATES.draft, target=STATES.issued)
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
             self.issue_date = dt.strptime(issue_date, '%Y-%m-%d').date()
@@ -1425,25 +1427,25 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self._save_pdf(state='issued')
+        self._save_pdf(state=self.STATES.issued)
 
-    @transition(field=state, source='issued', target='paid')
+    @transition(field=state, source=STATES.issued, target=STATES.paid)
     def pay(self, paid_date=None):
         if paid_date:
             self.paid_date = dt.strptime(paid_date, '%Y-%m-%d').date()
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        self._save_pdf(state='paid')
+        self._save_pdf(state=self.STATES.paid)
 
-    @transition(field=state, source='issued', target='canceled')
+    @transition(field=state, source=STATES.issued, target=STATES.canceled)
     def cancel(self, cancel_date=None):
         if cancel_date:
             self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-        self._save_pdf(state='canceled')
+        self._save_pdf(state=self.STATES.canceled)
 
     def clone_into_draft(self):
         copied_fields = {
@@ -1455,7 +1457,7 @@ class BillingDocument(models.Model):
         }
 
         clone = self.__class__._default_manager.create(**copied_fields)
-        clone.state = 'draft'
+        clone.state = self.STATES.draft
         clone.save()
 
         # clone entries too
@@ -1658,13 +1660,15 @@ class Invoice(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
 
-    @transition(field='state', source='draft', target='issued')
+    @transition(field='state', source=BillingDocument.STATES.draft,
+                target=BillingDocument.STATES.issued)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_invoice_archivable_field_values()
 
         super(Invoice, self).issue(issue_date, due_date)
 
-    @transition(field='state', source='issued', target='paid')
+    @transition(field='state', source=BillingDocument.STATES.issued,
+                target=BillingDocument.STATES.paid)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Invoice, self).pay(paid_date)
 
@@ -1673,7 +1677,8 @@ class Invoice(BillingDocument):
                               affect_related_document=False)
             self.proforma.save()
 
-    @transition(field='state', source='issued', target='canceled')
+    @transition(field='state', source=BillingDocument.STATES.issued,
+                target=BillingDocument.STATES.canceled)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Invoice, self).cancel(cancel_date)
 
@@ -1759,13 +1764,15 @@ class Proforma(BillingDocument):
                                      'provider.'}
                 raise ValidationError(err_msg)
 
-    @transition(field='state', source='draft', target='issued')
+    @transition(field='state', source=BillingDocument.STATES.draft,
+                target=BillingDocument.STATES.issued)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
 
         super(Proforma, self).issue(issue_date, due_date)
 
-    @transition(field='state', source='issued', target='paid')
+    @transition(field='state', source=BillingDocument.STATES.issued,
+                target=BillingDocument.STATES.paid)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Proforma, self).pay(paid_date)
 
@@ -1786,7 +1793,8 @@ class Proforma(BillingDocument):
                              affect_related_document=False)
             self.invoice.save()
 
-    @transition(field='state', source='issued', target='canceled')
+    @transition(field='state', source=BillingDocument.STATES.issued,
+                target=BillingDocument.STATES.canceled)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Proforma, self).cancel(cancel_date)
 
@@ -1796,7 +1804,7 @@ class Proforma(BillingDocument):
             self.invoice.save()
 
     def create_invoice(self):
-        if self.state != "issued":
+        if self.state != BillingDocument.STATES.issued:
             raise ValueError("You can't create an invoice from a %s proforma, "
                              "only from an issued one" % self.state)
 

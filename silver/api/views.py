@@ -11,7 +11,7 @@ from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma)
+                           DocumentEntry, Proforma, BillingDocument)
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
@@ -145,7 +145,7 @@ class SubscriptionActivate(APIView):
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('subscription_pk', None))
-        if sub.state != 'inactive':
+        if sub.state != Subscription.STATES.inactive:
             message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -205,7 +205,6 @@ class SubscriptionCancel(APIView):
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
-                # FIXME: fix this
                 sub.cancel_at_end_of_billing_cycle()
                 sub.save()
                 return Response({"state": sub.state},
@@ -220,7 +219,7 @@ class SubscriptionReactivate(APIView):
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('subscription_pk', None))
-        if sub.state != 'canceled':
+        if sub.state != Subscription.STATES.canceled:
             msg = 'Cannot reactivate subscription from %s state.' % sub.state
             return Response({"error": msg},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -442,7 +441,7 @@ class DocEntryCreate(generics.CreateAPIView):
             msg = "{model} not found".format(model=model_name)
             return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
 
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.draft:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -486,7 +485,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.draft:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -510,7 +509,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.draft:
             msg = "{model} entries can be deleted only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())

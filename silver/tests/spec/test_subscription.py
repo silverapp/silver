@@ -89,7 +89,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': 'canceled'})
+        self.assertEqual(response.data, {'state': 'canceling'})
 
     def test_cancel_subscription_from_wrong_state(self):
         subscription = SubscriptionFactory.create()
