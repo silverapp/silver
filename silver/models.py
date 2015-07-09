@@ -680,9 +680,7 @@ class Subscription(models.Model):
                                       end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
-                start_date_after_trial = self.trial_end + datetime.timedelta(
-                    days=1
-                )
+                start_date_after_trial = self.trial_end + ONE_DAY
                 end_date_after_trial = self._current_end_date(
                     reference_date=start_date_after_trial
                 )
