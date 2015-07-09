@@ -131,24 +131,16 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def perform_action(self, request, action, queryset):
         # FIXME: fix the action handling to accomodate the new action
-        method = None
-        available_methods = {
-            'activate_and_issue_billing_doc': Subscription.activate_and_issue_billing_doc,
-            'reactivate': Subscription.activate,
-            'cancel': Subscription.cancel,
-            'end': Subscription.end
-        }
-        if action == 'activate_and_issue_billing_doc':
-            method = Subscription.activate_and_issue_billing_doc
-        if action == 'reactivate':
-            method = Subscription.activate
-        elif action == 'cancel':
-            method = Subscription.cancel
-        elif action == 'end':
-            method = Subscription.end
-
-        method = getattr(self._model, action, None)
-        if not method:
+        try:
+            available_methods = {
+                'activate_and_issue_billing_doc': Subscription.activate_and_issue_billing_doc,
+                'reactivate': Subscription.activate,
+                'cancel_at_end_of_billing_cycle': Subscription.cancel_at_end_of_billing_cycle,
+                'cancel': Subscription.cancel,
+                'end': Subscription.end
+            }
+            method = available_methods[action]
+        except KeyError:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
@@ -184,7 +176,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'cancel', queryset)
     cancel.short_description = 'Cancel the selected Subscription(s) '
 
-    def cancel(self, request, queryset):
+    def cancel_at_the_end_of_billing_cycle(self, request, queryset):
         self.perform_action(request, 'cancel_at_end_of_billing_cycle', queryset)
     cancel.short_description = 'Cancel the selected Subscription(s) at the end '\
                                ' of the current billing cycle'
