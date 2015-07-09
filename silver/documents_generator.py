@@ -55,7 +55,8 @@ class DocumentsGenerator(object):
 
         # Select all the active or canceled subscriptions
         criteria = {'state__in': [Subscription.STATES.active,
-                                  Subscription.STATES.canceled]}
+                                  Subscription.STATES.canceled,
+                                  Subscription.STATES.canceling]}
         for subscription in customer.subscriptions.filter(**criteria):
             if not subscription.should_be_billed(billing_date):
                 continue
@@ -97,7 +98,8 @@ class DocumentsGenerator(object):
         # The user does not use consolidated_billing => add each
         # subscription on a separate document (Invoice/Proforma)
         criteria = {'state__in': [Subscription.STATES.active,
-                                  Subscription.STATES.canceled]}
+                                  Subscription.STATES.canceled,
+                                  Subscription.STATES.canceling]}
         for subscription in customer.subscriptions.filter(**criteria):
             if not subscription.should_be_billed(billing_date):
                 continue
