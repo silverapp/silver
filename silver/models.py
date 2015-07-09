@@ -529,8 +529,8 @@ class Subscription(models.Model):
             # It should never get here.
             return None
 
-    @transition(field=state, source=[STATES.inactive, STATES.canceled],
-                target=STATES.active)
+    @transition(field=state, source=[STATES.inactive, STATES.canceled,
+                                     STATES.canceling], target=STATES.active)
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
             self.start_date = min(timezone.now().date(), start_date)
