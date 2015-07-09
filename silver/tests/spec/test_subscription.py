@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import Subscription
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     PlanFactory, SubscriptionFactory,
                                     MeteredFeatureFactory)
@@ -89,7 +90,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': 'canceling'})
+        self.assertEqual(response.data, {'state': Subscription.STATES.canceling})
 
     def test_cancel_subscription_from_wrong_state(self):
         subscription = SubscriptionFactory.create()
