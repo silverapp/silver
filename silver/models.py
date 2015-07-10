@@ -527,8 +527,8 @@ class Subscription(models.Model):
             if self.state == self.STATES.canceling:
                 # state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
-                # interval='day' => should be billed if now.day = start_date.day+1
-                # interval='month' => should be billed if now.month = start_date.month+1
+                # interval='day' => should be billed if now.day = last_billing_date.day+1
+                # interval='month' => should be billed if now.month = last_billing_date.month+1
                 # TODO: generalize
                 lbd_month = last_billing_date.month
                 current_month = date.month
