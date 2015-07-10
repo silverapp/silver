@@ -79,7 +79,8 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state == Subscription.STATES.canceled:
+            if subscription.state in [Subscription.STATES.canceled,
+                                      Subscription.STATES.canceling]:
                 subscription.end()
                 subscription.save()
 
@@ -114,7 +115,8 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state == Subscription.STATES.canceled:
+            if subscription.state in [Subscription.STATES.canceled,
+                                      Subscription.STATES.canceling]:
                 subscription.end()
                 subscription.save()
 
