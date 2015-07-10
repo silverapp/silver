@@ -505,15 +505,17 @@ class Subscription(models.Model):
             return True
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
+
         if self.is_billed_first_time:
             if self.state == self.STATES.canceling:
                 # state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
                 # interval='day' => should be billed if now.day = start_date.day+1
-                # interval='month'=> should be billed if now.month = start_date.month+1
-                subscription_start = getattr(self.start_date, self.plan.interval)
-                now = getattr(date, self.plan.interval)
-                return now == subscription_start + 1
+                # interval='month' => should be billed if now.month = start_date.month+1
+                # TODO: generalize
+                start_month = self.start_date.month
+                current_month = date.month
+                return current_month == start_month + 1
             if not self.trial_end:
                 # a subscription whose plan does not have a trial => is billed
                 # right after being activated
@@ -527,9 +529,10 @@ class Subscription(models.Model):
                 # only at the start of the new billing cycle. e.g.:
                 # interval='day' => should be billed if now.day = start_date.day+1
                 # interval='month' => should be billed if now.month = start_date.month+1
-                lbd = getattr(last_billing_date, self.plan.interval)
-                now = getattr(date, self.plan.interval)
-                return now == lbd + 1
+                # TODO: generalize
+                lbd_month = last_billing_date.month
+                current_month = date.month
+                return current_month == start_month + 1
 
             if self.on_trial(last_billing_date):
                 # The trial spans over multiple months and the trial has endedi
