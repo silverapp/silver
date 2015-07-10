@@ -1093,9 +1093,6 @@ class Subscription(models.Model):
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
 
-            if consumed_units == 0:
-                continue
-
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
                             'name': metered_feature.name,
