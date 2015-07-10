@@ -710,7 +710,7 @@ class Subscription(models.Model):
                 end_date_after_trial = self._current_end_date(
                     reference_date=start_date_after_trial)
 
-                if self.state != self.STATES.canceling:
+                if self.state == self.STATES.active:
                     # It wasn't canceled during the trial => add the prorated
                     # plan value for the rest of the month
                     # Remaining plan value (trial end -> end of the month)
@@ -777,7 +777,7 @@ class Subscription(models.Model):
                                   end_date=bucket_end_date,
                                   invoice=invoice, proforma=proforma)
 
-                    if self.state != self.STATES.canceling:
+                    if self.state == self.STATES.active:
                         # If the subscription was not canceled
                         # Add the plan's value ahead
                         current_bucket_start_date = self._current_start_date(
