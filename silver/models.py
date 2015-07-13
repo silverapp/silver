@@ -510,9 +510,11 @@ class Subscription(models.Model):
             if self.state == self.STATES.canceling:
                 # state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
-                # interval='day' => should be billed if now.day = start_date.day+1
-                # interval='month' => should be billed if now.month = start_date.month+1
-                # TODO: generalize
+                # * interval='day' => should be billed if
+                #       now.day = start_date.day+1
+                # * interval='month' => should be billed if
+                #       now.month = start_date.month+1
+                # TODO: generalize for each interval type
                 start_month = self.start_date.month
                 current_month = date.month
                 return current_month == start_month + 1
@@ -527,9 +529,11 @@ class Subscription(models.Model):
             if self.state == self.STATES.canceling:
                 # state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
-                # interval='day' => should be billed if now.day = last_billing_date.day+1
-                # interval='month' => should be billed if now.month = last_billing_date.month+1
-                # TODO: generalize
+                # * interval='day' => should be billed if
+                #       now.day = last_billing_date.day+1
+                # * interval='month' => should be billed if
+                #       now.month = last_billing_date.month+1
+                # TODO: generalize for each interval type
                 lbd_month = last_billing_date.month
                 current_month = date.month
                 return current_month == start_month + 1
@@ -653,8 +657,8 @@ class Subscription(models.Model):
                                         invoice=invoice, proforma=proforma)
 
                 else:
-                    # Silver went down right after issuing the invoice and
-                    # it came back only next month
+                    # Silver went down right after issuing the invoice (but
+                    # it was not saved) and it came back only next month
 
                     # Add the prorated value for the previous month
                     previous_bucket_end_date = self._current_end_date(
@@ -668,7 +672,7 @@ class Subscription(models.Model):
                                   end_date=previous_bucket_end_date,
                                   invoice=invoice, proforma=proforma)
 
-                    if self.state != self.STATES.canceling:
+                    if self.state == self.STATES.active:
                         # Add the plan's value for the current month
                         current_bucket_start_date = self._current_start_date(
                             reference_date=billing_date)
@@ -695,8 +699,7 @@ class Subscription(models.Model):
                                       end_date=last_day_to_bill,
                                       invoice=invoice, proforma=proforma)
             else:
-                # First day after trial for a subscription which start
-                # in the same month as billing_date
+                # Billed first time, right after trial end.
 
                 # Is billed right after trial in the same month as start_date
                 # => add the trial value and the prorated value for the rest
@@ -710,7 +713,7 @@ class Subscription(models.Model):
                 end_date_after_trial = self._current_end_date(
                     reference_date=start_date_after_trial)
 
-                if self.state == self.STATES.active:
+                if self.state in [self.STATES.active, self.STATES.canceling]:
                     # It wasn't canceled during the trial => add the prorated
                     # plan value for the rest of the month
                     # Remaining plan value (trial end -> end of the month)
@@ -730,7 +733,7 @@ class Subscription(models.Model):
                                   end_date=end_date_after_trial,
                                   invoice=invoice, proforma=proforma)
 
-                    if self.state != self.STATES.canceling:
+                    if self.state == self.STATES.active:
                         # Add plan value for the next month
                         current_bucket_start_date = self._current_start_date(
                             reference_date=billing_date)
@@ -752,6 +755,8 @@ class Subscription(models.Model):
                     reference_date=last_billing_date)
                 bucket_end_date = self._current_end_date(
                     reference_date=last_billing_date)
+                # FIXME: investigate if here we shouldn't add only the mfs
+                # from the trial
                 self._add_trial_value(start_date=bucket_start_date,
                                       end_date=bucket_end_date,
                                       invoice=invoice, proforma=proforma)
