@@ -977,7 +977,7 @@ class Subscription(models.Model):
                                             start_date__gte=start_date,
                                             end_date__lte=end_date)
             log = [qs_item.consumed_units for qs_item in qs]
-            total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+            total_consumed_units = sum(log)
 
             extra_consumed, free = self._get_extra_consumed_units_during_trial(
                 metered_feature, total_consumed_units)
