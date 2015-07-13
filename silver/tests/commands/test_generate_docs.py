@@ -279,8 +279,9 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             proforma = Proforma.objects.get(id=1)
-            # For each doc, expect 1 entry: the plan value
-            assert proforma.proforma_entries.all().count() == subscriptions_cnt
+            # For each doc, expect 2 entries: the plan's value + the 'extra'
+            # mfs with 0 value
+            assert proforma.proforma_entries.all().count() == 2 * subscriptions_cnt
 
             expected_total = subscriptions_cnt * plan.amount
             assert proforma.total == expected_total
@@ -1037,7 +1038,7 @@ class TestInvoiceGenerationCommand(TestCase):
             return_value=dt.date(2015, 6, 1))  # was billed last month
         mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
-                            last_billing_date=mocked_last_billing_date,
+                           last_billing_date=mocked_last_billing_date,
                             is_billed_first_time=mocked_is_billed_first_time):
             call_command('generate_docs', date=billing_date, stdout=self.output)
 
