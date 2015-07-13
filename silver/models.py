@@ -508,16 +508,14 @@ class Subscription(models.Model):
 
         if self.is_billed_first_time:
             if self.state == self.STATES.canceling:
-                # state == canceling => the subscription should be billed
+                # if state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
                 # * interval='day' => should be billed if
                 #       now.day = start_date.day+1
                 # * interval='month' => should be billed if
                 #       now.month = start_date.month+1
                 # TODO: generalize for each interval type
-                start_month = self.start_date.month
-                current_month = date.month
-                return current_month == start_month + 1
+                return date.month == self.start_date.month + 1
             if not self.trial_end:
                 # a subscription whose plan does not have a trial => is billed
                 # right after being activated
@@ -527,17 +525,14 @@ class Subscription(models.Model):
             last_billing_date = self.last_billing_date
 
             if self.state == self.STATES.canceling:
-                # state == canceling => the subscription should be billed
+                # if state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
                 # * interval='day' => should be billed if
                 #       now.day = last_billing_date.day+1
                 # * interval='month' => should be billed if
                 #       now.month = last_billing_date.month+1
                 # TODO: generalize for each interval type
-                lbd_month = last_billing_date.month
-                current_month = date.month
-                return current_month == start_month + 1
-
+                return date.month == last_billing_date.month + 1
             if self.on_trial(last_billing_date):
                 # The trial spans over multiple months and the trial has endedi
                 # => it should issue an invoice right after the trial end
