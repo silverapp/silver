@@ -35,6 +35,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
+    consolidated_billing = True
 
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = Decimal(1.0)
