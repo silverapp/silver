@@ -53,15 +53,80 @@ class TestInvoiceGenerationCommand(TestCase):
     ###########################################################################
 
     def test_trial_spanning_over_multiple_months(self):
+        # FIXME
         """
         start_date=2015-03-18
         trial_end=2014-04-10
         billing_date_1=2015-04-04
         billing_date_2=2015-04-11
-        It hass consumed mfs between 03-18 -> 04-4 and also between
+        It has consumed mfs between 03-18 -> 04-4 and also between
         04-04 -> 04-10
         """
-        assert True
+
+        ## SETUP ##
+        prev_billing_date = '2015-06-04'
+        curr_billing_date = '2015-06-14' # First day after trial_end
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(
+            included_units_during_trial=Decimal('0.00'),
+            price_per_unit=mf_price)
+        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, amount=Decimal('200.00'),
+                                  trial_period_days=24,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 20)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        consumed_1 = Decimal('5.00')
+        consumed_2 = Decimal('5.00')
+        mf_log = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 13),
+            consumed_units=consumed_1)
+
+        ## TEST ##
+        call_command('generate_docs', billing_date=prev_billing_date,
+                     stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        assert Proforma.objects.get(id=1).total == Decimal('0.00')
+
+        mf_log.consumed_units += consumed_2
+
+        call_command('generate_docs', billing_date=curr_billing_date,
+                        stdout=self.output)
+
+        assert Proforma.objects.all().count() == 2
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.get(id=2)
+        print '-----------------------'
+        print proforma.proforma_entries.all()
+        print '-----------------------'
+        # Expect 5 entries:
+        # - prorated subscription
+        # - prorated subscription discount
+        # - consumed mfs from trial (as included_during_trial=0)
+        # - prorated subscription for the remaining period
+        assert proforma.proforma_entries.count() == 5
+        assert all([entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        assert all([entry.total != Decimal('0.0000')
+                    for entry in proforma.proforma_entries.all()])
+        prorated_plan_value = (Decimal(27/30.0) * plan.amount).quantize(
+            Decimal('0.000'))
+        assert proforma.total == prorated_plan_value
 
     def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
@@ -466,8 +531,7 @@ class TestInvoiceGenerationCommand(TestCase):
         mf_units_log_after_trial = MeteredFeatureUnitsLogFactory(
             subscription=subscription, metered_feature=metered_feature,
             start_date=trial_end + dt.timedelta(days=1),
-            end_date=dt.datetime(2015, 2, 28)
-        )
+            end_date=dt.datetime(2015, 2, 28))
 
         mocked_on_trial = MagicMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
