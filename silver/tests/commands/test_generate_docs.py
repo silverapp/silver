@@ -964,13 +964,9 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.get(id=2)
-        # Expect 1 entries: the subscription for the next month
-        print '------------------'
-        print proforma.proforma_entries.all()
-        print '------------------'
-        assert proforma.proforma_entries.count() == 1
-        assert all([not entry.prorated
-                    for entry in proforma.proforma_entries.all()])
+        # Expect 2 entries: the subscription for the next month
+        # One entry for the 0 consumed mfs
+        assert proforma.proforma_entries.count() == 2
         assert proforma.total == plan.amount
 
     def test_full_month_with_consumed_units(self):
