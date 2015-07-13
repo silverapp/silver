@@ -941,9 +941,10 @@ class TestInvoiceGenerationCommand(TestCase):
 
         # Create the prorated subscription
         subscription = SubscriptionFactory.create(
-            plan=plan, start_date=start_date, customer=customer, trial_end=None)
+            plan=plan, start_date=start_date, customer=customer)
         subscription.activate()
         subscription.save()
+
 
         ## TEST ##
         call_command('generate_docs', date=prev_billing_date,
@@ -951,6 +952,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
         assert Proforma.objects.all().count() == 1
         assert Invoice.objects.all().count() == 0
+
 
         percent = Decimal(12/31.0).quantize(Decimal('0.0000'))
         assert Proforma.objects.get(id=1).total == percent * plan.amount
@@ -963,6 +965,9 @@ class TestInvoiceGenerationCommand(TestCase):
 
         proforma = Proforma.objects.get(id=2)
         # Expect 1 entries: the subscription for the next month
+        print '------------------'
+        print proforma.proforma_entries.all()
+        print '------------------'
         assert proforma.proforma_entries.count() == 1
         assert all([not entry.prorated
                     for entry in proforma.proforma_entries.all()])

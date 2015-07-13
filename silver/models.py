@@ -640,18 +640,22 @@ class Subscription(models.Model):
         ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
+            print 'is_billed_first_time'
             if not self.trial_end:  # has no trial,
+                print 'NOT self.trial_end'
                 if billing_date.month == self.start_date.month:
+                    print 'billing_date.month == self.start_date.month'
                     # The same month as when the subscription started
                     # Generate first invoice, when the subscription starts
                     # => add the prorated value of the plan for the current month
                     bucket_end_date = self._current_end_date(
                         reference_date=billing_date)
                     self._add_plan_value(start_date=billing_date,
-                                        end_date=bucket_end_date,
-                                        invoice=invoice, proforma=proforma)
+                                         end_date=bucket_end_date,
+                                         invoice=invoice, proforma=proforma)
 
                 else:
+                    print 'NOT billing_date.month == self.start_date.month'
                     # Silver went down right after issuing the invoice (but
                     # it was not saved) and it came back only next month
 
@@ -678,6 +682,7 @@ class Subscription(models.Model):
                             end_date=current_bucket_end_date,
                             invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
+                print 'on_trial(billing_date)'
                 # Next month after the subscription has started with trial
                 # spanning over 2 months
                 if self.state == self.STATES.canceling:
@@ -694,6 +699,7 @@ class Subscription(models.Model):
                                       end_date=last_day_to_bill,
                                       invoice=invoice, proforma=proforma)
             else:
+                print 'NOT on_trial(billing_date)'
                 # Billed first time, right after trial end.
 
                 # Is billed right after trial in the same month as start_date
@@ -704,15 +710,15 @@ class Subscription(models.Model):
                                       end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
-                start_date_after_trial = self.trial_end + ONE_DAY
+                next_day_after_trial = self.trial_end + ONE_DAY
                 end_date_after_trial = self._current_end_date(
-                    reference_date=start_date_after_trial)
+                    reference_date=next_day_after_trial)
 
                 if self.state in [self.STATES.active, self.STATES.canceling]:
                     # It wasn't canceled during the trial => add the prorated
                     # plan value for the rest of the month
                     # Remaining plan value (trial end -> end of the month)
-                    self._add_plan_value(start_date=start_date_after_trial,
+                    self._add_plan_value(start_date=next_day_after_trial,
                                         end_date=end_date_after_trial,
                                         invoice=invoice, proforma=proforma)
 
@@ -724,7 +730,7 @@ class Subscription(models.Model):
                     # => add the plan's for the next month
 
                     # Add the consumed mfs from the first bucket after trial
-                    self._add_mfs(start_date=start_date_after_trial,
+                    self._add_mfs(start_date=next_day_after_trial,
                                   end_date=end_date_after_trial,
                                   invoice=invoice, proforma=proforma)
 
@@ -738,10 +744,12 @@ class Subscription(models.Model):
                                              end_date=current_bucket_end_date,
                                              invoice=invoice, proforma=proforma)
         else:
+            print 'not is_billed_first_time'
             # TODO: add value for trial which spans over >2 months
             last_billing_date = self.last_billing_date
             if self._should_add_prorated_trial_value(last_billing_date,
                                                      billing_date):
+                print '_should_add_prorated_trial_value'
                 # The subscription has a trial and trial_end was last month
                 # or it this month and the subscription has been billed
                 # before (trial spanning over multiple months)
@@ -767,6 +775,7 @@ class Subscription(models.Model):
                                      invoice=invoice, proforma=proforma)
 
                 if first_day_after_trial.month == billing_date.month - 1:
+                    print 'first_day_after_trial.month == billing_date.month - 1'
                     # Add consumed metered features in the interval right after
                     # the trial
                     bucket_start_date = self._current_start_date(
@@ -789,6 +798,7 @@ class Subscription(models.Model):
                                              invoice=invoice, proforma=proforma)
 
             else:
+                print 'NOT _should_add_prorated_trial_value'
                 #last_month = billing_date.month - 1 or 12
                 #if (self.trial_end and
                     #self.trial_end.month == last_month):
@@ -816,6 +826,7 @@ class Subscription(models.Model):
                               invoice=invoice, proforma=proforma)
 
                 if self.state == self.STATES.active:
+                    print 'self.state == self.STATES.active'
                 # Add the plan's value for the next month
                     current_bucket_start_date = self._current_start_date(
                         reference_date=billing_date)
@@ -1092,6 +1103,8 @@ class Subscription(models.Model):
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
+
+            print 'consumed_units: ', consumed_units
 
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
