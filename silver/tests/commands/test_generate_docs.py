@@ -51,6 +51,18 @@ class TestInvoiceGenerationCommand(TestCase):
     ###########################################################################
     # Non-Canceled
     ###########################################################################
+
+    def test_trial_spanning_over_multiple_months(self):
+        """
+        start_date=2015-03-18
+        trial_end=2014-04-10
+        billing_date_1=2015-04-04
+        billing_date_2=2015-04-11
+        It hass consumed mfs between 03-18 -> 04-4 and also between
+        04-04 -> 04-10
+        """
+        assert True
+
     def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
         A customer  has 3 subscriptions for which we use the normal case:
