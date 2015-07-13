@@ -1045,9 +1045,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             proforma = Proforma.objects.get(id=1)
-            assert proforma.proforma_entries.all().count() == 1
-            assert all([not entry.prorated
-                        for entry in proforma.proforma_entries.all()])
+            assert proforma.proforma_entries.all().count() == 2
             assert proforma.total == plan.amount
 
     def test_gen_proforma_to_issued_state_for_one_provider(self):
