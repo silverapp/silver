@@ -1165,15 +1165,13 @@ class TestInvoiceGenerationCommand(TestCase):
 
         mf_units_log_during_trial = MeteredFeatureUnitsLogFactory(
             subscription=subscription, metered_feature=metered_feature,
-            start_date=start_date, end_date=trial_end
-        )
+            start_date=start_date, end_date=trial_end)
 
         mf_units_log_after_trial = MeteredFeatureUnitsLogFactory(
             subscription=subscription, metered_feature=metered_feature,
             start_date=trial_end + dt.timedelta(days=1),
             # canceled 4 days before the end of the month
-            end_date=dt.datetime(2015, 2, 24)
-        )
+            end_date=dt.datetime(2015, 2, 24))
 
         mocked_on_trial = MagicMock(return_value=False)
         with patch.multiple('silver.models.Subscription',

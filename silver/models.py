@@ -714,15 +714,12 @@ class Subscription(models.Model):
                 end_date_after_trial = self._current_end_date(
                     reference_date=next_day_after_trial)
 
-                if self.state in [self.STATES.active, self.STATES.canceling]:
-                    # It wasn't canceled during the trial => add the prorated
-                    # plan value for the rest of the month
-                    # Remaining plan value (trial end -> end of the month)
-                    self._add_plan_value(start_date=next_day_after_trial,
+                self._add_plan_value(start_date=next_day_after_trial,
                                         end_date=end_date_after_trial,
                                         invoice=invoice, proforma=proforma)
 
                 if billing_date.month == self.start_date.month+1:
+                    print 'billing_date.month == self.start_date.month+1'
                     # It should have been billed right after trial, but the
                     # system did not work properly =>
                     # add the add the consumed mfs during the first bucked
@@ -735,6 +732,7 @@ class Subscription(models.Model):
                                   invoice=invoice, proforma=proforma)
 
                     if self.state == self.STATES.active:
+                        print 'self.state == self.STATES.active'
                         # Add plan value for the next month
                         current_bucket_start_date = self._current_start_date(
                             reference_date=billing_date)
@@ -1088,6 +1086,12 @@ class Subscription(models.Model):
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
+
+        #print 'INSIDE _add_mfs'
+        #print 'start_date: ', start_date
+        #print 'end_date: ', end_date
+        #print 'prorated: ', prorated
+        #print 'percent: ', percent
 
         context = self._build_entry_context({
             'name': self.plan.name,
