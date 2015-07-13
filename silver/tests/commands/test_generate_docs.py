@@ -169,9 +169,9 @@ class TestInvoiceGenerationCommand(TestCase):
 
             for proforma in Proforma.objects.all():
                 entries = proforma.proforma_entries.all()
-                assert entries.count() == 1
-                assert entries[0].quantity == 1
-                assert entries[0].unit_price == plan.amount
+                assert entries.count() == 2
+                assert entries[1].quantity == 1
+                assert entries[1].unit_price == plan.amount
 
     def test_gen_consolidated_billing_with_consumed_mfs(self):
         """
