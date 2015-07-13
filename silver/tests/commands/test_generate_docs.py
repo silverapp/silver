@@ -8,7 +8,7 @@ from django.utils import timezone
 from mock import patch, PropertyMock, MagicMock
 
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
-                           Customer, MeteredFeatureUnitsLog, BillingLog)
+                           Customer, MeteredFeatureUnitsLog, BillingLog, Plan)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
@@ -1417,11 +1417,12 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.quantity == mf_units_log_after_trial.consumed_units
 
     def test_gen_for_single_canceled_subscription(self):
-        billing_date = '2015-04-03'
+        billing_date = '2015-01-07'
 
-        plan = PlanFactory.create(interval='month', interval_count=1,
-                                  generate_after=120, enabled=True,
-                                  trial_period_days=7, amount=Decimal('200.00'))
+        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, trial_period_days=7,
+                                  amount=Decimal('200.00'))
         start_date = dt.date(2014, 1, 3)
 
         subscription = SubscriptionFactory.create(
@@ -1433,8 +1434,8 @@ class TestInvoiceGenerationCommand(TestCase):
         mocked_on_trial = MagicMock(return_value=True)
         with patch.multiple('silver.models.Subscription',
                             on_trial=mocked_on_trial):
-            call_command('generate_docs', subscription='1',
-                         billing_date=billing_date, stdout=self.output)
+            call_command('generate_docs', date=billing_date,
+                         subscription=subscription.pk, stdout=self.output)
 
             assert Subscription.objects.filter(state='ended').count() == 1
 
