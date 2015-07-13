@@ -329,9 +329,9 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.get(id=2)
-        # Expect 1 entry: the plan for the next month.
-        # The mfs will not be added as the consumed_mfs < included_mfs
-        assert proforma.proforma_entries.all().count() == 1
+        # Expect 2 entries: the plan for the next month and the consumed mfs.
+        # with 0.
+        assert proforma.proforma_entries.all().count() == 2
         assert proforma.total == plan.amount
 
     def test_prorated_subscription_with_consumed_mfs_overflow(self):
