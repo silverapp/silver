@@ -1212,7 +1212,6 @@ class TestInvoiceGenerationCommand(TestCase):
     # Canceled
     ###########################################################################
     def test_canceled_subscription_with_trial_and_consumed_metered_features_draft(self):
-        # TODO: FIXME
         """
         Subscription with consumed mfs both during trial and afterwards,
         canceled in the same month it started.
