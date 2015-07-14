@@ -48,7 +48,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
         model = MeteredFeature
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    unit = 'Unit'
+    unit = factory.Sequence(lambda n:'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
     included_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=100000.00,
