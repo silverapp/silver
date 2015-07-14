@@ -1,6 +1,5 @@
 from decimal import Decimal
 import datetime
-import random
 
 import factory
 import factory.fuzzy
