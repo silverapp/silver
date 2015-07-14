@@ -610,6 +610,7 @@ class Subscription(models.Model):
         bucket_end_date = self.bucket_end_date()
         if self.trial_end and self.trial_end > bucket_end_date:
             self.trial_end = bucket_end_date
+            self.save()
 
     @transition(field=state, source=[STATES.canceling, STATES.canceled],
                 target=STATES.ended)
