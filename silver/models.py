@@ -906,14 +906,14 @@ class Subscription(models.Model):
 
             consumed = [qs_item.quantity
                         for qs_item in qs if qs_item.unit_price >= 0]
-            consumed_in_last_billing_cyle = sum(consumed)
+            consumed_in_last_billing_cycle = sum(consumed)
 
             if metered_feature.included_units_during_trial:
                 included_during_trial = metered_feature.included_units_during_trial
-                if consumed_in_last_billing_cyle > included_during_trial:
+                if consumed_in_last_billing_cycle > included_during_trial:
                     return consumed_units, 0
                 else:
-                    remaining = included_during_trial - consumed_in_last_billing_cyle
+                    remaining = included_during_trial - consumed_in_last_billing_cycle
                     if consumed_units > remaining:
                         return consumed_units - remaining, remaining
                     elif consumed_units <= remaining:
