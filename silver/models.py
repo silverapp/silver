@@ -709,10 +709,10 @@ class Subscription(models.Model):
                     reference_date=next_day_after_trial)
 
                 self._add_plan_value(start_date=next_day_after_trial,
-                                        end_date=end_date_after_trial,
-                                        invoice=invoice, proforma=proforma)
+                                     end_date=end_date_after_trial,
+                                     invoice=invoice, proforma=proforma)
 
-                if billing_date.month == self.start_date.month+1:
+                if billing_date.month == self.start_date.month + 1:
                     # It should have been billed right after trial, but the
                     # system did not work properly =>
                     # add the add the consumed mfs during the first bucked
