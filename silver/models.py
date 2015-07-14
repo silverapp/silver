@@ -785,23 +785,6 @@ class Subscription(models.Model):
                                              invoice=invoice, proforma=proforma)
 
             else:
-                #last_month = billing_date.month - 1 or 12
-                #if (self.trial_end and
-                    #self.trial_end.month == last_month):
-                    ## Last month a prorated plan value was billed, now add the
-                    ## corresponding metered features that were consumed during
-                    ## that time.
-                    #trial_end = self.trial_end + ONE_DAY
-                    #mfs_start_date = self._current_start_date(
-                        #reference_date=first_day_after_trial
-                    #)
-                    #mfs_end_date = self._current_end_date(
-                        #reference_date=first_day_after_trial
-                    #)
-                #else:
-                # The subscription either did not have a trial at all or
-                # the trial ended in a month < than the last one => add
-                # all the consumed metered features for the last month.
                 mfs_start_date = self._current_start_date(
                     reference_date=last_billing_date)
                 mfs_end_date = self._current_end_date(
@@ -885,7 +868,7 @@ class Subscription(models.Model):
                 return extra_consumed, included_units_during_trial
             else:
                 return 0, consumed_units
-        return 0, 0
+        return consumed_units, 0
 
     def _get_extra_consumed_units_during_trial(self, metered_feature,
                                                consumed_units):
@@ -937,7 +920,6 @@ class Subscription(models.Model):
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
-
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
         context = self._build_entry_context({
