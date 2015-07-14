@@ -607,7 +607,6 @@ class Subscription(models.Model):
 
     @transition(field=state, source=STATES.active, target=STATES.canceling)
     def cancel_at_end_of_billing_cycle(self):
-        # FIXME: come back after fix
         bucket_end_date = self.bucket_end_date()
         if self.trial_end and self.trial_end > bucket_end_date:
             self.trial_end = bucket_end_date
@@ -746,8 +745,6 @@ class Subscription(models.Model):
                     reference_date=last_billing_date)
                 bucket_end_date = self._current_end_date(
                     reference_date=last_billing_date)
-                # FIXME: investigate if here we shouldn't add only the mfs
-                # from the trial
                 self._add_trial_value(start_date=bucket_start_date,
                                       end_date=bucket_end_date,
                                       invoice=invoice, proforma=proforma)
