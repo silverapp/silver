@@ -1198,6 +1198,7 @@ class TestInvoiceGenerationCommand(TestCase):
     # Canceled
     ###########################################################################
     def test_canceled_subscription_with_trial_and_consumed_metered_features_draft(self):
+        # TODO: FIXME
         """
         Subscription with consumed mfs both during trial and afterwards,
         canceled in the same month it started.
@@ -1245,7 +1246,6 @@ class TestInvoiceGenerationCommand(TestCase):
 
             # In draft state
             assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
-
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
             # Plan After Trial (+),  Metered Features After Trial (+)
