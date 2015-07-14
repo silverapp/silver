@@ -511,9 +511,9 @@ class Subscription(models.Model):
                 # if state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
                 # * interval='day' => should be billed if
-                #       now.day = start_date.day+1
+                #       now.day = start_date.day + 1
                 # * interval='month' => should be billed if
-                #       now.month = start_date.month+1
+                #       now.month = start_date.month + 1
                 # TODO: generalize for each interval type
                 return date.month == self.start_date.month + 1
             if not self.trial_end:
@@ -528,9 +528,9 @@ class Subscription(models.Model):
                 # if state == canceling => the subscription should be billed
                 # only at the start of the new billing cycle. e.g.:
                 # * interval='day' => should be billed if
-                #       now.day = last_billing_date.day+1
+                #       now.day = last_billing_date.day + 1
                 # * interval='month' => should be billed if
-                #       now.month = last_billing_date.month+1
+                #       now.month = last_billing_date.month + 1
                 # TODO: generalize for each interval type
                 return date.month == last_billing_date.month + 1
             if self.on_trial(last_billing_date):
