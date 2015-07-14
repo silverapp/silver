@@ -48,6 +48,7 @@ class TestInvoiceGenerationCommand(TestCase):
         super(TestInvoiceGenerationCommand, self).__init__(*args, **kwargs)
         self.output = StringIO()
 
+
     ###########################################################################
     # Non-Canceled
     ###########################################################################
@@ -1193,6 +1194,19 @@ class TestInvoiceGenerationCommand(TestCase):
 
             assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
             assert Proforma.objects.get(id=2).state == Proforma.STATES.issued
+
+    def test_canceling_for_subscription_without_trial(self):
+        assert True
+
+    def test_canceling_during_trial_ending_in_same_month_as_start_date(self):
+        assert True
+
+    def test_canceling_during_trial_which_spans_over_2_months(self):
+        assert True
+
+    def test_canceling_normal_cycle(self):
+        assert True
+
 
     ###########################################################################
     # Canceled
