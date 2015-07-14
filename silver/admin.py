@@ -200,8 +200,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def cancel_at_the_end_of_billing_cycle(self, request, queryset):
         self.perform_action(request, 'cancel_at_end_of_billing_cycle', queryset)
-    cancel.short_description = 'Cancel the selected Subscription(s) at the end '\
-                               ' of the current billing cycle'
+    cancel_at_the_end_of_billing_cycle.short_description = 'Cancel the '\
+            'selected Subscription(s) at the end'\
+            'of the current billing cycle'
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)
