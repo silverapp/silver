@@ -51,16 +51,14 @@ class TestInvoiceGenerationCommand(TestCase):
     ###########################################################################
     # Non-Canceled
     ###########################################################################
-
     def test_trial_spanning_over_multiple_months(self):
-        # FIXME
         """
-        start_date=2015-03-18
-        trial_end=2014-04-10
-        billing_date_1=2015-04-04
-        billing_date_2=2015-04-11
-        It has consumed mfs between 03-18 -> 04-4 and also between
-        04-04 -> 04-10
+        start_date=2015-05-20
+        trial_end=2014-06-13
+        billing_date_1=2015-06-04
+        billing_date_2=2015-06-14
+        It has consumed mfs between 2015-06-01 -> 2015-06-04 and also between
+        2015-06-04 -> 2015-06-13
         """
 
         ## SETUP ##
@@ -103,6 +101,7 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Proforma.objects.get(id=1).total == Decimal('0.00')
 
         mf_log.consumed_units += consumed_2
+        mf_log.save()
 
         call_command('generate_docs', billing_date=curr_billing_date,
                         stdout=self.output)
@@ -111,22 +110,20 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.get(id=2)
-        print '-----------------------'
-        print proforma.proforma_entries.all()
-        print '-----------------------'
-        # Expect 5 entries:
+        # Expect 4 entries:
         # - prorated subscription
         # - prorated subscription discount
         # - consumed mfs from trial (as included_during_trial=0)
         # - prorated subscription for the remaining period
-        assert proforma.proforma_entries.count() == 5
+        assert proforma.proforma_entries.count() == 4
         assert all([entry.prorated
                     for entry in proforma.proforma_entries.all()])
         assert all([entry.total != Decimal('0.0000')
                     for entry in proforma.proforma_entries.all()])
-        prorated_plan_value = (Decimal(27/30.0) * plan.amount).quantize(
-            Decimal('0.000'))
-        assert proforma.total == prorated_plan_value
+        prorated_plan_value = Decimal(17/30.0).quantize(
+            Decimal('0.0000')) * plan.amount
+        consumed_mfs_value = (consumed_1 + consumed_2) * mf_price
+        assert proforma.total == prorated_plan_value + consumed_mfs_value
 
     def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
