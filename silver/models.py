@@ -555,6 +555,19 @@ class Subscription(models.Model):
             # It should never get here.
             return None
 
+    def activate_and_issue_billing_doc(self, start_date=None,
+                                       trial_end_date=None):
+        from silver.documents_generator import DocumentsGenerator
+
+        self.activate(start_date=start_date,
+                      trial_end_date=trial_end_date)
+        self.save()
+        if not self.trial_end and not self.plan.trial_period_days:
+            DocumentsGenerator().generate(subscription=self)
+
+    ##########################################################################
+    # STATE MACHINE TRANSITIONS
+    ##########################################################################
     @transition(field=state, source=[STATES.inactive, STATES.canceled,
                                      STATES.canceling], target=STATES.active)
     def activate(self, start_date=None, trial_end_date=None):
@@ -575,16 +588,6 @@ class Subscription(models.Model):
             elif self.plan.trial_period_days > 0:
                 self.trial_end = self.start_date + datetime.timedelta(
                     days=self.plan.trial_period_days - 1)
-
-    def activate_and_issue_billing_doc(self, start_date=None,
-                                       trial_end_date=None):
-        from silver.documents_generator import DocumentsGenerator
-
-        self.activate(start_date=start_date,
-                      trial_end_date=trial_end_date)
-        self.save()
-        if not self.trial_end and not self.plan.trial_period_days:
-            DocumentsGenerator().generate(subscription=self)
 
     @transition(field=state, source=STATES.active, target=STATES.canceled)
     def cancel(self):
@@ -616,6 +619,7 @@ class Subscription(models.Model):
                 target=STATES.ended)
     def end(self):
         self.ended_at = timezone.now().date()
+    ##########################################################################
 
     def _add_trial_value(self, start_date, end_date, invoice=None,
                          proforma=None):
@@ -623,7 +627,6 @@ class Subscription(models.Model):
                              invoice=invoice, proforma=proforma)
         self._add_mfs_for_trial(start_date=start_date, end_date=end_date,
                                 invoice=invoice, proforma=proforma)
-
 
     def _should_add_prorated_trial_value(self, last_billing_date, billing_date):
         return self.trial_end and\
