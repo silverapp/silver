@@ -513,15 +513,15 @@ class Subscription(models.Model):
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
 
         if self.is_billed_first_time:
-            if self.state == self.STATES.canceling:
-                # if state == canceling => the subscription should be billed
-                # only at the start of the new billing cycle. e.g.:
-                # * interval='day' => should be billed if
-                #       now.day = start_date.day + 1
-                # * interval='month' => should be billed if
-                #       now.month = start_date.month + 1
-                # TODO: generalize for each interval type
-                return date.month == self.start_date.month + 1
+            #if self.state == self.STATES.canceling:
+                ## if state == canceling => the subscription should be billed
+                ## only at the start of the new billing cycle. e.g.:
+                ## * interval='day' => should be billed if
+                ##       now.day = start_date.day + 1
+                ## * interval='month' => should be billed if
+                ##       now.month = start_date.month + 1
+                ## TODO: generalize for each interval type
+                #return date.month == self.start_date.month + 1
             if not self.trial_end:
                 # a subscription whose plan does not have a trial => is billed
                 # right after being activated
@@ -530,15 +530,15 @@ class Subscription(models.Model):
         else:
             last_billing_date = self.last_billing_date
 
-            if self.state == self.STATES.canceling:
-                # if state == canceling => the subscription should be billed
-                # only at the start of the new billing cycle. e.g.:
-                # * interval='day' => should be billed if
-                #       now.day = last_billing_date.day + 1
-                # * interval='month' => should be billed if
-                #       now.month = last_billing_date.month + 1
-                # TODO: generalize for each interval type
-                return date.month == last_billing_date.month + 1
+            #if self.state == self.STATES.canceling:
+                ## if state == canceling => the subscription should be billed
+                ## only at the start of the new billing cycle. e.g.:
+                ## * interval='day' => should be billed if
+                ##       now.day = last_billing_date.day + 1
+                ## * interval='month' => should be billed if
+                ##       now.month = last_billing_date.month + 1
+                ## TODO: generalize for each interval type
+                #return date.month == last_billing_date.month + 1
             if self.on_trial(last_billing_date):
                 # The trial spans over multiple months and the trial has endedi
                 # => it should issue an invoice right after the trial end
@@ -574,8 +574,8 @@ class Subscription(models.Model):
     ##########################################################################
     # STATE MACHINE TRANSITIONS
     ##########################################################################
-    @transition(field=state, source=[STATES.inactive, STATES.canceled,
-                                     STATES.canceling], target=STATES.active)
+    @transition(field=state, source=[STATES.inactive, STATES.canceled],
+                target=STATES.active)
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
             self.start_date = min(timezone.now().date(), start_date)
@@ -596,7 +596,7 @@ class Subscription(models.Model):
                     days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=STATES.active, target=STATES.canceled)
-    def cancel(self, when=self.CANCEL_OPTIONS.NOW):
+    def cancel(self, when=Subscription.CANCEL_OPTIONS.NOW):
         now = timezone.now().date()
         bsd = self.bucket_start_date()
         bed = self.bucket_end_date()
@@ -699,16 +699,16 @@ class Subscription(models.Model):
             elif self.on_trial(billing_date):
                 # Next month after the subscription has started with trial
                 # spanning over 2 months
-                if self.state == self.STATES.canceling:
-                    # Between the start_date and now the customer has decided
-                    # to cancel the subscription => add the trial only
-                    # between start_date and now
-                    last_day_to_bill = billing_date
-                else:
+                #if self.state == self.STATES.canceling:
+                    ## Between the start_date and now the customer has decided
+                    ## to cancel the subscription => add the trial only
+                    ## between start_date and now
+                    #last_day_to_bill = billing_date
+                #else:
                     # The subscription isn't canceled => add the trial value
                     # between start_date and trial_end
-                    last_day_to_bill = self._current_end_date(
-                        reference_date=self.start_date)
+                last_day_to_bill = self._current_end_date(
+                    reference_date=self.start_date)
                 self._add_trial_value(start_date=self.start_date,
                                       end_date=last_day_to_bill,
                                       invoice=invoice, proforma=proforma)
@@ -723,7 +723,7 @@ class Subscription(models.Model):
                                       end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
-                if self.state in [self.STATES.active, self.STATES.canceling]:
+                if self.state in [self.STATES.active]:
                     # Add the value for the rest of the month if the
                     # subscription
                     next_day_after_trial = self.trial_end + ONE_DAY
