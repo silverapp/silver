@@ -643,7 +643,7 @@ class Subscription(models.Model):
         ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
-            if not self.trial_end:  # has no trial,
+            if not self.trial_end:  # has no trial
                 if billing_date.month == self.start_date.month:
                     # The same month as when the subscription started
                     # Generate first invoice, when the subscription starts
@@ -707,13 +707,16 @@ class Subscription(models.Model):
                                       end_date=self.trial_end,
                                       invoice=invoice, proforma=proforma)
 
-                next_day_after_trial = self.trial_end + ONE_DAY
-                end_date_after_trial = self._current_end_date(
-                    reference_date=next_day_after_trial)
+                if self.state in [self.STATES.active, self.STATES.canceling]:
+                    # Add the value for the rest of the month if the
+                    # subscription
+                    next_day_after_trial = self.trial_end + ONE_DAY
+                    end_date_after_trial = self._current_end_date(
+                        reference_date=next_day_after_trial)
 
-                self._add_plan_value(start_date=next_day_after_trial,
-                                     end_date=end_date_after_trial,
-                                     invoice=invoice, proforma=proforma)
+                    self._add_plan_value(start_date=next_day_after_trial,
+                                        end_date=end_date_after_trial,
+                                        invoice=invoice, proforma=proforma)
 
                 if billing_date.month == self.start_date.month + 1:
                     # It should have been billed right after trial, but the
