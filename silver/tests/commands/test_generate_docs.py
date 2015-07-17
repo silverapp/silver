@@ -1193,7 +1193,10 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
             assert Proforma.objects.get(id=2).state == Proforma.STATES.issued
 
+    # NOTE: the tests marked with TEMP <i> are temporary until #231 and #234
+    # are implemented.
     def test_canceling_for_sub_without_trial(self):
+        # TEMP 1
         """
         start_date=2015-05-20
         billing_date_1=2015-05-20
@@ -1274,7 +1277,24 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = consumed_mfs * mf_price
         assert proforma.total == consumed_mfs_value
 
-    def test_canceling_for_sub_without_trial_for_customer_with_consolidated_billing_and_other_existing_subscriptions(self):
+    def test_canceling_during_trial(self):
+        # TEMP 2
+        assert True
+
+    def test_canceling_during_trial_spanning_over_multiple_months(self):
+        # TEMP 3
+        assert True
+
+    def test_canceling_in_period_right_after_trial_in_same_month_as_trial_start(self):
+        # TEMP 4
+        assert True
+
+    def test_canceling_in_period_right_after_trial_with_trial_spanning_over_multiple_months(self):
+        # TEMP 5
+        assert True
+
+    def test_canceling_normal_subscription(self):
+        # TEMP 6
         assert True
 
     def test_canceling_for_sub_without_trial_for_customer_wit_consolidated_billing_and_no_existing_subscriptions(self):
