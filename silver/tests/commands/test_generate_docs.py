@@ -1198,10 +1198,7 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_canceling_for_sub_without_trial(self):
         # TEMP 1
         """
-        start_date=2015-05-20
-        billing_date_1=2015-05-20
-        billing_date_2=2015-06-01
-        It has consumed mfs between 2015-05-20 -> end_of_month
+        It has consumed mfs between start_date -> end_of_month
         """
 
         ## SETUP ##
@@ -1228,6 +1225,7 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.save()
 
         ## TEST ##
+
         # RUN 1
         call_command('generate_docs', billing_date=prev_billing_date,
                      stdout=self.output)
