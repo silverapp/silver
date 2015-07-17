@@ -1193,8 +1193,86 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
             assert Proforma.objects.get(id=2).state == Proforma.STATES.issued
 
-    def test_canceling_for_sub_without_trial_for_customer_without_consolidated_billing(self):
-        assert True
+    def test_canceling_for_sub_without_trial(self):
+        """
+        start_date=2015-05-20
+        billing_date_1=2015-05-20
+        billing_date_2=2015-06-01
+        It has consumed mfs between 2015-05-20 -> end_of_month
+        """
+
+        ## SETUP ##
+        prev_billing_date = '2015-05-20'
+        random_billing_date = '2015-05-27'
+        curr_billing_date = '2015-06-01'
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('0.0000'),
+            price_per_unit=mf_price)
+        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, amount=Decimal('200.00'),
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 20)
+
+        # Create the prorated subscription
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        ## TEST ##
+        # RUN 1
+        call_command('generate_docs', billing_date=prev_billing_date,
+                     stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        # It should add the prorated value of the plan for the rest of the
+        # month
+        prorated_days = (dt.date(2015, 5, 31) - start_date).days + 1
+        prorated_plan_value = Decimal(prorated_days / 31.0).quantize(
+            Decimal('0.0000')) * plan.amount
+        assert Proforma.objects.get(id=1).total == prorated_plan_value
+
+        # RUN 2
+        call_command('generate_docs', billing_date=random_billing_date,
+                     stdout=self.output)
+
+        # It should be ignored
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        # Move it to `canceling` state
+        subscription.cancel_at_end_of_billing_cycle()
+        subscription.save()
+
+        # Consume some mfs
+        consumed_mfs = Decimal('5.00')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_date=start_date, end_date=dt.date(2015, 5, 31),
+            consumed_units=consumed_mfs)
+
+        # RUN 3
+        call_command('generate_docs', billing_date=curr_billing_date,
+                     stdout=self.output)
+
+        assert Proforma.objects.all().count() == 2
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.get(id=2)
+        assert proforma.proforma_entries.count() == 1
+        assert all([entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        assert all([entry.total != Decimal('0.0000')
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = consumed_mfs * mf_price
+        assert proforma.total == consumed_mfs_value
 
     def test_canceling_for_sub_without_trial_for_customer_with_consolidated_billing_and_other_existing_subscriptions(self):
         assert True
