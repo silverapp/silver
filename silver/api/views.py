@@ -197,7 +197,7 @@ class SubscriptionCancel(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             if when == 'now':
-                sub.cancel()
+                sub.cancel(when=when)
                 sub.save()
 
                 DocumentsGenerator().generate(subscription=sub)
@@ -205,7 +205,7 @@ class SubscriptionCancel(APIView):
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
-                sub.cancel_at_end_of_billing_cycle()
+                self.cancel(when=when)
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)

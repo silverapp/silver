@@ -254,17 +254,19 @@ class Subscription(models.Model):
     class STATES(object):
         active = 'active'
         inactive = 'inactive'
-        canceling = 'canceling'
         canceled = 'canceled'
         ended = 'ended'
 
     STATE_CHOICES = Choices(
         (STATES.active, _('Active')),
         (STATES.inactive, _('Inactive')),
-        (STATES.canceling, _('Canceling')),
         (STATES.canceled, _('Canceled')),
         (STATES.ended, _('Ended'))
     )
+
+    class CANCEL_OPTIONS(object):
+        NOW = 'now'
+        END_OF_BILLING_CYCLE = 'end_of_billing_cycle'
 
     _INTERVALS_CODES = {
         'year': rrule.YEARLY,
@@ -290,6 +292,10 @@ class Subscription(models.Model):
     start_date = models.DateField(
         blank=True, null=True,
         help_text='The starting date for the subscription.'
+    )
+    cancel_date = models.DateField(
+        blank=True, null=True,
+        help_text='The date when the subscription was canceled.'
     )
     ended_at = models.DateField(
         blank=True, null=True,
@@ -590,8 +596,8 @@ class Subscription(models.Model):
                     days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=STATES.active, target=STATES.canceled)
-    def cancel(self):
-        canceled_at_date = timezone.now().date()
+    def cancel(self, when=self.CANCEL_OPTIONS.NOW):
+        now = timezone.now().date()
         bsd = self.bucket_start_date()
         bed = self.bucket_end_date()
         for metered_feature in self.plan.metered_features.all():
@@ -601,23 +607,33 @@ class Subscription(models.Model):
                 metered_feature=metered_feature.pk,
                 subscription=self.pk).first()
             if log:
-                log.end_date = canceled_at_date
+                log.end_date = now
                 log.save()
 
-        if self.trial_end and self.trial_end > canceled_at_date:
-            self.trial_end = canceled_at_date
-            self.save()
+        if self.trial_end and self.trial_end > now:
+            self.trial_end = now
 
-    @transition(field=state, source=STATES.active, target=STATES.canceling)
-    def cancel_at_end_of_billing_cycle(self):
-        bucket_end_date = self.bucket_end_date()
-        if self.trial_end and self.trial_end > bucket_end_date:
-            self.trial_end = bucket_end_date
-            self.save()
+        if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
+            if self.is_on_trial:
+                if self.start_date.month == self.trial_end.month:
+                    current_bucket_end_date = self.bucket_end_date()
+                    next_day_after_bucket_end = current_bucket_end_date + ONE_DAY
+                    next_bucket_end_date = self.bucked_end_date(
+                        reference_date=next_day_after_bucket_end)
+                    self.cancel_date = next_bucket_end_date + ONE_DAY
+                else:
+                    self.cancel_date = self.current_end_date + ONE_DAY
+            else:
+                self.cancel_date = self.current_end_date + ONE_DAY
+        elif when == self.CANCEL_OPTIONS.NOW:
+            self.cancel_date = now
 
-    @transition(field=state, source=[STATES.canceling, STATES.canceled],
-                target=STATES.ended)
+        self.save()
+
+    @transition(field=state, source=STATES.canceled, target=STATES.ended)
     def end(self):
+        # ended_at could have been modified by `cancel` => we update it to be
+        # correct
         self.ended_at = timezone.now().date()
     ##########################################################################
 
