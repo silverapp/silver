@@ -55,8 +55,7 @@ class DocumentsGenerator(object):
 
         # Select all the active or canceled subscriptions
         criteria = {'state__in': [Subscription.STATES.active,
-                                  Subscription.STATES.canceled,
-                                  Subscription.STATES.canceling]}
+                                  Subscription.STATES.canceled]}
         for subscription in customer.subscriptions.filter(**criteria):
             if not subscription.should_be_billed(billing_date):
                 continue
@@ -79,8 +78,7 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state in [Subscription.STATES.canceled,
-                                      Subscription.STATES.canceling]:
+            if subscription.state == Subscription.STATES.canceled:
                 subscription.end()
                 subscription.save()
 
@@ -99,8 +97,7 @@ class DocumentsGenerator(object):
         # The user does not use consolidated_billing => add each
         # subscription on a separate document (Invoice/Proforma)
         criteria = {'state__in': [Subscription.STATES.active,
-                                  Subscription.STATES.canceled,
-                                  Subscription.STATES.canceling]}
+                                  Subscription.STATES.canceled]}
         for subscription in customer.subscriptions.filter(**criteria):
             if not subscription.should_be_billed(billing_date):
                 continue
@@ -115,8 +112,7 @@ class DocumentsGenerator(object):
             }
             subscription.add_total_value_to_document(**args)
 
-            if subscription.state in [Subscription.STATES.canceled,
-                                      Subscription.STATES.canceling]:
+            if subscription.state == Subscription.STATES.canceled:
                 subscription.end()
                 subscription.save()
 
@@ -144,8 +140,7 @@ class DocumentsGenerator(object):
         }
         subscription.add_total_value_to_document(**args)
 
-        if subscription.state in [Subscription.STATES.canceled,
-                                  Subscription.STATES.canceling]:
+        if subscription.state == Subscription.STATES.canceled:
             subscription.end()
             subscription.save()
 
