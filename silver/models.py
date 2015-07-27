@@ -577,7 +577,7 @@ class Subscription(models.Model):
                     days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=STATES.active, target=STATES.canceled)
-    def cancel(self, when=None):
+    def cancel(self):
         now = timezone.now().date()
         bsd = self.bucket_start_date()
         bed = self.bucket_end_date()
@@ -600,10 +600,8 @@ class Subscription(models.Model):
                 if log:
                     log.end_date = now
                     log.save()
-
             if self.on_trial(now):
                 self.trial_end = now
-
             self.cancel_date = now
 
         self.save()
