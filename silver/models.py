@@ -600,40 +600,34 @@ class Subscription(models.Model):
         now = timezone.now().date()
         bsd = self.bucket_start_date()
         bed = self.bucket_end_date()
+
         for metered_feature in self.plan.metered_features.all():
             log = MeteredFeatureUnitsLog.objects.filter(
-                start_date=bsd,
-                end_date=bed,
+                start_date=bsd, end_date=bed,
                 metered_feature=metered_feature.pk,
                 subscription=self.pk).first()
             if log:
                 log.end_date = now
                 log.save()
 
-        if self.trial_end and self.trial_end > now:
-            self.trial_end = now
-
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
-                if self.start_date.month == self.trial_end.month:
-                    current_bucket_end_date = self.bucket_end_date()
-                    next_day_after_bucket_end = current_bucket_end_date + ONE_DAY
-                    next_bucket_end_date = self.bucked_end_date(
-                        reference_date=next_day_after_bucket_end)
-                    self.cancel_date = next_bucket_end_date + ONE_DAY
-                else:
-                    self.cancel_date = self.current_end_date + ONE_DAY
+                bucket_after_trial = self.bucked_end_date(
+                    reference_date=self.trial_end + ONE_DAY)
+                # After trial_end comes a prorated paid period. The cancel_date
+                # should one day after the end of the prorated peid period.
+                self.cancel_date = bucket_after_trial + ONE_DAY
             else:
                 self.cancel_date = self.current_end_date + ONE_DAY
         elif when == self.CANCEL_OPTIONS.NOW:
+            if self.on_trial(now):
+                self.trial_end = now
             self.cancel_date = now
 
         self.save()
 
     @transition(field=state, source=STATES.canceled, target=STATES.ended)
     def end(self):
-        # ended_at could have been modified by `cancel` => we update it to be
-        # correct
         self.ended_at = timezone.now().date()
     ##########################################################################
 
