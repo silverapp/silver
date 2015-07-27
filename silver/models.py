@@ -20,8 +20,6 @@ from django.conf import settings
 from django.db.models.signals import pre_delete, pre_save
 from django.dispatch.dispatcher import receiver
 from django.core.validators import MinValueValidator
-from django.template.loader import select_template
-from django.core.validators import MinValueValidator
 from django.template import TemplateDoesNotExist
 from django.template.loader import (select_template, get_template,
                                     render_to_string)
@@ -420,7 +418,7 @@ class Subscription(models.Model):
         elif self.plan.interval == self.plan.INTERVALS.week and\
                 _current_start_date.weekday() != 0:
             byweekday = 0  # first day of the week (Monday)
-        elif (self.plan.interval == self.plan.INTERVALS.year and\
+        elif (self.plan.interval == self.plan.INTERVALS.year and
               _current_start_date.month != 1 and _current_start_date.day != 1):
             # first day of the first month (1 Jan)
             bymonth = 1
@@ -795,7 +793,7 @@ class Subscription(models.Model):
                               invoice=invoice, proforma=proforma)
 
                 if self.state == self.STATES.active:
-                # Add the plan's value for the next month
+                    # Add the plan's value for the next month
                     current_bucket_start_date = self._current_start_date(
                         reference_date=billing_date)
                     current_bucket_end_date = self._current_end_date(
@@ -919,7 +917,6 @@ class Subscription(models.Model):
                     elif consumed_units <= remaining:
                         return 0, consumed_units
             return 0, consumed_units
-
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
@@ -1781,7 +1778,6 @@ class Invoice(BillingDocument):
     @property
     def related_document(self):
         return self.proforma
-
 
 
 @receiver(pre_delete, sender=Invoice)
