@@ -154,15 +154,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def perform_action(self, request, action, queryset):
         try:
-            available_methods = {
-                'activate_and_issue_billing_doc': Subscription.activate_and_issue_billing_doc,
-                'reactivate': Subscription.activate,
-                'cancel_at_end_of_billing_cycle': Subscription.cancel_at_end_of_billing_cycle,
-                'cancel': Subscription.cancel,
-                'end': Subscription.end
-            }
-            method = available_methods[action]
-        except KeyError:
+            method = getattr(Subscription, action)
+        except AttributeError:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
@@ -190,16 +183,16 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'activate_and_issue_billing_doc', queryset)
     activate.short_description = 'Activate the selected Subscription(s) '
 
-    def reactivate(self, request, queryset):
-        self.perform_action(request, 'reactivate', queryset)
-    reactivate.short_description = 'Reactivate the selected Subscription(s) '
+    #def reactivate(self, request, queryset):
+        #self.perform_action(request, 'reactivate', queryset)
+    #reactivate.short_description = 'Reactivate the selected Subscription(s) '
 
-    def cancel(self, request, queryset):
-        self.perform_action(request, 'cancel', queryset)
-    cancel.short_description = 'Cancel the selected Subscription(s) '
+    def cancel_now(self, request, queryset):
+        self.perform_action(request, '_cancel_now', queryset)
+    cancel_now.short_description = 'Cancel the selected Subscription(s) now'
 
     def cancel_at_the_end_of_billing_cycle(self, request, queryset):
-        self.perform_action(request, 'cancel_at_end_of_billing_cycle', queryset)
+        self.perform_action(request, '_cancel_at_end_of_billing_cycle', queryset)
     cancel_at_the_end_of_billing_cycle.short_description = 'Cancel the '\
             'selected Subscription(s) at the end'\
             'of the current billing cycle'

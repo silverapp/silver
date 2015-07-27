@@ -612,6 +612,12 @@ class Subscription(models.Model):
         self.ended_at = timezone.now().date()
     ##########################################################################
 
+    def _cancel_now(self):
+        self.cancel(when=self.CANCEL_OPTIONS.NOW)
+
+    def _cancel_at_end_of_billing_cycle(self):
+        self.cancel(when=self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE)
+
     def _add_trial_value(self, start_date, end_date, invoice=None,
                          proforma=None):
         self._add_plan_trial(start_date=start_date, end_date=end_date,
