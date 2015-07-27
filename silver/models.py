@@ -582,15 +582,6 @@ class Subscription(models.Model):
         bsd = self.bucket_start_date()
         bed = self.bucket_end_date()
 
-        for metered_feature in self.plan.metered_features.all():
-            log = MeteredFeatureUnitsLog.objects.filter(
-                start_date=bsd, end_date=bed,
-                metered_feature=metered_feature.pk,
-                subscription=self.pk).first()
-            if log:
-                log.end_date = now
-                log.save()
-
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
                 bucket_after_trial = self.bucked_end_date(
@@ -601,8 +592,18 @@ class Subscription(models.Model):
             else:
                 self.cancel_date = self.current_end_date + ONE_DAY
         elif when == self.CANCEL_OPTIONS.NOW:
+            for metered_feature in self.plan.metered_features.all():
+                log = MeteredFeatureUnitsLog.objects.filter(
+                    start_date=bsd, end_date=bed,
+                    metered_feature=metered_feature.pk,
+                    subscription=self.pk).first()
+                if log:
+                    log.end_date = now
+                    log.save()
+
             if self.on_trial(now):
                 self.trial_end = now
+
             self.cancel_date = now
 
         self.save()
