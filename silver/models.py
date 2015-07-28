@@ -628,6 +628,12 @@ class Subscription(models.Model):
                last_billing_date <= self.trial_end
 
     def _get_interval_end_date(self, date=None):
+        """
+        :returns: the end date of the interval that should be billed. The
+            returned value is a function f(subscription_state, date)
+        :rtype: datetime.date
+        """
+
         if self.state == self.STATES.active:
             end_date = self.bucket_end_date(reference_date=date)
         elif self.state == self.STATES.canceled:
@@ -694,15 +700,25 @@ class Subscription(models.Model):
                                       end_date=end_date,
                                       invoice=invoice, proforma=proforma)
 
+                first_day_after_trial = self.trial_end + ONE_DAY
+                end_date = None
                 if self.state == self.STATES.active:
                     # Add the value for the rest of the month if the
                     # subscription
-                    end_date_after_trial = self.bucked_end_date(
-                        reference_date=self.trial_end + ONE_DAY)
-                    self._add_plan_value(start_date=next_day_after_trial,
-                                        end_date=end_date_after_trial,
-                                        invoice=invoice, proforma=proforma)
-                    # TODO: handle this if it was canceled
+                    end_date = self.bucked_end_date(
+                        reference_date=first_day_after_trial)
+                elif self.state == self.STATES.canceled:
+                    # The subscription was canceled after the trial, during
+                    # during the prorated period of the month => add the value
+                    # only between trial_end -> cancel_date
+                    if self.cancel_date >= first_day_after_trial:
+                        end_date = self.cancel_date
+
+                # Add the prorated plan value for the rest of the month, after
+                # the trial
+                self._add_plan_value(start_date=first_day_after_trial,
+                                     end_date=end_date,
+                                     invoice=invoice, proforma=proforma)
 
                 if billing_date.month == self.start_date.month + 1:
                     # It should have been billed right after trial, but the
@@ -712,19 +728,15 @@ class Subscription(models.Model):
                     # => add the plan's for the next month
 
                     # Add the consumed mfs from the first bucket after trial
-                    # TODO: get end_date here
                     self._add_mfs(start_date=next_day_after_trial,
-                                  end_date=end_date_after_trial,
+                                  end_date=end_date,
                                   invoice=invoice, proforma=proforma)
 
                     if self.state == self.STATES.active:
                         # Add plan value for the next month
-                        current_bucket_start_date = self._current_start_date(
-                            reference_date=billing_date)
-                        current_bucket_end_date = self._current_end_date(
-                            reference_date=billing_date)
-                        self._add_plan_value(start_date=current_bucket_start_date,
-                                             end_date=current_bucket_end_date,
+                        bsd = self.bucket_start_date(reference_date=billing_date)
+                        bed = self.bucket_end_date(reference_date=billing_date)
+                        self._add_plan_value(start_date=bsd, end_date=bed,
                                              invoice=invoice, proforma=proforma)
         else:
             # TODO: add value for trial which spans over >2 months
