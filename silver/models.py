@@ -726,7 +726,6 @@ class Subscription(models.Model):
                         self._add_plan_value(start_date=bsd, end_date=bed,
                                              invoice=invoice, proforma=proforma)
         else:
-            # FIXME: left here + check should_be_billed
             last_billing_date = self.last_billing_date
             if (self.trial_end and
                 (self.trial_end.month == billing_date.month or
@@ -769,7 +768,6 @@ class Subscription(models.Model):
                 self._add_plan_value(start_date=start_date, end_date=end_date,
                                      invoice=invoice, proforma=proforma)
 
-                # FIXME
                 if billing_date.month == first_day_after_trial.month + 1:
                     # If there was a period of paid subscription right after
                     # the trial period => add the consumed mfs for that period.
