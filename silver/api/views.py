@@ -188,8 +188,8 @@ class SubscriptionCancel(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('subscription_pk', None))
+        sub = get_object_or_404(Subscription,
+                                pk=kwargs.get('subscription_pk', None))
         when = request.data.get('when', None)
         if sub.state != 'active':
             message = 'Cannot cancel subscription from %s state.' % sub.state
@@ -205,7 +205,7 @@ class SubscriptionCancel(APIView):
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
-                self.cancel(when=when)
+                sub.cancel(when=when)
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
@@ -217,8 +217,8 @@ class SubscriptionReactivate(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('subscription_pk', None))
+        sub = get_object_or_404(Subscription,
+                                pk=kwargs.get('subscription_pk', None))
         if sub.state != Subscription.STATES.canceled:
             msg = 'Cannot reactivate subscription from %s state.' % sub.state
             return Response({"error": msg},
