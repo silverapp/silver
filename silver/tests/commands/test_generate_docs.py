@@ -1249,7 +1249,7 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         # Move it to `canceling` state
-        subscription.cancel_at_end_of_billing_cycle()
+        subscription.cancel(when=Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE)
         subscription.save()
 
         # Consume some mfs
@@ -1420,24 +1420,31 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription = SubscriptionFactory.create(
             plan=plan, start_date=start_date)
         subscription.activate()
-        subscription.cancel()
         subscription.save()
 
         mf_units_log = MeteredFeatureUnitsLogFactory(
             subscription=subscription, metered_feature=metered_feature,
             start_date=dt.datetime(2015, 2, 1),
-            end_date=dt.datetime(2015, 2, 24)
+            end_date=dt.datetime(2015, 2, 28)
         )
 
         mocked_on_trial = PropertyMock(return_value=False)
+        mocked_is_on_trial = PropertyMock(return_value=False)
         mocked_last_billing_date = PropertyMock(
-            return_value=dt.date(2015, 2, 1)
-        )
+            return_value=dt.date(2015, 2, 1))
         mocked_is_billed_first_time = PropertyMock(return_value=False)
+        mocked_current_end_date = PropertyMock(
+            return_value=dt.date(2015, 2, 28))
         with patch.multiple('silver.models.Subscription',
                             on_trial=mocked_on_trial,
+                            is_on_trial=mocked_is_on_trial,
                             last_billing_date=mocked_last_billing_date,
-                            is_billed_first_time=mocked_is_billed_first_time):
+                            is_billed_first_time=mocked_is_billed_first_time,
+                            current_end_date=mocked_current_end_date):
+            subscription.cancel(
+                when=Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE)
+            subscription.save()
+
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
