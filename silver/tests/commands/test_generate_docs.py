@@ -1489,7 +1489,6 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription = SubscriptionFactory.create(
             plan=plan, start_date=start_date, trial_end=trial_end)
         subscription.activate()
-        subscription.cancel()
         subscription.save()
 
         trial_quantity = Decimal('3.00')
@@ -1501,13 +1500,19 @@ class TestInvoiceGenerationCommand(TestCase):
         mf_units_log_after_trial = MeteredFeatureUnitsLogFactory(
             subscription=subscription, metered_feature=metered_feature,
             start_date=trial_end + dt.timedelta(days=1),
-            # canceled 4 days before the end of the month
-            end_date=dt.datetime(2015, 2, 24)
+            end_date=dt.datetime(2015, 2, 28)
         )
 
         mocked_on_trial = MagicMock(return_value=False)
+        mocked_current_end_date = PropertyMock(
+            return_value=dt.date(2015, 2, 28))
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial):
+                            on_trial=mocked_on_trial,
+                            current_end_date=mocked_current_end_date):
+
+            subscription.cancel(when=Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE)
+            subscription.save()
+
             call_command('generate_docs', billing_date=billing_date,
                          stdout=self.output)
 
@@ -1538,7 +1543,8 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.quantity == trial_quantity
 
             doc = get_object_or_None(DocumentEntry, id=5)  # Plan after trial end
-            assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
+            assert doc.unit_price == Decimal(21.0 / 28).quantize(
+                Decimal('0.0000')) * plan.amount
 
             doc = get_object_or_None(DocumentEntry, id=6)  # Consumed mf after trial
             assert doc.unit_price == metered_feature.price_per_unit
