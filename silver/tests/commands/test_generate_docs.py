@@ -1674,26 +1674,34 @@ class TestInvoiceGenerationCommand(TestCase):
         for subscription in Subscription.objects.all():
             subscription.activate()
             subscription.save()
-        for subscription in Subscription.objects.filter(id__gte=2, id__lte=4):
-            subscription.cancel()
-            subscription.save()
 
         mocked_on_trial = MagicMock(return_value=True)
+        mocked_bsd = MagicMock(return_value=dt.date(2015, 1, 29))
+        mocked_bed = MagicMock(return_value=dt.date(2015, 1, 31))
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial):
-            call_command('generate_docs', billing_date=billing_date,
-                         stdout=self.output)
+                            on_trial=mocked_on_trial,
+                            bucket_start_date=mocked_bsd,
+                            bucket_end_date=mocked_bed):
+            with patch('silver.models.timezone') as mocked_timezone:
+                mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 29)
 
-            # Expect 5 Proformas (2 active Subs, 3 canceled)
-            assert Proforma.objects.all().count() == 5
-            assert Invoice.objects.all().count() == 0
+                for subscription in Subscription.objects.filter(id__in=range(2, 5)):
+                    subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                    subscription.save()
 
-            assert Subscription.objects.filter(state='ended').count() == 3
+                call_command('generate_docs', billing_date=billing_date,
+                            stdout=self.output)
 
-            Proforma.objects.all().delete()
+                # Expect 5 Proformas (2 active Subs, 3 canceled)
+                assert Proforma.objects.all().count() == 5
+                assert Invoice.objects.all().count() == 0
 
-            call_command('generate_docs', billing_date=billing_date,
-                         stdout=self.output)
+                assert Subscription.objects.filter(state='ended').count() == 3
 
-            # Expect 2 Proformas (2 active Subs, 3 ended)
-            assert Proforma.objects.all().count() == 2
+                Proforma.objects.all().delete()
+
+                call_command('generate_docs', billing_date=billing_date,
+                            stdout=self.output)
+
+                # Expect 2 Proformas (2 active Subs, 3 ended)
+                assert Proforma.objects.all().count() == 2
