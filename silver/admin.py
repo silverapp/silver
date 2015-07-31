@@ -147,7 +147,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                     'start_date', 'ended_at', 'state', metadata]
     list_filter = ['plan', 'state', 'plan__provider', 'customer']
     readonly_fields = ['state', ]
-    actions = ['activate', 'reactivate', 'cancel', 'end']
+    actions = ['activate', 'cancel_now', 'cancel_at_end_of_cycle', 'end']
     search_fields = ['customer__name', 'customer__company', 'plan__name',
                      'meta']
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
@@ -183,19 +183,20 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'activate_and_issue_billing_doc', queryset)
     activate.short_description = 'Activate the selected Subscription(s) '
 
-    #def reactivate(self, request, queryset):
-        #self.perform_action(request, 'reactivate', queryset)
-    #reactivate.short_description = 'Reactivate the selected Subscription(s) '
+    def reactivate(self, request, queryset):
+        # NOTE: deactivated for now
+        self.perform_action(request, 'reactivate', queryset)
+    reactivate.short_description = 'Reactivate the selected Subscription(s) '
 
     def cancel_now(self, request, queryset):
         self.perform_action(request, '_cancel_now', queryset)
     cancel_now.short_description = 'Cancel the selected Subscription(s) now'
 
-    def cancel_at_the_end_of_billing_cycle(self, request, queryset):
+    def cancel_at_end_of_cycle(self, request, queryset):
         self.perform_action(request, '_cancel_at_end_of_billing_cycle', queryset)
-    cancel_at_the_end_of_billing_cycle.short_description = 'Cancel the '\
-            'selected Subscription(s) at the end'\
-            'of the current billing cycle'
+    cancel_at_end_of_cycle.short_description = 'Cancel the '\
+            'selected Subscription(s) at the end '\
+            'of the billing cycle'
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)
