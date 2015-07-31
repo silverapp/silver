@@ -1295,36 +1295,6 @@ class TestInvoiceGenerationCommand(TestCase):
         # TEMP 6
         assert True
 
-    def test_canceling_for_sub_without_trial_for_customer_wit_consolidated_billing_and_no_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_during_trial_ending_in_same_month_as_start_date_for_customer_without_consolidated_billing(self):
-        assert True
-
-    def test_canceling_during_trial_ending_in_same_month_as_start_date_for_customer_with_consolidated_billing_and_other_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_during_trial_ending_in_same_month_as_start_date_for_customer_with_consolidated_billing_and_no_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_during_trial_which_spans_over_2_months_for_customer_without_consolidated_billing(self):
-        assert True
-
-    def test_canceling_during_trial_which_spans_over_2_months_with_consolidated_billing_and_other_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_during_trial_which_spans_over_2_months_with_consolidated_billing_and_no_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_normal_cycle_for_customer_without_consolidated_billing(self):
-        assert True
-
-    def test_canceling_normal_cycle_for_customer_with_consolidated_billing_and_other_existing_subscriptions(self):
-        assert True
-
-    def test_canceling_normal_cycle_for_customer_with_consolidated_billing_and_no_existing_subscriptions(self):
-        assert True
-
     ###########################################################################
     # Canceled
     ###########################################################################
