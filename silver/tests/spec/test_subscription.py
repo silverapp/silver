@@ -88,7 +88,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'state': Subscription.STATES.canceled}
+        assert response.data == {'state': Subscription.STATES.CANCELED}
 
     def test_cancel_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
@@ -148,7 +148,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'state': Subscription.STATES.active}
+        assert response.data == {'state': Subscription.STATES.ACTIVE}
 
     def test_reactivate_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()

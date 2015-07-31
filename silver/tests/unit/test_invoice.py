@@ -11,13 +11,13 @@ class TestInvoice(TestCase):
         proforma.issue()
         proforma.create_invoice()
 
-        assert proforma.invoice.state == Invoice.STATES.issued
+        assert proforma.invoice.state == Invoice.STATES.ISSUED
 
         proforma.invoice.pay()
         proforma.invoice.save()
 
-        assert proforma.invoice.state == Invoice.STATES.paid
-        assert proforma.state == Proforma.STATES.paid
+        assert proforma.invoice.state == Invoice.STATES.PAID
+        assert proforma.state == Proforma.STATES.PAID
 
     def test_clone_invoice_into_draft(self):
         invoice = InvoiceFactory.create()
@@ -30,7 +30,7 @@ class TestInvoice(TestCase):
 
         clone = invoice.clone_into_draft()
 
-        assert clone.state == Invoice.STATES.draft
+        assert clone.state == Invoice.STATES.DRAFT
         assert clone.paid_date is None
         assert clone.issue_date is None
         assert clone.proforma is None
@@ -60,7 +60,7 @@ class TestInvoice(TestCase):
                 if entry not in ('id', 'proforma', 'invoice'):
                     assert getattr(clone_entry, entry) == \
                         getattr(original_entry, entry)
-        assert invoice.state == Invoice.STATES.paid
+        assert invoice.state == Invoice.STATES.PAID
 
     def test_cancel_issued_invoice_with_related_proforma(self):
         proforma = ProformaFactory.create()
@@ -72,4 +72,4 @@ class TestInvoice(TestCase):
         proforma.invoice.cancel()
         proforma.invoice.save()
 
-        assert proforma.invoice.state == proforma.state == Invoice.STATES.canceled
+        assert proforma.invoice.state == proforma.state == Invoice.STATES.CANCELED

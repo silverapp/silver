@@ -83,7 +83,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = Plan.INTERVALS.month
+    interval = Plan.INTERVALS.MONTH
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'

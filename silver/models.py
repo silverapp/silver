@@ -74,16 +74,16 @@ class UnsavedForeignKey(models.ForeignKey):
 
 class Plan(models.Model):
     class INTERVALS(object):
-        day = 'day'
-        week = 'week'
-        month = 'month'
-        year = 'year'
+        DAY = 'day'
+        WEEK = 'week'
+        MONTH = 'month'
+        YEAR = 'year'
 
     INTERVAL_CHOICES = Choices(
-        (INTERVALS.day, _('Day')),
-        (INTERVALS.week, _('Week')),
-        (INTERVALS.month, _('Month')),
-        (INTERVALS.year, _('Year'))
+        (INTERVALS.DAY, _('Day')),
+        (INTERVALS.WEEK, _('Week')),
+        (INTERVALS.MONTH, _('Month')),
+        (INTERVALS.YEAR, _('Year'))
     )
 
     name = models.CharField(
@@ -91,7 +91,7 @@ class Plan(models.Model):
         db_index=True
     )
     interval = models.CharField(
-        choices=INTERVAL_CHOICES, max_length=12, default=INTERVALS.month,
+        choices=INTERVAL_CHOICES, max_length=12, default=INTERVALS.MONTH,
         help_text='The frequency with which a subscription should be billed.'
     )
     interval_count = models.PositiveIntegerField(
@@ -204,8 +204,8 @@ class MeteredFeatureUnitsLog(models.Model):
 
     def clean(self):
         super(MeteredFeatureUnitsLog, self).clean()
-        if self.subscription.state in [Subscription.STATES.ended,
-                                       Subscription.STATES.inactive]:
+        if self.subscription.state in [Subscription.STATES.ENDED,
+                                       Subscription.STATES.INACTIVE]:
             if not self.id:
                 action_type = "create"
             else:
@@ -250,16 +250,16 @@ class MeteredFeatureUnitsLog(models.Model):
 
 class Subscription(models.Model):
     class STATES(object):
-        active = 'active'
-        inactive = 'inactive'
-        canceled = 'canceled'
-        ended = 'ended'
+        ACTIVE = 'active'
+        INACTIVE = 'inactive'
+        CANCELED = 'canceled'
+        ENDED = 'ended'
 
     STATE_CHOICES = Choices(
-        (STATES.active, _('Active')),
-        (STATES.inactive, _('Inactive')),
-        (STATES.canceled, _('Canceled')),
-        (STATES.ended, _('Ended'))
+        (STATES.ACTIVE, _('Active')),
+        (STATES.INACTIVE, _('Inactive')),
+        (STATES.CANCELED, _('Canceled')),
+        (STATES.ENDED, _('Ended'))
     )
 
     class CANCEL_OPTIONS(object):
@@ -305,7 +305,7 @@ class Subscription(models.Model):
     )
 
     state = FSMField(
-        choices=STATE_CHOICES, max_length=12, default=STATES.inactive,
+        choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         protected=True, help_text='The state the subscription is in.'
     )
     meta = jsonfield.JSONField(blank=True, null=True)
@@ -319,7 +319,7 @@ class Subscription(models.Model):
                                   "the subscription's start date."}
                 )
         if self.ended_at:
-            if self.state not in [self.STATES.canceled, self.STATES.ended]:
+            if self.state not in [self.STATES.CANCELED, self.STATES.ENDED]:
                 errors.update(
                     {'ended_at': 'The ended at date cannot be set if the '
                                  'subscription is not canceled or ended.'}
@@ -358,11 +358,11 @@ class Subscription(models.Model):
         # we calculate a fake (intermediary) start date depending on the
         # interval type, for the purposes of alignment to a specific day
         bymonth = bymonthday = byweekday = None
-        if self.plan.interval == self.plan.INTERVALS.month:
+        if self.plan.interval == self.plan.INTERVALS.MONTH:
             bymonthday = 1  # first day of the month
-        elif self.plan.interval == self.plan.INTERVALS.week:
+        elif self.plan.interval == self.plan.INTERVALS.WEEK:
             byweekday = 0  # first day of the week (Monday)
-        elif self.plan.interval == self.plan.INTERVALS.year:
+        elif self.plan.interval == self.plan.INTERVALS.YEAR:
             # first day of the first month (1 Jan)
             bymonth = 1
             bymonthday = 1
@@ -412,13 +412,13 @@ class Subscription(models.Model):
         bymonth = bymonthday = byweekday = None
         count = 1
         interval_count = 1
-        if self.plan.interval == self.plan.INTERVALS.month and\
+        if self.plan.interval == self.plan.INTERVALS.MONTH and\
            _current_start_date.day != 1:
             bymonthday = 1  # first day of the month
-        elif self.plan.interval == self.plan.INTERVALS.week and\
+        elif self.plan.interval == self.plan.INTERVALS.WEEK and\
                 _current_start_date.weekday() != 0:
             byweekday = 0  # first day of the week (Monday)
-        elif (self.plan.interval == self.plan.INTERVALS.year and
+        elif (self.plan.interval == self.plan.INTERVALS.YEAR and
               _current_start_date.month != 1 and _current_start_date.day != 1):
             # first day of the first month (1 Jan)
             bymonth = 1
@@ -495,7 +495,7 @@ class Subscription(models.Model):
 
     @property
     def is_on_trial(self):
-        if self.state == self.STATES.active and self.trial_end:
+        if self.state == self.STATES.ACTIVE and self.trial_end:
             return timezone.now().date() <= self.trial_end
         return False
 
@@ -507,7 +507,7 @@ class Subscription(models.Model):
     def should_be_billed(self, date):
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
 
-        if self.state == self.STATES.canceled and\
+        if self.state == self.STATES.CANCELED and\
            date >= (self.cancel_date + generate_after):
             return True
 
@@ -548,8 +548,8 @@ class Subscription(models.Model):
     ##########################################################################
     # STATE MACHINE TRANSITIONS
     ##########################################################################
-    @transition(field=state, source=[STATES.inactive, STATES.canceled],
-                target=STATES.active)
+    @transition(field=state, source=[STATES.INACTIVE, STATES.CANCELED],
+                target=STATES.ACTIVE)
     def activate(self, start_date=None, trial_end_date=None):
         if start_date:
             self.start_date = min(timezone.now().date(), start_date)
@@ -569,7 +569,7 @@ class Subscription(models.Model):
                 self.trial_end = self.start_date + datetime.timedelta(
                     days=self.plan.trial_period_days - 1)
 
-    @transition(field=state, source=STATES.active, target=STATES.canceled)
+    @transition(field=state, source=STATES.ACTIVE, target=STATES.CANCELED)
     def cancel(self, when):
         now = timezone.now().date()
         bsd = self.bucket_start_date()
@@ -600,7 +600,7 @@ class Subscription(models.Model):
 
         self.save()
 
-    @transition(field=state, source=STATES.canceled, target=STATES.ended)
+    @transition(field=state, source=STATES.CANCELED, target=STATES.ENDED)
     def end(self):
         self.ended_at = timezone.now().date()
     ##########################################################################
@@ -624,9 +624,9 @@ class Subscription(models.Model):
             returned value is a function f(subscription_state, date)
         :rtype: datetime.date
         """
-        if self.state == self.STATES.active:
+        if self.state == self.STATES.ACTIVE:
             end_date = self.bucket_end_date(reference_date=date)
-        elif self.state == self.STATES.canceled:
+        elif self.state == self.STATES.CANCELED:
             if self.trial_end and date <= self.trial_end:
                 if self.trial_end <= self.cancel_date:
                     end_date = self.trial_end
@@ -670,7 +670,7 @@ class Subscription(models.Model):
                                   end_date=end_date,
                                   invoice=invoice, proforma=proforma)
 
-                    if self.state == self.STATES.active:
+                    if self.state == self.STATES.ACTIVE:
                         # Add the plan's value for the month ahead
                         bsd = self.bucket_start_date(reference_date=billing_date)
                         bed = self.bucket_end_date(reference_date=billing_date)
@@ -698,12 +698,12 @@ class Subscription(models.Model):
 
                 first_day_after_trial = self.trial_end + ONE_DAY
                 end_date = None
-                if self.state == self.STATES.active:
+                if self.state == self.STATES.ACTIVE:
                     # Add the value for the rest of the month if the
                     # subscription
                     end_date = self.bucket_end_date(
                         reference_date=first_day_after_trial)
-                elif self.state == self.STATES.canceled:
+                elif self.state == self.STATES.CANCELED:
                     # The subscription was canceled after the trial, during
                     # during the prorated period of the month => add the value
                     # only between trial_end -> cancel_date
@@ -728,7 +728,7 @@ class Subscription(models.Model):
                                   end_date=end_date,
                                   invoice=invoice, proforma=proforma)
 
-                    if self.state == self.STATES.active:
+                    if self.state == self.STATES.ACTIVE:
                         # Add plan value for the next month
                         bsd = self.bucket_start_date(reference_date=billing_date)
                         bed = self.bucket_end_date(reference_date=billing_date)
@@ -755,7 +755,7 @@ class Subscription(models.Model):
                 # bucket or the cancel_date (if the subscription is canceled)
                 start_date = self.bucket_start_date(reference_date=last_billing_date)
                 end_date = self.bucket_end_date(reference_date=last_billing_date)
-                if self.state == self.STATES.canceled:
+                if self.state == self.STATES.CANCELED:
                     if start_date <= self.cancel_date <= end_date:
                         # Was scheduled for canceling sometimes during the
                         # trial period
@@ -770,7 +770,7 @@ class Subscription(models.Model):
                 first_day_after_trial = self.trial_end + ONE_DAY
                 start_date = self.bucket_start_date(reference_date=first_day_after_trial)
                 end_date = self.bucket_end_date(reference_date=first_day_after_trial)
-                if self.state == self.STATES.canceled:
+                if self.state == self.STATES.CANCELED:
                     if start_date <= self.cancel_date <= end_date:
                         end_date = self.cancel_date
 
@@ -788,7 +788,7 @@ class Subscription(models.Model):
                     # The subscription was not canceled and we bill it the
                     # next month after the trial end => add the value of the
                     # subscription for the next month
-                    if self.state == self.STATES.active:
+                    if self.state == self.STATES.ACTIVE:
                         bsd = self.bucket_start_date(reference_date=billing_date)
                         bed = self.bucket_end_date(reference_date=billing_date)
                         self._add_plan_value(start_date=bsd, end_date=bed,
@@ -804,7 +804,7 @@ class Subscription(models.Model):
                 self._add_mfs(start_date=bsd, end_date=bed,
                               invoice=invoice, proforma=proforma)
 
-                if self.state == self.STATES.active:
+                if self.state == self.STATES.ACTIVE:
                     # Add the plan's value for the month ahead
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
@@ -1296,25 +1296,25 @@ class Customer(AbstractBillingEntity):
 
 class Provider(AbstractBillingEntity):
     class FLOWS(object):
-        proforma = 'proforma'
-        invoice = 'invoice'
+        PROFORMA = 'proforma'
+        INVOICE = 'invoice'
 
     FLOW_CHOICES = Choices(
-        (FLOWS.proforma, _('Proforma')),
-        (FLOWS.invoice, _('Invoice')),
+        (FLOWS.PROFORMA, _('Proforma')),
+        (FLOWS.INVOICE, _('Invoice')),
     )
 
     class DEFAULT_DOC_STATE(object):
-        draft = 'draft'
-        issued = 'issued'
+        DRAFT = 'draft'
+        ISSUED = 'issued'
 
     DOCUMENT_DEFAULT_STATE = Choices(
-        (DEFAULT_DOC_STATE.draft, _('Draft')),
-        (DEFAULT_DOC_STATE.issued, _('Issued')))
+        (DEFAULT_DOC_STATE.DRAFT, _('Draft')),
+        (DEFAULT_DOC_STATE.ISSUED, _('Issued')))
 
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
-        default=FLOWS.proforma,
+        default=FLOWS.PROFORMA,
         help_text="One of the available workflows for generating proformas and\
                    invoices (see the documentation for more details)."
     )
@@ -1344,7 +1344,7 @@ class Provider(AbstractBillingEntity):
         company_field.help_text = "The provider issuing the invoice."
 
     def clean(self):
-        if self.flow == self.FLOWS.proforma:
+        if self.flow == self.FLOWS.PROFORMA:
             if not self.proforma_starting_number and\
                not self.proforma_series:
                 errors = {'proforma_series': "This field is required as the "
@@ -1375,7 +1375,7 @@ class Provider(AbstractBillingEntity):
 
     @property
     def model_corresponding_to_default_flow(self):
-        return Proforma if self.flow == self.FLOWS.proforma else Invoice
+        return Proforma if self.flow == self.FLOWS.PROFORMA else Invoice
 
 
 @receiver(pre_save, sender=Provider)
@@ -1415,16 +1415,16 @@ class ProductCode(models.Model):
 
 class BillingDocument(models.Model):
     class STATES(object):
-        draft = 'draft'
-        issued = 'issued'
-        paid = 'paid'
-        canceled = 'canceled'
+        DRAFT = 'draft'
+        ISSUED = 'issued'
+        PAID = 'paid'
+        CANCELED = 'canceled'
 
     STATE_CHOICES = Choices(
-        (STATES.draft, _('Draft')),
-        (STATES.issued, _('Issued')),
-        (STATES.paid, _('Paid')),
-        (STATES.canceled, _('Canceled'))
+        (STATES.DRAFT, _('Draft')),
+        (STATES.ISSUED, _('Issued')),
+        (STATES.PAID, _('Paid')),
+        (STATES.CANCELED, _('Canceled'))
     )
 
     series = models.CharField(max_length=20, blank=True, null=True,
@@ -1447,7 +1447,7 @@ class BillingDocument(models.Model):
         help_text='The currency used for billing.')
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
-    state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.draft,
+    state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.DRAFT,
                      verbose_name="State",
                      help_text='The state the invoice is in.')
 
@@ -1462,7 +1462,7 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self._last_state = self.state
 
-    @transition(field=state, source=STATES.draft, target=STATES.issued)
+    @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         if issue_date:
             self.issue_date = dt.strptime(issue_date, '%Y-%m-%d').date()
@@ -1482,25 +1482,25 @@ class BillingDocument(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self._save_pdf(state=self.STATES.issued)
+        self._save_pdf(state=self.STATES.ISSUED)
 
-    @transition(field=state, source=STATES.issued, target=STATES.paid)
+    @transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
     def pay(self, paid_date=None):
         if paid_date:
             self.paid_date = dt.strptime(paid_date, '%Y-%m-%d').date()
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        self._save_pdf(state=self.STATES.paid)
+        self._save_pdf(state=self.STATES.PAID)
 
-    @transition(field=state, source=STATES.issued, target=STATES.canceled)
+    @transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
     def cancel(self, cancel_date=None):
         if cancel_date:
             self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-        self._save_pdf(state=self.STATES.canceled)
+        self._save_pdf(state=self.STATES.CANCELED)
 
     def clone_into_draft(self):
         copied_fields = {
@@ -1512,7 +1512,7 @@ class BillingDocument(models.Model):
         }
 
         clone = self.__class__._default_manager.create(**copied_fields)
-        clone.state = self.STATES.draft
+        clone.state = self.STATES.DRAFT
         clone.save()
 
         # clone entries too
@@ -1540,17 +1540,17 @@ class BillingDocument(models.Model):
         # send a request which contains the state = 'paid' and also send
         # other changed fields and the request would be accepted bc. only
         # the state is verified.
-        if self._last_state == self.STATES.issued and\
-           self.state not in [self.STATES.paid, self.STATES.canceled]:
+        if self._last_state == self.STATES.ISSUED and\
+           self.state not in [self.STATES.PAID, self.STATES.CANCELED]:
             msg = 'You cannot edit the document once it is in issued state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
-        if self._last_state == self.STATES.canceled:
+        if self._last_state == self.STATES.CANCELED:
             msg = 'You cannot edit the document once it is in canceled state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
         # If it's in paid state => don't allow any changes
-        if self._last_state == self.STATES.paid:
+        if self._last_state == self.STATES.PAID:
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
@@ -1725,15 +1725,15 @@ class Invoice(BillingDocument):
         customer_field = self._meta.get_field_by_name("customer")[0]
         customer_field.related_name = "invoices"
 
-    @transition(field='state', source=BillingDocument.STATES.draft,
-                target=BillingDocument.STATES.issued)
+    @transition(field='state', source=BillingDocument.STATES.DRAFT,
+                target=BillingDocument.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_invoice_archivable_field_values()
 
         super(Invoice, self).issue(issue_date, due_date)
 
-    @transition(field='state', source=BillingDocument.STATES.issued,
-                target=BillingDocument.STATES.paid)
+    @transition(field='state', source=BillingDocument.STATES.ISSUED,
+                target=BillingDocument.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Invoice, self).pay(paid_date)
 
@@ -1742,8 +1742,8 @@ class Invoice(BillingDocument):
                               affect_related_document=False)
             self.proforma.save()
 
-    @transition(field='state', source=BillingDocument.STATES.issued,
-                target=BillingDocument.STATES.canceled)
+    @transition(field='state', source=BillingDocument.STATES.ISSUED,
+                target=BillingDocument.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Invoice, self).cancel(cancel_date)
 
@@ -1829,15 +1829,15 @@ class Proforma(BillingDocument):
                                      'provider.'}
                 raise ValidationError(err_msg)
 
-    @transition(field='state', source=BillingDocument.STATES.draft,
-                target=BillingDocument.STATES.issued)
+    @transition(field='state', source=BillingDocument.STATES.DRAFT,
+                target=BillingDocument.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
 
         super(Proforma, self).issue(issue_date, due_date)
 
-    @transition(field='state', source=BillingDocument.STATES.issued,
-                target=BillingDocument.STATES.paid)
+    @transition(field='state', source=BillingDocument.STATES.ISSUED,
+                target=BillingDocument.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Proforma, self).pay(paid_date)
 
@@ -1858,8 +1858,8 @@ class Proforma(BillingDocument):
                              affect_related_document=False)
             self.invoice.save()
 
-    @transition(field='state', source=BillingDocument.STATES.issued,
-                target=BillingDocument.STATES.canceled)
+    @transition(field='state', source=BillingDocument.STATES.ISSUED,
+                target=BillingDocument.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Proforma, self).cancel(cancel_date)
 
@@ -1869,7 +1869,7 @@ class Proforma(BillingDocument):
             self.invoice.save()
 
     def create_invoice(self):
-        if self.state != BillingDocument.STATES.issued:
+        if self.state != BillingDocument.STATES.ISSUED:
             raise ValueError("You can't create an invoice from a %s proforma, "
                              "only from an issued one" % self.state)
 

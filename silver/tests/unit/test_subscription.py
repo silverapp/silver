@@ -19,7 +19,7 @@ class TestSubscription(TestCase):
         subscription.save()
 
         # Every month, 16 days of trial
-        subscription.plan.interval = Plan.INTERVALS.month
+        subscription.plan.interval = Plan.INTERVALS.MONTH
         subscription.plan.interval_count = 1
         subscription.plan.save()
 
@@ -59,7 +59,7 @@ class TestSubscription(TestCase):
             reference_date=datetime.date(year=2015, month=4, day=22))
 
         # Every 2 months, 5 months of trial (2015-05-30)
-        subscription.plan.interval = Plan.INTERVALS.month
+        subscription.plan.interval = Plan.INTERVALS.MONTH
         subscription.plan.interval_count = 2
         subscription.plan.save()
 
@@ -109,7 +109,7 @@ class TestSubscription(TestCase):
             reference_date=datetime.date(year=2015, month=6, day=1))
 
         # Every 2 weeks, 8 days of trial
-        subscription.plan.interval = Plan.INTERVALS.week
+        subscription.plan.interval = Plan.INTERVALS.WEEK
         subscription.plan.interval_count = 2
         subscription.plan.save()
 
@@ -151,7 +151,7 @@ class TestSubscription(TestCase):
             reference_date=datetime.date(year=2015, month=6, day=28))
 
         # Every year, 3 months (90 days) of trial
-        subscription.plan.interval = Plan.INTERVALS.year
+        subscription.plan.interval = Plan.INTERVALS.YEAR
         subscription.plan.interval_count = 1
         subscription.plan.save()
 
@@ -199,7 +199,7 @@ class TestSubscription(TestCase):
 
         with patch('silver.models.timezone') as mock_timezone:
             # Every month, 16 days of trial
-            subscription.plan.interval = Plan.INTERVALS.month
+            subscription.plan.interval = Plan.INTERVALS.MONTH
             subscription.plan.interval_count = 1
             subscription.plan.save()
 
@@ -229,7 +229,7 @@ class TestSubscription(TestCase):
             assert end_date == subscription.current_end_date
 
             # Every 2 months, 5 months of trial (2015-05-30)
-            subscription.plan.interval = Plan.INTERVALS.month
+            subscription.plan.interval = Plan.INTERVALS.MONTH
             subscription.plan.interval_count = 2
             subscription.plan.save()
 
@@ -279,7 +279,7 @@ class TestSubscription(TestCase):
             assert end_date == subscription.current_end_date
 
             # Every 2 weeks, 8 days of trial
-            subscription.plan.interval = Plan.INTERVALS.week
+            subscription.plan.interval = Plan.INTERVALS.WEEK
             subscription.plan.interval_count = 2
             subscription.plan.save()
 
@@ -313,7 +313,7 @@ class TestSubscription(TestCase):
             assert end_date == subscription.current_end_date
 
             # Every year, 3 months (90 days) of trial
-            subscription.plan.interval = Plan.INTERVALS.year
+            subscription.plan.interval = Plan.INTERVALS.YEAR
             subscription.plan.interval_count = 1
             subscription.plan.save()
 
@@ -337,3 +337,6 @@ class TestSubscription(TestCase):
 
             end_date = datetime.date(year=2016, month=12, day=31)
             assert end_date == subscription.current_end_date
+
+    def test_should_be_billed(self):
+        assert True

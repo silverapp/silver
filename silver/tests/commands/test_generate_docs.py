@@ -72,7 +72,7 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=Decimal('0.00'),
             price_per_unit=mf_price)
-        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+        plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
                                   interval_count=1, generate_after=120,
                                   enabled=True, amount=Decimal('200.00'),
                                   trial_period_days=24,
@@ -480,7 +480,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
 
             # Expect 4 entries:
             # Plan Trial (+-), Plan Prorated (+), Plan for next month(+)
@@ -542,7 +542,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-), Plan After Trial (+)
@@ -619,7 +619,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1137,7 +1137,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.issued
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.ISSUED
 
     def test_gen_mixed_states_for_multiple_providers(self):
         billing_date = '2015-03-02'
@@ -1190,8 +1190,8 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 2
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
-            assert Proforma.objects.get(id=2).state == Proforma.STATES.issued
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
+            assert Proforma.objects.get(id=2).state == Proforma.STATES.ISSUED
 
     # NOTE: the tests marked with TEMP <i> are temporary until #231 and #234
     # are implemented.
@@ -1212,7 +1212,7 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units=Decimal('0.0000'),
             price_per_unit=mf_price)
-        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+        plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
                                   interval_count=1, generate_after=120,
                                   enabled=True, amount=Decimal('200.00'),
                                   metered_features=[metered_feature])
@@ -1381,7 +1381,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
             # Plan After Trial (+),  Metered Features After Trial (+)
@@ -1521,7 +1521,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
 
             # Expect 6 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1599,7 +1599,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Invoice.objects.all().count() == 0
 
             # In draft state
-            assert Proforma.objects.get(id=1).state == Proforma.STATES.draft
+            assert Proforma.objects.get(id=1).state == Proforma.STATES.DRAFT
 
             # Expect 7 entries:
             # Plan Trial (+-), Plan Trial Metered Feature (+-),
@@ -1636,7 +1636,7 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_gen_for_single_canceled_subscription(self):
         billing_date = '2015-01-06'
 
-        plan = PlanFactory.create(interval=Plan.INTERVALS.month,
+        plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
                                   interval_count=1, generate_after=120,
                                   enabled=True, trial_period_days=7,
                                   amount=Decimal('200.00'))
