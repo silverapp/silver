@@ -1,6 +1,5 @@
 import datetime
 import json
-from mock import patch
 
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -30,7 +29,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "trial_end": '2014-12-07',
             "start_date": '2014-11-19'
         }), content_type='application/json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert response.status_code == status.HTTP_201_CREATED
 
     def test_create_post_subscription_with_invalid_trial_end(self):
         plan = PlanFactory.create()
@@ -46,7 +45,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "start_date": '2014-11-19'
         }), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_activate_subscription(self):
         subscription = SubscriptionFactory.create()
@@ -56,13 +55,13 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': 'active'})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'state': 'active'}
 
-    def test_activate_subscription_from_wrong_state(self):
+    def test_activate_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
-        subscription.cancel()
+        subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
         subscription.save()
 
         url = reverse('sub-activate',
@@ -71,11 +70,10 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data,
-            {'error': u'Cannot activate subscription from canceled state.'}
-        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            'error': u'Cannot activate subscription from canceled state.'
+        }
 
     def test_cancel_subscription(self):
         subscription = SubscriptionFactory.create()
@@ -89,10 +87,10 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': Subscription.STATES.canceling})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'state': Subscription.STATES.canceled}
 
-    def test_cancel_subscription_from_wrong_state(self):
+    def test_cancel_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
 
         url = reverse('sub-cancel',
@@ -102,11 +100,10 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data,
-            {'error': u'Cannot cancel subscription from inactive state.'}
-        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            'error': u'Cannot cancel subscription from inactive state.'
+        }
 
     def test_end_subscription(self):
         subscription = SubscriptionFactory.create()
@@ -120,10 +117,10 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "now"}), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': 'ended'})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'state': 'ended'}
 
-    def test_end_subscription_from_wrong_state(self):
+    def test_end_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
 
         url = reverse('sub-cancel',
@@ -133,16 +130,15 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "now"}), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data,
-            {'error': u'Cannot cancel subscription from inactive state.'}
-        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            'error': u'Cannot cancel subscription from inactive state.'
+        }
 
     def test_reactivate_subscription(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
-        subscription.cancel()
+        subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
         subscription.save()
 
         url = reverse('sub-reactivate',
@@ -151,13 +147,13 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'state': 'active'})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'state': Subscription.STATES.active}
 
-    def test_reactivate_subscription_from_wrong_state(self):
+    def test_reactivate_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
-        subscription.cancel()
+        subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
         subscription.end()
         subscription.save()
 
@@ -167,11 +163,10 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data,
-            {'error': u'Cannot reactivate subscription from ended state.'}
-        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            'error': u'Cannot reactivate subscription from ended state.'
+        }
 
     def test_get_subscription_list(self):
         customer = CustomerFactory.create()
@@ -214,8 +209,8 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertNotEqual(response.data, [])
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data != []
 
     def test_get_subscription_detail_unexisting(self):
         customer = CustomerFactory.create()
@@ -225,8 +220,8 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {u'detail': u'Not found.'})
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data == {u'detail': u'Not found.'}
 
     def test_create_subscription_mf_units_log(self):
         subscription = SubscriptionFactory.create()
@@ -250,8 +245,8 @@ class TestSubscriptionEndpoint(APITestCase):
             "update_type": "absolute"
         }), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'count': 150})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 150}
 
         response = self.client.patch(url, json.dumps({
             "count": 29,
@@ -259,8 +254,8 @@ class TestSubscriptionEndpoint(APITestCase):
             "update_type": "relative"
         }), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'count': 179})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 179}
 
     def test_create_subscription_mf_units_log_with_unexisting_mf(self):
         subscription = SubscriptionFactory.create()
@@ -275,8 +270,8 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.patch(url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {'detail': 'Metered Feature Not found.'})
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data == {'detail': 'Metered Feature Not found.'}
 
     def test_create_subscription_mf_units_log_with_unactivated_sub(self):
         subscription = SubscriptionFactory.create()
@@ -290,9 +285,8 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.patch(url)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data,
-                         {'detail': 'Subscription is not active.'})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'Subscription is not active.'}
 
     def test_create_subscription_mf_units_log_with_invalid_date(self):
         subscription = SubscriptionFactory.create()
@@ -314,8 +308,8 @@ class TestSubscriptionEndpoint(APITestCase):
             "update_type": "absolute"
         }), content_type='application/json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'detail': 'Date is out of bounds.'})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {'detail': 'Date is out of bounds.'}
 
     def test_create_subscription_mf_units_log_with_insufficient_data(self):
         subscription = SubscriptionFactory.create()
@@ -344,6 +338,5 @@ class TestSubscriptionEndpoint(APITestCase):
             response = self.client.patch(url, json.dumps(data_copy),
                                          content_type='application/json')
 
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(response.data,
-                             {field: ['This field is required.']})
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert response.data == {field: ['This field is required.']}
