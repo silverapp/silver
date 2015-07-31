@@ -516,7 +516,7 @@ class Subscription(models.Model):
                 # a subscription whose plan does not have a trial => is billed
                 # right after being activated.
                 return True
-            interval_end = self.trial_end
+            interval_end = self.bucket_end_date(reference_date=self.start_date)
         else:
             last_billing_date = self.last_billing_date
             interval_end = self.bucket_end_date(reference_date=last_billing_date)
