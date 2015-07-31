@@ -1634,7 +1634,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.quantity == mf_units_log_after_trial.consumed_units
 
     def test_gen_for_single_canceled_subscription(self):
-        billing_date = '2015-01-07'
+        billing_date = '2015-01-06'
 
         plan = PlanFactory.create(interval=Plan.INTERVALS.month,
                                   interval_count=1, generate_after=120,
@@ -1645,21 +1645,35 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription = SubscriptionFactory.create(
             plan=plan, start_date=start_date)
         subscription.activate()
-        subscription.cancel()
         subscription.save()
 
         mocked_on_trial = MagicMock(return_value=True)
+        mocked_bsd = MagicMock(return_value=dt.date(2015, 1, 3))
+        mocked_bed = MagicMock(return_value=dt.date(2015, 1, 10))
         with patch.multiple('silver.models.Subscription',
-                            on_trial=mocked_on_trial):
-            call_command('generate_docs', date=billing_date,
-                         subscription=subscription.pk, stdout=self.output)
+                            on_trial=mocked_on_trial,
+                            bucket_start_date=mocked_bsd,
+                            bucket_end_date=mocked_bed):
+            with patch('silver.models.timezone') as mocked_timezone:
+                mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 6)
 
-            assert Subscription.objects.filter(state='ended').count() == 1
+                subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                subscription.save()
 
-            assert Proforma.objects.all().count() == 1
-            assert Invoice.objects.all().count() == 0
+                call_command('generate_docs', date=billing_date,
+                            subscription=subscription.pk, stdout=self.output)
 
-            # TODO: test what's added on the proforma
+                assert Subscription.objects.filter(state='ended').count() == 1
+
+                assert Proforma.objects.all().count() == 1
+                assert Invoice.objects.all().count() == 0
+
+                proforma = Proforma.objects.get(id=1)
+
+                assert proforma.proforma_entries.count() == 2
+                assert all([entry.prorated
+                            for entry in proforma.proforma_entries.all()])
+                assert proforma.total == Decimal('0.0000')
 
     def test_gen_active_and_canceled_selection(self):
         billing_date = '2015-02-09'
