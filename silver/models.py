@@ -505,16 +505,18 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
-        if self.state == self.STATES.canceled and date >= self.cancel_date:
+        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
+
+        if self.state == self.STATES.canceled and\
+           date >= (self.cancel_date + generate_after):
             return True
 
-        generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         if self.is_billed_first_time:
             if not self.trial_end:
                 # a subscription whose plan does not have a trial => is billed
-                # right after being activated
+                # right after being activated.
                 return True
-            interval_end = self.bucket_end_date(reference_date=self.start_date)
+            interval_end = self.trial_end
         else:
             last_billing_date = self.last_billing_date
             interval_end = self.bucket_end_date(reference_date=last_billing_date)
