@@ -7,6 +7,7 @@ djangorestframework-bulk
 django-livefield
 django-jsonfield
 python-dateutil
+django-model-utils
 pytz
 # python-dev is required for xhtml2pdf to work
 xhtml2pdf

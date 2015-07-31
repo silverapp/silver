@@ -34,6 +34,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
+    consolidated_billing = True
 
     customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
     sales_tax_percent = Decimal(1.0)
@@ -46,7 +47,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
         model = MeteredFeature
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    unit = 'Unit'
+    unit = factory.Sequence(lambda n:'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
     included_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=100000.00,
@@ -82,7 +83,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
         model = Plan
 
     name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    interval = factory.Sequence(lambda n: Plan.INTERVALS[n % 4][0])
+    interval = Plan.INTERVALS.MONTH
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'

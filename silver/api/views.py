@@ -11,7 +11,7 @@ from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma)
+                           DocumentEntry, Proforma, BillingDocument)
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
@@ -145,7 +145,7 @@ class SubscriptionActivate(APIView):
     def post(self, request, *args, **kwargs):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('subscription_pk', None))
-        if sub.state != 'inactive':
+        if sub.state != Subscription.STATES.INACTIVE:
             message = 'Cannot activate subscription from %s state.' % sub.state
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -188,8 +188,8 @@ class SubscriptionCancel(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('subscription_pk', None))
+        sub = get_object_or_404(Subscription,
+                                pk=kwargs.get('subscription_pk', None))
         when = request.data.get('when', None)
         if sub.state != 'active':
             message = 'Cannot cancel subscription from %s state.' % sub.state
@@ -197,7 +197,7 @@ class SubscriptionCancel(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             if when == 'now':
-                sub.cancel()
+                sub.cancel(when=when)
                 sub.save()
 
                 DocumentsGenerator().generate(subscription=sub)
@@ -205,7 +205,7 @@ class SubscriptionCancel(APIView):
                 return Response({"state": 'ended'},
                                 status=status.HTTP_200_OK)
             elif when == 'end_of_billing_cycle':
-                sub.cancel()
+                sub.cancel(when=when)
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
@@ -217,9 +217,9 @@ class SubscriptionReactivate(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        sub = get_object_or_404(Subscription.objects,
-                                pk=self.kwargs.get('subscription_pk', None))
-        if sub.state != 'canceled':
+        sub = get_object_or_404(Subscription,
+                                pk=kwargs.get('subscription_pk', None))
+        if sub.state != Subscription.STATES.CANCELED:
             msg = 'Cannot reactivate subscription from %s state.' % sub.state
             return Response({"error": msg},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -441,7 +441,7 @@ class DocEntryCreate(generics.CreateAPIView):
             msg = "{model} not found".format(model=model_name)
             return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
 
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.DRAFT:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -485,7 +485,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.DRAFT:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -509,7 +509,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != 'draft':
+        if document.state != BillingDocument.STATES.DRAFT:
             msg = "{model} entries can be deleted only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -561,8 +561,8 @@ class InvoiceStateHandler(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         state = request.DATA.get('state', None)
-        if state == 'issued':
-            if invoice.state != 'draft':
+        if state == Invoice.STATES.ISSUED:
+            if invoice.state != Invoice.STATES.DRAFT:
                 msg = "An invoice can be issued only if it is in draft state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -571,8 +571,8 @@ class InvoiceStateHandler(APIView):
             due_date = request.DATA.get('due_date', None)
             invoice.issue(issue_date, due_date)
             invoice.save()
-        elif state == 'paid':
-            if invoice.state != 'issued':
+        elif state == Invoice.STATES.PAID:
+            if invoice.state != Invoice.STATES.ISSUED:
                 msg = "An invoice can be paid only if it is in issued state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -580,8 +580,8 @@ class InvoiceStateHandler(APIView):
             paid_date = request.DATA.get('paid_date', None)
             invoice.pay(paid_date)
             invoice.save()
-        elif state == 'canceled':
-            if invoice.state != 'issued':
+        elif state == Invoice.STATES.CANCELED:
+            if invoice.state != Invoice.STATES.ISSUED:
                 msg = "An invoice can be canceled only if it is in issued " \
                       "state."
                 return Response({"detail": msg},
@@ -697,8 +697,8 @@ class ProformaStateHandler(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         state = request.DATA.get('state', None)
-        if state == 'issued':
-            if proforma.state != 'draft':
+        if state == Proforma.STATES.ISSUED:
+            if proforma.state != Proforma.STATES.DRAFT:
                 msg = "A proforma can be issued only if it is in draft state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -707,8 +707,8 @@ class ProformaStateHandler(APIView):
             due_date = request.DATA.get('due_date', None)
             proforma.issue(issue_date, due_date)
             proforma.save()
-        elif state == 'paid':
-            if proforma.state != 'issued':
+        elif state == Proforma.STATES.PAID:
+            if proforma.state != Proforma.STATES.ISSUED:
                 msg = "A proforma can be paid only if it is in issued state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -716,8 +716,8 @@ class ProformaStateHandler(APIView):
             paid_date = request.DATA.get('paid_date', None)
             proforma.pay(paid_date)
             proforma.save()
-        elif state == 'canceled':
-            if proforma.state != 'issued':
+        elif state == Proforma.STATES.CANCELED:
+            if proforma.state != Proforma.STATES.ISSUED:
                 msg = "A proforma can be canceled only if it is in issued " \
                       "state."
                 return Response({"detail": msg},

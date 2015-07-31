@@ -153,15 +153,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
 
     def perform_action(self, request, action, queryset):
-        method = None
-        if action == 'activate_and_issue_billing_doc':
-            method = Subscription.activate_and_issue_billing_doc
-        if action == 'reactivate':
-            method = Subscription.activate
-        elif action == 'cancel':
-            method = Subscription.cancel
-        elif action == 'end':
-            method = Subscription.end
+        try:
+            method = getattr(Subscription, action)
+        except AttributeError:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
 
         failed_count = 0
         queryset_count = queryset.count()
@@ -187,13 +183,19 @@ class SubscriptionAdmin(admin.ModelAdmin):
         self.perform_action(request, 'activate_and_issue_billing_doc', queryset)
     activate.short_description = 'Activate the selected Subscription(s) '
 
-    def reactivate(self, request, queryset):
-        self.perform_action(request, 'reactivate', queryset)
-    reactivate.short_description = 'Reactivate the selected Subscription(s) '
+    #def reactivate(self, request, queryset):
+        #self.perform_action(request, 'reactivate', queryset)
+    #reactivate.short_description = 'Reactivate the selected Subscription(s) '
 
-    def cancel(self, request, queryset):
-        self.perform_action(request, 'cancel', queryset)
-    cancel.short_description = 'Cancel the selected Subscription(s) '
+    def cancel_now(self, request, queryset):
+        self.perform_action(request, '_cancel_now', queryset)
+    cancel_now.short_description = 'Cancel the selected Subscription(s) now'
+
+    def cancel_at_the_end_of_billing_cycle(self, request, queryset):
+        self.perform_action(request, '_cancel_at_end_of_billing_cycle', queryset)
+    cancel_at_the_end_of_billing_cycle.short_description = 'Cancel the '\
+            'selected Subscription(s) at the end'\
+            'of the current billing cycle'
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)
