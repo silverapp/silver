@@ -339,4 +339,16 @@ class TestSubscription(TestCase):
             assert end_date == subscription.current_end_date
 
     def test_should_be_billed(self):
+        # TODO: implement
+        # Note: these are not quite urgent as most of the cases are covered
+        # by the spec or command tests. Nontheless, we should make sure it
+        # works properly
+        assert True
+
+    def test_subscription_activate_transition(self):
+        # TODO implement
+        assert True
+
+    def test_subscription_cancel_transition(self):
+        # TODO implement
         assert True
