@@ -505,23 +505,62 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
+        # FIXME: work in progress for consolidated billing ng
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
 
-        if self.state == self.STATES.CANCELED and\
-           date >= (self.cancel_date + generate_after):
-            return True
+        if self.state == self.STATES.CANCELED:
+            if date >= (self.cancel_date + generate_after):
+                if self._has_existing_customer_with_consolidated_billing:
+                    # The customer has consolidated billing and at least
+                    # one other active subscription => it should be billed
+                    # only at the next cycle
+                    return date.month == self.cancel_date + 1
+                else:
+                    # The customer either does not have consolidated billing
+                    # or it does not have any other active subscription
+                    return True
+            else:
+                # It's canceled but the date is < cancel_date + generate_after
+                return False
 
         if self.is_billed_first_time:
             if not self.trial_end:
-                # a subscription whose plan does not have a trial => is billed
-                # right after being activated.
-                return True
-            interval_end = self.bucket_end_date(reference_date=self.start_date)
+                # The subscription does not have a trial => it should
+                # be billed right after being activated. However, it the
+                # customer has consolidated billing and he has other active
+                # subscriptions the subscription should be billed only
+                # at the next billing cycle
+                if self._has_existing_customer_with_consolidated_billing:
+                    return date.month == self.start_date + 1
+                else:
+                    return True
+            else:
+                # It has a trial => it should be billed next month if
+                # has consolidated billing
+                if self.trial_end.month == self.start_date.month:
+                    # The trial will be finished the same month as it started
+                    # => the start of the first month is used as interval_end
+                    interval_end = list(rrule.rrule(rrule.MONTHLY,
+                                                    count=2,
+                                                    bymonthday=1,
+                                                    dtstart=self.start_date))[-1]
+                else:
+                    # The trial spans over multiple months => the end of the
+                    # first bucket is used as interval_end
+                    interval_end = self.bucket_end_date(reference_date=self.start_date)
         else:
+            # XXX: take it from here
             last_billing_date = self.last_billing_date
             interval_end = self.bucket_end_date(reference_date=last_billing_date)
 
         return date > interval_end + generate_after
+
+    @property
+    def _has_existing_customer_with_consolidated_billing(self):
+        return (
+            self.customer.consolidated_billing and
+            self.customer.has_more_than_one_active_subscription
+        )
 
     @property
     def is_billed_first_time(self):
@@ -1292,6 +1331,10 @@ class Customer(AbstractBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
+
+    @property
+    def has_more_than_one_active_subscription(self):
+        return self.subscriptions.all(state=Subscription.STATES.ACTIVE).count() > 1
 
 
 class Provider(AbstractBillingEntity):
