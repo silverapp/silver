@@ -448,22 +448,21 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.proforma_entries.all().count() == 2
         assert proforma.total == plan.amount + mf_price * 2
         # mfs for last month
-        assert proforma.proforma_entries.all()[0].prorated == True
+        assert proforma.proforma_entries.all()[0].prorated is True
         # plan for upcoming month
-        assert proforma.proforma_entries.all()[1].prorated == False
+        assert proforma.proforma_entries.all()[1].prorated is False
 
     def test_subscription_with_trial_without_metered_features_to_draft(self):
         billing_date = '2015-03-02'
 
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
-                                  trial_period_days=15, amount=Decimal('200.00'))
+                                  trial_period_days=14, amount=Decimal('200.00'))
 
         start_date = dt.date(2015, 2, 4)
-        trial_end = start_date + dt.timedelta(days=plan.trial_period_days - 1)
 
-        subscription = SubscriptionFactory.create(
-            plan=plan, start_date=start_date, trial_end=trial_end)
+        subscription = SubscriptionFactory.create(plan=plan,
+                                                  start_date=start_date)
         subscription.activate()
         subscription.save()
 
