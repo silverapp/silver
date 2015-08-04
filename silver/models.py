@@ -518,40 +518,60 @@ class Subscription(models.Model):
                 else:
                     # The customer either does not have consolidated billing
                     # or it does not have any other active subscription
+                    # => it should be billed
                     return True
             else:
                 # It's canceled but the date is < cancel_date + generate_after
+                # it should not be billed
                 return False
 
         if self.is_billed_first_time:
             if not self.trial_end:
                 # The subscription does not have a trial => it should
-                # be billed right after being activated. However, it the
-                # customer has consolidated billing and he has other active
-                # subscriptions the subscription should be billed only
-                # at the next billing cycle
+                # be billed right after being activated. However, if the
+                # customer has consolidated billing and he has subscriptions
+                # the subscription should be billed only at the next
+                # billing cycle
                 if self._has_existing_customer_with_consolidated_billing:
                     return date.month == self.start_date + 1
                 else:
+                    # The customer either does not have consolidated billing
+                    # or it does not have any other active subscription
+                    # => it should be billed
                     return True
             else:
-                # It has a trial => it should be billed next month if
-                # has consolidated billing
                 if self.trial_end.month == self.start_date.month:
                     # The trial will be finished the same month as it started
                     # => the start of the first month is used as interval_end
-                    interval_end = list(rrule.rrule(rrule.MONTHLY,
-                                                    count=2,
-                                                    bymonthday=1,
-                                                    dtstart=self.start_date))[-1]
+                    interval_end = list(
+                        rrule.rrule(
+                            rrule.MONTHLY,
+                            count=2,
+                            bymonthday=1,
+                            dtstart=self.start_date)
+                    )[-1].date()
                 else:
                     # The trial spans over multiple months => the end of the
                     # first bucket is used as interval_end
                     interval_end = self.bucket_end_date(reference_date=self.start_date)
         else:
-            # XXX: take it from here
             last_billing_date = self.last_billing_date
-            interval_end = self.bucket_end_date(reference_date=last_billing_date)
+            if (self.trial_end and
+                self.trial_end.month in [date.month, date.month - 1] and
+                self._has_existing_customer_with_consolidated_billing
+            ):
+                # The trial will end this month => issue a document only
+                # next month if the user has consolidated billing and has
+                # other subscription => (an old client)
+                interval_end = list(
+                    rrule.rrule(
+                        rrule.MONTHLY,
+                        count=2,
+                        bymonthday=1,
+                        dtstart=self.trial_end)
+                )[-1].date()
+            else:
+                interval_end = self.bucket_end_date(reference_date=last_billing_date)
 
         return date > interval_end + generate_after
 
@@ -559,7 +579,7 @@ class Subscription(models.Model):
     def _has_existing_customer_with_consolidated_billing(self):
         return (
             self.customer.consolidated_billing and
-            self.customer.has_more_than_one_active_subscription
+            self.customer.has_more_than_one_subscription
         )
 
     @property
@@ -1333,8 +1353,8 @@ class Customer(AbstractBillingEntity):
         return base_fields
 
     @property
-    def has_more_than_one_active_subscription(self):
-        return self.subscriptions.all(state=Subscription.STATES.ACTIVE).count() > 1
+    def has_more_than_one_subscription(self):
+        return self.subscriptions.all().count() > 1
 
 
 class Provider(AbstractBillingEntity):
