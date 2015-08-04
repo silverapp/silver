@@ -505,7 +505,6 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
-        # FIXME: work in progress for consolidated billing ng
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
 
         if self.state == self.STATES.CANCELED:
@@ -573,7 +572,7 @@ class Subscription(models.Model):
             else:
                 interval_end = self.bucket_end_date(reference_date=last_billing_date)
 
-        return date > interval_end + generate_after
+        return date >= interval_end + generate_after
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):
