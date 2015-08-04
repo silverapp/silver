@@ -542,10 +542,11 @@ class Subscription(models.Model):
                 if self.trial_end.month == self.start_date.month:
                     # The trial will be finished the same month as it started
                     # => the start of the first month is used as interval_end
+                    count = 1 if self.start_date.day != 1 else 2
                     interval_end = list(
                         rrule.rrule(
                             rrule.MONTHLY,
-                            count=2,
+                            count=count,
                             bymonthday=1,
                             dtstart=self.start_date)
                     )[-1].date()
@@ -562,10 +563,11 @@ class Subscription(models.Model):
                 # The trial will end this month => issue a document only
                 # next month if the user has consolidated billing and has
                 # other subscription => (an old client)
+                count = 1 if self.trial_end.day != 1 else 2
                 interval_end = list(
                     rrule.rrule(
                         rrule.MONTHLY,
-                        count=2,
+                        count=count,
                         bymonthday=1,
                         dtstart=self.trial_end)
                 )[-1].date()
