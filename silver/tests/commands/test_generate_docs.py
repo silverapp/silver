@@ -579,10 +579,9 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_subscription_with_trial_with_metered_features_overflow_to_draft(self):
         billing_date = '2015-03-01'
 
-        units_included_during_trial = Decimal('5.00')
         metered_feature = MeteredFeatureFactory(
             included_units=Decimal('0.00'),
-            included_units_during_trial=units_included_during_trial)
+            included_units_during_trial=Decimal('5.00'))
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'),
@@ -636,15 +635,15 @@ class TestInvoiceGenerationCommand(TestCase):
 
             doc = get_object_or_None(DocumentEntry, id=3)
             assert doc.unit_price == metered_feature.price_per_unit
-            assert doc.quantity == units_included_during_trial
+            assert doc.quantity == metered_feature.included_units_during_trial
 
             doc = get_object_or_None(DocumentEntry, id=4)
             assert doc.unit_price == - metered_feature.price_per_unit
-            assert doc.quantity == units_included_during_trial
+            assert doc.quantity == metered_feature.included_units_during_trial
 
             doc = get_object_or_None(DocumentEntry, id=5)
             assert doc.unit_price == metered_feature.price_per_unit
-            assert doc.quantity == units_consumed_during_trial - units_included_during_trial
+            assert doc.quantity == units_consumed_during_trial - metered_feature.included_units_during_trial
 
             doc = get_object_or_None(DocumentEntry, id=6)
             assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
