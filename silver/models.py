@@ -521,8 +521,8 @@ class Subscription(models.Model):
                     # than the cancel date
                     return True
             else:
-                # It's canceled but the date is < cancel_date + generate_after
-                # it should not be billed
+                # It's canceled but the billing date is < cancel_date +
+                # generate_after => it should not be billed
                 return False
 
         if self.is_billed_first_time:
@@ -716,11 +716,12 @@ class Subscription(models.Model):
 
         if self.is_billed_first_time:
             if not self.trial_end:  # has no trial
-                if billing_date.month == self.start_date.month:
+                if billing_date.month in [self.start_date.month,
+                                          self.start_date.month - 1]:
                     # The same month as when the subscription started
                     # Generate first invoice, when the subscription starts
                     # => add the prorated value of the plan for the current month
-                    end_date = self._get_interval_end_date(date=billing_date)
+                    end_date = self._get_interval_end_date(date=self.start_date)
                     self._add_plan_value(start_date=self.start_date,
                                          end_date=end_date,
                                          invoice=invoice, proforma=proforma)
