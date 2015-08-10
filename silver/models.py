@@ -511,13 +511,14 @@ class Subscription(models.Model):
             if date >= (self.cancel_date + generate_after):
                 if self._has_existing_customer_with_consolidated_billing:
                     # The customer has consolidated billing and at least
-                    # one other active subscription => it should be billed
+                    # one other subscription => it should be billed
                     # only at the next cycle
                     return date.month == self.cancel_date + 1
                 else:
                     # The customer either does not have consolidated billing
                     # or it does not have any other active subscription
-                    # => it should be billed
+                    # => it should be billed now since the billing date is >=
+                    # than the cancel date
                     return True
             else:
                 # It's canceled but the date is < cancel_date + generate_after
@@ -542,7 +543,11 @@ class Subscription(models.Model):
                 if self.trial_end.month == self.start_date.month:
                     # The trial will be finished the same month as it started
                     # => the start of the first month is used as interval_end
+
+                    # Check `python-datetutil.rrule` docs to see why the value
+                    # of count is set like this
                     count = 1 if self.start_date.day != 1 else 2
+
                     interval_end = list(
                         rrule.rrule(
                             rrule.MONTHLY,
@@ -560,10 +565,15 @@ class Subscription(models.Model):
                 self.trial_end.month in [date.month, date.month - 1] and
                 self._has_existing_customer_with_consolidated_billing
             ):
-                # The trial will end this month => issue a document only
-                # next month if the user has consolidated billing and has
-                # other subscription => (an old client)
+                # The trial will end this month or it has already ended past
+                # month => issue a document only the next month after the
+                # trial end if the user has consolidated billing and has
+                # other subscription (an old client)
+
+                # Check `python-datetutil.rrule` docs to see why the value
+                # of count is set like this
                 count = 1 if self.trial_end.day != 1 else 2
+
                 interval_end = list(
                     rrule.rrule(
                         rrule.MONTHLY,
@@ -580,7 +590,7 @@ class Subscription(models.Model):
     def _has_existing_customer_with_consolidated_billing(self):
         return (
             self.customer.consolidated_billing and
-            self.customer.has_more_than_one_subscription
+            self.subscriptions.all().count() > 1
         )
 
     @property
@@ -1352,10 +1362,6 @@ class Customer(AbstractBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
-
-    @property
-    def has_more_than_one_subscription(self):
-        return self.subscriptions.all().count() > 1
 
 
 class Provider(AbstractBillingEntity):
