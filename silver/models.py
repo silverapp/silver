@@ -1583,10 +1583,10 @@ class BillingDocument(models.Model):
         for entry in self._entries:
             entry.pk = None
             entry.id = None
-            if self.__class__.__name__.lower() == 'proforma':
+            if isinstance(self, Proforma):
                 entry.proforma = clone
                 entry.invoice = None
-            elif self.__class__.__name__.lower() == 'invoice':
+            elif isinstance(self, Invoice):
                 entry.invoice = clone
                 entry.proforma = None
             entry.save()
