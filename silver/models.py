@@ -752,27 +752,6 @@ class Subscription(models.Model):
                                 start_date=bsd, end_date=bed,
                                 invoice=invoice, proforma=proforma
                             )
-                #else:
-                    ## Silver went down right after activating the subscription
-                    ## and it was not billed last month
-
-                    ## Add prorated plan value for the last month
-                    #end_date = self._get_interval_end_date(date=self.start_date)
-                    #self._add_plan_value(start_date=self.start_date,
-                                         #end_date=end_date, invoice=invoice,
-                                         #proforma=proforma)
-
-                    ## Add the mfs consumed during the last month
-                    #self._add_mfs(start_date=self.start_date,
-                                  #end_date=end_date,
-                                  #invoice=invoice, proforma=proforma)
-
-                    #if self.state == self.STATES.ACTIVE:
-                        ## Add the plan's value for the month ahead
-                        #bsd = self.bucket_start_date(reference_date=billing_date)
-                        #bed = self.bucket_end_date(reference_date=billing_date)
-                        #self._add_plan_value(start_date=bsd, end_date=bed,
-                                             #invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
                 # Next month after the subscription has started with trial
                 # spanning over 2 months
