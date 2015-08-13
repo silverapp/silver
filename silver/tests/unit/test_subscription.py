@@ -2,6 +2,7 @@ import datetime
 
 from django.test import TestCase
 from mock import patch, PropertyMock
+import pytest
 
 from silver.models import Plan, Subscription
 from silver.tests.factories import (SubscriptionFactory, MeteredFeatureFactory,
@@ -421,10 +422,62 @@ class TestSubscriptionShouldBeBilled(TestCase):
         assert subscription.should_be_billed(incorrect_billing_date) is False
 
     def test_new_active_sub_no_trial_w_consolidated_billing(self):
-        assert True
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 8, 12)
+        )
+        incorrect_billing_date = datetime.date(2015, 8, 23)
+        correct_billing_date = datetime.date(2015, 9, 1)
+
+        true_property = PropertyMock(return_value=True)
+        with patch.multiple(
+            'silver.models.Subscription',
+            _has_existing_customer_with_consolidated_billing=true_property,
+            is_billed_first_time=true_property
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+            assert subscription.should_be_billed(incorrect_billing_date) is False
 
     def test_new_active_sub_no_trial_wa_consolidated_billing(self):
-        assert True
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 8, 12)
+        )
+        correct_billing_date_1 = datetime.date(2015, 8, 12)
+        correct_billing_date_2 = datetime.date(2015, 8, 20)
+
+        true_property = PropertyMock(return_value=True)
+        false_property = PropertyMock(return_value=False)
+        with patch.multiple(
+            'silver.models.Subscription',
+            is_billed_first_time=true_property,
+            _has_existing_customer_with_consolidated_billing=false_property
+        ):
+            assert subscription.should_be_billed(correct_billing_date_1) is True
+            assert subscription.should_be_billed(correct_billing_date_2) is True
+
+    def test_new_active_sub_with_smaller_billing_date_than_start_date(self):
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 8, 12)
+        )
+        billing_date = datetime.date(2015, 8, 10)
+
+        true_property = PropertyMock(return_value=True)
+        false_property = PropertyMock(return_value=False)
+        with patch.multiple(
+            'silver.models.Subscription',
+            is_billed_first_time=true_property,
+            _has_existing_customer_with_consolidated_billing=false_property
+        ):
+            with pytest.raises(ValueError):
+                subscription.should_be_billed(billing_date)
 
     def test_new_active_sub_trial_end__same_month_as_start_date_w_cb(self):
         assert True

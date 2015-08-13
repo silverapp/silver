@@ -533,6 +533,14 @@ class Subscription(models.Model):
             else:
                 return False
 
+        if self.state != self.STATES.ACTIVE:
+            # If it's not canceled or active => don't bill it.
+            return False
+
+        if date < self.start_date:
+            msg = 'Billing date cannot be smaller than subscription\'s start date.'
+            raise ValueError(msg)
+
         if self.is_billed_first_time:
             if not self.trial_end:
                 # The subscription does not have a trial => it should
