@@ -516,12 +516,11 @@ class Subscription(models.Model):
                     return date.month == self.cancel_date + 1
                 else:
                     # The customer either does not have consolidated billing
-                    # or it does not have any other active subscription
-                    # => it should be billed now since the billing date is >=
-                    # than the cancel date
+                    # or it has only this subscription => it should be billed
+                    # now since billing date >= cancel_date
                     return True
             else:
-                # It's canceled but the billing date is < cancel_date +
+                # It's canceled but the billing date < cancel_date +
                 # generate_after => it should not be billed
                 return False
 
@@ -604,16 +603,6 @@ class Subscription(models.Model):
         except BillingLog.DoesNotExist:
             # It should never get here.
             return None
-
-    def activate_and_issue_billing_doc(self, start_date=None,
-                                       trial_end_date=None):
-        from silver.documents_generator import DocumentsGenerator
-
-        self.activate(start_date=start_date,
-                      trial_end_date=trial_end_date)
-        self.save()
-        if not self.trial_end and not self.plan.trial_period_days:
-            DocumentsGenerator().generate(subscription=self)
 
     ##########################################################################
     # STATE MACHINE TRANSITIONS
