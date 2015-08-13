@@ -1,10 +1,11 @@
 import datetime
 
 from django.test import TestCase
-from mock import patch
+from mock import patch, PropertyMock
 
-from silver.models import Plan
-from silver.tests.factories import (SubscriptionFactory, MeteredFeatureFactory)
+from silver.models import Plan, Subscription
+from silver.tests.factories import (SubscriptionFactory, MeteredFeatureFactory,
+                                    PlanFactory)
 
 
 class TestSubscription(TestCase):
@@ -355,17 +356,69 @@ class TestSubscriptionShouldBeBilled(TestCase):
         * wa = without
         * cb = consolidated billing
     """
-    def test_canceled_sub_w_cb_before_date(self):
-        assert True
 
-    def test_canceled_sub_w_consolidated_billing_after_date(self):
-        assert True
+    def test_sub_canceled_at_end_of_bc_w_consolidated_billing(self):
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            cancel_date=datetime.date(2015, 9, 1)
+        )
+        correct_billing_date = datetime.date(2015, 9, 2)
+        incorrect_billing_date = datetime.date(2015, 8, 22)
 
-    def test_canceled_sub_wa_consolidated_billing_before_date(self):
-        assert True
+        true_property = PropertyMock(return_value=True)
+        with patch.multiple(
+            'silver.models.Subscription',
+            _has_existing_customer_with_consolidated_billing=true_property
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+            assert subscription.should_be_billed(incorrect_billing_date) is False
 
-    def test_canceled_sub_wa_consolidated_billing_after_date(self):
-        assert True
+    def test_sub_canceled_now_w_consolidated_billing(self):
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            cancel_date=datetime.date(2015, 8, 22)
+        )
+        correct_billing_date = datetime.date(2015, 9, 2)
+        incorrect_billing_date = datetime.date(2015, 8, 23)
+
+        true_property = PropertyMock(return_value=True)
+        with patch.multiple(
+            'silver.models.Subscription',
+            _has_existing_customer_with_consolidated_billing=true_property
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+            assert subscription.should_be_billed(incorrect_billing_date) is False
+
+    def test_canceled_sub_wa_consolidated_billing(self):
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            cancel_date=datetime.date(2015, 8, 22)
+        )
+        correct_billing_date = datetime.date(2015, 8, 23)
+
+        false_property = PropertyMock(return_value=False)
+        with patch.multiple(
+            'silver.models.Subscription',
+            _has_existing_customer_with_consolidated_billing=false_property
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+
+    def test_canceled_sub_w_date_before_cancel_date(self):
+        plan = PlanFactory.create(generate_after=120)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            cancel_date=datetime.date(2015, 8, 22)
+        )
+        incorrect_billing_date = datetime.date(2015, 8, 20)
+
+        assert subscription.should_be_billed(incorrect_billing_date) is False
 
     def test_new_active_sub_no_trial_w_consolidated_billing(self):
         assert True
