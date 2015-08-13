@@ -1513,7 +1513,6 @@ class BillingDocument(models.Model):
 
         clone = self.__class__._default_manager.create(**copied_fields)
         clone.state = self.STATES.DRAFT
-        clone.save()
 
         # clone entries too
         for entry in self._entries:
@@ -1526,6 +1525,8 @@ class BillingDocument(models.Model):
                 entry.invoice = clone
                 entry.proforma = None
             entry.save()
+
+        clone.save()
 
         return clone
 
