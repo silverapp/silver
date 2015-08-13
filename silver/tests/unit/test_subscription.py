@@ -1,7 +1,7 @@
 import datetime
 
 from django.test import TestCase
-from mock import patch, PropertyMock
+from mock import patch, PropertyMock, MagicMock
 import pytest
 
 from silver.models import Plan, Subscription
@@ -452,10 +452,14 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         false_property = PropertyMock(return_value=False)
+        mocked_bucket_end_date = MagicMock(
+            return_value=datetime.date(2015, 8, 31)
+        )
         with patch.multiple(
             'silver.models.Subscription',
             is_billed_first_time=true_property,
-            _has_existing_customer_with_consolidated_billing=false_property
+            _has_existing_customer_with_consolidated_billing=false_property,
+            bucket_end_date=mocked_bucket_end_date
         ):
             assert subscription.should_be_billed(correct_billing_date_1) is True
             assert subscription.should_be_billed(correct_billing_date_2) is True
@@ -471,15 +475,19 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         false_property = PropertyMock(return_value=False)
+        mocked_bucket_end_date = MagicMock(
+            return_value=datetime.date(2015, 8, 31)
+        )
         with patch.multiple(
             'silver.models.Subscription',
             is_billed_first_time=true_property,
-            _has_existing_customer_with_consolidated_billing=false_property
+            _has_existing_customer_with_consolidated_billing=false_property,
+            bucket_end_date=mocked_bucket_end_date
         ):
             with pytest.raises(ValueError):
                 subscription.should_be_billed(billing_date)
 
-    def test_new_active_sub_trial_end__same_month_as_start_date_w_cb(self):
+    def test_new_active_sub_trial_end_same_month_as_start_date_w_cb(self):
         assert True
 
     def test_new_active_sub_trial_end_different_month_from_start_date_w_cb(self):
