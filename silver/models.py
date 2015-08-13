@@ -530,6 +530,8 @@ class Subscription(models.Model):
                     # or it has only this subscription => it should be billed
                     # now since billing date >= cancel_date
                     return True
+            else:
+                return False
 
         if self.is_billed_first_time:
             if not self.trial_end:
