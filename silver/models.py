@@ -539,7 +539,7 @@ class Subscription(models.Model):
                 # the subscription should be billed only at the next
                 # billing cycle
                 if self._has_existing_customer_with_consolidated_billing:
-                    return date.month == self.start_date + 1
+                    return date.month == self.start_date.month + 1
                 else:
                     # The customer either does not have consolidated billing
                     # or it does not have any other active subscription
@@ -564,7 +564,9 @@ class Subscription(models.Model):
                 else:
                     # The trial spans over multiple months => the end of the
                     # first bucket is used as interval_end
-                    interval_end = self.bucket_end_date(reference_date=self.start_date)
+                    interval_end = self.bucket_end_date(
+                        reference_date=self.start_date
+                    )
         else:
             last_billing_date = self.last_billing_date
             if (self.trial_end and
@@ -588,7 +590,9 @@ class Subscription(models.Model):
                         dtstart=self.trial_end)
                 )[-1].date()
             else:
-                interval_end = self.bucket_end_date(reference_date=last_billing_date)
+                interval_end = self.bucket_end_date(
+                    reference_date=last_billing_date
+                )
 
         return date >= interval_end + generate_after
 
