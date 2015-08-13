@@ -338,17 +338,49 @@ class TestSubscription(TestCase):
             end_date = datetime.date(year=2016, month=12, day=31)
             assert end_date == subscription.current_end_date
 
-    def test_should_be_billed(self):
-        # TODO: implement
-        # Note: these are not quite urgent as most of the cases are covered
-        # by the spec or command tests. Nontheless, we should make sure it
-        # works properly
-        assert True
-
     def test_subscription_activate_transition(self):
         # TODO implement
         assert True
 
     def test_subscription_cancel_transition(self):
         # TODO implement
+        assert True
+
+
+class TestSubscriptionShouldBeBilled(TestCase):
+    """
+    NOTE (important abb):
+        * sbb = should_be_billed
+        * w = with
+        * wa = without
+        * cb = consolidated billing
+    """
+    def test_canceled_sub_w_cb_before_date(self):
+        assert True
+
+    def test_canceled_sub_w_consolidated_billing_after_date(self):
+        assert True
+
+    def test_canceled_sub_wa_consolidated_billing_before_date(self):
+        assert True
+
+    def test_canceled_sub_wa_consolidated_billing_after_date(self):
+        assert True
+
+    def test_new_active_sub_no_trial_w_consolidated_billing(self):
+        assert True
+
+    def test_new_active_sub_no_trial_wa_consolidated_billing(self):
+        assert True
+
+    def test_new_active_sub_trial_end__same_month_as_start_date_w_cb(self):
+        assert True
+
+    def test_new_active_sub_trial_end_different_month_from_start_date_w_cb(self):
+        assert True
+
+    def test_already_billed_sub_w_cb(self):
+        assert True
+
+    def test_already_billed_sub_wa_cb(self):
         assert True
