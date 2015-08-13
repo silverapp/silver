@@ -510,19 +510,26 @@ class Subscription(models.Model):
         if self.state == self.STATES.CANCELED:
             if date >= (self.cancel_date + generate_after):
                 if self._has_existing_customer_with_consolidated_billing:
-                    # The customer has consolidated billing and at least
-                    # one other subscription => it should be billed
-                    # only at the next cycle
-                    return date.month == self.cancel_date + 1
+                    if self.cancel_date.day == 1:
+                        # If the subscription was canceled at
+                        # `end_of_billing_cycle` the cancel day will be set as
+                        # the first day of the next month (see
+                        # `Subscription.cancel()`) => if the day == 1 it was
+                        # either canceled at end_of_billing_cycle or now (in the
+                        # first day of the month) => it should be billed
+                        return date.month == self.cancel_date.month
+                    else:
+                        # If cancel_date.day != 1 => it was definitely canceled
+                        # `now` (remember that the cancel_date is set
+                        # automatically as the first day of the next month) =>
+                        # if the customer has consolidated billing it should
+                        # be billed only the next month
+                        return date.month == self.cancel_date.month + 1
                 else:
                     # The customer either does not have consolidated billing
                     # or it has only this subscription => it should be billed
                     # now since billing date >= cancel_date
                     return True
-            else:
-                # It's canceled but the billing date < cancel_date +
-                # generate_after => it should not be billed
-                return False
 
         if self.is_billed_first_time:
             if not self.trial_end:
@@ -640,7 +647,7 @@ class Subscription(models.Model):
                 bucket_after_trial = self.bucket_end_date(
                     reference_date=self.trial_end + ONE_DAY)
                 # After trial_end comes a prorated paid period. The cancel_date
-                # should one day after the end of the prorated peid period.
+                # should be one day after the end of the prorated paid period.
                 self.cancel_date = bucket_after_trial + ONE_DAY
             else:
                 self.cancel_date = self.current_end_date + ONE_DAY
