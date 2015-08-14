@@ -500,8 +500,34 @@ class TestSubscriptionShouldBeBilled(TestCase):
             assert subscription.should_be_billed(incorrect_billing_date_2) is False
             assert subscription.should_be_billed(incorrect_billing_date_3) is False
 
+
     def test_new_active_sub_trial_end_different_month_from_start_date_w_cb(self):
-        assert True
+        plan = PlanFactory.create(generate_after=100)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 8, 12),
+            trial_end=datetime.date(2015, 9, 12)
+        )
+        correct_billing_date = datetime.date(2015, 9, 1)
+        incorrect_billing_date_1 = datetime.date(2015, 8, 12)
+        incorrect_billing_date_2 = datetime.date(2015, 8, 13)
+        incorrect_billing_date_3 = datetime.date(2015, 8, 31)
+
+        true_property = PropertyMock(return_value=True)
+        mocked_bucket_end_date = MagicMock(
+            return_value=datetime.date(2015, 8, 31)
+        )
+        with patch.multiple(
+            'silver.models.Subscription',
+            is_billed_first_time=true_property,
+            _has_existing_customer_with_consolidated_billing=true_property,
+            bucket_end_date=mocked_bucket_end_date
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+            assert subscription.should_be_billed(incorrect_billing_date_1) is False
+            assert subscription.should_be_billed(incorrect_billing_date_2) is False
+            assert subscription.should_be_billed(incorrect_billing_date_3) is False
 
     def test_already_billed_sub_w_cb(self):
         assert True
