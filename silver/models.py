@@ -586,16 +586,19 @@ class Subscription(models.Model):
                 else:
                     # The customer does not have consolidated billing =>
                     # the subscription should be billed after trial_end
+                    # or if the trial spans over multiple months at the end of
+                    # first month
                     interval_end = self.bucket_end_date(
                         reference_date=self.start_date
                     )
         else:
-            # TODO: continue from here
             last_billing_date = self.last_billing_date
             if self.on_trial(last_billing_date):
                 if self._has_existing_customer_with_consolidated_billing:
                     # If the customer has consolidated billing the subscription
                     # should be charged only next month
+
+                    # Get the end of the month when it was last billed
                     interval_end = list(
                         rrule.rrule(
                             rrule.MONTHLY,
@@ -610,6 +613,9 @@ class Subscription(models.Model):
                         reference_date=last_billing_date
                     )
             else:
+                # last time it was billed the subscription was not on trial
+                # => it should be billed at the beginning of the next month
+                # => get the end of the bucket
                 interval_end = self.bucket_end_date(
                     reference_date=last_billing_date
                 )
