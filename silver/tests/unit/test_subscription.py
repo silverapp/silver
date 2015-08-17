@@ -383,7 +383,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
             state=Subscription.STATES.CANCELED,
             cancel_date=datetime.date(2015, 8, 22)
         )
-        correct_billing_date = datetime.date(2015, 9, 2)
+        correct_billing_date = datetime.date(2015, 9, 1)
         incorrect_billing_date = datetime.date(2015, 8, 23)
 
         true_property = PropertyMock(return_value=True)
@@ -494,6 +494,35 @@ class TestSubscriptionShouldBeBilled(TestCase):
             Subscription,
             is_billed_first_time=true_property,
             _has_existing_customer_with_consolidated_billing=true_property,
+        ):
+            assert subscription.should_be_billed(correct_billing_date) is True
+            assert subscription.should_be_billed(incorrect_billing_date_1) is False
+            assert subscription.should_be_billed(incorrect_billing_date_2) is False
+            assert subscription.should_be_billed(incorrect_billing_date_3) is False
+
+    def test_new_active_sub_trial_end_same_month_as_start_date_wa_cb(self):
+        plan = PlanFactory.create(generate_after=100)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 8, 12),
+            trial_end=datetime.date(2015, 8, 26)
+        )
+        correct_billing_date = datetime.date(2015, 8, 27)
+        incorrect_billing_date_1 = datetime.date(2015, 8, 12)
+        incorrect_billing_date_2 = datetime.date(2015, 8, 13)
+        incorrect_billing_date_3 = datetime.date(2015, 8, 25)
+
+        true_property = PropertyMock(return_value=True)
+        false_property = PropertyMock(return_value=False)
+        mocked_bucket_end_date = MagicMock(
+            return_value=datetime.date(2015, 8, 26)
+        )
+        with patch.multiple(
+            Subscription,
+            is_billed_first_time=true_property,
+            _has_existing_customer_with_consolidated_billing=false_property,
+            bucket_end_date=mocked_bucket_end_date
         ):
             assert subscription.should_be_billed(correct_billing_date) is True
             assert subscription.should_be_billed(incorrect_billing_date_1) is False
