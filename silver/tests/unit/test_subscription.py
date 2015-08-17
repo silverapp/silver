@@ -351,7 +351,7 @@ class TestSubscription(TestCase):
 
 class TestSubscriptionShouldBeBilled(TestCase):
     """
-    NOTE (important abb):
+    NOTE (important abbreviations):
         * sbb = should_be_billed
         * w = with
         * wa = without
@@ -370,7 +370,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             _has_existing_customer_with_consolidated_billing=true_property
         ):
             assert subscription.should_be_billed(correct_billing_date) is True
@@ -388,7 +388,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             _has_existing_customer_with_consolidated_billing=true_property
         ):
             assert subscription.should_be_billed(correct_billing_date) is True
@@ -405,7 +405,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         false_property = PropertyMock(return_value=False)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             _has_existing_customer_with_consolidated_billing=false_property
         ):
             assert subscription.should_be_billed(correct_billing_date) is True
@@ -436,7 +436,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
             return_value=datetime.date(2015, 8, 31)
         )
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             _has_existing_customer_with_consolidated_billing=true_property,
             is_billed_first_time=true_property,
             bucket_end_date=mocked_bucket_end_date,
@@ -457,7 +457,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
         true_property = PropertyMock(return_value=True)
         false_property = PropertyMock(return_value=False)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             is_billed_first_time=true_property,
             _has_existing_customer_with_consolidated_billing=false_property,
         ):
@@ -491,7 +491,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             is_billed_first_time=true_property,
             _has_existing_customer_with_consolidated_billing=true_property,
         ):
@@ -499,7 +499,6 @@ class TestSubscriptionShouldBeBilled(TestCase):
             assert subscription.should_be_billed(incorrect_billing_date_1) is False
             assert subscription.should_be_billed(incorrect_billing_date_2) is False
             assert subscription.should_be_billed(incorrect_billing_date_3) is False
-
 
     def test_new_active_sub_trial_end_different_month_from_start_date_w_cb(self):
         plan = PlanFactory.create(generate_after=100)
@@ -519,7 +518,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
             return_value=datetime.date(2015, 8, 31)
         )
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             is_billed_first_time=true_property,
             _has_existing_customer_with_consolidated_billing=true_property,
             bucket_end_date=mocked_bucket_end_date
@@ -544,7 +543,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
 
         true_property = PropertyMock(return_value=True)
         with patch.multiple(
-            'silver.models.Subscription',
+            Subscription,
             is_billed_first_time=true_property,
             _has_existing_customer_with_consolidated_billing=true_property,
         ):
