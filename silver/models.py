@@ -495,11 +495,25 @@ class Subscription(models.Model):
 
     @property
     def is_on_trial(self):
+        """
+        Tells if the subscription is currently on trial.
+
+        :rtype: bool
+        """
+
         if self.state == self.STATES.ACTIVE and self.trial_end:
             return timezone.now().date() <= self.trial_end
         return False
 
     def on_trial(self, date):
+        """
+        Tells if the subscription was on trial at the date passed as argument.
+
+        :param date: the date for which the check is made.
+        :type date: datetime.date
+        :rtype: bool
+        """
+
         if self.trial_end:
             return date <= self.trial_end
         return False
@@ -739,6 +753,7 @@ class Subscription(models.Model):
         Adds the total value of the subscription (value(plan) + value(consumed
         metered features)) to the document.
         """
+
         ONE_DAY = datetime.timedelta(days=1)
 
         if self.is_billed_first_time:
@@ -885,9 +900,6 @@ class Subscription(models.Model):
 
                 self._add_trial_value(start_date=bsd, end_date=bed,
                                       invoice=invoice, proforma=proforma)
-
-                # FIXME: add the value only if was not canceled during the
-                # trial (cancel_date >= first_day_after_trial)
 
                 # Add the plan's value for the period after the trial
                 # The end_date will be either the normal end_date of the
