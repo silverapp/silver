@@ -519,6 +519,10 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
+        if date < self.start_date:
+            msg = 'Billing date has to be >= than subscription\'s start date.'
+            raise ValueError(msg)
+
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         ONE_DAY = datetime.timedelta(days=1)
 
@@ -549,8 +553,8 @@ class Subscription(models.Model):
                         )[-1].date()
                 else:
                     # The customer either does not have consolidated billing
-                    # or it has only this subscription => it should be billed
-                    # now since billing date >= cancel_date
+                    # or it does not have any other active subscriptions
+                    # => it should be billed now since billing date >= cancel_date
                     return True
             else:
                 # date < cancel_date => don't charge the subscription
@@ -559,12 +563,8 @@ class Subscription(models.Model):
             return date >= interval_end + ONE_DAY + generate_after
 
         if self.state != self.STATES.ACTIVE:
-            # If it's nor canceled neither active => don't bill it.
+            # It was not canceled and it is not active either => don't bill it.
             return False
-
-        if date < self.start_date:
-            msg = 'Billing date has to be >= than subscription\'s start date.'
-            raise ValueError(msg)
 
         if self.is_billed_first_time:
             if not self.trial_end:
@@ -579,8 +579,9 @@ class Subscription(models.Model):
                     )
                 else:
                     # The customer either does not have consolidated billing
-                    # or it does not have any other active subscription
-                    # => it should be billed right now
+                    # or it does not have any other active subscriptions
+                    # => it should be billed right now, after starting the
+                    # subscription
                     return True
             else:
                 if self._has_existing_customer_with_consolidated_billing:
@@ -601,7 +602,8 @@ class Subscription(models.Model):
                     # The customer does not have consolidated billing =>
                     # the subscription should be billed after trial_end
                     # or if the trial spans over multiple months at the end of
-                    # first month
+                    # first month. The date (either the end of the month or
+                    # trial_end given by Subscription.bucket_end_date.
                     interval_end = self.bucket_end_date(
                         reference_date=self.start_date
                     )
@@ -618,11 +620,16 @@ class Subscription(models.Model):
                             rrule.MONTHLY,
                             count=1,
                             bymonthday=-1,
-                            dtstart=self.last_billing_date)
+                            dtstart=last_billing_date)
                     )[-1].date()
                 else:
-                    # interval_end will be either the end of the month or
-                    # trial_end
+                    # If at the last billing the subscription was on trial
+                    # => trial_end could be either this month or sometimes in
+                    # the future => if the customer does not have consolidated
+                    # billing it should be billed either after the trial_end (if
+                    # trial_end is this month or at the end of the month.
+                    # trial_end or end of the month is returned by
+                    # `Subscription.bucket_end_date`
                     interval_end = self.bucket_end_date(
                         reference_date=last_billing_date
                     )
@@ -640,7 +647,7 @@ class Subscription(models.Model):
     def _has_existing_customer_with_consolidated_billing(self):
         return (
             self.customer.consolidated_billing and
-            self.customer.subscriptions.all().count() > 1
+            self.customer.subscriptions.filter(state=self.STATES.ACTIVE).count() > 1
         )
 
     @property
