@@ -811,7 +811,7 @@ class Subscription(models.Model):
                                 invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
                 # Next month after the subscription has started with trial
-                # spanning over 2 months
+                # spanning over >=2 months
                 end_date = self._get_interval_end_date(date=self.start_date)
                 self._add_trial_value(start_date=self.start_date,
                                       end_date=end_date,
@@ -831,59 +831,66 @@ class Subscription(models.Model):
                                       invoice=invoice, proforma=proforma)
 
                 first_day_after_trial = self.trial_end + ONE_DAY
+                # If it got here (by permission of `should_be_billed()`
+                # => it has to be either ACTIVE or CANCELED
+                end_date = None
+                if self.state == self.STATES.ACTIVE:
+                    # Add the value for the rest of the month if the
+                    # subscription is still active
+                    end_date = self.bucket_end_date(
+                        reference_date=first_day_after_trial)
+                elif self.state == self.STATES.CANCELED:
+                    # The subscription was canceled after the trial, during
+                    # the prorated period of the month => add the value
+                    # only between trial_end -> cancel_date
+                    if self.cancel_date >= first_day_after_trial:
+                        end_date = self.cancel_date
+
                 if first_day_after_trial.month == self.trial_end.month:
                     # Add the prorated value of the plan between
                     # trial_end -> end_of_month only if the first day after
                     # trial belongs to the same month as the trial end.
-                    # Exception: trial_end = 31.08.2015.
+                    # Exception e.g.: trial_end = 31.08.2015.
                     # trial_end + ONE_DAY = 1.09.2015 => don't add any prorated
                     # value.
 
-                    end_date = None
-                    if self.state == self.STATES.ACTIVE:
-                        # Add the value for the rest of the month if the
-                        # subscription
-                        end_date = self.bucket_end_date(
-                            reference_date=first_day_after_trial)
-                    elif self.state == self.STATES.CANCELED:
-                        # The subscription was canceled after the trial, during
-                        # the prorated period of the month => add the value
-                        # only between trial_end -> cancel_date
-                        if self.cancel_date >= first_day_after_trial:
-                            end_date = self.cancel_date
+                    if (self.state == self.STATES.ACTIVE or
+                        (self.state == self.STATES.CANCELED and
+                         self.cancel_date >= self.trial_end)
+                    ):
+                        # Add the prorated plan value for trial_end -> end_of_month
+                        # if the subscription is active or if it was canceled
+                        # between trial_end -> end_of_month.
+                        # note: it could have been canceled before trial_end
+                        # and in that case the value does not have to be added
+                        self._add_plan_value(start_date=first_day_after_trial,
+                                            end_date=end_date,
+                                            invoice=invoice, proforma=proforma)
 
-                    # Add the prorated plan value for trial_end -> end_of_month
-                    self._add_plan_value(start_date=first_day_after_trial,
-                                        end_date=end_date,
-                                        invoice=invoice, proforma=proforma)
+                        if billing_date.month == self.start_date.month + 1:
+                            # It's the next month after the subscription start
+                            # and there was a prorated period between trial_end ->
+                            # end_of_month => add the consumed metered features
+                            # from that period.
+                            self._add_mfs(start_date=first_day_after_trial,
+                                          end_date=end_date,
+                                          invoice=invoice, proforma=proforma)
 
-                if billing_date.month == self.start_date.month + 1:
-                    # It should have been billed right after trial, but the
-                    # system did not work properly or the customer has
-                    # consolidated billing => add the add the consumed mfs during
-                    # the first bucket after the trial and if the subscription
-                    # was not canceled => add the plan's for the next month
-
-                    if first_day_after_trial.month == self.trial_end.month:
-                        # If there was a prorated period between trial_end ->
-                        # end_of_month => add the consumed metered features
-                        # from that period.
-                        self._add_mfs(start_date=first_day_after_trial,
-                                    end_date=end_date,
-                                    invoice=invoice, proforma=proforma)
-
-                    if self.state == self.STATES.ACTIVE:
-                        # Add plan value for the next month
-                        bsd = self.bucket_start_date(reference_date=billing_date)
-                        bed = self.bucket_end_date(reference_date=billing_date)
-                        self._add_plan_value(start_date=bsd, end_date=bed,
-                                             invoice=invoice, proforma=proforma)
+                if (self.state == self.STATES.ACTIVE and
+                    billing_date.month == self.start_date.month + 1
+                ):
+                    # It's billed next month after the start date and it is
+                    # still active => add the prorated value for the next month
+                    bsd = self.bucket_start_date(reference_date=billing_date)
+                    bed = self.bucket_end_date(reference_date=billing_date)
+                    self._add_plan_value(start_date=bsd, end_date=bed,
+                                         invoice=invoice, proforma=proforma)
         else:
             last_billing_date = self.last_billing_date
             if (self.trial_end and
                 (self.trial_end.month == billing_date.month or
                  self.trial_end.month == billing_date.month - 1) and
-                last_billing_date <= self.trial_end
+                last_billing_date < self.trial_end
             ):
                 # It has/had a trial which ends this month or it ended last
                 # month and it has been billed before
@@ -936,21 +943,14 @@ class Subscription(models.Model):
                         self._add_plan_value(start_date=bsd, end_date=bed,
                                              invoice=invoice, proforma=proforma)
 
-                if billing_date.month == first_day_after_trial.month + 1:
-                    # If there was a period of paid subscription between
-                    # trial_end -> last_month_end=> add the consumed mfs for
-                    # that period.
-                    # Note: the start_date and end_date that were previously
-                    # computed are being used
-                    if (self.state == self.STATES.ACTIVE or
-                        self.cancel_date >= self.trial_end
-                    ):
-                        bsd = self.bucket_start_date(
-                            reference_date=first_day_after_trial)
-                        bed = self.bucket_end_date(
-                            reference_date=first_day_after_trial)
-                        self._add_mfs(start_date=bsd, end_date=bed,
-                                    invoice=invoice, proforma=proforma)
+                        if billing_date.month == first_day_after_trial.month + 1:
+                            # If there was a period of paid subscription between
+                            # trial_end -> last_month_end=> add the consumed mfs
+                            # for that period.
+                            # Note: the bsd and bed that were previously
+                            # computed are being used
+                            self._add_mfs(start_date=bsd, end_date=bed,
+                                          invoice=invoice, proforma=proforma)
 
                 # The subscription was not canceled and we bill it the
                 # next month after the trial end => add the value of the
@@ -958,7 +958,7 @@ class Subscription(models.Model):
                 if (self.state == self.STATES.ACTIVE and
                     billing_date.month == self.trial_end.month + 1
                 ):
-                    # It's the next month after the trial => add the value
+                    # It's the next month after the trial end => add the value
                     # for the month ahead
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
@@ -967,9 +967,12 @@ class Subscription(models.Model):
 
             else:
                 # This is the normal case of a subscription which was billed
-                # sometimes at the beginning of last month.
+                # sometimes at the beginning of last month or it's the next
+                # month after the trial_end of a subscription whose customer
+                # does not have consolidated billing => the subscription was
+                # billed after trial_end.
 
-                # Add mfs for the last month
+                # Add mfs for the last month or part of month
                 bsd = self.bucket_start_date(reference_date=last_billing_date)
                 bed = self.bucket_end_date(reference_date=last_billing_date)
                 self._add_mfs(start_date=bsd, end_date=bed,
