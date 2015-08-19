@@ -7,22 +7,43 @@ from silver.models import Customer, Subscription, Provider
 
 
 class DocumentsGenerator(object):
-    def generate(self, subscription=None, billing_date=None):
+    def generate(self, subscription=None, billing_date=None, customers=None,
+                 force_generate=False):
         """
         The `public` method called when one wants to generate the billing
         documents.
 
         .. warning:: For now, the generator works only for plans with single
         month intervals.
+
+        .. note:: If `subscription` is passed, only the documents for that
+            subscription are generated.
+            If the `customers` parameter is passed, only the docments for those
+            customers are generated.
+            If neither the `subscription` nor the `customers` parameters are
+            passed, the documents for all the customers are generated.
+
+        :param subscription: the subscription for which one wants to generate the
+            proformas/invoices.
+        :param billing_date: the date used as billing date
+        :param customers: the customers for which one wants to generate the
+            proformas/invoices.
+        :param force_generate: if True invoices are generated at the date
+            indicated by `billing_date` instead of the normal end of billing
+            cycle.
         """
 
         if not subscription:
-            self._generate_all(billing_date=billing_date)
+            customers = customers or Customer.objects.all()
+            self._generate_all(billing_date=billing_date,
+                               customers=customers,
+                               force_generate=force_generate)
         else:
             self._generate_for_single_subscription(subscription=subscription,
                                                    billing_date=billing_date)
 
-    def _generate_all(self, billing_date=None):
+    def _generate_all(self, billing_date=None, customers=None,
+                      force_generate=False):
         """
         Generates the invoices/proformas for all the subscriptions that should
         be billed.
@@ -31,16 +52,19 @@ class DocumentsGenerator(object):
         billing_date = billing_date or timezone.now().date()
         # billing_date -> the date when the billing documents are issued.
 
-        for customer in Customer.objects.all():
+        for customer in customers:
             if customer.consolidated_billing:
-                self._generate_for_user_with_consolidated_billing(customer,
-                                                                  billing_date)
+                self._generate_for_user_with_consolidated_billing(
+                    customer, billing_date, force_generate
+                )
             else:
-                self._generate_for_user_without_consolidated_billing(customer,
-                                                                     billing_date)
+                self._generate_for_user_without_consolidated_billing(
+                    customer, billing_date, force_generate
+                )
 
     def _generate_for_user_with_consolidated_billing(self, customer,
-                                                     billing_date):
+                                                     billing_date,
+                                                     force_generate):
         """
         Generates the billing documents for all the subscriptions of a customer
         who uses consolidated billing.
@@ -54,12 +78,20 @@ class DocumentsGenerator(object):
         cached_documents = {}
 
         # Select all the active or canceled subscriptions
+        subs_to_bill = []
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
                                   Subscription.STATES.CANCELED]}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(billing_date):
-                continue
+            if subscription.should_be_billed(billing_date):
+                subs_to_bill.append(subscription)
+            elif force_generate and subscription.state == Subscription.STATES.ACTIVE:
+                subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                subscription.save()
+                subs_to_bill.append(subscription)
+            elif force_generate and subscription.state == Subscription.STATE.CANCELED:
+                subs_to_bill.append(subscription)
 
+        for subscription in subs_to_bill:
             provider = subscription.plan.provider
             if provider in cached_documents:
                 # The BillingDocument was created beforehand, now just extract it
@@ -88,7 +120,8 @@ class DocumentsGenerator(object):
                 document.save()
 
     def _generate_for_user_without_consolidated_billing(self, customer,
-                                                        billing_date):
+                                                        billing_date,
+                                                        force_generate):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
@@ -99,8 +132,14 @@ class DocumentsGenerator(object):
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
                                   Subscription.STATES.CANCELED]}
         for subscription in customer.subscriptions.filter(**criteria):
-            if not subscription.should_be_billed(billing_date):
+            if force_generate and subscription.state == Subscription.STATES.ACTIVE:
+                subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                subscription.save()
+            elif not subscription.should_be_billed(billing_date):
                 continue
+
+            # TODO: filter the subs as the ones for customers w/ consolidated
+            # billing. Handle the canceled case too.
 
             provider = subscription.plan.provider
             document = self._create_document(provider, customer,
