@@ -164,7 +164,8 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': total
+            'total': total,
+            'total_before_tax': Decimal(200.0)
         }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})
@@ -181,7 +182,8 @@ class TestProformaEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': total
+            'total': total,
+            'total_before_tax': Decimal(200.0)
         }
 
     def test_try_to_get_proforma_entries(self):
@@ -220,7 +222,8 @@ class TestProformaEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': total
+                'total': total,
+                'total_before_tax': Decimal(200.0)
             }
 
         url = reverse('proforma-detail', kwargs={'pk': 1})

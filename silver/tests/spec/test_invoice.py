@@ -162,7 +162,8 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': total
+            'total': total,
+            'total_before_tax': Decimal(200.0)
         }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -179,7 +180,8 @@ class TestInvoiceEndpoints(APITestCase):
             'end_date': None,
             'prorated': False,
             'product_code': None,
-            'total': total
+            'total': total,
+            'total_before_tax': Decimal(200.0)
         }
 
     def test_try_to_get_invoice_entries(self):
@@ -217,7 +219,8 @@ class TestInvoiceEndpoints(APITestCase):
                 'end_date': None,
                 'prorated': False,
                 'product_code': None,
-                'total': total
+                'total': total,
+                'total_before_tax': Decimal(200.0)
             }
 
         url = reverse('invoice-detail', kwargs={'pk': 1})
