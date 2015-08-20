@@ -244,7 +244,8 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = DocumentEntry
         fields = ('description', 'unit', 'unit_price', 'quantity', 'total',
-                  'start_date', 'end_date', 'prorated', 'product_code')
+                  'total_before_tax', 'start_date', 'end_date', 'prorated',
+                  'product_code')
 
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
