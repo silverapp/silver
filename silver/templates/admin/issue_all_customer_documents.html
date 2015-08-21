@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n %}
+{% load admin_urls %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> ›
+    <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a> ›
+    <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a> › Issue multiple Invoices or Proformas
+  </div>
+{% endblock %}
+
+{% block content %}
+
+<form action="" method="post">
+    {% csrf_token %}
+
+    {% if active_subscriptions %}
+        <p> The following <b>active</b> subscriptions will be <b>CANCELED</b> and <b>ISSUED</b>: </p>
+        <ul>{{ active_subscriptions|unordered_list }}</ul>
+    {% endif %}
+
+    {% if canceled_subscriptions %}
+        <p> The following <b>canceled</b> subscriptions will be <b>ISSUED</b>: </p>
+        <ul>{{ canceled_subscriptions|unordered_list }}</ul>
+    {% endif %}
+
+    <div>
+        {% for obj in queryset %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}" />
+        {% endfor %}
+        <input type="hidden" name="action" value="generate_all_documents" />
+        <input type="hidden" name="post" value="yes" />
+        <input type="submit" value="{% trans "Yes, I'm sure" %}" />
+        <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% trans "No, take me back" %}</a>
+
+    </div>
+</form>
+{% endblock content %}

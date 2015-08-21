@@ -3,14 +3,17 @@ from django.contrib import admin, messages
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
+from django.contrib.admin.actions import delete_selected as delete_selected_
+from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
+from django.contrib.admin import helpers
+from django.shortcuts import render
+from django.template.response import TemplateResponse
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog)
-
-from django.contrib.admin.actions import delete_selected as delete_selected_
-
-from django.utils.translation import ugettext_lazy
+from documents_generator import DocumentsGenerator
 
 
 def metadata(obj):
@@ -48,8 +51,8 @@ class LiveModelAdmin(admin.ModelAdmin):
             queryset.delete = queryset.hard_delete
         return delete_selected_(self, request, queryset)
 
-    delete_selected.short_description = ugettext_lazy("Delete selected "
-                                                      "%(verbose_name_plural)s")
+    delete_selected.short_description = _("Delete selected "
+                                          "%(verbose_name_plural)s")
 
     actions = ['delete_selected']
 
@@ -180,7 +183,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                               queryset_count)
 
     def activate(self, request, queryset):
-        self.perform_action(request, 'activate_and_issue_billing_doc', queryset)
+        self.perform_action(request, 'activate', queryset)
     activate.short_description = 'Activate the selected Subscription(s) '
 
     def reactivate(self, request, queryset):
@@ -214,6 +217,51 @@ class CustomerAdmin(LiveModelAdmin):
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email', 'meta']
     exclude = ['live']
+    actions = ['generate_all_documents']
+
+    def generate_all_documents(self, request, queryset):
+        if request.POST.get('post'):
+            billing_date = timezone.now().date()
+            DocumentsGenerator().generate(billing_date=billing_date,
+                                          customers=queryset,
+                                          force_generate=True)
+
+            msg = 'Successfully generated all user{term} documents.'
+            if queryset.count() > 1:
+                msg = msg.format(term='s\'')
+            else:
+                msg = msg.format(term='\'s')
+            self.message_user(request, msg)
+
+            return None
+
+        active_subs = []
+        canceled_subs = []
+        for customer in queryset:
+            subs = customer.subscriptions.all()
+            for sub in subs:
+                if sub.state == Subscription.STATES.ACTIVE:
+                    active_subs.append(sub)
+                elif sub.state == Subscription.STATES.CANCELED:
+                    canceled_subs.append(sub)
+
+        if len(active_subs) + len(canceled_subs) == 0:
+            msg = 'The user does not have any active or canceled documents.'
+            self.message_user(request, msg, level=messages.WARNING)
+            return None
+
+        context = {
+            'title': _('Are you sure?'),
+            'active_subscriptions': active_subs,
+            'canceled_subscriptions': canceled_subs,
+            'queryset': queryset,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'opts': self.model._meta
+
+        }
+        return render(request, 'admin/issue_all_customer_documents.html', context)
+    generate_all_documents.short_description = 'Generate all user\'s Invoices and Proformas'
+
 
 class ProviderAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
