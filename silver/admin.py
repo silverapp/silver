@@ -227,7 +227,7 @@ class CustomerAdmin(LiveModelAdmin):
                                           force_generate=True)
 
             msg = 'Successfully generated all user{term} documents.'
-            if len(queryset) > 1:
+            if queryset.count() > 1:
                 msg = msg.format(term='s\'')
             else:
                 msg = msg.format(term='\'s')
