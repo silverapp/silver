@@ -7,6 +7,7 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.admin import helpers
+from django.shortcuts import render
 from django.template.response import TemplateResponse
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
@@ -220,34 +221,45 @@ class CustomerAdmin(LiveModelAdmin):
 
     def generate_all_documents(self, request, queryset):
         if request.POST.get('post'):
-            print 'DOING MAGIC'
-            docs_generator = DocumentsGenerator()
             billing_date = timezone.now().date()
-            docs_generator.generate(billing_date=billing_date,
-                                    customers=queryset, force_generate=True)
-            print 'DONE'
-        else:
-            active_subs = []
-            canceled_subs = []
-            for customer in queryset:
-                subs = customer.subscriptions.all()
-                for sub in subs:
-                    if sub.state == Subscription.STATES.ACTIVE:
-                        active_subs.append(sub)
-                    elif sub.state == Subscription.STATES.CANCELED:
-                        canceled_subs.append(sub)
+            DocumentsGenerator().generate(billing_date=billing_date,
+                                          customers=queryset,
+                                          force_generate=True)
 
-            context = {
-                'title': _('Are you sure?'),
-                'active_subscriptions': active_subs,
-                'canceled_subscriptions': canceled_subs,
-                'queryset': queryset,
-                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME
-            }
-            return TemplateResponse(
-                request, 'admin/issue_all_customer_documents.html',
-                context, current_app=self.admin_site.name
-            )
+            msg = 'Successfully generated all user{term} documents.'
+            if len(queryset) > 1:
+                msg = msg.format(term='s\'')
+            else:
+                msg = msg.format(term='\'s')
+            self.message_user(request, msg)
+
+            return None
+
+        active_subs = []
+        canceled_subs = []
+        for customer in queryset:
+            subs = customer.subscriptions.all()
+            for sub in subs:
+                if sub.state == Subscription.STATES.ACTIVE:
+                    active_subs.append(sub)
+                elif sub.state == Subscription.STATES.CANCELED:
+                    canceled_subs.append(sub)
+
+        if len(active_subs) + len(canceled_subs) == 0:
+            msg = 'The user does not have any active or canceled documents.'
+            self.message_user(request, msg, level=messages.WARNING)
+            return None
+
+        context = {
+            'title': _('Are you sure?'),
+            'active_subscriptions': active_subs,
+            'canceled_subscriptions': canceled_subs,
+            'queryset': queryset,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'opts': self.model._meta
+
+        }
+        return render(request, 'admin/issue_all_customer_documents.html', context)
     generate_all_documents.short_description = 'Generate all user\'s Invoices and Proformas'
 
 
