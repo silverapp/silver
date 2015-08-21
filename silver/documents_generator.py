@@ -70,13 +70,6 @@ class DocumentsGenerator(object):
         who uses consolidated billing.
         """
 
-        # For each provider there will be one invoice or proforma. The cache
-        # is necessary as a certain customer might have more than one
-        # subscription => all the subscriptions that belong to the same
-        # provider will be added on the same invoice/proforma
-        # => they are "cached".
-        cached_documents = {}
-
         # Select all the active or canceled subscriptions
         subs_to_bill = []
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
@@ -84,13 +77,24 @@ class DocumentsGenerator(object):
         for subscription in customer.subscriptions.filter(**criteria):
             if subscription.should_be_billed(billing_date):
                 subs_to_bill.append(subscription)
-            elif force_generate and subscription.state == Subscription.STATE.CANCELED:
+                if (force_generate and
+                    subscription.state == Subscription.STATES.ACTIVE
+                ):
+                    subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                    subscription.save()
+            elif force_generate and subscription.state == Subscription.STATES.CANCELED:
                 subs_to_bill.append(subscription)
             elif force_generate and subscription.state == Subscription.STATES.ACTIVE:
                 subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                 subscription.save()
                 subs_to_bill.append(subscription)
 
+        # For each provider there will be one invoice or proforma. The cache
+        # is necessary as a certain customer might have more than one
+        # subscription => all the subscriptions that belong to the same
+        # provider will be added on the same invoice/proforma
+        # => they are "cached".
+        cached_documents = {}
         for subscription in subs_to_bill:
             provider = subscription.plan.provider
             if provider in cached_documents:
@@ -135,6 +139,11 @@ class DocumentsGenerator(object):
         for subscription in customer.subscriptions.filter(**criteria):
             if subscription.should_be_billed(billing_date):
                 subs_to_bill.append(subscription)
+                if (force_generate and
+                    subscription.state == Subscription.STATES.ACTIVE
+                ):
+                    subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+                    subscription.save()
             elif force_generate and subscription.state == Subscription.STATES.CANCELED:
                 subs_to_bill.append(subscription)
             elif force_generate and subscription.state == Subscription.STATES.ACTIVE:
