@@ -675,15 +675,22 @@ class Subscription(models.Model):
             else:
                 self.start_date = timezone.now().date()
 
-        if trial_end_date:
-            self.trial_end = max(self.start_date, trial_end_date)
-        else:
-            if self.trial_end:
-                if self.trial_end < self.start_date:
-                    self.trial_end = None
-            elif self.plan.trial_period_days > 0:
-                self.trial_end = self.start_date + datetime.timedelta(
-                    days=self.plan.trial_period_days - 1)
+        should_give_trial = self.customer.subscriptions.filter(
+            plan__provider=self.plan.provider,
+            state__in=[self.STATES.ACTIVE, self.STATES.CANCELED,
+                       self.STATES.ENDED]
+        ).count() == 0  # does not have other subs. from this provider
+
+        if should_give_trial:
+            if trial_end_date:
+                self.trial_end = max(self.start_date, trial_end_date)
+            else:
+                if self.trial_end:
+                    if self.trial_end < self.start_date:
+                        self.trial_end = None
+                elif self.plan.trial_period_days > 0:
+                    self.trial_end = self.start_date + datetime.timedelta(
+                        days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=STATES.ACTIVE, target=STATES.CANCELED)
     def cancel(self, when):
