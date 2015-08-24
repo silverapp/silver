@@ -675,13 +675,7 @@ class Subscription(models.Model):
             else:
                 self.start_date = timezone.now().date()
 
-        should_give_trial = self.customer.subscriptions.filter(
-            plan__provider=self.plan.provider,
-            state__in=[self.STATES.ACTIVE, self.STATES.CANCELED,
-                       self.STATES.ENDED]
-        ).count() == 0  # does not have other subs. from this provider
-
-        if should_give_trial:
+        if self.customer.should_get_free_trial(self.plan.provider):
             if trial_end_date:
                 self.trial_end = max(self.start_date, trial_end_date)
             else:
@@ -1472,6 +1466,13 @@ class Customer(AbstractBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
+
+    def should_get_free_trial(self, provider):
+        return self.subscriptions.filter(
+            plan__provider=provider,
+            state__in=[Subscription.STATES.ACTIVE, Subscription.STATES.CANCELED,
+                       Subscription.STATES.ENDED]
+        ).count() == 0
 
 
 class Provider(AbstractBillingEntity):
