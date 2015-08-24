@@ -565,7 +565,6 @@ class Subscription(models.Model):
 
             return date >= interval_end + ONE_DAY + generate_after
 
-
         if self.is_billed_first_time:
             if not self.trial_end:
                 # The subscription does not have a trial => it should
