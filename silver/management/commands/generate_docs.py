@@ -1,5 +1,5 @@
 import logging
-from optparse import make_option
+import argparse
 from datetime import datetime as dt
 
 from django.core.management.base import BaseCommand
@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 def date(date_str):
     try:
-        return datetime.strptime(date_str, "%Y-%m-%d")
+        return dt.strptime(date_str, "%Y-%m-%d")
     except ValueError:
         msg = "Not a valid date: '{date_str}'. "\
               "Expected format: YYYY-MM-DD.".format(date_str=date_str)
         raise argparse.ArgumentTypeError(msg)
+
 
 class Command(BaseCommand):
     help = 'Generates the billing documents (Invoices, Proformas).'
@@ -26,7 +27,7 @@ class Command(BaseCommand):
         parser.add_argument('--subscription',
                             action='store', dest='subscription_id', type=int,
                             help='The id of ths subscription to be billed.')
-        parser.add_argument( '--date',
+        parser.add_argument('--date',
                             action='store', dest='billing_date', type=date,
                             help='The billing date (format YYYY-MM-DD).')
 
@@ -42,7 +43,7 @@ class Command(BaseCommand):
         if options['subscription_id']:
             try:
                 subscription_id = options['subscription_id']
-                logger.info('Generating for subscription with id=%s; '\
+                logger.info('Generating for subscription with id=%s; '
                             'billing_date=%s.', subscription_id,
                             billing_date)
 
@@ -54,7 +55,7 @@ class Command(BaseCommand):
                 msg = 'The subscription with the provided id does not exist.'
                 self.stdout.write(msg)
         else:
-            logger.info('Generating for all the available subscriptions; '\
+            logger.info('Generating for all the available subscriptions; '
                         'billing_date=%s.', billing_date)
 
             docs_generator.generate(billing_date=billing_date)
