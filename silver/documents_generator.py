@@ -1,9 +1,12 @@
 import datetime as dt
+import logging
 
 from django.utils import timezone
 from dateutil.relativedelta import *
 
 from silver.models import Customer, Subscription, Provider
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentsGenerator(object):
@@ -62,6 +65,16 @@ class DocumentsGenerator(object):
                     customer, billing_date, force_generate
                 )
 
+    def _log_subscription_billing(self, document, subscription):
+        logger.debug('Billing subscription: %s', {
+            'subscription': subscription.id,
+            'state': subscription.state,
+            'doc_type': document.provider.flow,
+            'number': document.number,
+            'provider': document.provider.id,
+            'customer': document.customer.id
+        })
+
     def _generate_for_user_with_consolidated_billing(self, customer,
                                                      billing_date,
                                                      force_generate):
@@ -112,6 +125,9 @@ class DocumentsGenerator(object):
                 'billing_date': billing_date,
                 provider.flow: document,
             }
+
+            self._log_subscription_billing(document, subscription)
+
             subscription.add_total_value_to_document(**args)
 
             if subscription.state == Subscription.STATES.CANCELED:
@@ -160,6 +176,9 @@ class DocumentsGenerator(object):
                 'billing_date': billing_date,
                 provider.flow: document,
             }
+
+            self._log_subscription_billing(document, subscription)
+
             subscription.add_total_value_to_document(**args)
 
             if subscription.state == Subscription.STATES.CANCELED:
@@ -188,6 +207,9 @@ class DocumentsGenerator(object):
             'billing_date': billing_date,
             provider.flow: document,
         }
+
+        self._log_subscription_billing(document, subscription)
+
         subscription.add_total_value_to_document(**args)
 
         if subscription.state == Subscription.STATES.CANCELED:
