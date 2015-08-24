@@ -28,7 +28,7 @@ class DocumentsGenerator(object):
         :param billing_date: the date used as billing date
         :param customers: the customers for which one wants to generate the
             proformas/invoices.
-        :param force_generate: if True invoices are generated at the date
+        :param force_generate: if True, invoices are generated at the date
             indicated by `billing_date` instead of the normal end of billing
             cycle.
         """
