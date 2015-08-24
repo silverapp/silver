@@ -118,7 +118,7 @@ class TestSubscriptionEndpoint(APITestCase):
             "when": "now"}), content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'state': 'ended'}
+        assert response.data == {'state': 'canceled'}
 
     def test_end_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()

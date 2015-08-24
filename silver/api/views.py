@@ -187,26 +187,26 @@ class SubscriptionCancel(APIView):
         sub = get_object_or_404(Subscription,
                                 pk=kwargs.get('subscription_pk', None))
         when = request.data.get('when', None)
-        if sub.state != 'active':
+        if sub.state != Subscription.STATES.ACTIVE:
             message = 'Cannot cancel subscription from %s state.' % sub.state
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
-            if when == 'now':
-                sub.cancel(when=when)
-                sub.save()
-
-                DocumentsGenerator().generate(subscription=sub)
-
-                return Response({"state": 'ended'},
-                                status=status.HTTP_200_OK)
-            elif when == 'end_of_billing_cycle':
+            if when in [Subscription.CANCEL_OPTIONS.NOW,
+                        Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE]:
                 sub.cancel(when=when)
                 sub.save()
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                if when is None:
+                    err = 'You must provide the `when` argument'
+                    return Response({'error': err},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    err = 'You must provide a correct value for the `when` argument'
+                    return Response({'error': err},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubscriptionReactivate(APIView):
