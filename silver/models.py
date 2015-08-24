@@ -519,6 +519,9 @@ class Subscription(models.Model):
         return False
 
     def should_be_billed(self, date):
+        if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
+            return False
+
         if date < self.start_date:
             msg = 'Billing date has to be >= than subscription\'s start date.'
             raise ValueError(msg)
@@ -562,9 +565,6 @@ class Subscription(models.Model):
 
             return date >= interval_end + ONE_DAY + generate_after
 
-        if self.state != self.STATES.ACTIVE:
-            # It was not canceled and it is not active either => don't bill it.
-            return False
 
         if self.is_billed_first_time:
             if not self.trial_end:
