@@ -8,11 +8,13 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.admin import helpers
 from django.shortcuts import render
-from django.template.response import TemplateResponse
+from django.http import HttpResponse
+from PyPDF2 import PdfFileReader, PdfFileMerger, PdfFileWriter
+from cStringIO import StringIO
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog)
+                    ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
 
 
@@ -362,7 +364,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
               'sales_tax_percent', 'currency', 'state', 'total')
     readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
-    actions = ['issue', 'pay', 'cancel', 'clone']
+    actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents']
 
     @property
     def _model(self):
@@ -438,6 +440,32 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def total(self, obj):
         return '{:.2f} {currency}'.format(obj.total,
                                           currency=obj.currency)
+
+    def download_selected_documents(self, request, queryset):
+        queryset = queryset.filter(
+            state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.PAID]
+        )
+
+        pdf_writer = PdfFileWriter()
+        for document in queryset:
+            if document.pdf:
+                # TODO: fix this -- check source
+                #pdf = PdfFileReader(document.pdf.path)
+                for page_num in range(pdf.numPages):
+                    pdf_writer.addPage(pdf.getPage(page_num))
+
+        response = HttpResponse(content_type='application/pdf')
+        filename = 'magic.pdf'  # TODO: change
+        response['Content-Disposition'] = 'attachment; filename="{name}'.format(name=filename)
+
+        out_stream = StringIO()
+        pdf_writer.write(out_stream)
+        response.write(out_stream.getvalue())
+
+        return response
+
+    download_selected_documents.short_description = 'Download selected documents'
 
 
 class InvoiceAdmin(BillingDocumentAdmin):
