@@ -288,56 +288,79 @@ class ProviderAdmin(LiveModelAdmin):
                               obj.proforma_starting_number)
     proforma_series_list_display.short_description = 'Proforma series starting number'
 
-    def _compute_monthly_totals(self, model_klass, provider):
+    def _compute_monthly_totals(self, model_klass, provider, documents):
         klass_name_plural = model_klass.__name__ + 's'
 
         totals = {}
         totals[klass_name_plural] = {}
-        documents_months = model_klass.objects.extra(
-            select={
-                'month': connections[model_klass.objects.db].ops.date_trunc_sql(
-                    'month', 'issue_date'
-                )
-            }
-        ).order_by().filter(provider=provider).values('month').distinct()
 
-        all_documents = model_klass.objects.filter(
-            provider=provider,
-            state__in=[BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.PAID]
-        )
-
-        paid_documents = model_klass.objects.filter(
+        all_documents = documents.filter(provider=provider)
+        paid_documents = documents.filter(
             provider=provider,
             state=BillingDocument.STATES.PAID
         )
+        documents_months = documents.order_by().filter(
+            provider=provider
+        ).values(
+            'month'
+        ).distinct()
 
         for month in documents_months:
             month_value_str = month['month']
             month_value = dt.strptime(month_value_str, '%Y-%m-%d')
-            month_name = month_value.strftime('%B')
-            totals[klass_name_plural][month_name] = {}
-            totals[klass_name_plural][month_name]['total'] = {}
-            totals[klass_name_plural][month_name]['unpaid'] = {}
+            display_date = month_value.strftime('%B %Y')
+            totals[klass_name_plural][display_date] = {}
 
-            all_from_month = all_documents.filter(issue_date__month=month_value.month)
-            paid_from_month = paid_documents.filter(issue_date__month=month_value.month)
+            all_from_month = all_documents.filter(
+                issue_date__month=month_value.month,
+                issue_date__year=month_value.year
+            )
+            paid_from_month = paid_documents.filter(
+                issue_date__month=month_value.month,
+                issue_date__year=month_value.year
+            )
             total = sum(invoice.total for invoice in all_from_month)
             total_paid = sum(invoice.total for invoice in paid_from_month)
-            totals[klass_name_plural][month_name]['total'] = str(total)
-            totals[klass_name_plural][month_name]['unpaid'] = str(total - total_paid)
+            totals[klass_name_plural][display_date]['total'] = str(total)
+            totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
 
         return totals
 
     def generate_monthly_totals(self, request, queryset):
         totals = {}
+
+        invoices = Invoice.objects.extra(
+            select={
+                'month': connections[Invoice.objects.db].ops.date_trunc_sql(
+                    'month', 'issue_date'
+                )
+            }
+        ).filter(
+            provider__in=queryset,
+            state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.PAID]
+        )
+
+        proformas = Proforma.objects.extra(
+            select={
+                'month': connections[Invoice.objects.db].ops.date_trunc_sql(
+                    'month', 'issue_date'
+                )
+            }
+        ).filter(
+            provider__in=queryset,
+            state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.PAID]
+        )
+
         for provider in queryset:
             totals[provider.name] = {}
-
-            invoices_total = self._compute_monthly_totals(Invoice, provider)
+            invoices_total = self._compute_monthly_totals(Invoice, provider,
+                                                          invoices)
             totals[provider.name].update(invoices_total)
 
-            proformas_total = self._compute_monthly_totals(Proforma, provider)
+            proformas_total = self._compute_monthly_totals(Proforma, provider,
+                                                           proformas)
             totals[provider.name].update(proformas_total)
 
         context = {
