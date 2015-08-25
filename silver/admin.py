@@ -1,4 +1,7 @@
+from datetime import datetime as dt
+
 from django import forms
+from django.db import connections
 from django.contrib import admin, messages
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
@@ -8,11 +11,10 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.admin import helpers
 from django.shortcuts import render
-from django.template.response import TemplateResponse
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog)
+                    ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
 
 
@@ -216,8 +218,8 @@ class CustomerAdmin(LiveModelAdmin):
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email', 'meta']
-    exclude = ['live']
     actions = ['generate_all_documents']
+    exclude = ['live']
 
     def generate_all_documents(self, request, queryset):
         if request.POST.get('post'):
@@ -274,6 +276,7 @@ class ProviderAdmin(LiveModelAdmin):
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
                      'email', 'meta']
+    actions = ['generate_monthly_totals']
     exclude = ['live']
 
     def invoice_series_list_display(self, obj):
@@ -284,6 +287,70 @@ class ProviderAdmin(LiveModelAdmin):
         return '{}-{}'.format(obj.proforma_series,
                               obj.proforma_starting_number)
     proforma_series_list_display.short_description = 'Proforma series starting number'
+
+    def _compute_monthly_totals(self, model_klass, provider):
+        klass_name_plural = model_klass.__name__ + 's'
+        print klass_name_plural
+
+        totals = {}
+        totals[provider.name] = {}
+        totals[provider.name][klass_name_plural] = {}
+        documents_months = model_klass.objects.extra(
+            select={
+                'month': connections[model_klass.objects.db].ops.date_trunc_sql(
+                    'month', 'issue_date'
+                )
+            }
+        ).order_by().filter(provider=provider).values('month').distinct()
+
+        all_documents = model_klass.objects.filter(
+            provider=provider,
+            state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.PAID]
+        )
+
+        paid_documents = model_klass.objects.filter(
+            provider=provider,
+            state=BillingDocument.STATES.PAID
+        )
+
+        for month in documents_months:
+            month_value_str = month['month']
+            month_value = dt.strptime(month_value_str, '%Y-%m-%d')
+            month_name = month_value.strftime('%B')
+            totals[provider.name][klass_name_plural][month_name] = {}
+            totals[provider.name][klass_name_plural][month_name]['total'] = {}
+            totals[provider.name][klass_name_plural][month_name]['unpaid'] = {}
+
+            all_from_month = all_documents.filter(issue_date__month=month_value.month)
+            paid_from_month = paid_documents.filter(issue_date__month=month_value.month)
+            total = sum(invoice.total for invoice in all_from_month)
+            total_paid = sum(invoice.total for invoice in paid_from_month)
+            totals[provider.name][klass_name_plural][month_name]['total'] = str(total)
+            totals[provider.name][klass_name_plural][month_name]['unpaid'] = str(total - total_paid)
+
+        return totals
+
+    def generate_monthly_totals(self, request, queryset):
+        totals = {}
+        for provider in queryset:
+            totals[provider.name] = {}
+            invoices_total = self._compute_monthly_totals(Invoice, provider)
+            proformas_total = self._compute_monthly_totals(Proforma, provider)
+
+            totals[provider.name].update(invoices_total[provider.name])
+            totals[provider.name].update(proformas_total[provider.name])
+
+        context = {
+            'title': _('Monthly totals'),
+            'totals': totals,
+            'queryset': queryset,
+            'opts': self.model._meta
+        }
+
+        return render(request, 'admin/monthly_totals.html', context)
+
+    generate_monthly_totals.short_description = 'Generate monthly totals'
 
 
 class DocumentEntryInline(admin.TabularInline):
