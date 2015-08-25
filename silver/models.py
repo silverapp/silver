@@ -675,15 +675,16 @@ class Subscription(models.Model):
             else:
                 self.start_date = timezone.now().date()
 
-        if trial_end_date:
-            self.trial_end = max(self.start_date, trial_end_date)
-        else:
-            if self.trial_end:
-                if self.trial_end < self.start_date:
-                    self.trial_end = None
-            elif self.plan.trial_period_days > 0:
-                self.trial_end = self.start_date + datetime.timedelta(
-                    days=self.plan.trial_period_days - 1)
+        if self.customer.should_get_free_trial(self.plan.provider):
+            if trial_end_date:
+                self.trial_end = max(self.start_date, trial_end_date)
+            else:
+                if self.trial_end:
+                    if self.trial_end < self.start_date:
+                        self.trial_end = None
+                elif self.plan.trial_period_days > 0:
+                    self.trial_end = self.start_date + datetime.timedelta(
+                        days=self.plan.trial_period_days - 1)
 
     @transition(field=state, source=STATES.ACTIVE, target=STATES.CANCELED)
     def cancel(self, when):
@@ -1465,6 +1466,13 @@ class Customer(AbstractBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
+
+    def should_get_free_trial(self, provider):
+        return self.subscriptions.filter(
+            plan__provider=provider,
+            state__in=[Subscription.STATES.ACTIVE, Subscription.STATES.CANCELED,
+                       Subscription.STATES.ENDED]
+        ).count() == 0
 
 
 class Provider(AbstractBillingEntity):
