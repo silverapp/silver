@@ -290,11 +290,9 @@ class ProviderAdmin(LiveModelAdmin):
 
     def _compute_monthly_totals(self, model_klass, provider):
         klass_name_plural = model_klass.__name__ + 's'
-        print klass_name_plural
 
         totals = {}
-        totals[provider.name] = {}
-        totals[provider.name][klass_name_plural] = {}
+        totals[klass_name_plural] = {}
         documents_months = model_klass.objects.extra(
             select={
                 'month': connections[model_klass.objects.db].ops.date_trunc_sql(
@@ -318,16 +316,16 @@ class ProviderAdmin(LiveModelAdmin):
             month_value_str = month['month']
             month_value = dt.strptime(month_value_str, '%Y-%m-%d')
             month_name = month_value.strftime('%B')
-            totals[provider.name][klass_name_plural][month_name] = {}
-            totals[provider.name][klass_name_plural][month_name]['total'] = {}
-            totals[provider.name][klass_name_plural][month_name]['unpaid'] = {}
+            totals[klass_name_plural][month_name] = {}
+            totals[klass_name_plural][month_name]['total'] = {}
+            totals[klass_name_plural][month_name]['unpaid'] = {}
 
             all_from_month = all_documents.filter(issue_date__month=month_value.month)
             paid_from_month = paid_documents.filter(issue_date__month=month_value.month)
             total = sum(invoice.total for invoice in all_from_month)
             total_paid = sum(invoice.total for invoice in paid_from_month)
-            totals[provider.name][klass_name_plural][month_name]['total'] = str(total)
-            totals[provider.name][klass_name_plural][month_name]['unpaid'] = str(total - total_paid)
+            totals[klass_name_plural][month_name]['total'] = str(total)
+            totals[klass_name_plural][month_name]['unpaid'] = str(total - total_paid)
 
         return totals
 
@@ -335,11 +333,12 @@ class ProviderAdmin(LiveModelAdmin):
         totals = {}
         for provider in queryset:
             totals[provider.name] = {}
-            invoices_total = self._compute_monthly_totals(Invoice, provider)
-            proformas_total = self._compute_monthly_totals(Proforma, provider)
 
-            totals[provider.name].update(invoices_total[provider.name])
-            totals[provider.name].update(proformas_total[provider.name])
+            invoices_total = self._compute_monthly_totals(Invoice, provider)
+            totals[provider.name].update(invoices_total)
+
+            proformas_total = self._compute_monthly_totals(Proforma, provider)
+            totals[provider.name].update(proformas_total)
 
         context = {
             'title': _('Monthly totals'),
