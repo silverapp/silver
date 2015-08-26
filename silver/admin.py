@@ -474,9 +474,9 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                        BillingDocument.STATES.PAID]
         )
 
-        merger = PdfFileMerger()
         base_path = '/tmp'
-        for done, document in enumerate(queryset):
+        merger = PdfFileMerger()
+        for document in queryset:
             if document.pdf:
                 local_file_path = self._download_pdf(document.pdf.url, base_path)
                 try:
