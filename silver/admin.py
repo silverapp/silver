@@ -470,7 +470,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
             state__in=[BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
-        queryset_len = queryset.count()
 
         merger = PdfFileMerger()
         base_path = '/tmp'
@@ -488,12 +487,6 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 except OSError as e:
                     if e.errno != errno.ENOENT:
                         raise
-
-                msg = 'Processed {done} out of {total}'.format(
-                    done=done + 1,
-                    total=queryset_len
-                )
-                self.message_user(request, msg)
 
         response = HttpResponse(content_type='application/pdf')
         filename = 'Billing-Documents-{now}.pdf'.format(now=now)
