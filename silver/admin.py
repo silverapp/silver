@@ -1,5 +1,6 @@
 import os
 import errno
+import logging
 
 import requests
 from django import forms
@@ -19,6 +20,8 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
+
+logger = logging.getLogger(__name__)
 
 
 def metadata(obj):
@@ -479,8 +482,18 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 try:
                     reader = PdfFileReader(file(local_file_path, 'rb'))
                     merger.append(reader)
+                    logging_ctx = {
+                        'number': document.series_number,
+                        'status': 'ok'
+                    }
                 except Exception as e:
-                    print e  # TODO: log
+                    logging_ctx = {
+                        'number': document.series_number,
+                        'status': 'failed',
+                        'error': e
+                    }
+
+                logger.debug('PDF generation: %s', logging_ctx)
 
                 try:
                     os.remove(local_file_path)
