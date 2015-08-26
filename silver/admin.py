@@ -456,7 +456,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 if chunk:
                     if should_wipe_bad_headers:
                         pdf_header_pos = chunk.find('%PDF-')
-                        if pdf_header_pos != 0:
+                        if pdf_header_pos > 0:
                             # The file does not start with the '%PDF-' header
                             # => trim everything up to that position
                             chunk = chunk[pdf_header_pos:]
