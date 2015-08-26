@@ -493,7 +493,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                         'error': e
                     }
 
-                logger.debug('PDF generation: %s', logging_ctx)
+                logger.debug('Admin aggregate PDF generation: %s', logging_ctx)
 
                 try:
                     os.remove(local_file_path)
