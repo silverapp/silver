@@ -1,3 +1,7 @@
+import os
+import errno
+
+import requests
 from django import forms
 from django.contrib import admin, messages
 from django.utils.html import escape
@@ -9,8 +13,7 @@ from django.utils import timezone
 from django.contrib.admin import helpers
 from django.shortcuts import render
 from django.http import HttpResponse
-from PyPDF2 import PdfFileReader, PdfFileMerger, PdfFileWriter
-from cStringIO import StringIO
+from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
@@ -441,27 +444,64 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         return '{:.2f} {currency}'.format(obj.total,
                                           currency=obj.currency)
 
+    def _download_pdf(self, url, base_path):
+        local_file_path = os.path.join(base_path, 'billing-temp-document.pdf')
+        response = requests.get(url, stream=True)
+        should_wipe_bad_headers = True
+        with open(local_file_path, 'wb') as out_file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    if should_wipe_bad_headers:
+                        pdf_header_pos = chunk.find('%PDF-')
+                        if pdf_header_pos != 0:
+                            # The file does not start with the '%PDF-' header
+                            # => trim everything up to that position
+                            chunk = chunk[pdf_header_pos:]
+                        should_wipe_bad_headers = False
+                    out_file.write(chunk)
+                    out_file.flush()
+
+        return local_file_path
+
     def download_selected_documents(self, request, queryset):
+        now = timezone.now()
+
         queryset = queryset.filter(
             state__in=[BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
+        queryset_len = queryset.count()
 
-        pdf_writer = PdfFileWriter()
-        for document in queryset:
+        merger = PdfFileMerger()
+        base_path = '/tmp'
+        for done, document in enumerate(queryset):
             if document.pdf:
-                # TODO: fix this -- check source
-                #pdf = PdfFileReader(document.pdf.path)
-                for page_num in range(pdf.numPages):
-                    pdf_writer.addPage(pdf.getPage(page_num))
+                local_file_path = self._download_pdf(document.pdf.url, base_path)
+                try:
+                    reader = PdfFileReader(file(local_file_path, 'rb'))
+                    merger.append(reader)
+                except Exception as e:
+                    print e  # TODO: log
+
+                try:
+                    os.remove(local_file_path)
+                except OSError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
+
+                msg = 'Processed {done} out of {total}'.format(
+                    done=done + 1,
+                    total=queryset_len
+                )
+                self.message_user(request, msg)
 
         response = HttpResponse(content_type='application/pdf')
-        filename = 'magic.pdf'  # TODO: change
-        response['Content-Disposition'] = 'attachment; filename="{name}'.format(name=filename)
+        filename = 'Billing-Documents-{now}.pdf'.format(now=now)
+        content_disposition = 'attachment; filename="{fn}'.format(fn=filename)
+        response['Content-Disposition'] = content_disposition
 
-        out_stream = StringIO()
-        pdf_writer.write(out_stream)
-        response.write(out_stream.getvalue())
+        merger.write(response)
+        merger.close()
 
         return response
 
