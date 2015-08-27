@@ -250,7 +250,7 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        return obj.pdf.url if obj.pdf else None
+        return request.build_absolute_uri(obj.pdf.url) if obj.pdf else None
 
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
