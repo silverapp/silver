@@ -123,3 +123,18 @@ LOGGING['loggers']['django.security'] = {
     'level': 'DEBUG',
     'handlers': ['console']
 }
+LOGGING['formatters'] = {}
+LOGGING['formatters']['verbose'] = {
+    'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+    'datefmt': "%d/%b/%Y %H:%M:%S"
+}
+LOGGING['handlers']['file'] = {
+    'level': 'DEBUG',
+    'class': 'logging.FileHandler',
+    'filename': '/var/log/silver/silver.log',
+    'formatter': 'verbose'
+}
+LOGGING['loggers']['silver'] = {
+    'handlers': ['file'],
+    'level': 'DEBUG',
+}

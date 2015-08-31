@@ -518,6 +518,13 @@ class Subscription(models.Model):
             return date <= self.trial_end
         return False
 
+    def _log_should_be_billed_result(self, billing_date, interval_end):
+        logger.debug('should_be_billed result: %s', {
+            'subscription': self.id,
+            'billing_date': billing_date.strftime('%Y-%m-%d'),
+            'interval_end': interval_end.strftime('%Y-%m-%d')
+        })
+
     def should_be_billed(self, date):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
@@ -563,7 +570,11 @@ class Subscription(models.Model):
                 # date < cancel_date => don't charge the subscription
                 return False
 
-            return date >= interval_end + ONE_DAY + generate_after
+            result = (date >= interval_end + ONE_DAY + generate_after)
+            if result is True:
+                self._log_should_be_billed_result(date, interval_end)
+
+            return result
 
         if self.is_billed_first_time:
             if not self.trial_end:
@@ -640,10 +651,15 @@ class Subscription(models.Model):
                     reference_date=last_billing_date
                 )
 
-        return date >= interval_end + ONE_DAY + generate_after
+        result = (date >= interval_end + ONE_DAY + generate_after)
+        if result is True:
+            self._log_should_be_billed_result(date, interval_end)
+
+        return result
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):
+        # TODO: move to Customer
         return (
             self.customer.consolidated_billing and
             self.customer.subscriptions.filter(state=self.STATES.ACTIVE).count() > 1
@@ -754,6 +770,12 @@ class Subscription(models.Model):
                 end_date = self.cancel_date
         return end_date
 
+    def _log_value_state(self, value_state):
+        logger.debug('Adding value: %s', {
+            'subscription': self.id,
+            'value_state': value_state
+        })
+
     def add_total_value_to_document(self, billing_date, invoice=None,
                                     proforma=None):
         """
@@ -767,6 +789,8 @@ class Subscription(models.Model):
             if not self.trial_end:  # has no trial
                 if billing_date.month in [self.start_date.month,
                                           self.start_date.month + 1]:
+                    self._log_value_state('first time, without trial')
+
                     # The same month or the next one as the start_date
 
                     # Generate first invoice, when the subscription starts
@@ -810,6 +834,7 @@ class Subscription(models.Model):
                                 start_date=bsd, end_date=bed,
                                 invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
+                self._log_value_state('first time, on trial')
                 # Next month after the subscription has started with trial
                 # spanning over >=2 months
                 end_date = self._get_interval_end_date(date=self.start_date)
@@ -817,6 +842,7 @@ class Subscription(models.Model):
                                       end_date=end_date,
                                       invoice=invoice, proforma=proforma)
             else:
+                self._log_value_state('first time, after trial')
                 # Billed first time, right after trial end
 
                 # Is billed right after trial in the same month as start_date
@@ -892,6 +918,7 @@ class Subscription(models.Model):
                  self.trial_end.month == billing_date.month - 1) and
                 last_billing_date < self.trial_end
             ):
+                self._log_value_state('billed before, with trial')
                 # It has/had a trial which ends this month or it ended last
                 # month and it has been billed before
                 # => expect the following items:
@@ -966,6 +993,7 @@ class Subscription(models.Model):
                                         invoice=invoice, proforma=proforma)
 
             else:
+                self._log_value_state('billed before, normal')
                 # This is the normal case of a subscription which was billed
                 # sometimes at the beginning of last month or it's the next
                 # month after the trial_end of a subscription whose customer

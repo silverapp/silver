@@ -1,7 +1,9 @@
 import datetime
+import logging
 from decimal import Decimal
 
 from django.http.response import Http404
+from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -24,6 +26,8 @@ from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 InvoiceFilter, ProformaFilter)
 from silver.documents_generator import DocumentsGenerator
 from silver.utils import get_object_or_None
+
+logger = logging.getLogger(__name__)
 
 
 class PlanList(generics.ListCreateAPIView):
@@ -176,6 +180,12 @@ class SubscriptionActivate(APIView):
             else:
                 sub.activate()
                 sub.save()
+
+            logger.debug('Activated subscription: %s', {
+                'subscription': sub.id,
+                'date': timezone.now().date().strftime('%Y-%m-%d')
+            })
+
             return Response({"state": sub.state},
                             status=status.HTTP_200_OK)
 
@@ -196,6 +206,13 @@ class SubscriptionCancel(APIView):
                         Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE]:
                 sub.cancel(when=when)
                 sub.save()
+
+                logger.debug('Canceled subscription: %s', {
+                    'subscription': sub.id,
+                    'date': timezone.now().date().strftime('%Y-%m-%d'),
+                    'when': when,
+                })
+
                 return Response({"state": sub.state},
                                 status=status.HTTP_200_OK)
             else:
@@ -222,6 +239,12 @@ class SubscriptionReactivate(APIView):
         else:
             sub.activate()
             sub.save()
+
+            logger.debug('Reactivated subscription: %s', {
+                'subscription': sub.id,
+                'date': timezone.now().date().strftime('%Y-%m-%d'),
+            })
+
             return Response({"state": sub.state},
                             status=status.HTTP_200_OK)
 
