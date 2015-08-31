@@ -314,8 +314,7 @@ class ProviderAdmin(LiveModelAdmin):
         ).distinct()
 
         for month in documents_months:
-            month_value_str = month['month']
-            month_value = dt.strptime(month_value_str, '%Y-%m-%d')
+            month_value = month['month']
             display_date = month_value.strftime('%B %Y')
             totals[klass_name_plural][display_date] = {}
 
