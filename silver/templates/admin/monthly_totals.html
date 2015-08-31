@@ -1,0 +1,59 @@
+
+{% extends "admin/base_site.html" %}
+{% load i18n l10n %}
+{% load admin_urls %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> ›
+    <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a> ›
+    <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a> › Monthly Providers Reports
+  </div>
+{% endblock %}
+
+{% block content %}
+
+<form action="" method="post">
+    {% csrf_token %}
+
+    <ul>
+        {% for provider, ptotals in totals.items %}
+        <li> <b>{{ provider }}</b> <br>
+            <ul>
+            {% for doc_name, monthly_totals in ptotals.items %}
+                {% if monthly_totals %}
+                    <li>
+                        <b>{{ doc_name }} </b>
+                        <table>
+                            <tr> 
+                                <th> Month </th>
+                                <th> Unpaid </th>
+                                <th> Total </th>
+                            </tr>
+                            {% for month, values in monthly_totals.items %}
+                            <tr> 
+                                <td> {{ month }} </td> 
+                                {% for name, value in values.items %}
+                                    <td> {{ value }} </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </li>
+                    <br>
+                {% endif %}
+            {% endfor %}
+            </ul>
+        </li>
+        <br>
+        {% endfor %}
+    </ul>
+
+    <div>
+        <input type="hidden" name="action" value="generate_monthly_totals" />
+        <input type="hidden" name="post" value="yes" />
+        <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% trans "Back" %}</a>
+
+    </div>
+</form>
+{% endblock content %}
