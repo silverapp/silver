@@ -467,10 +467,13 @@ class BillingDocumentAdmin(admin.ModelAdmin):
         return local_file_path
 
     def download_selected_documents(self, request, queryset):
+        # NOTE (important): this works only if the pdf is not stored on local
+        # disk as it is fetched via HTTP
         now = timezone.now()
 
         queryset = queryset.filter(
             state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.CANCELED,
                        BillingDocument.STATES.PAID]
         )
 
