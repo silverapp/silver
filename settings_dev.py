@@ -131,7 +131,7 @@ LOGGING['formatters']['verbose'] = {
 LOGGING['handlers']['file'] = {
     'level': 'DEBUG',
     'class': 'logging.FileHandler',
-    'filename': '/var/log/billing/django.log',
+    'filename': '/var/log/billing/silver.log',
     'formatter': 'verbose'
 }
 LOGGING['loggers']['silver'] = {
