@@ -1,5 +1,9 @@
+import os
+import errno
+import logging
 from datetime import datetime as dt
 
+import requests
 from django import forms
 from django.db import connections
 from django.contrib import admin, messages
@@ -11,11 +15,15 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.admin import helpers
 from django.shortcuts import render
+from django.http import HttpResponse
+from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
+
+logger = logging.getLogger(__name__)
 
 
 def metadata(obj):
@@ -451,7 +459,7 @@ class BillingDocumentAdmin(admin.ModelAdmin):
               'sales_tax_percent', 'currency', 'state', 'total')
     readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
-    actions = ['issue', 'pay', 'cancel', 'clone']
+    actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents']
 
     @property
     def _model(self):
@@ -527,6 +535,75 @@ class BillingDocumentAdmin(admin.ModelAdmin):
     def total(self, obj):
         return '{:.2f} {currency}'.format(obj.total,
                                           currency=obj.currency)
+
+    def _download_pdf(self, url, base_path):
+        local_file_path = os.path.join(base_path, 'billing-temp-document.pdf')
+        response = requests.get(url, stream=True)
+        should_wipe_bad_headers = True
+        with open(local_file_path, 'wb') as out_file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    if should_wipe_bad_headers:
+                        pdf_header_pos = chunk.find('%PDF-')
+                        if pdf_header_pos > 0:
+                            # The file does not start with the '%PDF-' header
+                            # => trim everything up to that position
+                            chunk = chunk[pdf_header_pos:]
+                        should_wipe_bad_headers = False
+                    out_file.write(chunk)
+                    out_file.flush()
+
+        return local_file_path
+
+    def download_selected_documents(self, request, queryset):
+        # NOTE (important): this works only if the pdf is not stored on local
+        # disk as it is fetched via HTTP
+        now = timezone.now()
+
+        queryset = queryset.filter(
+            state__in=[BillingDocument.STATES.ISSUED,
+                       BillingDocument.STATES.CANCELED,
+                       BillingDocument.STATES.PAID]
+        )
+
+        base_path = '/tmp'
+        merger = PdfFileMerger()
+        for document in queryset:
+            if document.pdf:
+                local_file_path = self._download_pdf(document.pdf.url, base_path)
+                try:
+                    reader = PdfFileReader(file(local_file_path, 'rb'))
+                    merger.append(reader)
+                    logging_ctx = {
+                        'number': document.series_number,
+                        'status': 'ok'
+                    }
+                except Exception as e:
+                    logging_ctx = {
+                        'number': document.series_number,
+                        'status': 'failed',
+                        'error': e
+                    }
+
+                logger.debug('Admin aggregate PDF generation: %s', logging_ctx)
+
+                try:
+                    os.remove(local_file_path)
+                except OSError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
+
+        response = HttpResponse(content_type='application/pdf')
+        filename = 'Billing-Documents-{now}.pdf'.format(now=now)
+        content_disposition = 'attachment; filename="{fn}'.format(fn=filename)
+        response['Content-Disposition'] = content_disposition
+
+        merger.write(response)
+        merger.close()
+
+        return response
+
+    download_selected_documents.short_description = 'Download selected documents'
 
 
 class InvoiceAdmin(BillingDocumentAdmin):
