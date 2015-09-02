@@ -1,7 +1,7 @@
 import os
 import errno
 import logging
-from datetime import datetime as dt
+from collections import OrderedDict
 
 import requests
 from django import forms
@@ -313,23 +313,38 @@ class ProviderAdmin(LiveModelAdmin):
             'month'
         ).distinct()
 
-        for month in documents_months:
-            month_value = month['month']
+        totals[klass_name_plural] = OrderedDict()
+        documents_months = sorted([month['month'] for month in documents_months])
+        for month_value in documents_months:
+            if month_value is None:
+                continue
             display_date = month_value.strftime('%B %Y')
-            totals[klass_name_plural][display_date] = {}
+            totals[klass_name_plural][display_date] = OrderedDict()
 
-            all_from_month = all_documents.filter(
+            all_documents_from_month = all_documents.filter(
                 issue_date__month=month_value.month,
                 issue_date__year=month_value.year
             )
-            paid_from_month = paid_documents.filter(
+            paid_documents_from_month = paid_documents.filter(
                 issue_date__month=month_value.month,
                 issue_date__year=month_value.year
             )
-            total = sum(invoice.total for invoice in all_from_month)
-            total_paid = sum(invoice.total for invoice in paid_from_month)
+            total = sum(invoice.total for invoice in all_documents_from_month)
+            total_paid = sum(invoice.total for invoice in paid_documents_from_month)
             totals[klass_name_plural][display_date]['total'] = str(total)
+            totals[klass_name_plural][display_date]['paid'] = str(total_paid)
             totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
+
+        total_draft = sum(
+            doc.total for doc in (
+                documents.filter(
+                    provider=provider,
+                    state=BillingDocument.STATES.PAID
+                )
+            )
+        )
+
+        totals[klass_name_plural]['total_draft'] = str(total_draft)
 
         return totals
 
@@ -344,7 +359,8 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.ISSUED,
+            state__in=[BillingDocument.STATES.DRAFT,
+                       BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
 
@@ -356,7 +372,8 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.ISSUED,
+            state__in=[BillingDocument.STATES.DRAFT,
+                       BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
 
@@ -370,6 +387,7 @@ class ProviderAdmin(LiveModelAdmin):
                                                            proformas)
             totals[provider.name].update(proformas_total)
 
+        print totals
         context = {
             'title': _('Monthly totals'),
             'totals': totals,
