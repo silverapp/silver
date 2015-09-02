@@ -313,13 +313,13 @@ class ProviderAdmin(LiveModelAdmin):
             'month'
         ).distinct()
 
-        totals[klass_name_plural] = OrderedDict()
+        totals[klass_name_plural]['monthly_totals'] = OrderedDict()
         documents_months = sorted([month['month'] for month in documents_months])
         for month_value in documents_months:
             if month_value is None:
                 continue
             display_date = month_value.strftime('%B %Y')
-            totals[klass_name_plural][display_date] = OrderedDict()
+            totals[klass_name_plural]['monthly_totals'][display_date] = OrderedDict()
 
             all_documents_from_month = all_documents.filter(
                 issue_date__month=month_value.month,
@@ -331,9 +331,9 @@ class ProviderAdmin(LiveModelAdmin):
             )
             total = sum(invoice.total for invoice in all_documents_from_month)
             total_paid = sum(invoice.total for invoice in paid_documents_from_month)
-            totals[klass_name_plural][display_date]['total'] = str(total)
-            totals[klass_name_plural][display_date]['paid'] = str(total_paid)
-            totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
+            totals[klass_name_plural]['monthly_totals'][display_date]['total'] = str(total)
+            totals[klass_name_plural]['monthly_totals'][display_date]['paid'] = str(total_paid)
+            totals[klass_name_plural]['monthly_totals'][display_date]['unpaid'] = str(total - total_paid)
 
         total_draft = sum(
             doc.total for doc in (
