@@ -300,7 +300,7 @@ class ProviderAdmin(LiveModelAdmin):
         klass_name_plural = model_klass.__name__ + 's'
 
         totals = {}
-        totals[klass_name_plural] = {}
+        totals[klass_name_plural] = OrderedDict()
 
         all_documents = documents.filter(provider=provider)
         paid_documents = documents.filter(
@@ -322,7 +322,6 @@ class ProviderAdmin(LiveModelAdmin):
             )
         )
 
-        totals[klass_name_plural] = OrderedDict()
         documents_months = sorted([month['month'] for month in documents_months])
         for month_value in documents_months:
             if month_value is None:
@@ -344,7 +343,8 @@ class ProviderAdmin(LiveModelAdmin):
             totals[klass_name_plural][display_date]['paid'] = str(total_paid)
             totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
 
-        return totals if len(totals[klass_name_plural]) else {}
+        #totals.update({klass_name_plural.lower() + '_draft': str(total_draft)})
+        return totals
 
     def generate_monthly_totals(self, request, queryset):
         totals = {}
@@ -376,7 +376,7 @@ class ProviderAdmin(LiveModelAdmin):
         )
 
         for provider in queryset:
-            totals[provider.name] = {}
+            totals[provider.name] = OrderedDict()
             invoices_total = self._compute_monthly_totals(Invoice, provider,
                                                           invoices)
             totals[provider.name].update(invoices_total)

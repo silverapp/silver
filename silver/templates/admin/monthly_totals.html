@@ -18,12 +18,13 @@
 
     <ul>
         {% for provider, ptotals in totals.items %}
+            {% if ptotals %}
             <li> <b>{{ provider }}</b> <br>
                 <ul>
                 {% for doc_name, monthly_totals in ptotals.items %}
                     {% if monthly_totals|length %}
                         <li>
-                            <b>{{ doc_name }} </b>
+                            <b> {{ doc_name }} </b> (total draft: )
                             <table>
                                 <tr> 
                                     <th> Month </th>
@@ -47,6 +48,7 @@
                 </ul>
             </li>
             <br>
+            {% endif %}
         {% endfor %}
     </ul>
 
