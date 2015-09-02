@@ -18,46 +18,35 @@
 
     <ul>
         {% for provider, ptotals in totals.items %}
-        <li> <b>{{ provider }}</b> <br>
-            <ul>
-            {% for doc_name, monthly_totals in ptotals.items %}
-                {% if monthly_totals|length %}
-                    <li>
-                        <b>{{ doc_name }} </b>
-                        <table>
-                            <tr> 
-                                <th> Month </th>
-                                <th> Total </th>
-                                <th> Paid </th>
-                                <th> Unpaid </th>
-                                <th> Draft </th>
-                            </tr>
-                            {% for month, values in monthly_totals.items %}
-                            <tr> 
-                                <td> {{ month }} </td> 
-                                {% if forloop.first %}
+            <li> <b>{{ provider }}</b> <br>
+                <ul>
+                {% for doc_name, monthly_totals in ptotals.items %}
+                    {% if monthly_totals|length %}
+                        <li>
+                            <b>{{ doc_name }} </b>
+                            <table>
+                                <tr> 
+                                    <th> Month </th>
+                                    <th> Total </th>
+                                    <th> Paid </th>
+                                    <th> Unpaid </th>
+                                </tr>
+                                {% for month, values in monthly_totals.items %}
+                                <tr> 
+                                    <td> {{ month }} </td> 
                                     {% for name, value in values.items %}
-                                        {% if not forloop.last %}
                                             <td> {{ value }} </td>
-                                        {% else %}
-                                            <td colspan={{ monthly_totals|length }}> gigi are mere</td>
-                                        {% endif %}
                                     {% endfor %}
-                                {% else %}
-                                    {% for name, value in values.items %}
-                                        <td> {{ value }} </td>
-                                    {% endfor %}
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    </li>
-                    <br>
-                {% endif %}
-            {% endfor %}
-            </ul>
-        </li>
-        <br>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </li>
+                        <br>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            </li>
+            <br>
         {% endfor %}
     </ul>
 

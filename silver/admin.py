@@ -322,7 +322,6 @@ class ProviderAdmin(LiveModelAdmin):
             )
         )
 
-        add_draft_total = True
         totals[klass_name_plural] = OrderedDict()
         documents_months = sorted([month['month'] for month in documents_months])
         for month_value in documents_months:
@@ -345,11 +344,7 @@ class ProviderAdmin(LiveModelAdmin):
             totals[klass_name_plural][display_date]['paid'] = str(total_paid)
             totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
 
-            if add_draft_total:
-                totals[klass_name_plural][display_date]['total_draft'] = str(total_draft)
-                add_draft_total = False
-
-        return totals
+        return totals if len(totals[klass_name_plural]) else {}
 
     def generate_monthly_totals(self, request, queryset):
         totals = {}
