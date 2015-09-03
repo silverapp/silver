@@ -84,6 +84,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'description', 'interval_display',
                     'trial_period_days', 'enabled', 'private']
     search_fields = ['name']
+    list_filter = ['provider']
     form = PlanForm
 
     def interval_display(self, obj):
