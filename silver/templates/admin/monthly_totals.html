@@ -1,5 +1,5 @@
-
 {% extends "admin/base_site.html" %}
+
 {% load i18n l10n %}
 {% load admin_urls %}
 
@@ -15,35 +15,39 @@
 
 <form action="" method="post">
     {% csrf_token %}
-
     <ul>
         {% for provider, ptotals in totals.items %}
             {% if ptotals %}
             <li> <b>{{ provider }}</b> <br>
                 <ul>
-                {% for doc_name, monthly_totals in ptotals.items %}
-                    {% if monthly_totals|length %}
-                        <li>
-                            <b> {{ doc_name }} </b> (total draft: )
-                            <table>
-                                <tr> 
-                                    <th> Month </th>
-                                    <th> Total </th>
-                                    <th> Paid </th>
-                                    <th> Unpaid </th>
-                                </tr>
-                                {% for month, values in monthly_totals.items %}
-                                <tr> 
-                                    <td> {{ month }} </td> 
-                                    {% for name, value in values.items %}
-                                            <td> {{ value }} </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </table>
-                        </li>
-                        <br>
-                    {% endif %}
+                {% for doc_name, totals_and_draft in ptotals.items %}
+                    <li>
+                        {% for entry, item_value in totals_and_draft.items %}
+                            {% if forloop.first %}
+                                <b> {{ doc_name }} </b> (total draft: {{ item_value }})
+                            {% else %}
+                                {% if item_value|length %}
+                                    <table>
+                                        <tr> 
+                                            <th> Month </th>
+                                            <th> Total </th>
+                                            <th> Paid </th>
+                                            <th> Unpaid </th>
+                                        </tr>
+                                        {% for month, totals_value in item_value.items %}
+                                        <tr> 
+                                            <td> {{ month }} </td> 
+                                            {% for name, value in totals_value.items %}
+                                                    <td> {{ value }} </td>
+                                            {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </table>
+                                {% endif %}
+                            {% endif%}
+                        {% endfor %}
+                    </li>
+                    <br>
                 {% endfor %}
                 </ul>
             </li>
@@ -56,7 +60,6 @@
         <input type="hidden" name="action" value="generate_monthly_totals" />
         <input type="hidden" name="post" value="yes" />
         <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% trans "Back" %}</a>
-
     </div>
 </form>
 {% endblock content %}
