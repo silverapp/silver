@@ -383,10 +383,20 @@ class ProviderAdmin(LiveModelAdmin):
     generate_monthly_totals.short_description = 'Generate monthly totals'
 
 
+class DocumentEntryForm(forms.ModelForm):
+
+    class Meta:
+        model = DocumentEntry
+        fields = ('description', 'prorated', 'product_code', 'unit',
+                  'unit_price', 'quantity', 'start_date', 'end_date')
+        widgets = {
+            'description': forms.Textarea(attrs={'cols': 50, 'rows': 3})
+        }
+
+
 class DocumentEntryInline(admin.TabularInline):
     model = DocumentEntry
-    fields = ('description', 'prorated', 'product_code', 'unit', 'unit_price',
-              'quantity', 'start_date', 'end_date')
+    form = DocumentEntryForm
     extra = 0
 
 
