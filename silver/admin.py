@@ -1,7 +1,7 @@
 import os
 import errno
 import logging
-from datetime import datetime as dt
+from collections import OrderedDict
 
 import requests
 from django import forms
@@ -84,6 +84,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = ['name', 'description', 'interval_display',
                     'trial_period_days', 'enabled', 'private']
     search_fields = ['name']
+    list_filter = ['provider']
     form = PlanForm
 
     def interval_display(self, obj):
@@ -300,7 +301,7 @@ class ProviderAdmin(LiveModelAdmin):
         klass_name_plural = model_klass.__name__ + 's'
 
         totals = {}
-        totals[klass_name_plural] = {}
+        totals[klass_name_plural] = OrderedDict()
 
         all_documents = documents.filter(provider=provider)
         paid_documents = documents.filter(
@@ -313,23 +314,39 @@ class ProviderAdmin(LiveModelAdmin):
             'month'
         ).distinct()
 
-        for month in documents_months:
-            month_value = month['month']
-            display_date = month_value.strftime('%B %Y')
-            totals[klass_name_plural][display_date] = {}
+        total_draft = sum(
+            doc.total for doc in (
+                documents.filter(
+                    provider=provider,
+                    state=BillingDocument.STATES.DRAFT
+                )
+            )
+        )
 
-            all_from_month = all_documents.filter(
+        totals[klass_name_plural]['draft_total'] = str(total_draft)
+        totals[klass_name_plural]['entries'] = OrderedDict()
+        documents_months = sorted([month['month']
+                                   for month in documents_months
+                                   if month['month']])
+        for month_value in documents_months:
+            if month_value is None:
+                continue
+            display_date = month_value.strftime('%B %Y')
+            totals[klass_name_plural]['entries'][display_date] = OrderedDict()
+
+            all_documents_from_month = all_documents.filter(
                 issue_date__month=month_value.month,
                 issue_date__year=month_value.year
             )
-            paid_from_month = paid_documents.filter(
+            paid_documents_from_month = paid_documents.filter(
                 issue_date__month=month_value.month,
                 issue_date__year=month_value.year
             )
-            total = sum(invoice.total for invoice in all_from_month)
-            total_paid = sum(invoice.total for invoice in paid_from_month)
-            totals[klass_name_plural][display_date]['total'] = str(total)
-            totals[klass_name_plural][display_date]['unpaid'] = str(total - total_paid)
+            total = sum(invoice.total for invoice in all_documents_from_month)
+            total_paid = sum(invoice.total for invoice in paid_documents_from_month)
+            totals[klass_name_plural]['entries'][display_date]['total'] = str(total)
+            totals[klass_name_plural]['entries'][display_date]['paid'] = str(total_paid)
+            totals[klass_name_plural]['entries'][display_date]['unpaid'] = str(total - total_paid)
 
         return totals
 
@@ -344,7 +361,8 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.ISSUED,
+            state__in=[BillingDocument.STATES.DRAFT,
+                       BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
 
@@ -356,12 +374,13 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.ISSUED,
+            state__in=[BillingDocument.STATES.DRAFT,
+                       BillingDocument.STATES.ISSUED,
                        BillingDocument.STATES.PAID]
         )
 
         for provider in queryset:
-            totals[provider.name] = {}
+            totals[provider.name] = OrderedDict()
             invoices_total = self._compute_monthly_totals(Invoice, provider,
                                                           invoices)
             totals[provider.name].update(invoices_total)
@@ -382,10 +401,20 @@ class ProviderAdmin(LiveModelAdmin):
     generate_monthly_totals.short_description = 'Generate monthly totals'
 
 
+class DocumentEntryForm(forms.ModelForm):
+
+    class Meta:
+        model = DocumentEntry
+        fields = ('description', 'prorated', 'product_code', 'unit',
+                  'unit_price', 'quantity', 'start_date', 'end_date')
+        widgets = {
+            'description': forms.Textarea(attrs={'cols': 50, 'rows': 3})
+        }
+
+
 class DocumentEntryInline(admin.TabularInline):
     model = DocumentEntry
-    fields = ('description', 'prorated', 'product_code', 'unit', 'unit_price',
-              'quantity', 'start_date', 'end_date')
+    form = DocumentEntryForm
     extra = 0
 
 
