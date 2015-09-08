@@ -629,6 +629,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
         subscription = SubscriptionFactory.create(
             plan=plan,
             state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 1, 1)
         )
         correct_billing_date = datetime.date(2015, 10, 1)
         incorrect_billing_date_1 = datetime.date(2015, 9, 3)
