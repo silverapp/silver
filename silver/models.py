@@ -32,6 +32,7 @@ from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
 from silver.utils import get_object_or_None
+from silver.utils.storage import MultipleStorage
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,15 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
+
+def get_storage(storage):
+    return import_string(storage[0])(*storage[1], **storage[2])
+
 if _storage:
-    _storage_klass = import_string(_storage[0])
-    _storage = _storage_klass(*_storage[1], **_storage[2])
+    if isinstance(_storage, list):
+        _storage = MultipleStorage([storage for storage in get_storage(_storage)])
+    else:
+        _storage = get_storage(_storage)
 
 
 def documents_pdf_path(document, filename):
