@@ -531,7 +531,7 @@ class Subscription(models.Model):
 
         if date < self.start_date:
             msg = 'Billing date has to be >= than subscription\'s start date.'
-            raise ValueError(msg)
+            return False
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
         ONE_DAY = datetime.timedelta(days=1)
