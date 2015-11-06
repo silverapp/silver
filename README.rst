@@ -1,8 +1,8 @@
 silver 
 ======
 
-.. image:: http://drone.presslabs.net/github.com/PressLabs/silver/status.svg?branch=master
-   :target: http://drone.presslabs.net/github.com/PressLabs/silver
+.. image:: https://drone.presslabs.net/api/badges/PressLabs/silver/status.svg?branch=master
+   :target: https://drone.presslabs.net/PressLabs/silver
 
 Django automated billing with an API
 
