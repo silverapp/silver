@@ -477,8 +477,7 @@ class TestSubscriptionShouldBeBilled(TestCase):
         )
         billing_date = datetime.date(2015, 8, 10)
 
-        with pytest.raises(ValueError):
-            subscription.should_be_billed(billing_date)
+        assert subscription.should_be_billed(billing_date) is False
 
     def test_new_active_sub_trial_end_same_month_as_start_date_w_cb(self):
         plan = PlanFactory.create(generate_after=100)
