@@ -1,7 +1,16 @@
-image: python2.7
-services:
-  - mysql
-script:
-  - pip install -U -r requirements/test.txt
-  - mysql -e 'create database test_db;' -h 127.0.0.1 -u root
-  - python manage.py test -v2
+build:
+  image: python:2.7
+  commands:
+    - pip install -U -r requirements/test.txt
+    - mkdir /var/log/silver && python manage.py test -v2
+
+compose:
+  mysql:
+    image: mysql:5.5
+    environment:
+      - MYSQL_DATABASE=test_db
+
+cache:
+  mount:
+    - /root/.cache/pip
+    - /usr/local/lib/python2.7/site-packages
