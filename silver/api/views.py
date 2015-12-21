@@ -769,10 +769,3 @@ class ProformaStateHandler(APIView):
 
         serializer = ProformaSerializer(proforma, context={'request': request})
         return Response(serializer.data)
-
-
-class DocsGenerator(APIView):
-    def get(self, request, format=None, **kwargs):
-        DocumentsGenerator().generate()
-
-        return Response('Done')
