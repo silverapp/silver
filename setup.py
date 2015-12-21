@@ -42,31 +42,17 @@ For more information on creating source distributions, see
 http://docs.python.org/2/distutils/sourcedist.html
 
 """
+
 import os
 from setuptools import setup, find_packages
 import silver as app
 
 
-dev_requires = [
-    'flake8',
+install_requires  = [
+    line.strip() 
+    for line in open("requirements/common.txt").readlines()
+    if not line.startswith('#')
 ]
-
-install_requires = [
-    'python-dateutil',
-    'pytz',
-    'django',
-    'djangorestframework',
-    'django-filter',
-    'djangorestframework-bulk',
-    'django-fsm',
-    'django-livefield',
-    'django-international',
-    'django-jsonfield',
-    'pyvat',
-    'xhtml2pdf',
-    'django-xhtml2pdf'
-]
-
 
 def read(fname):
     try:
@@ -79,16 +65,20 @@ setup(
     version=app.__version__,
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
-    license='The MIT License',
+    license='Apache 2',
     platforms=['OS Independent'],
     keywords='django, app, reusable, billing, invoicing, api',
-    author='PressLabs',
+    author='Presslabs',
     author_email='ping@presslabs.com',
-    url="https://github.com/PressLabs/silver",
+    url="https://github.com/PressLabs/silver",  # TODO: add presslabs.com page
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
-    extras_require={
-        'dev': dev_requires,
-    },
+    classifiers=[
+        'Environment :: Web Environment',
+        'Framework :: Django :: 1.8',
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 2.7'
+    ]
 )
