@@ -46,10 +46,12 @@ Don't forget to migrate your database
     ./manage.py migrate silver
 
 
-Usage
+Configuration
 -----
 
 For the complete API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
+
+To run Silver automatically, you will have to setup a cron which calls the ``generate_documents`` Django command.
 
 For creating the PDF templates, Silver uses the built-in templating engine of
 Django <https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language>. 
@@ -109,4 +111,4 @@ The Python package can be found at https://pypi.python.org/pypi/django-silver/.
 You are highly encouraged to contribute with code, tests, documentation or just
 sharing experience.
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md).
+Please see CONTRIBUTING.md for a short guide on how to get started with Silver contributions.
