@@ -70,7 +70,7 @@ The template variables that are available in the context of the template are:
 For the API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
 
 For specifying the storage used add the ``SILVER_DOCUMENT_STORAGE`` setting to 
-your settings.py. Example (for storing the PDFs on S3):
+your settings file. Example for storing the PDFs on S3:
 
 .. code-block:: python
 
@@ -85,18 +85,14 @@ your settings.py. Example (for storing the PDFs on S3):
     )
 
 
-TODO: Describe usage or point to docs. Also describe available settings and
-templatetags.
-
-
 Contribute
 ----------
 
-Development of gitfs happens at http://github.com/PressLabs/silver.
+Development of silver happens at http://github.com/PressLabs/silver.
 
 Issues are tracked at http://github.com/PressLabs/silver/issues.
 
-Python package can be found at https://pypi.python.org/pypi/django-silver/.
+The Python package can be found at https://pypi.python.org/pypi/django-silver/.
 
 You are highly encouraged to contribute with code, tests, documentation or just
 sharing experience.
