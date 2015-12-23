@@ -92,6 +92,7 @@ Other available settings:
 
 
 To add REST hooks to Silver install and configure the following packages:
+
     * <https://github.com/PressLabs/django-rest-hooks-ng>
     * <https://github.com/PressLabs/django-rest-hooks-delivery>
 
