@@ -67,7 +67,7 @@ The template variables that are available in the context of the template are:
     * ``metered_feature``
     * ``context``
 
-For the API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
+For the complete API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
 
 For specifying the storage used add the ``SILVER_DOCUMENT_STORAGE`` setting to 
 your settings file. Example for storing the PDFs on S3:
@@ -91,7 +91,7 @@ Other available settings:
       The default path of the documents is ``{prefix}{company}/{doc_type}/{date}/{filename}``
 
 
-To add REST hooks to Silver install and configure the following packages:
+To add REST hooks to Silver you can install and configure the following packages:
 
     * <https://github.com/PressLabs/django-rest-hooks-ng>
     * <https://github.com/PressLabs/django-rest-hooks-delivery>
