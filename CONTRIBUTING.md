@@ -1,6 +1,6 @@
 # Contributing
 
-We love pull requests. Here's a quick guide.
+We love pull requests. Here's how to get started:
 
 1. Fork and clone the repo:
 ```
