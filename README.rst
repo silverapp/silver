@@ -52,21 +52,20 @@ Usage
 For creating the PDF templates, Silver uses the [built-in templating engine of
 Django] (https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language). 
 The template variables that are available in the context of the template are:
-* `name`
-* `unit`
-* `subscription`
-* `plan`
-* `provider`
-* `customer`
-* `product_code`
-* `start_date`
-* `end_date`
-* `prorated`
-* `proration_percentage`
-* `metered_feature`
-* `context`
 
-
+    * `name`
+    * `unit`
+    * `subscription`
+    * `plan`
+    * `provider`
+    * `customer`
+    * `product_code`
+    * `start_date`
+    * `end_date`
+    * `prorated`
+    * `proration_percentage`
+    * `metered_feature`
+    * `context`
 
 For the API reference, [check the wiki](https://github.com/PressLabs/silver/wiki)
 
