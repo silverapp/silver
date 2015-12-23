@@ -109,7 +109,7 @@ Getting Started
 4. Create subscriptions for your customers.
 5. Create your custom templates using HTML/CSS or use the ones already provided.
 6. Setup cron job for generating the invoices automatically.
-7. Enjoy. Silver will automatically generate the invoices or proforma invoices based on your providers' configuration
+7. Enjoy. Silver will automatically generate the invoices or proforma invoices based on your providers' configuration.
 
 
 Contribute
