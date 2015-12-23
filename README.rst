@@ -50,24 +50,40 @@ Usage
 -----
 
 For creating the PDF templates, Silver uses the built-in templating engine of
-Django (https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language). 
+Django <https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language>. 
 The template variables that are available in the context of the template are:
 
-    * `name`
-    * `unit`
-    * `subscription`
-    * `plan`
-    * `provider`
-    * `customer`
-    * `product_code`
-    * `start_date`
-    * `end_date`
-    * `prorated`
-    * `proration_percentage`
-    * `metered_feature`
-    * `context`
+    * ``name``
+    * ``unit``
+    * ``subscription``
+    * ``plan``
+    * ``provider``
+    * ``customer``
+    * ``product_code``
+    * ``start_date``
+    * ``end_date``
+    * ``prorated``
+    * ``proration_percentage``
+    * ``metered_feature``
+    * ``context``
 
-For the API reference, [check the wiki](../wiki)
+For the API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
+
+For specifying the storage used add the ``SILVER_DOCUMENT_STORAGE`` setting to 
+your settings.py. Example (for storing the PDFs on S3):
+
+.. code-block:: python
+
+    SILVER_DOCUMENT_STORAGE = (
+        'storages.backends.s3boto.S3BotoStorage', [], {
+            'bucket': 'THE-AWS-BUCKET',
+            'access_key': 'YOUR-AWS-ACCESS-KEY',
+            'secret_key': 'YOUR-AWS-SECRET-KEY',
+            'acl': 'private',
+            'calling_format': 'boto.s3.connection.OrdinaryCallingFormat'
+        }
+    )
+
 
 TODO: Describe usage or point to docs. Also describe available settings and
 templatetags.
