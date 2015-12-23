@@ -49,6 +49,27 @@ Don't forget to migrate your database
 Usage
 -----
 
+For creating the PDF templates, Silver uses the [built-in templating engine of
+Django] (https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language). 
+The template variables that are available in the context of the template are:
+* `name`
+* `unit`
+* `subscription`
+* `plan`
+* `provider`
+* `customer`
+* `product_code`
+* `start_date`
+* `end_date`
+* `prorated`
+* `proration_percentage`
+* `metered_feature`
+* `context`
+
+
+
+For the API reference, [check the wiki](https://github.com/PressLabs/silver/wiki)
+
 TODO: Describe usage or point to docs. Also describe available settings and
 templatetags.
 
@@ -56,18 +77,13 @@ templatetags.
 Contribute
 ----------
 
-If you want to contribute to this project, please perform the following steps
+Development of gitfs happens at http://github.com/PressLabs/silver.
 
-.. code-block:: bash
+Issues are tracked at http://github.com/PressLabs/silver/issues.
 
-    # Fork this repository
-    # Clone your fork
-    mkvirtualenv -p python2.7 django-silver
-    make develop
+Python package can be found at https://pypi.python.org/pypi/django-silver/.
 
-    git co -b feature_branch master
-    # Implement your feature and tests
-    git add . && git commit
-    git push -u origin feature_branch
-    # Send us a pull request for your feature branch
+You are highly encouraged to contribute with code, tests, documentation or just
+sharing experience.
 
+Please see [CONTRIBUTING.md](CONTRIBUTING.md).
