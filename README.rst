@@ -13,6 +13,7 @@ To get the latest stable release from PyPi
 
 .. code-block:: bash
 
+    sudo apt-get build-dep python-imaging
     pip install django-silver
 
 To get the latest commit from GitHub
