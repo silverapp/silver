@@ -100,6 +100,18 @@ To add REST hooks to Silver you can install and configure the following packages
     * <https://github.com/PressLabs/django-rest-hooks-delivery>
 
 
+Getting Started
+---------------
+
+1. Create your profile as a service provider.
+2. Add your pricing plans to the mix.
+3. Import/add your customer list.
+4. Create subscriptions for your customers.
+5. Create your custom templates using HTML/CSS or use the ones already provided.
+6. Setup cron job for generating the invoices automatically.
+7. Enjoy. Silver will automatically generate the invoices or proforma invoices based on your providers' configuration
+
+
 Contribute
 ----------
 
