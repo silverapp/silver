@@ -84,6 +84,17 @@ your settings file. Example for storing the PDFs on S3:
         }
     )
 
+Other available settings:
+
+    * ``SILVER_DEFAULT_DUE_DAYS`` - the default number of until an invoice is due for payment.
+    * ``SILVER_DOCUMENT_PREFIX`` - it gets prepended to the path of the saved files.
+      The default path of the documents is ``{prefix}{company}/{doc_type}/{date}/{filename}``
+
+
+To add REST hooks to Silver install and configure the following packages:
+    * <https://github.com/PressLabs/django-rest-hooks-ng>
+    * <https://github.com/PressLabs/django-rest-hooks-delivery>
+
 
 Contribute
 ----------
