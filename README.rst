@@ -49,8 +49,8 @@ Don't forget to migrate your database
 Usage
 -----
 
-For creating the PDF templates, Silver uses the [built-in templating engine of
-Django] (https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language). 
+For creating the PDF templates, Silver uses the built-in templating engine of
+Django (https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language). 
 The template variables that are available in the context of the template are:
 
     * `name`
@@ -67,7 +67,7 @@ The template variables that are available in the context of the template are:
     * `metered_feature`
     * `context`
 
-For the API reference, [check the wiki](https://github.com/PressLabs/silver/wiki)
+For the API reference, [check the wiki](../wiki)
 
 TODO: Describe usage or point to docs. Also describe available settings and
 templatetags.
