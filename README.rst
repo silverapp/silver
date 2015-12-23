@@ -49,6 +49,8 @@ Don't forget to migrate your database
 Usage
 -----
 
+For the complete API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
+
 For creating the PDF templates, Silver uses the built-in templating engine of
 Django <https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language>. 
 The template variables that are available in the context of the template are:
@@ -66,8 +68,6 @@ The template variables that are available in the context of the template are:
     * ``proration_percentage``
     * ``metered_feature``
     * ``context``
-
-For the complete API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
 
 For specifying the storage used add the ``SILVER_DOCUMENT_STORAGE`` setting to 
 your settings file. Example for storing the PDFs on S3:
