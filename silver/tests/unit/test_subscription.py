@@ -355,14 +355,6 @@ class TestSubscription(TestCase):
             end_date = datetime.date(year=2016, month=12, day=31)
             assert end_date == subscription.current_end_date
 
-    def test_subscription_activate_transition(self):
-        # TODO implement
-        assert True
-
-    def test_subscription_cancel_transition(self):
-        # TODO implement
-        assert True
-
 
 class TestSubscriptionShouldBeBilled(TestCase):
     """

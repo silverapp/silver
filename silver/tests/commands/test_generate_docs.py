@@ -1288,27 +1288,6 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = consumed_mfs * metered_feature.price_per_unit
         assert proforma.total == consumed_mfs_value
 
-    def test_cancel_now_during_trial(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_during_trial(self):
-        assert True
-
-    def test_cancel_now_during_trial_spanning_over_multiple_months(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_during_trial_spanning_over_multiple_months(self):
-        assert True
-
-    def test_cancel_now_right_after_trial_in_same_month_as_trial_start(self):
-        assert True
-
-    def test_cancel_now_normal_subscription(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_normal_subscription(self):
-        assert True
-
     ###########################################################################
     # Canceled
     ###########################################################################
