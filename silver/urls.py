@@ -29,4 +29,4 @@ urlpatterns = patterns(
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
 
-) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+) 

@@ -19,7 +19,7 @@ These settings are used by the ``manage.py`` command.
 """
 import os
 
-DEBUG = True
+DEBUG = False
 
 SITE_ID = 1
 
