@@ -13,6 +13,6 @@ lint-python:
 	@echo ""
 
 test:
-	@DJANGO_SETTINGS_MODULE=settings_dev PYTHONPATH=`pwd` py.test -s 
+	@DJANGO_SETTINGS_MODULE=settings PYTHONPATH=`pwd` py.test -s 
 
 .PHONY: develop setup-git lint-python test

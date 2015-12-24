@@ -1,3 +1,18 @@
+# Copyright (c) 2015 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import datetime as dt
 from decimal import Decimal
 
@@ -1272,27 +1287,6 @@ class TestInvoiceGenerationCommand(TestCase):
                     for entry in proforma.proforma_entries.all()])
         consumed_mfs_value = consumed_mfs * metered_feature.price_per_unit
         assert proforma.total == consumed_mfs_value
-
-    def test_cancel_now_during_trial(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_during_trial(self):
-        assert True
-
-    def test_cancel_now_during_trial_spanning_over_multiple_months(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_during_trial_spanning_over_multiple_months(self):
-        assert True
-
-    def test_cancel_now_right_after_trial_in_same_month_as_trial_start(self):
-        assert True
-
-    def test_cancel_now_normal_subscription(self):
-        assert True
-
-    def test_cancel_at_end_of_billing_cycle_normal_subscription(self):
-        assert True
 
     ###########################################################################
     # Canceled
