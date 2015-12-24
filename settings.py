@@ -52,8 +52,7 @@ EXTERNAL_APPS = [
     'django_xhtml2pdf',
 
     # Dev tools
-    'django_extensions',
-    'rest_framework_swagger',
+    #'django_extensions',
 ]
 
 INTERNAL_APPS = [
