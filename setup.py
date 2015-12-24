@@ -48,10 +48,22 @@ from setuptools import setup, find_packages
 import silver as app
 
 
-install_requires  = [
-    line.strip() 
-    for line in open("requirements/common.txt").readlines()
-    if not line.startswith('#')
+install_requires = [
+    'django==1.8.3',
+    'djangorestframework==3.1.3',
+    'django-international==0.0.6',
+    'django-fsm==2.2.1',
+    'django-filter==0.10.0',
+    'djangorestframework-bulk==0.2.1',
+    'django-livefield==2.2.0',
+    'django-jsonfield==0.9.15',
+    'python-dateutil==2.4.2',
+    'django-model-utils==2.3.1',
+    'pytz==2015.4',
+    'xhtml2pdf==0.0.6',
+    'django-xhtml2pdf==0.0.3',
+    'pyvat==1.3.1',
+    'PyPDF2==1.25.1'
 ]
 
 def read(fname):
