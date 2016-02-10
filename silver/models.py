@@ -1393,7 +1393,7 @@ class BillingLog(models.Model):
         ordering = ['-billing_date']
 
     def __unicode__(self):
-        return '{sub} - {pro} - {inv} - {date}'.format(
+        return u'{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)
 
