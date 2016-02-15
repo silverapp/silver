@@ -49,7 +49,7 @@ import silver as app
 
 
 install_requires = [
-    'django==1.8.3',
+    'django==1.8.9',
     'djangorestframework==3.1.3',
     'django-international==0.0.6',
     'django-fsm==2.2.1',
