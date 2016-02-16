@@ -1479,7 +1479,7 @@ class Customer(AbstractBillingEntity):
 
     def __init__(self, *args, **kwargs):
         super(Customer, self).__init__(*args, **kwargs)
-        company_field = self._meta.get_field_by_name("company")[0]
+        company_field = self._meta.get_field("company")
         company_field.help_text = "The company to which the bill is issued."
 
     def clean(self):
@@ -1564,7 +1564,7 @@ class Provider(AbstractBillingEntity):
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
-        company_field = self._meta.get_field_by_name("company")[0]
+        company_field = self._meta.get_field("company")
         company_field.help_text = "The provider issuing the invoice."
 
     def clean(self):
@@ -1944,10 +1944,10 @@ class Invoice(BillingDocument):
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
 
-        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field = self._meta.get_field("provider")
         provider_field.related_name = "invoices"
 
-        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field = self._meta.get_field("customer")
         customer_field.related_name = "invoices"
 
     @transition(field='state', source=BillingDocument.STATES.DRAFT,
@@ -2035,10 +2035,10 @@ class Proforma(BillingDocument):
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
 
-        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field = self._meta.get_field("provider")
         provider_field.related_name = "proformas"
 
-        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field = self._meta.get_field("customer")
         customer_field.related_name = "proformas"
 
     def clean(self):
