@@ -104,10 +104,7 @@ MIDDLEWARE_CLASSES = (
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination',
-    'PAGINATE_BY': 30,
-    'PAGINATE_BY_PARAM': 'per_page',
-    'MAX_PAGINATE_BY': 100,
+    'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination'
 }
 
 from silver import HOOK_EVENTS as _HOOK_EVENTS
