@@ -146,14 +146,14 @@ class SubscriptionDetail(generics.RetrieveUpdateAPIView):
         sub = get_object_or_404(Subscription.objects,
                                 pk=self.kwargs.get('subscription_pk', None))
         state = sub.state
-        meta = request.DATA.pop('meta', None)
-        if request.DATA:
+        meta = request.data.pop('meta', None)
+        if request.data:
             message = "Cannot update a subscription when it's in %s state." \
                       % state
             return Response({"detail": message},
                             status=status.HTTP_400_BAD_REQUEST)
-        request.DATA.clear()
-        request.DATA.update({'meta': meta} if meta else {})
+        request.data.clear()
+        request.data.update({'meta': meta} if meta else {})
         return super(SubscriptionDetail, self).patch(request,
                                                      *args, **kwargs)
 
@@ -481,7 +481,7 @@ class DocEntryCreate(generics.CreateAPIView):
                                             model_lower=model_name.lower())
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = DocumentEntrySerializer(data=request.DATA,
+        serializer = DocumentEntrySerializer(data=request.data,
                                              context={'request': request})
 
         if serializer.is_valid(raise_exception=True):
@@ -528,7 +528,7 @@ class DocEntryUpdateDestroy(APIView):
         searched_fields = {model_name.lower(): document, 'pk': entry_pk}
         entry = get_object_or_404(DocumentEntry, **searched_fields)
 
-        serializer = DocumentEntrySerializer(entry, data=request.DATA,
+        serializer = DocumentEntrySerializer(entry, data=request.data,
                                              context={'request': request})
 
         if serializer.is_valid(raise_exception=True):
@@ -594,15 +594,15 @@ class InvoiceStateHandler(APIView):
             return Response({"detail": "Invoice not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        state = request.DATA.get('state', None)
+        state = request.data.get('state', None)
         if state == Invoice.STATES.ISSUED:
             if invoice.state != Invoice.STATES.DRAFT:
                 msg = "An invoice can be issued only if it is in draft state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            issue_date = request.DATA.get('issue_date', None)
-            due_date = request.DATA.get('due_date', None)
+            issue_date = request.data.get('issue_date', None)
+            due_date = request.data.get('due_date', None)
             invoice.issue(issue_date, due_date)
             invoice.save()
         elif state == Invoice.STATES.PAID:
@@ -611,7 +611,7 @@ class InvoiceStateHandler(APIView):
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            paid_date = request.DATA.get('paid_date', None)
+            paid_date = request.data.get('paid_date', None)
             invoice.pay(paid_date)
             invoice.save()
         elif state == Invoice.STATES.CANCELED:
@@ -621,7 +621,7 @@ class InvoiceStateHandler(APIView):
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            cancel_date = request.DATA.get('cancel_date', None)
+            cancel_date = request.data.get('cancel_date', None)
             invoice.cancel(cancel_date)
             invoice.save()
         elif not state:
@@ -730,15 +730,15 @@ class ProformaStateHandler(APIView):
             return Response({"detail": "Proforma not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        state = request.DATA.get('state', None)
+        state = request.data.get('state', None)
         if state == Proforma.STATES.ISSUED:
             if proforma.state != Proforma.STATES.DRAFT:
                 msg = "A proforma can be issued only if it is in draft state."
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            issue_date = request.DATA.get('issue_date', None)
-            due_date = request.DATA.get('due_date', None)
+            issue_date = request.data.get('issue_date', None)
+            due_date = request.data.get('due_date', None)
             proforma.issue(issue_date, due_date)
             proforma.save()
         elif state == Proforma.STATES.PAID:
@@ -747,7 +747,7 @@ class ProformaStateHandler(APIView):
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            paid_date = request.DATA.get('paid_date', None)
+            paid_date = request.data.get('paid_date', None)
             proforma.pay(paid_date)
             proforma.save()
         elif state == Proforma.STATES.CANCELED:
@@ -757,7 +757,7 @@ class ProformaStateHandler(APIView):
                 return Response({"detail": msg},
                                 status=status.HTTP_403_FORBIDDEN)
 
-            cancel_date = request.DATA.get('cancel_date', None)
+            cancel_date = request.data.get('cancel_date', None)
             proforma.cancel(cancel_date)
             proforma.save()
         elif not state:
