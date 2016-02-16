@@ -22,11 +22,9 @@ from django.conf.urls.static import static
 
 admin.autodiscover()
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
-    url(r'', include('silver.api.urls')),
-
-) 
+    url(r'', include('silver.api.urls'))
+]
