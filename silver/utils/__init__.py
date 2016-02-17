@@ -13,5 +13,4 @@
 # limitations under the License.
 
 
-from .django_utils import get_object_or_None
 from .date_utils import next_month, prev_month

@@ -39,13 +39,14 @@ from django.template import TemplateDoesNotExist
 from django.template.loader import (select_template, get_template,
                                     render_to_string)
 from django.core.urlresolvers import reverse
+from annoying.functions import get_object_or_None
 from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
-from silver.utils import get_object_or_None, next_month, prev_month
+from silver.utils import next_month, prev_month
 
 logger = logging.getLogger(__name__)
 
