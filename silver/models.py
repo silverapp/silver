@@ -41,7 +41,6 @@ from django.template.loader import (select_template, get_template,
 from django.core.urlresolvers import reverse
 from international.models import countries, currencies
 from livefield.models import LiveModel
-from dateutil.relativedelta import *
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 from model_utils import Choices
