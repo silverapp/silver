@@ -46,7 +46,7 @@ from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
-from silver.utils import get_object_or_None
+from silver.utils import get_object_or_None, next_month, prev_month
 
 logger = logging.getLogger(__name__)
 
@@ -803,7 +803,7 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             if not self.trial_end:  # has no trial
                 if billing_date.month in [self.start_date.month,
-                                          self.start_date.month + 1]:
+                                          next_month(self.start_date)]:
                     self._log_value_state('first time, without trial')
 
                     # The same month or the next one as the start_date
@@ -829,7 +829,7 @@ class Subscription(models.Model):
                                       end_date=end_date,
                                       invoice=invoice, proforma=proforma)
 
-                    if billing_date.month == self.start_date.month + 1:
+                    if billing_date.month == next_month(self.start_date):
                         # If it gets here => a new subscription, with no trial
                         # and the customer has other subscriptions => it's
                         # an old customer.
@@ -908,7 +908,7 @@ class Subscription(models.Model):
                                             end_date=end_date,
                                             invoice=invoice, proforma=proforma)
 
-                        if billing_date.month == self.start_date.month + 1:
+                        if billing_date.month == next_month(self.start_date):
                             # It's the next month after the subscription start
                             # and there was a prorated period between trial_end ->
                             # end_of_month => add the consumed metered features
@@ -918,7 +918,7 @@ class Subscription(models.Model):
                                           invoice=invoice, proforma=proforma)
 
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == self.start_date.month + 1
+                    billing_date.month == next_month(self.start_date)
                 ):
                     # It's billed next month after the start date and it is
                     # still active => add the prorated value for the next month
@@ -930,7 +930,7 @@ class Subscription(models.Model):
             last_billing_date = self.last_billing_date
             if (self.trial_end and
                 (self.trial_end.month == billing_date.month or
-                 self.trial_end.month == billing_date.month - 1) and
+                 self.trial_end.month == prev_month(billing_date)) and
                 last_billing_date < self.trial_end
             ):
                 self._log_value_state('billed before, with trial')
@@ -985,7 +985,7 @@ class Subscription(models.Model):
                         self._add_plan_value(start_date=bsd, end_date=bed,
                                              invoice=invoice, proforma=proforma)
 
-                        if billing_date.month == first_day_after_trial.month + 1:
+                        if billing_date.month == next_month(first_day_after_trial):
                             # If there was a period of paid subscription between
                             # trial_end -> last_month_end=> add the consumed mfs
                             # for that period.
@@ -998,7 +998,7 @@ class Subscription(models.Model):
                 # next month after the trial end => add the value of the
                 # subscription for the next month
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == self.trial_end.month + 1
+                    billing_date.month == next_month(self.trial_end)
                 ):
                     # It's the next month after the trial end => add the value
                     # for the month ahead
