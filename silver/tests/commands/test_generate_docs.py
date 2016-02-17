@@ -20,6 +20,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.six import StringIO
 from mock import patch, PropertyMock, MagicMock
+from annoying.functions import get_object_or_None
 
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
                            Customer, Plan)
@@ -27,8 +28,6 @@ from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
                                     CustomerFactory, ProviderFactory)
-
-from silver.utils import get_object_or_None
 
 
 class TestInvoiceGenerationCommand(TestCase):

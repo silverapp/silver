@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
+from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
@@ -40,7 +41,7 @@ from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
 from silver.documents_generator import DocumentsGenerator
-from silver.utils import get_object_or_None
+
 
 logger = logging.getLogger(__name__)
 
