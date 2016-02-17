@@ -19,6 +19,10 @@ from rest_framework.utils.urls import replace_query_param, remove_query_param
 
 
 class LinkHeaderPagination(PageNumberPagination):
+    page_size = 30
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
     def get_last_link(self):
         url = self.request.build_absolute_uri()
         page_number = self.page.paginator.num_pages
