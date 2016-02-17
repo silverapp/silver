@@ -12,6 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dateutil.relativedelta import *
 
-from .django_utils import get_object_or_None
-from .date_utils import next_month, prev_month
+ONE_MONTH = relativedelta(months=1)
+
+
+def next_month(date):
+    return (date + ONE_MONTH).month
+
+
+def prev_month(date):
+    return (date - ONE_MONTH).month
