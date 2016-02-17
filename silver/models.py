@@ -165,7 +165,7 @@ class Plan(models.Model):
             product_codes[mf.product_code.value] = mf.name
 
     def __unicode__(self):
-        return self.name
+        return unicode(self.name)
 
     @property
     def provider_flow(self):
@@ -260,7 +260,7 @@ class MeteredFeatureUnitsLog(models.Model):
                 update_fields=update_fields)
 
     def __unicode__(self):
-        return self.metered_feature.name
+        return unicode(self.metered_feature.name)
 
 
 class Subscription(models.Model):
@@ -1634,7 +1634,7 @@ class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
     def __unicode__(self):
-        return self.value
+        return unicode(self.value)
 
 
 class BillingDocument(models.Model):
