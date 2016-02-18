@@ -1,4 +1,4 @@
-django==1.9.2
+django==1.8.9
 djangorestframework==3.3.2
 django-international==0.0.6
 django-fsm==2.3.0
