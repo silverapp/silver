@@ -1,3 +1,7 @@
+# DON'T place inline comments with actual requirements
+# dependency==x.x  # we really need this
+# DON'T do it the file will be parsed on deploy
+
 django==1.9.2
 djangorestframework==3.3.2
 django-international==0.0.6
