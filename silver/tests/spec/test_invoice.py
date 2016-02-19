@@ -24,11 +24,10 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from annoying.functions import get_object_or_None
 
-from silver.models import Invoice, DocumentEntry
+from silver.models import Invoice
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
-                                    SubscriptionFactory, ProformaFactory,
-                                    DocumentEntryFactory)
+                                    SubscriptionFactory)
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
