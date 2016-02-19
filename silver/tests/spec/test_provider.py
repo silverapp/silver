@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2015 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,8 +37,8 @@ class TestProviderEndpoints(APITestCase):
     def test_post_valid_provider(self):
         url = reverse('provider-list')
         data = {
-            "name": "TestProvider",
-            "company": "S.C. Timisoara S.R.L",
+            "name": "TestProviderá",
+            "company": "S.C. Timisoará S.R.L",
             "address_1": "Address",
             "country": "RO",
             "city": "Timisoara",
@@ -54,8 +55,8 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': u'TestProvider',
-            'company': u'S.C. Timisoara S.R.L',
+            'name': u'TestProviderá',
+            'company': u'S.C. Timisoará S.R.L',
             'email': None,
             'address_1': u'Address',
             'address_2': None,
@@ -142,6 +143,7 @@ class TestProviderEndpoints(APITestCase):
              '<' + full_url + '?page=2; rel="last">')
 
         response = self.client.get(url + '?page=2')
+        
 
         assert response.status_code == status.HTTP_200_OK
         assert response._headers['link'] == \
@@ -159,15 +161,16 @@ class TestProviderEndpoints(APITestCase):
             serialized_providers.append(item['fields'])
 
         url = reverse('provider-list')
-        response = self.client.post(url, data=json.dumps(serialized_providers),
+        response = self.client.post(url, data=json.dumps(serialized_providers, ensure_ascii=True).encode('utf8'),
                                     content_type='application/json')
 
+        import ipdb; ipdb.set_trace()
         assert response.status_code == status.HTTP_201_CREATED
         assert len(response.data) == 5
 
     def test_get_provider(self):
         ProviderFactory.reset_sequence(1)
-        ProviderFactory.create()
+        provider = ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
 
@@ -177,23 +180,24 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'Name1',
-            'company': 'Company1',
-            'flow': 'proforma',
-            'invoice_series': 'InvoiceSeries',
-            'invoice_starting_number': 1,
-            'proforma_series': 'ProformaSeries',
-            'proforma_starting_number': 1,
-            'email': 'some1@email.com',
-            'address_1': 'Address11',
-            'address_2': 'Address21',
-            'city': 'City1',
-            'state': 'State1',
-            'zip_code': '1',
-            'country': u'AL',
-            'extra': 'Extra1',
+            'name': provider.name,
+            'company': provider.company,
+            'flow': provider.flow,
+            'invoice_series': provider.invoice_series,
+            'invoice_starting_number': provider.invoice_starting_number,
+            'proforma_series': provider.proforma_series,
+            'proforma_starting_number': provider.proforma_starting_number,
+            'email': provider.email,
+            'address_1': provider.address_1,
+            'address_2': provider.address_2,
+            'city': provider.city,
+            'state': provider.state,
+            'zip_code': provider.zip_code,
+            'country': provider.country,
+            'extra': provider.extra,
             'meta': {u'something': [1, 2]}
         }
+
 
     def test_get_unexisting_provider(self):
         url = reverse('provider-detail', kwargs={'pk': 1})
@@ -305,14 +309,14 @@ class TestProviderEndpoints(APITestCase):
         assert response.data == {
             'id': 1,
             'url': 'http://testserver/providers/1/',
-            'name': 'Name1',
-            'company': 'TheNewCompany',
+            'name': u'Náme1',
+            'company': u'TheNewCompany',
             'flow': 'proforma',
             'invoice_series': 'InvoiceSeries',
             'invoice_starting_number': 1,
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
-            'email': 'some1@email.com',
+            'email': u'some1@email.com',
             'address_1': 'Address11',
             'address_2': 'Address21',
             'city': 'City1',
