@@ -20,6 +20,8 @@ from collections import OrderedDict
 
 import requests
 from django import forms
+from django.contrib.admin.models import LogEntry, CHANGE
+from django.contrib.contenttypes.models import ContentType
 from django.db import connections
 from django.contrib import admin, messages
 from django.utils.html import escape
@@ -530,6 +532,17 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 if result:
                     results.append(result)
                 entry.save()
+
+                LogEntry.objects.log_action(
+                    user_id=request.user.id,
+                    content_type_id=ContentType.objects.get_for_model(entry).pk,
+                    object_id=entry.id,
+                    object_repr=unicode(entry),
+                    action_flag=CHANGE,
+                    change_message='{action} action initiated by user.'.format(
+                        action=action.capitalize().replace('_', ' ')
+                    )
+                )
             except TransitionNotAllowed:
                 exist_failed_changes = True
                 failed_changes.append(entry.number)
