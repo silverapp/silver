@@ -174,7 +174,6 @@ class TestProviderEndpoints(APITestCase):
         url = reverse('provider-detail', kwargs={'pk': 1})
 
         response = self.client.get(url)
-        import ipdb; ipdb.set_trace()
 
         assert response.status_code == 200
         expected = {
