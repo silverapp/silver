@@ -164,7 +164,6 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(serialized_providers, ensure_ascii=True).encode('utf8'),
                                     content_type='application/json')
 
-        import ipdb; ipdb.set_trace()
         assert response.status_code == status.HTTP_201_CREATED
         assert len(response.data) == 5
 
@@ -175,9 +174,10 @@ class TestProviderEndpoints(APITestCase):
         url = reverse('provider-detail', kwargs={'pk': 1})
 
         response = self.client.get(url)
+        import ipdb; ipdb.set_trace()
 
         assert response.status_code == 200
-        assert response.data == {
+        expected = {
             'id': 1,
             'url': 'http://testserver/providers/1/',
             'name': provider.name,
@@ -197,6 +197,7 @@ class TestProviderEndpoints(APITestCase):
             'extra': provider.extra,
             'meta': {u'something': [1, 2]}
         }
+        assert response.data == expected
 
 
     def test_get_unexisting_provider(self):
@@ -239,7 +240,7 @@ class TestProviderEndpoints(APITestCase):
             'flow': 'proforma',
             'email': 'a@a.com',
             'address_1': 'address',
-            'address_2': 'Address21',
+            'address_2': u'Addåress21',
             'city': 'City',
             'state': 'State1',
             'zip_code': '1',
@@ -316,9 +317,9 @@ class TestProviderEndpoints(APITestCase):
             'invoice_starting_number': 1,
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
-            'email': u'some1@email.com',
+            'email': 'some1@email.com',
             'address_1': 'Address11',
-            'address_2': 'Address21',
+            'address_2': u'Addåress21',
             'city': 'City1',
             'state': 'State1',
             'zip_code': '1',
