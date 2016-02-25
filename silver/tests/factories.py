@@ -169,7 +169,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
         if extracted:
             # A list of groups were passed in, use them
             for invoice_entry in extracted:
-                self.proforma_entries.add(invoice_entry)
+                self.invoice_entries.add(invoice_entry)
 
 
 class ProformaFactory(factory.django.DjangoModelFactory):
