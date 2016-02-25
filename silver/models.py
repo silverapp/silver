@@ -1992,21 +1992,21 @@ class Invoice(BillingDocument):
     def total(self):
         entries_total = [Decimal(item.total)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        res = sum(entries_total)
         return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
@@ -2141,21 +2141,21 @@ class Proforma(BillingDocument):
     def total(self):
         entries_total = [Decimal(item.total)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
@@ -2198,12 +2198,12 @@ class DocumentEntry(models.Model):
     @property
     def total(self):
         res = self.total_before_tax + self.tax_value
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     @property
     def total_before_tax(self):
         res = Decimal(self.quantity * self.unit_price)
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     @property
     def tax_value(self):
@@ -2218,7 +2218,7 @@ class DocumentEntry(models.Model):
             return Decimal(0)
 
         res = Decimal(self.total_before_tax * sales_tax_percent / 100)
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     def __unicode__(self):
         s = u'{descr} - {unit} - {unit_price} - {quantity} - {product_code}'
