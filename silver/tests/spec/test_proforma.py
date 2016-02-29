@@ -58,7 +58,7 @@ class TestProformaEndpoints(APITestCase):
         assert response.data == {
             "id": 1,
             "series": "ProformaSeries",
-            "number": 1,
+            "number": None,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
             "archived_provider": {},

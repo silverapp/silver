@@ -58,7 +58,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data == {
             "id": 1,
             "series": "InvoiceSeries",
-            "number": 1,
+            "number": None,
             "provider": "http://testserver/providers/1/",
             "customer": "http://testserver/customers/1/",
             "archived_provider": {},
