@@ -1614,9 +1614,7 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                   provider=provider):
                 # update the series for draft invoices
                 invoice.series = instance.invoice_series
-                invoice.number = invoice._generate_number(
-                    instance.invoice_starting_number
-                )
+                invoice.number = None
                 invoice.save()
 
         if instance.proforma_series != old_proforma_series:
@@ -1624,9 +1622,7 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                     provider=provider):
                 # update the series for draft invoices
                 proforma.series = instance.proforma_series
-                proforma.number = proforma._generate_number(
-                    instance.proforma_starting_number
-                )
+                proforma.number = None
                 proforma.save()
 
 
@@ -1784,7 +1780,7 @@ class BillingDocument(models.Model):
             self.series = self.default_series
 
         # Generate the number
-        if not self.number:
+        if not self.number and self.state != BillingDocument.STATES.DRAFT:
             self.number = self._generate_number()
 
         # Add tax info
