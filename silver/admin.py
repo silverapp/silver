@@ -196,6 +196,17 @@ class SubscriptionAdmin(ModelAdmin):
             try:
                 method(entry)
                 entry.save()
+
+                LogEntry.objects.log_action(
+                    user_id=request.user.id,
+                    content_type_id=ContentType.objects.get_for_model(entry).pk,
+                    object_id=entry.id,
+                    object_repr=unicode(entry),
+                    action_flag=CHANGE,
+                    change_message='{action} action initiated by user.'.format(
+                        action=action.replace('_', ' ').strip().capitalize()
+                    )
+                )
             except TransitionNotAllowed:
                 failed_count += 1
         if failed_count:
@@ -540,7 +551,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     object_repr=unicode(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
-                        action=action.capitalize().replace('_', ' ')
+                        action=action.replace('_', ' ').strip().capitalize()
                     )
                 )
             except TransitionNotAllowed:
