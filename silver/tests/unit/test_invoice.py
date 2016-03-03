@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from decimal import Decimal
+
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Proforma, Invoice
@@ -88,3 +90,36 @@ class TestInvoice(TestCase):
         proforma.invoice.save()
 
         assert proforma.invoice.state == proforma.state == Invoice.STATES.CANCELED
+
+    def _get_decimal_places(self, number):
+        return max(0, -number.as_tuple().exponent)
+
+    def test_invoice_total_decimal_points(self):
+        invoice_entries = DocumentEntryFactory.create_batch(3)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
+
+        assert self._get_decimal_places(invoice.total) == 2
+
+    def test_invoice_total_before_tax_decimal_places(self):
+        invoice_entries = DocumentEntryFactory.create_batch(3)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
+
+        invoice.sales_tax_percent = Decimal('20.00')
+
+        assert self._get_decimal_places(invoice.total_before_tax) == 2
+
+    def test_invoice_tax_value_decimal_places(self):
+        invoice_entries = DocumentEntryFactory.create_batch(3)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
+
+        invoice.sales_tax_percent = Decimal('20.00')
+
+        assert self._get_decimal_places(invoice.tax_value) == 2
+
+    def test_invoice_total_with_tax_integrity(self):
+        invoice_entries = DocumentEntryFactory.create_batch(5)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
+
+        invoice.sales_tax_percent = Decimal('20.00')
+
+        assert invoice.total == invoice.total_before_tax + invoice.tax_value
