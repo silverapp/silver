@@ -40,7 +40,6 @@ from silver.api.serializers import (MFUnitsLogSerializer,
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter)
-from silver.documents_generator import DocumentsGenerator
 
 
 logger = logging.getLogger(__name__)
