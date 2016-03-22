@@ -39,14 +39,14 @@ from django.template import TemplateDoesNotExist
 from django.template.loader import (select_template, get_template,
                                     render_to_string)
 from django.core.urlresolvers import reverse
+from annoying.functions import get_object_or_None
 from international.models import countries, currencies
 from livefield.models import LiveModel
-from dateutil.relativedelta import *
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
-from silver.utils import get_object_or_None
+from silver.utils import next_month, prev_month
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ class Plan(models.Model):
             product_codes[mf.product_code.value] = mf.name
 
     def __unicode__(self):
-        return self.name
+        return unicode(self.name)
 
     @property
     def provider_flow(self):
@@ -260,7 +260,7 @@ class MeteredFeatureUnitsLog(models.Model):
                 update_fields=update_fields)
 
     def __unicode__(self):
-        return self.metered_feature.name
+        return unicode(self.metered_feature.name)
 
 
 class Subscription(models.Model):
@@ -803,7 +803,7 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             if not self.trial_end:  # has no trial
                 if billing_date.month in [self.start_date.month,
-                                          self.start_date.month + 1]:
+                                          next_month(self.start_date)]:
                     self._log_value_state('first time, without trial')
 
                     # The same month or the next one as the start_date
@@ -829,7 +829,7 @@ class Subscription(models.Model):
                                       end_date=end_date,
                                       invoice=invoice, proforma=proforma)
 
-                    if billing_date.month == self.start_date.month + 1:
+                    if billing_date.month == next_month(self.start_date):
                         # If it gets here => a new subscription, with no trial
                         # and the customer has other subscriptions => it's
                         # an old customer.
@@ -908,7 +908,7 @@ class Subscription(models.Model):
                                             end_date=end_date,
                                             invoice=invoice, proforma=proforma)
 
-                        if billing_date.month == self.start_date.month + 1:
+                        if billing_date.month == next_month(self.start_date):
                             # It's the next month after the subscription start
                             # and there was a prorated period between trial_end ->
                             # end_of_month => add the consumed metered features
@@ -918,7 +918,7 @@ class Subscription(models.Model):
                                           invoice=invoice, proforma=proforma)
 
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == self.start_date.month + 1
+                    billing_date.month == next_month(self.start_date)
                 ):
                     # It's billed next month after the start date and it is
                     # still active => add the prorated value for the next month
@@ -930,7 +930,7 @@ class Subscription(models.Model):
             last_billing_date = self.last_billing_date
             if (self.trial_end and
                 (self.trial_end.month == billing_date.month or
-                 self.trial_end.month == billing_date.month - 1) and
+                 self.trial_end.month == prev_month(billing_date)) and
                 last_billing_date < self.trial_end
             ):
                 self._log_value_state('billed before, with trial')
@@ -985,7 +985,7 @@ class Subscription(models.Model):
                         self._add_plan_value(start_date=bsd, end_date=bed,
                                              invoice=invoice, proforma=proforma)
 
-                        if billing_date.month == first_day_after_trial.month + 1:
+                        if billing_date.month == next_month(first_day_after_trial):
                             # If there was a period of paid subscription between
                             # trial_end -> last_month_end=> add the consumed mfs
                             # for that period.
@@ -998,7 +998,7 @@ class Subscription(models.Model):
                 # next month after the trial end => add the value of the
                 # subscription for the next month
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == self.trial_end.month + 1
+                    billing_date.month == next_month(self.trial_end)
                 ):
                     # It's the next month after the trial end => add the value
                     # for the month ahead
@@ -1393,7 +1393,7 @@ class BillingLog(models.Model):
         ordering = ['-billing_date']
 
     def __unicode__(self):
-        return '{sub} - {pro} - {inv} - {date}'.format(
+        return u'{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)
 
@@ -1479,7 +1479,7 @@ class Customer(AbstractBillingEntity):
 
     def __init__(self, *args, **kwargs):
         super(Customer, self).__init__(*args, **kwargs)
-        company_field = self._meta.get_field_by_name("company")[0]
+        company_field = self._meta.get_field("company")
         company_field.help_text = "The company to which the bill is issued."
 
     def clean(self):
@@ -1564,7 +1564,7 @@ class Provider(AbstractBillingEntity):
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
-        company_field = self._meta.get_field_by_name("company")[0]
+        company_field = self._meta.get_field("company")
         company_field.help_text = "The provider issuing the invoice."
 
     def clean(self):
@@ -1614,9 +1614,7 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                   provider=provider):
                 # update the series for draft invoices
                 invoice.series = instance.invoice_series
-                invoice.number = invoice._generate_number(
-                    instance.invoice_starting_number
-                )
+                invoice.number = None
                 invoice.save()
 
         if instance.proforma_series != old_proforma_series:
@@ -1624,9 +1622,7 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                                                     provider=provider):
                 # update the series for draft invoices
                 proforma.series = instance.proforma_series
-                proforma.number = proforma._generate_number(
-                    instance.proforma_starting_number
-                )
+                proforma.number = None
                 proforma.save()
 
 
@@ -1634,7 +1630,7 @@ class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
     def __unicode__(self):
-        return self.value
+        return unicode(self.value)
 
 
 class BillingDocument(models.Model):
@@ -1784,7 +1780,7 @@ class BillingDocument(models.Model):
             self.series = self.default_series
 
         # Generate the number
-        if not self.number:
+        if not self.number and self.state != BillingDocument.STATES.DRAFT:
             self.number = self._generate_number()
 
         # Add tax info
@@ -1944,10 +1940,10 @@ class Invoice(BillingDocument):
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
 
-        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field = self._meta.get_field("provider")
         provider_field.related_name = "invoices"
 
-        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field = self._meta.get_field("customer")
         customer_field.related_name = "invoices"
 
     @transition(field='state', source=BillingDocument.STATES.DRAFT,
@@ -1992,21 +1988,21 @@ class Invoice(BillingDocument):
     def total(self):
         entries_total = [Decimal(item.total)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.00'))
+        res = sum(entries_total)
         return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.invoice_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
@@ -2035,10 +2031,10 @@ class Proforma(BillingDocument):
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
 
-        provider_field = self._meta.get_field_by_name("provider")[0]
+        provider_field = self._meta.get_field("provider")
         provider_field.related_name = "proformas"
 
-        customer_field = self._meta.get_field_by_name("customer")[0]
+        customer_field = self._meta.get_field("customer")
         customer_field.related_name = "proformas"
 
     def clean(self):
@@ -2141,21 +2137,21 @@ class Proforma(BillingDocument):
     def total(self):
         entries_total = [Decimal(item.total)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(item.total_before_tax)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
     def tax_value(self):
         entries_total = [Decimal(item.tax_value)
                          for item in self.proforma_entries.all()]
-        res = reduce(lambda x, y: x + y, entries_total, Decimal('0.0000'))
+        res = sum(entries_total)
         return res
 
     @property
@@ -2198,12 +2194,12 @@ class DocumentEntry(models.Model):
     @property
     def total(self):
         res = self.total_before_tax + self.tax_value
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     @property
     def total_before_tax(self):
         res = Decimal(self.quantity * self.unit_price)
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     @property
     def tax_value(self):
@@ -2218,7 +2214,7 @@ class DocumentEntry(models.Model):
             return Decimal(0)
 
         res = Decimal(self.total_before_tax * sales_tax_percent / 100)
-        return res.quantize(Decimal('0.0000'))
+        return res.quantize(Decimal('0.00'))
 
     def __unicode__(self):
         s = u'{descr} - {unit} - {unit_price} - {quantity} - {product_code}'

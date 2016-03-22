@@ -17,7 +17,6 @@ import datetime as dt
 import logging
 
 from django.utils import timezone
-from dateutil.relativedelta import *
 
 from silver.models import Customer, Subscription, Provider
 

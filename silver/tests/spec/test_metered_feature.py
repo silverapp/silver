@@ -14,7 +14,6 @@
 
 
 import json
-import urlparse
 import pytest
 
 from rest_framework import status

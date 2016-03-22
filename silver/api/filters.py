@@ -16,7 +16,7 @@
 from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
                             NumberFilter)
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
-                           Plan, Invoice, BillingDocument, Proforma)
+                           Plan, Invoice, Proforma)
 
 
 class MeteredFeaturesFilter(FilterSet):

@@ -8,3 +8,5 @@ docs/_build/
 app_media/
 app_static/
 settings_local.py
+
+*.swp

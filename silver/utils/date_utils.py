@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dateutil.relativedelta import *
 
-from django.shortcuts import _get_queryset
+ONE_MONTH = relativedelta(months=1)
 
 
-def get_object_or_None(model, *args, **kwargs):
-    queryset = _get_queryset(model)
-    try:
-        return queryset.get(*args, **kwargs)
-    except queryset.model.DoesNotExist:
-        return None
+def next_month(date):
+    return (date + ONE_MONTH).month
+
+
+def prev_month(date):
+    return (date - ONE_MONTH).month

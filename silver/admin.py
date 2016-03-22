@@ -20,15 +20,17 @@ from collections import OrderedDict
 
 import requests
 from django import forms
+from django.contrib import messages
+from django.contrib.admin import helpers, site, TabularInline, ModelAdmin
+from django.contrib.admin.actions import delete_selected as delete_selected_
+from django.contrib.admin.models import LogEntry, CHANGE
+from django.contrib.contenttypes.models import ContentType
 from django.db import connections
-from django.contrib import admin, messages
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
-from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
-from django.contrib.admin import helpers
 from django.shortcuts import render
 from django.http import HttpResponse
 from PyPDF2 import PdfFileReader, PdfFileMerger
@@ -57,7 +59,7 @@ def tax(obj):
 tax.admin_order_field = 'sales_tax_percent'
 
 
-class LiveModelAdmin(admin.ModelAdmin):
+class LiveModelAdmin(ModelAdmin):
     def get_queryset(self, request):
         qs = self.model.all_objects.get_queryset()
         ordering = self.get_ordering(request)
@@ -95,7 +97,7 @@ class PlanForm(forms.ModelForm):
         return self.cleaned_data
 
 
-class PlanAdmin(admin.ModelAdmin):
+class PlanAdmin(ModelAdmin):
     list_display = ['name', 'description', 'interval_display',
                     'trial_period_days', 'enabled', 'private']
     search_fields = ['name']
@@ -125,7 +127,7 @@ class PlanAdmin(admin.ModelAdmin):
     description.allow_tags = True
 
 
-class MeteredFeatureUnitsLogInLine(admin.TabularInline):
+class MeteredFeatureUnitsLogInLine(TabularInline):
     model = MeteredFeatureUnitsLog
     list_display = ['metered_feature']
     readonly_fields = ('start_date', 'end_date', )
@@ -147,7 +149,7 @@ class MeteredFeatureUnitsLogInLine(admin.TabularInline):
                                                     **kwargs)
 
 
-class BillingLogInLine(admin.TabularInline):
+class BillingLogInLine(TabularInline):
     model = BillingLog
     fields = ['billing_date', 'proforma_link', 'invoice_link']
     readonly_fields = ['billing_date', 'proforma_link', 'invoice_link']
@@ -171,7 +173,7 @@ class BillingLogInLine(admin.TabularInline):
     proforma_link.allow_tags = True
 
 
-class SubscriptionAdmin(admin.ModelAdmin):
+class SubscriptionAdmin(ModelAdmin):
     list_display = ['customer', 'plan', 'last_billing_date', 'trial_end',
                     'start_date', 'ended_at', 'state', metadata]
     list_filter = ['plan', 'state', 'plan__provider', 'customer']
@@ -194,6 +196,17 @@ class SubscriptionAdmin(admin.ModelAdmin):
             try:
                 method(entry)
                 entry.save()
+
+                LogEntry.objects.log_action(
+                    user_id=request.user.id,
+                    content_type_id=ContentType.objects.get_for_model(entry).pk,
+                    object_id=entry.id,
+                    object_repr=unicode(entry),
+                    action_flag=CHANGE,
+                    change_message='{action} action initiated by user.'.format(
+                        action=action.replace('_', ' ').strip().capitalize()
+                    )
+                )
             except TransitionNotAllowed:
                 failed_count += 1
         if failed_count:
@@ -427,7 +440,7 @@ class DocumentEntryForm(forms.ModelForm):
         }
 
 
-class DocumentEntryInline(admin.TabularInline):
+class DocumentEntryInline(TabularInline):
     model = DocumentEntry
     form = DocumentEntryForm
     extra = 0
@@ -479,7 +492,7 @@ class ProformaForm(BillingDocumentForm):
         fields = ()
 
 
-class BillingDocumentAdmin(admin.ModelAdmin):
+class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', tax, 'total']
@@ -530,6 +543,17 @@ class BillingDocumentAdmin(admin.ModelAdmin):
                 if result:
                     results.append(result)
                 entry.save()
+
+                LogEntry.objects.log_action(
+                    user_id=request.user.id,
+                    content_type_id=ContentType.objects.get_for_model(entry).pk,
+                    object_id=entry.id,
+                    object_repr=unicode(entry),
+                    action_flag=CHANGE,
+                    change_message='{action} action initiated by user.'.format(
+                        action=action.replace('_', ' ').strip().capitalize()
+                    )
+                )
             except TransitionNotAllowed:
                 exist_failed_changes = True
                 failed_changes.append(entry.number)
@@ -756,11 +780,11 @@ class ProformaAdmin(BillingDocumentAdmin):
     related_invoice.short_description = 'Related invoice'
     related_invoice.allow_tags = True
 
-admin.site.register(Plan, PlanAdmin)
-admin.site.register(Subscription, SubscriptionAdmin)
-admin.site.register(Customer, CustomerAdmin)
-admin.site.register(Provider, ProviderAdmin)
-admin.site.register(Invoice, InvoiceAdmin)
-admin.site.register(Proforma, ProformaAdmin)
-admin.site.register(ProductCode)
-admin.site.register(MeteredFeature)
+site.register(Plan, PlanAdmin)
+site.register(Subscription, SubscriptionAdmin)
+site.register(Customer, CustomerAdmin)
+site.register(Provider, ProviderAdmin)
+site.register(Invoice, InvoiceAdmin)
+site.register(Proforma, ProformaAdmin)
+site.register(ProductCode)
+site.register(MeteredFeature)

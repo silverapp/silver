@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*- 
 # Copyright (c) 2015 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,13 +39,13 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
-    email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
-    address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
-    address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
+    company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
+    email = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
+    address_1 = factory.Sequence(lambda n: u'Addrâss1{cnt}'.format(cnt=n))
+    address_2 = factory.Sequence(lambda n: u'Addrãess2{cnt}'.format(cnt=n))
     country = factory.Sequence(lambda n: countries[n % len(countries)][0])
-    city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
+    city = factory.Sequence(lambda n: u'Citŷ{cnt}'.format(cnt=n))
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
@@ -61,7 +62,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = MeteredFeature
 
-    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
     unit = factory.Sequence(lambda n:'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
@@ -74,13 +75,13 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Provider
 
-    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
-    company = factory.Sequence(lambda n: 'Company{cnt}'.format(cnt=n))
-    email = factory.Sequence(lambda n: 'some{cnt}@email.com'.format(cnt=n))
-    address_1 = factory.Sequence(lambda n: 'Address1{cnt}'.format(cnt=n))
-    address_2 = factory.Sequence(lambda n: 'Address2{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
+    company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
+    email = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
+    address_1 = factory.Sequence(lambda n: u'Addãress1{cnt}'.format(cnt=n))
+    address_2 = factory.Sequence(lambda n: u'Addåress2{cnt}'.format(cnt=n))
     country = factory.Sequence(lambda n: countries[n % len(countries)][0])
-    city = factory.Sequence(lambda n: 'City{cnt}'.format(cnt=n))
+    city = factory.Sequence(lambda n: u'Citŷ{cnt}'.format(cnt=n))
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
@@ -97,7 +98,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Plan
 
-    name = factory.Sequence(lambda n: 'Name{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
     interval = Plan.INTERVALS.MONTH
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
@@ -169,7 +170,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
         if extracted:
             # A list of groups were passed in, use them
             for invoice_entry in extracted:
-                self.proforma_entries.add(invoice_entry)
+                self.invoice_entries.add(invoice_entry)
 
 
 class ProformaFactory(factory.django.DjangoModelFactory):

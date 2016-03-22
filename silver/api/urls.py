@@ -18,7 +18,7 @@ from django.conf.urls import patterns, url
 from silver import views as silver_views
 from silver.api import views
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^customers/$',
         views.CustomerList.as_view(), name='customer-list'),
     url(r'^customers/(?P<pk>[0-9]+)/$',
@@ -76,5 +76,5 @@ urlpatterns = patterns('',
     url(r'^proformas/(?P<pk>[0-9]+)/invoice/$',
         views.ProformaInvoiceRetrieveCreate.as_view(), name='proforma-invoice'),
     url(r'^proformas/(?P<proforma_id>\d+).pdf$',
-        silver_views.proforma_pdf, name='proforma-pdf'),
-)
+        silver_views.proforma_pdf, name='proforma-pdf')
+]

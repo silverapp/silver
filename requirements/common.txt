@@ -1,14 +1,19 @@
+# DON'T place inline comments with actual requirements
+# dependency==x.x  # we really need this
+# DON'T do it the file will be parsed on deploy
+
 django==1.8.9
-djangorestframework==3.1.3
+djangorestframework==3.3.2
 django-international==0.0.6
-django-fsm==2.2.1
-django-filter==0.10.0
+django-fsm==2.3.0
+django-filter==0.12.0
 djangorestframework-bulk==0.2.1
-django-livefield==2.2.0
+django-livefield==2.4.0
 django-jsonfield==0.9.15
 python-dateutil==2.4.2
-django-model-utils==2.3.1
-pytz==2015.4
+django-model-utils==2.4
+django-annoying==0.8.7
+pytz==2015.7
 # python-dev is required for xhtml2pdf to work
 xhtml2pdf==0.0.6
 django-xhtml2pdf==0.0.3
