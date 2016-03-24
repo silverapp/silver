@@ -1604,7 +1604,7 @@ class Provider(AbstractBillingEntity):
 
 @receiver(pre_save, sender=Provider)
 def update_draft_billing_documents(sender, instance, **kwargs):
-    if instance.pk:
+    if instance.pk and not kwargs.get('raw', False):
         provider = Provider.objects.get(pk=instance.pk)
         old_invoice_series = provider.invoice_series
         old_proforma_series = provider.proforma_series
