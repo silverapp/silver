@@ -1700,6 +1700,9 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
+        if not self.number:
+            self.number = self._generate_number()
+
         self.archived_customer = self.customer.get_archivable_field_values()
 
         self._save_pdf(state=self.STATES.ISSUED)
