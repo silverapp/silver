@@ -123,3 +123,20 @@ class TestInvoice(TestCase):
         invoice.sales_tax_percent = Decimal('20.00')
 
         assert invoice.total == invoice.total_before_tax + invoice.tax_value
+
+    def test_draft_invoice_series_number(self):
+        invoice = InvoiceFactory.create()
+        invoice.number = None
+
+        assert invoice.series_number == '%s-draft-id:%d' % (invoice.series,
+                                                            invoice.pk)
+
+        invoice.series = None
+
+        assert invoice.series_number == 'draft-id:%d' % invoice.pk
+
+    def test_issues_invoice_series_number(self):
+        invoice = InvoiceFactory.create()
+
+        assert invoice.series_number == '%s-%s' % (invoice.series,
+                                                   invoice.number)
