@@ -121,3 +121,20 @@ class TestProforma(TestCase):
         proforma.sales_tax_percent = Decimal('20.00')
 
         assert proforma.total == proforma.total_before_tax + proforma.tax_value
+
+    def test_draft_proforma_series_number(self):
+        proforma = ProformaFactory.create()
+        proforma.number = None
+
+        assert proforma.series_number == '%s-draft-id:%d' % (proforma.series,
+                                                             proforma.pk)
+
+        proforma.series = None
+
+        assert proforma.series_number == 'draft-id:%d' % proforma.pk
+
+    def test_issues_proforma_series_number(self):
+        proforma = ProformaFactory.create()
+
+        assert proforma.series_number == '%s-%s' % (proforma.series,
+                                                    proforma.number)

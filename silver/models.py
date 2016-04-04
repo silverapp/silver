@@ -1700,6 +1700,9 @@ class BillingDocument(models.Model):
         if not self.sales_tax_percent:
             self.sales_tax_percent = self.customer.sales_tax_percent
 
+        if not self.number:
+            self.number = self._generate_number()
+
         self.archived_customer = self.customer.get_archivable_field_values()
 
         self._save_pdf(state=self.STATES.ISSUED)
@@ -1819,17 +1822,23 @@ class BillingDocument(models.Model):
                 return default_starting_number
 
     def series_number(self):
-        if self.series and self.number:
-            return "%s-%d" % (self.series, self.number)
-        return None
+        if self.series:
+            if self.number:
+                return "%s-%d" % (self.series, self.number)
+            else:
+                return "%s-draft-id:%d" % (self.series, self.pk)
+
+        else:
+            return "draft-id:%d" % self.pk
+
     series_number.short_description = 'Number'
     series_number = property(series_number)
 
     def __unicode__(self):
-        return u'%s-%s %s => %s [%.2f %s]' % (self.series, self.number,
-                                              self.provider.billing_name,
-                                              self.customer.billing_name,
-                                              self.total, self.currency)
+        return u'%s %s => %s [%.2f %s]' % (self.series_number,
+                                           self.provider.billing_name,
+                                           self.customer.billing_name,
+                                           self.total, self.currency)
 
     @property
     def updateable_fields(self):
