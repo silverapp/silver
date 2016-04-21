@@ -323,7 +323,7 @@ class Subscription(models.Model):
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         protected=True, help_text='The state the subscription is in.'
     )
-    meta = jsonfield.JSONField(blank=True, null=True)
+    meta = jsonfield.JSONField(blank=True, null=True, default={})
 
     def clean(self):
         errors = dict()
