@@ -1682,8 +1682,7 @@ class BillingDocument(models.Model):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self._last_state = self.state
 
-    @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
-    def issue(self, issue_date=None, due_date=None):
+    def _issue(self, issue_date=None, due_date=None):
         if issue_date:
             self.issue_date = dt.strptime(issue_date, '%Y-%m-%d').date()
         elif not self.issue_date and not issue_date:
@@ -1707,8 +1706,11 @@ class BillingDocument(models.Model):
 
         self._save_pdf(state=self.STATES.ISSUED)
 
-    @transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
-    def pay(self, paid_date=None):
+    @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
+    def issue(self, issue_date=None, due_date=None):
+        self._issue(issue_date=issue_date, due_date=due_date)
+
+    def _pay(self, paid_date=None):
         if paid_date:
             self.paid_date = dt.strptime(paid_date, '%Y-%m-%d').date()
         if not self.paid_date and not paid_date:
@@ -1716,14 +1718,21 @@ class BillingDocument(models.Model):
 
         self._save_pdf(state=self.STATES.PAID)
 
-    @transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
-    def cancel(self, cancel_date=None):
+    @transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
+    def pay(self, paid_date=None):
+        self._pay(paid_date=paid_date)
+
+    def _cancel(self, cancel_date=None):
         if cancel_date:
             self.cancel_date = dt.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
         self._save_pdf(state=self.STATES.CANCELED)
+
+    @transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
+    def cancel(self, cancel_date=None):
+        self._cancel(cancel_date=cancel_date)
 
     def clone_into_draft(self):
         copied_fields = {
@@ -1960,12 +1969,12 @@ class Invoice(BillingDocument):
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_invoice_archivable_field_values()
 
-        super(Invoice, self).issue(issue_date, due_date)
+        super(Invoice, self)._issue(issue_date, due_date)
 
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
-        super(Invoice, self).pay(paid_date)
+        super(Invoice, self)._pay(paid_date)
 
         if self.proforma and affect_related_document:
             self.proforma.pay(paid_date=paid_date,
@@ -1975,7 +1984,7 @@ class Invoice(BillingDocument):
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Invoice, self).cancel(cancel_date)
+        super(Invoice, self)._cancel(cancel_date)
 
         if self.proforma and affect_related_document:
             self.proforma.cancel(cancel_date=cancel_date,
@@ -2064,12 +2073,12 @@ class Proforma(BillingDocument):
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
 
-        super(Proforma, self).issue(issue_date, due_date)
+        super(Proforma, self)._issue(issue_date, due_date)
 
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
-        super(Proforma, self).pay(paid_date)
+        super(Proforma, self)._pay(paid_date)
 
         if not self.invoice:
             self.invoice = self._new_invoice()
@@ -2091,7 +2100,7 @@ class Proforma(BillingDocument):
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Proforma, self).cancel(cancel_date)
+        super(Proforma, self)._cancel(cancel_date)
 
         if self.invoice and affect_related_document:
             self.invoice.cancel(cancel_date=cancel_date,
