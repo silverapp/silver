@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ from django.test import TestCase
 
 from silver.models import DocumentEntry, Proforma, Invoice
 from silver.tests.factories import (ProformaFactory, InvoiceFactory,
-                                    DocumentEntryFactory)
+                                    DocumentEntryFactory, CustomerFactory,
+                                    ProviderFactory)
 
 
 class TestInvoice(TestCase):
@@ -140,3 +141,85 @@ class TestInvoice(TestCase):
 
         assert invoice.series_number == '%s-%s' % (invoice.series,
                                                    invoice.number)
+
+    def test_invoice_name_cache(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        invoice.series += 'alternate'  # no save, doesn't invalidate cache
+
+        assert cached_name == invoice.__unicode__()
+
+    def test_invoice_name_cache_invalidation_on_invoice_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        invoice.series += 'alternate'
+        invoice.save()
+
+        assert cached_name != invoice.__unicode__()
+
+    def test_invoice_name_cache_invalidation_on_related_entries_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        entry = DocumentEntryFactory.create()
+        invoice.invoice_entries.add(entry)
+
+        entry.save()
+
+        assert cached_name != invoice.__unicode__()
+
+    def test_invoice_name_cache_invalidation_on_related_customer_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        invoice.customer.company = "change"
+        invoice.customer.save()
+
+        assert cached_name != invoice.__unicode__()
+
+    def test_invoice_name_cache_invalidation_on_related_provider_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        invoice.provider.company = "change"
+        invoice.provider.save()
+
+        assert cached_name != invoice.__unicode__()
+
+    def test_invoice_name_cache_on_unrelated_entries_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        entry = DocumentEntryFactory.create()
+
+        entry.save()
+
+        assert cached_name == invoice.__unicode__()
+
+    def test_invoice_name_cache_on_unrelated_customer_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        customer = CustomerFactory.create()
+        customer.save()
+
+        assert cached_name == invoice.__unicode__()
+
+    def test_invoice_name_cache_on_unrelated_provider_save(self):
+        invoice = InvoiceFactory.create()
+
+        cached_name = invoice.__unicode__()
+
+        provider = ProviderFactory.create()
+        provider.save()
+
+        assert cached_name == invoice.__unicode__()

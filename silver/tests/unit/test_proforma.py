@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ from decimal import Decimal
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
-from silver.tests.factories import ProformaFactory, DocumentEntryFactory
+from silver.tests.factories import ProformaFactory, DocumentEntryFactory, \
+    CustomerFactory, ProviderFactory
 
 
 class TestProforma(TestCase):
@@ -138,3 +139,85 @@ class TestProforma(TestCase):
 
         assert proforma.series_number == '%s-%s' % (proforma.series,
                                                     proforma.number)
+
+    def test_proforma_name_cache(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        proforma.series += 'alternate'  # no save, doesn't invalidate cache
+
+        assert cached_name == proforma.__unicode__()
+
+    def test_proforma_name_cache_invalidation_on_invoice_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        proforma.series += 'alternate'
+        proforma.save()
+
+        assert cached_name != proforma.__unicode__()
+
+    def test_proforma_name_cache_invalidation_on_related_entries_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        entry = DocumentEntryFactory.create()
+        proforma.proforma_entries.add(entry)
+
+        entry.save()
+
+        assert cached_name != proforma.__unicode__()
+
+    def test_proforma_name_cache_invalidation_on_related_customer_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        proforma.customer.company = "change"
+        proforma.customer.save()
+
+        assert cached_name != proforma.__unicode__()
+
+    def test_proforma_name_cache_invalidation_on_related_provider_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        proforma.provider.company = "change"
+        proforma.provider.save()
+
+        assert cached_name != proforma.__unicode__()
+
+    def test_proforma_name_cache_on_unrelated_entries_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        entry = DocumentEntryFactory.create()
+
+        entry.save()
+
+        assert cached_name == proforma.__unicode__()
+
+    def test_proforma_name_cache_on_unrelated_customer_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        customer = CustomerFactory.create()
+        customer.save()
+
+        assert cached_name == proforma.__unicode__()
+
+    def test_proforma_name_cache_on_unrelated_provider_save(self):
+        proforma = ProformaFactory.create()
+
+        cached_name = proforma.__unicode__()
+
+        provider = ProviderFactory.create()
+        provider.save()
+
+        assert cached_name == proforma.__unicode__()
