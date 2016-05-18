@@ -101,6 +101,15 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 9001
+        }
+    }
+}
+
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
