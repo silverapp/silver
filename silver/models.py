@@ -1977,9 +1977,14 @@ class Invoice(BillingDocument):
         super(Invoice, self)._pay(paid_date)
 
         if self.proforma and affect_related_document:
-            self.proforma.pay(paid_date=paid_date,
-                              affect_related_document=False)
-            self.proforma.save()
+            try:
+                self.proforma.pay(paid_date=paid_date,
+                                  affect_related_document=False)
+                self.proforma.save()
+            except TransitionNotAllowed:
+                # the related proforma is already paid
+                # other inconsistencies should've been fixed before
+                pass
 
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.CANCELED)
@@ -2093,9 +2098,14 @@ class Proforma(BillingDocument):
             self.save()
 
         elif affect_related_document:
-            self.invoice.pay(paid_date=paid_date,
-                             affect_related_document=False)
-            self.invoice.save()
+            try:
+                self.invoice.pay(paid_date=paid_date,
+                                 affect_related_document=False)
+                self.invoice.save()
+            except TransitionNotAllowed:
+                # the related invoice is already paid
+                # other inconsistencies should've been fixed before
+                pass
 
     @transition(field='state', source=BillingDocument.STATES.ISSUED,
                 target=BillingDocument.STATES.CANCELED)
