@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-import datetime as dt
 from decimal import Decimal
 
 from django.core.management import call_command
@@ -28,7 +27,7 @@ from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
                                     CustomerFactory, ProviderFactory)
-
+from silver.management.commands.generate_docs import date as generate_docs_date
 
 class TestGenerateDocsArguments(TestCase):
     """
@@ -49,8 +48,7 @@ class TestGenerateDocsArguments(TestCase):
         self.output = StringIO()
         self.good_output = 'Done. You can have a Club-Mate now. :)\n'
         self.date_string = '2016-06-01'
-        self.date        = dt.date(2016, 06, 01) 
-
+        self.date =  generate_docs_date(self.date_string)
 
     def setUp(self):
         # Setup simple subscription
@@ -93,7 +91,7 @@ class TestGenerateDocsArguments(TestCase):
 
     def test_generate_docs_date_options(self):
 
-        call_command('generate_docs', billing_date=self.date_string,
+        call_command('generate_docs', billing_date=self.date,
                       stdout=self.output)
 
         assert self.output.getvalue() == self.good_output
@@ -110,7 +108,7 @@ class TestGenerateDocsArguments(TestCase):
     def test_generate_docs_date_sub_options(self):
 
         call_command('generate_docs',
-                      billing_date=self.date_string,
+                      billing_date=self.date,
                       subscription=self.subscription.id,
                       stdout=self.output)
 

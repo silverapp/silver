@@ -51,8 +51,6 @@ class Command(BaseCommand):
         translation.activate('en-us')
 
         billing_date = options['billing_date']
-        if type( options['billing_date'] ) == StringType:
-            billing_date = date(options['billing_date'])
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
