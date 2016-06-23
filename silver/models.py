@@ -21,6 +21,7 @@ import logging
 
 import jsonfield
 from django_fsm import FSMField, transition, TransitionNotAllowed
+from django.apps import apps
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.files.base import ContentFile
 from django.http import HttpResponse
@@ -32,7 +33,7 @@ from django_xhtml2pdf.utils import generate_pdf_template_object
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
-from django.db.models.signals import pre_delete, pre_save
+from django.db.models.signals import pre_delete, pre_save, post_save
 from django.dispatch.dispatcher import receiver
 from django.core.validators import MinValueValidator
 from django.template import TemplateDoesNotExist
@@ -47,6 +48,7 @@ from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
 from silver.utils import next_month, prev_month
+from silver.utils.decorators import cached_method
 
 logger = logging.getLogger(__name__)
 
@@ -1647,6 +1649,11 @@ class BillingDocument(models.Model):
         (STATES.CANCELED, _('Canceled'))
     )
 
+    # ('property', (invalidators on post save))
+    CACHED_PROPERTIES = (
+        ('name', ('self', 'DocumentEntry', Provider, Customer)),
+    )
+
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
     number = models.IntegerField(blank=True, null=True, db_index=True)
@@ -1843,11 +1850,19 @@ class BillingDocument(models.Model):
     series_number.short_description = 'Number'
     series_number = property(series_number)
 
-    def __unicode__(self):
+    @cached_method(unique_attribute='pk')
+    def name(self):
         return u'%s %s => %s [%.2f %s]' % (self.series_number,
                                            self.provider.billing_name,
                                            self.customer.billing_name,
                                            self.total, self.currency)
+
+    def invalidate(self, property_name):
+        return getattr(self, property_name)(invalidate_cache=True,
+                                            set_cache=True)
+
+    def __unicode__(self):
+        return self.name()
 
     @property
     def updateable_fields(self):
@@ -1947,6 +1962,42 @@ class BillingDocument(models.Model):
                 'id': self.id
             }
         }
+
+
+@receiver(post_save)
+def document_properties_invalidate(sender, instance=None, **kwargs):
+    for cache in BillingDocument.CACHED_PROPERTIES:
+        prop = cache[0]
+        triggers = cache[1]
+
+        invalidate = False
+
+        for trigger in triggers:
+            if isinstance(trigger, str):
+                if trigger == 'self':
+                    trigger = BillingDocument
+                else:
+                    trigger = apps.get_model('silver', trigger)
+
+            if isinstance(instance, trigger):
+                invalidate = True
+                break
+
+        if invalidate:
+            if isinstance(instance, BillingDocument):
+                instance.invalidate(prop)
+            else:
+                if hasattr(instance, 'invoice'):
+                    if instance.invoice:
+                        instance.invoice.invalidate(prop)
+                    if instance.proforma:
+                        instance.proforma.invalidate(prop)
+                elif hasattr(instance, 'invoice_set'):
+                    # this should be a task
+                    for invoice in instance.invoice_set.all():
+                        invoice.invalidate(prop)
+                    for proforma in instance.proforma_set.all():
+                        proforma.invalidate(prop)
 
 
 class Invoice(BillingDocument):
