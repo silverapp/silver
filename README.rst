@@ -1,13 +1,17 @@
 silver 
 ======
 
-.. image:: https://drone.presslabs.net/api/badges/PressLabs/silver/status.svg?branch=master
-   :target: https://drone.presslabs.net/PressLabs/silver
-
-.. image:: https://travis-ci.org/PressLabs/silver.svg?branch=master
-    :target: https://travis-ci.org/PressLabs/silver
-
 Django automated billing with an API
+
+.. list-table::
+
+   * - **Travis** (public)
+     - .. image:: https://travis-ci.org/PressLabs/silver.svg?branch=master
+                  :target: https://travis-ci.org/PressLabs/silver
+   * - **Drone** (private)
+     - .. image:: https://drone.presslabs.net/api/badges/PressLabs/silver/status.svg?branch=master
+                  :target: https://drone.presslabs.net/PressLabs/silver
+
 
 Installation
 ------------
