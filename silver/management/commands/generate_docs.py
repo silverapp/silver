@@ -16,6 +16,7 @@
 import logging
 import argparse
 from datetime import datetime as dt
+from types import StringType
 
 from django.core.management.base import BaseCommand
 from django.utils import translation
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def date(date_str):
     try:
-        return dt.strptime(date_str, "%Y-%m-%d")
+        return dt.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         msg = "Not a valid date: '{date_str}'. "\
               "Expected format: YYYY-MM-DD.".format(date_str=date_str)
@@ -49,10 +50,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         translation.activate('en-us')
 
-        billing_date = None
-        if options['billing_date']:
-            billing_date = dt.strptime(options['billing_date'],
-                                       '%Y-%m-%d').date()
+        billing_date = options['billing_date']
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
