@@ -89,8 +89,8 @@ class JSONSerializerField(serializers.Field):
         if not data:
             return data
 
-        if (data is not None and not isinstance(data, dict)
-                and not isinstance(data, list)):
+        if (data is not None and not isinstance(data, dict) and
+                not isinstance(data, list)):
                     raise ValidationError("Invalid JSON <{}>".format(data))
         return data
 
@@ -212,7 +212,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
         model = Subscription
         fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
                   'ended_at', 'state', 'reference', 'updateable_buckets',
-                  'meta')
+                  'meta', 'description')
         read_only_fields = ('state', 'updateable_buckets')
 
     def validate(self, attrs):
