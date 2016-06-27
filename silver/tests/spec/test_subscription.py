@@ -215,6 +215,32 @@ class TestSubscriptionEndpoint(APITestCase):
              '<' + full_url + '?page=1; rel="first">, ' +
              '<' + full_url + '?page=2; rel="last">')
 
+    def test_get_subscription_list_reference_filter(self):
+        customer = CustomerFactory.create()
+        subscriptions = SubscriptionFactory.create_batch(3, customer=customer)
+
+        url = reverse('subscription-list',
+                      kwargs={'customer_pk': customer.pk})
+
+        references = [subscription.reference for subscription in subscriptions]
+
+        reference = '?reference=' + references[0]
+        response = self.client.get(url + reference)
+
+        assert len(response.data) == 1
+        assert response.status_code == status.HTTP_200_OK
+
+        reference = '?reference=' + ','.join(references)
+        response = self.client.get(url + reference)
+
+        assert len(response.data) == 3
+        assert response.status_code == status.HTTP_200_OK
+
+        reference = '?reference=' + ','.join(references[:-1]) + ',invalid'
+        response = self.client.get(url + reference)
+        assert len(response.data) == 2
+        assert response.status_code == status.HTTP_200_OK
+
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
 

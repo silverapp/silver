@@ -131,6 +131,7 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
         lambda obj: obj.start_date +\
                         datetime.timedelta(days=obj.plan.trial_period_days)
                     if obj.plan.trial_period_days else None)
+    reference = factory.Sequence(lambda n: "{}".format(n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
     @factory.post_generation
