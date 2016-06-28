@@ -47,6 +47,7 @@ from pyvat import is_vat_number_format_valid
 from model_utils import Choices
 
 from silver.utils import next_month, prev_month
+from silver.validators import validate_reference
 
 logger = logging.getLogger(__name__)
 
@@ -315,10 +316,9 @@ class Subscription(models.Model):
         help_text='The date when the subscription ended.'
     )
     reference = models.CharField(
-        max_length=128, blank=True, null=True,
+        max_length=128, blank=True, null=True, validators=[validate_reference],
         help_text="The subscription's reference in an external system."
     )
-
     state = FSMField(
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         protected=True, help_text='The state the subscription is in.'
@@ -1461,7 +1461,7 @@ class Customer(AbstractBillingEntity):
         default=False, help_text='A flag indicating consolidated billing.'
     )
     customer_reference = models.CharField(
-        max_length=256, blank=True, null=True,
+        max_length=256, blank=True, null=True, validators=[validate_reference],
         help_text="It's a reference to be passed between silver and clients. "
                   "It usually points to an account ID."
     )

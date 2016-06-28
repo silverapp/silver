@@ -15,8 +15,19 @@
 
 from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
                             NumberFilter)
+from django_filters.fields import Lookup
+
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
                            Plan, Invoice, Proforma)
+
+
+class MultipleCharFilter(CharFilter):
+    def filter(self, qs, value):
+        if value:
+            value = value.split(',')
+
+        lookup = Lookup(value, 'in')
+        return super(MultipleCharFilter, self).filter(qs, lookup)
 
 
 class MeteredFeaturesFilter(FilterSet):
@@ -28,8 +39,8 @@ class MeteredFeaturesFilter(FilterSet):
 
 
 class SubscriptionFilter(FilterSet):
-    plan = CharFilter(name='plan__name', lookup_type='icontains')
-    reference = CharFilter(name='reference', lookup_type='icontains')
+    plan = CharFilter(name='plan__name', lookup_type='iexact')
+    reference = MultipleCharFilter(name='reference', lookup_type='iexact')
 
     class Meta:
         model = Subscription
@@ -47,7 +58,8 @@ class CustomerFilter(FilterSet):
                                   lookup_type='icontains')
     consolidated_billing = CharFilter(name='consolidated_billing',
                                       lookup_type='icontains')
-    reference = CharFilter(name='customer_reference', lookup_type='icontains')
+    reference = MultipleCharFilter(name='customer_reference',
+                                   lookup_type='iexact')
 
     class Meta:
         model = Customer
