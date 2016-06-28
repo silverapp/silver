@@ -46,6 +46,44 @@ class TestSubscriptionEndpoint(APITestCase):
         }), content_type='application/json')
         assert response.status_code == status.HTTP_201_CREATED
 
+    def test_create_post_subscription_reference(self):
+        plan = PlanFactory.create()
+        customer = CustomerFactory.create()
+
+        plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
+
+        url = reverse('subscription-list', kwargs={'customer_pk': customer.pk})
+
+        test_reference = 'test reference'
+        response = self.client.post(url, json.dumps({
+            "plan": plan_url,
+            "start_date": '2014-11-19',
+            "reference": test_reference,
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        assert response.data["reference"] == test_reference
+
+    def test_create_post_subscription_description(self):
+        plan = PlanFactory.create()
+        customer = CustomerFactory.create()
+
+        plan_url = reverse('plan-detail', kwargs={'pk': plan.pk})
+
+        url = reverse('subscription-list', kwargs={'customer_pk': customer.pk})
+
+        test_description = 'test description'
+        response = self.client.post(url, json.dumps({
+            "plan": plan_url,
+            "start_date": '2014-11-19',
+            "description": test_description,
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        assert response.data["description"] == test_description
+
     def test_create_post_subscription_with_invalid_trial_end(self):
         plan = PlanFactory.create()
         customer = CustomerFactory.create()
