@@ -104,9 +104,7 @@ class DocumentsGenerator(object):
         for subscription in customer.subscriptions.filter(**criteria):
             if subscription.should_be_billed(billing_date):
                 subs_to_bill.append(subscription)
-                if (force_generate and
-                    subscription.state == Subscription.STATES.ACTIVE
-                ):
+                if (force_generate and subscription.state == Subscription.STATES.ACTIVE):
                     subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                     subscription.save()
             elif force_generate and subscription.state == Subscription.STATES.CANCELED:
@@ -169,9 +167,7 @@ class DocumentsGenerator(object):
         for subscription in customer.subscriptions.filter(**criteria):
             if subscription.should_be_billed(billing_date):
                 subs_to_bill.append(subscription)
-                if (force_generate and
-                    subscription.state == Subscription.STATES.ACTIVE
-                ):
+                if (force_generate and subscription.state == Subscription.STATES.ACTIVE):
                     subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                     subscription.save()
             elif force_generate and subscription.state == Subscription.STATES.CANCELED:

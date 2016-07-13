@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+from silver import HOOK_EVENTS as _HOOK_EVENTS
+from django.utils.log import DEFAULT_LOGGING as LOGGING
+
 """
 These settings are used by the ``manage.py`` command.
 
@@ -35,7 +38,7 @@ DATABASES = {
 
 EXTERNAL_APPS = [
     # Django core apps
-    #'django_admin_bootstrapped',
+    # 'django_admin_bootstrapped',
     'django.contrib.admin',
     'django.contrib.admindocs',
     'django.contrib.auth',
@@ -51,7 +54,7 @@ EXTERNAL_APPS = [
     'django_xhtml2pdf',
 
     # Dev tools
-    #'django_extensions',
+    # 'django_extensions',
 ]
 
 INTERNAL_APPS = [
@@ -106,14 +109,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination'
 }
 
-from silver import HOOK_EVENTS as _HOOK_EVENTS
 HOOK_EVENTS = _HOOK_EVENTS
 
 SILVER_DEFAULT_DUE_DAYS = 5
 SILVER_DOCUMENT_PREFIX = 'documents/'
 SILVER_DOCUMENT_STORAGE = None
 
-from django.utils.log import DEFAULT_LOGGING as LOGGING
 
 LOGGING['loggers']['xhtml2pdf'] = {
     'level': 'DEBUG',

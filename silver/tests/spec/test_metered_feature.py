@@ -25,6 +25,7 @@ from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
 
 
 class TestMeteredFeatureEndpoint(APITestCase):
+
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
@@ -70,8 +71,8 @@ class TestMeteredFeatureEndpoint(APITestCase):
                                         content_type='application/json')
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            assert (response.data == {field: ['This field may not be blank.']}
-                    or response.data == {field: ['This field is required.']})
+            assert (response.data == {field: ['This field may not be blank.']} or
+                    response.data == {field: ['This field is required.']})
     """
     #def test_create_post_metered_feature_bulk(self):
         #mfs = MeteredFeatureFactory.create_batch(7)

@@ -387,11 +387,11 @@ class Subscription(models.Model):
 
         fake_initial_date = list(
             rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                  count=1,
-                  bymonth=bymonth,
-                  bymonthday=bymonthday,
-                  byweekday=byweekday,
-                  dtstart=relative_start_date)
+                        count=1,
+                        bymonth=bymonth,
+                        bymonthday=bymonthday,
+                        byweekday=byweekday,
+                        dtstart=relative_start_date)
         )[-1].date()
 
         if fake_initial_date > reference_date:
@@ -399,9 +399,9 @@ class Subscription(models.Model):
 
         dates = list(
             rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                  dtstart=fake_initial_date,
-                  interval=interval_count,
-                  until=reference_date)
+                        dtstart=fake_initial_date,
+                        interval=interval_count,
+                        until=reference_date)
         )
 
         return fake_initial_date if not dates else dates[-1].date()
@@ -448,12 +448,12 @@ class Subscription(models.Model):
 
         fake_end_date = list(
             rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                  interval=interval_count,
-                  count=count,
-                  bymonth=bymonth,
-                  bymonthday=bymonthday,
-                  byweekday=byweekday,
-                  dtstart=_current_start_date)
+                        interval=interval_count,
+                        count=count,
+                        bymonth=bymonth,
+                        bymonthday=bymonthday,
+                        byweekday=byweekday,
+                        dtstart=_current_start_date)
         )[-1].date() - datetime.timedelta(days=1)
 
         # if the trial_end date is set and we're not ignoring it
@@ -500,8 +500,8 @@ class Subscription(models.Model):
         buckets.append({'start_date': start_date, 'end_date': end_date})
 
         generate_after = datetime.timedelta(seconds=self.plan.generate_after)
-        while (timezone.now() - generate_after
-                < dt.combine(start_date, dt.min.time()).replace(
+        while (timezone.now() - generate_after <
+                dt.combine(start_date, dt.min.time()).replace(
                     tzinfo=timezone.get_current_timezone())):
             end_date = start_date - datetime.timedelta(days=1)
             start_date = self.bucket_start_date(end_date)
@@ -820,8 +820,7 @@ class Subscription(models.Model):
 
                     if (self.state == self.STATES.CANCELED and
                         self.cancel_date.month == self.start_date.month and
-                        self.cancel_date == billing_date.month
-                    ):
+                            self.cancel_date == billing_date.month):
                         # It was canceled the same month it started, with `now`
                         # option and since it got here (by permissions of
                         # Subscription.should_be_billed) => the customer does
@@ -900,16 +899,15 @@ class Subscription(models.Model):
 
                     if (self.state == self.STATES.ACTIVE or
                         (self.state == self.STATES.CANCELED and
-                         self.cancel_date >= self.trial_end)
-                    ):
+                         self.cancel_date >= self.trial_end)):
                         # Add the prorated plan value for trial_end -> end_of_month
                         # if the subscription is active or if it was canceled
                         # between trial_end -> end_of_month.
                         # note: it could have been canceled before trial_end
                         # and in that case the value does not have to be added
                         self._add_plan_value(start_date=first_day_after_trial,
-                                            end_date=end_date,
-                                            invoice=invoice, proforma=proforma)
+                                             end_date=end_date,
+                                             invoice=invoice, proforma=proforma)
 
                         if billing_date.month == next_month(self.start_date):
                             # It's the next month after the subscription start
@@ -921,8 +919,7 @@ class Subscription(models.Model):
                                           invoice=invoice, proforma=proforma)
 
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == next_month(self.start_date)
-                ):
+                        billing_date.month == next_month(self.start_date)):
                     # It's billed next month after the start date and it is
                     # still active => add the prorated value for the next month
                     bsd = self.bucket_start_date(reference_date=billing_date)
@@ -934,8 +931,7 @@ class Subscription(models.Model):
             if (self.trial_end and
                 (self.trial_end.month == billing_date.month or
                  self.trial_end.month == prev_month(billing_date)) and
-                last_billing_date < self.trial_end
-            ):
+                    last_billing_date < self.trial_end):
                 self._log_value_state('billed before, with trial')
                 # It has/had a trial which ends this month or it ended last
                 # month and it has been billed before
@@ -977,9 +973,7 @@ class Subscription(models.Model):
                         if bsd <= self.cancel_date <= bed:
                             bed = self.cancel_date
 
-                    if (self.state == self.STATES.ACTIVE or
-                        self.cancel_date >= self.trial_end
-                    ):
+                    if (self.state == self.STATES.ACTIVE or self.cancel_date >= self.trial_end):
                         # Add the prorated value only if the subscription is still
                         # active or it was canceled during the period right after
                         # the trial. If it was canceled during the trial, skip
@@ -1001,14 +995,13 @@ class Subscription(models.Model):
                 # next month after the trial end => add the value of the
                 # subscription for the next month
                 if (self.state == self.STATES.ACTIVE and
-                    billing_date.month == next_month(self.trial_end)
-                ):
+                        billing_date.month == next_month(self.trial_end)):
                     # It's the next month after the trial end => add the value
                     # for the month ahead
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
                     self._add_plan_value(start_date=bsd, end_date=bed,
-                                        invoice=invoice, proforma=proforma)
+                                         invoice=invoice, proforma=proforma)
 
             else:
                 self._log_value_state('billed before, normal')
@@ -1542,18 +1535,18 @@ class Provider(AbstractBillingEntity):
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
         default=FLOWS.PROFORMA,
-        help_text="One of the available workflows for generating proformas and\
+        help_text="One of the available workflows for generating proformas and \
                    invoices (see the documentation for more details)."
     )
     invoice_series = models.CharField(
         max_length=20,
-        help_text="The series that will be used on every invoice generated by\
+        help_text="The series that will be used on every invoice generated by \
                    this provider."
     )
     invoice_starting_number = models.PositiveIntegerField()
     proforma_series = models.CharField(
         max_length=20, blank=True, null=True,
-        help_text="The series that will be used on every proforma generated by\
+        help_text="The series that will be used on every proforma generated by \
                    this provider."
     )
     proforma_starting_number = models.PositiveIntegerField(
