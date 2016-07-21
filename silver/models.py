@@ -20,6 +20,7 @@ import calendar
 import logging
 
 import jsonfield
+import pycountry
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.files.base import ContentFile
@@ -40,7 +41,6 @@ from django.template.loader import (select_template, get_template,
                                     render_to_string)
 from django.core.urlresolvers import reverse
 from annoying.functions import get_object_or_None
-from international.models import countries, currencies
 from livefield.models import LiveModel
 from dateutil import rrule
 from pyvat import is_vat_number_format_valid
@@ -48,6 +48,9 @@ from model_utils import Choices
 
 from silver.utils import next_month, prev_month
 from silver.validators import validate_reference
+
+countries = [ (c.alpha2, c.name) for c in pycountry.countries ]
+currencies = [ (c.letter, c.name) for c in pycountry.currencies ]
 
 logger = logging.getLogger(__name__)
 
