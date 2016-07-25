@@ -49,8 +49,8 @@ from model_utils import Choices
 from silver.utils import next_month, prev_month
 from silver.validators import validate_reference
 
-countries = [ (c.alpha2, c.name) for c in pycountry.countries ]
-currencies = [ (c.letter, c.name) for c in pycountry.currencies ]
+countries = [ (countries.alpha2, countries.name) for countries in pycountry.countries ]
+currencies = [ (countries.letter, countries.name) for countries in pycountry.currencies ]
 
 logger = logging.getLogger(__name__)
 
