@@ -50,7 +50,7 @@ from silver.utils import next_month, prev_month
 from silver.validators import validate_reference
 
 countries = [ (countries.alpha2, countries.name) for countries in pycountry.countries ]
-currencies = [ (countries.letter, countries.name) for countries in pycountry.currencies ]
+currencies = [ (currencies.letter, currencies.name) for currencies in pycountry.currencies ]
 
 logger = logging.getLogger(__name__)
 
