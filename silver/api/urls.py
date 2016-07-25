@@ -58,8 +58,7 @@ urlpatterns = [
     url(r'^invoices/(?P<document_pk>[0-9]+)/entries/$',
         views.InvoiceEntryCreate.as_view(), name='invoice-entry-create'),
     url(r'^invoices/(?P<document_pk>[0-9]+)/entries/(?P<entry_pk>[0-9]+)/$',
-        views.InvoiceEntryUpdateDestroy.as_view(
-        ), name='invoice-entry-update'),
+        views.InvoiceEntryUpdateDestroy.as_view(), name='invoice-entry-update'),
     url(r'^invoices/(?P<pk>[0-9]+)/state/$',
         views.InvoiceStateHandler.as_view(), name='invoice-state'),
     url(r'^invoices/(?P<invoice_id>\d+).pdf$',
@@ -71,13 +70,13 @@ urlpatterns = [
     url(r'^proformas/(?P<document_pk>[0-9]+)/entries/$',
         views.ProformaEntryCreate.as_view(), name='proforma-entry-create'),
     url(r'^proformas/(?P<document_pk>[0-9]+)/entries/(?P<entry_pk>[0-9]+)/$',
-        views.ProformaEntryUpdateDestroy.as_view(
-        ), name='proforma-entry-update'),
+        views.ProformaEntryUpdateDestroy.as_view(),
+        name='proforma-entry-update'),
     url(r'^proformas/(?P<pk>[0-9]+)/state/$',
         views.ProformaStateHandler.as_view(), name='proforma-state'),
     url(r'^proformas/(?P<pk>[0-9]+)/invoice/$',
-        views.ProformaInvoiceRetrieveCreate.as_view(
-        ), name='proforma-invoice'),
+        views.ProformaInvoiceRetrieveCreate.as_view(),
+        name='proforma-invoice'),
     url(r'^proformas/(?P<proforma_id>\d+).pdf$',
         silver_views.proforma_pdf, name='proforma-pdf')
 ]

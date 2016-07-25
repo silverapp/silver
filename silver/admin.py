@@ -580,7 +580,7 @@ class BillingDocumentAdmin(ModelAdmin):
                       'into {results}.'.format(
                           model_name=self._model_name.lower(), count=qs_count,
                           results=results
-                        )
+                      )
             else:
                 msg = 'Successfully changed {count} {model_name}(s).'.format(
                     model_name=self._model_name.lower(), count=qs_count

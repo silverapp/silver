@@ -74,7 +74,8 @@ class TestGenerateDocsArguments(TestCase):
 
         call_command(
             'generate_docs', '--subscription=%s' % self.subscription.id,
-            stdout=self.output)
+            stdout=self.output
+            )
 
         assert self.output.getvalue() == self.good_output
 

@@ -475,7 +475,8 @@ class TestInvoiceEndpoints(APITestCase):
                                    content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be issued only if it is in draft state.'}
+            'detail': 'An invoice can be issued only if it is in draft state.'
+            }
 
     def test_issue_invoice_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -491,7 +492,8 @@ class TestInvoiceEndpoints(APITestCase):
                                    content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be issued only if it is in draft state.'}
+            'detail': 'An invoice can be issued only if it is in draft state.'
+            }
 
     def test_pay_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -555,7 +557,8 @@ class TestInvoiceEndpoints(APITestCase):
                                    content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be paid only if it is in issued state.'}
+            'detail': 'An invoice can be paid only if it is in issued state.'
+            }
 
     def test_pay_invoice_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -571,7 +574,8 @@ class TestInvoiceEndpoints(APITestCase):
                                    content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be paid only if it is in issued state.'}
+            'detail': 'An invoice can be paid only if it is in issued state.'
+            }
 
     def test_cancel_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -656,7 +660,8 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be canceled only if it is in issued state.'}
+            'detail': 'An invoice can be canceled only if it is in issued state.'
+            }
 
     def test_cancel_invoice_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -674,7 +679,8 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be canceled only if it is in issued state.'}
+            'detail': 'An invoice can be canceled only if it is in issued state.'
+            }
 
     def test_illegal_state_change_when_in_draft_state(self):
         provider = ProviderFactory.create()
