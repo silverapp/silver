@@ -17,15 +17,18 @@
 from decimal import Decimal
 import datetime
 
+import pycountry
 import factory
 import factory.fuzzy
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from international.models import countries
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry)
+
+
+countries = [(country.alpha2, country.name) for country in pycountry.countries]
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):

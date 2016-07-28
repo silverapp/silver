@@ -45,7 +45,6 @@ EXTERNAL_APPS = [
     'django.contrib.staticfiles',
 
     # Required apps
-    'international',
     'django_fsm',
     'rest_framework',
     'django_filters',
