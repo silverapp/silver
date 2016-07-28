@@ -28,7 +28,7 @@ from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry)
 
 
-countries = [ (c.alpha2, c.name) for c in pycountry.countries ]
+countries = [(country.alpha2, country.name) for country in pycountry.countries]
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
