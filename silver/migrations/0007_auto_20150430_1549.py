@@ -29,6 +29,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plan',
             name='trial_period_days',
-            field=models.PositiveIntegerField(help_text=b'Number of trial period days granted when subscribing a customer to this plan.', null=True, verbose_name=b'Trial days'),
+            field=models.PositiveIntegerField(help_text=b'Number of trial '
+                                                        'period days granted when '
+                                                        'subscribing a customer to this plan.',
+                                              null=True, verbose_name=b'Trial days'),
         ),
     ]

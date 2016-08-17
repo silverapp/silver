@@ -30,6 +30,7 @@ from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     CustomerFactory, ProviderFactory)
 from silver.management.commands.generate_docs import date as generate_docs_date
 
+
 class TestInvoiceGenerationCommand(TestCase):
     """
     Tests:
@@ -77,7 +78,7 @@ class TestInvoiceGenerationCommand(TestCase):
         2015-06-04 -> 2015-06-13
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-06-04')
         curr_billing_date = generate_docs_date('2015-06-14')  # First day after trial_end
 
@@ -107,7 +108,7 @@ class TestInvoiceGenerationCommand(TestCase):
             start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 13),
             consumed_units=consumed_1)
 
-        ## TEST ##
+        # # TEST ##
         call_command('generate_docs', billing_date=prev_billing_date,
                      stdout=self.output)
 
@@ -391,7 +392,7 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.save()
 
         call_command('generate_docs', date=prev_billing_date,
-                    stdout=self.output)
+                     stdout=self.output)
 
         assert Proforma.objects.all().count() == 1
         assert Invoice.objects.all().count() == 0
@@ -402,7 +403,7 @@ class TestInvoiceGenerationCommand(TestCase):
             consumed_units=Decimal('10.00'))
 
         call_command('generate_docs', date=curr_billing_date,
-                    stdout=self.output)
+                     stdout=self.output)
 
         assert Proforma.objects.all().count() == 2
         assert Invoice.objects.all().count() == 0
@@ -779,7 +780,7 @@ class TestInvoiceGenerationCommand(TestCase):
         The consumed_during_trial < included_during_trial
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-06-01')
         curr_billing_date = generate_docs_date('2015-06-04')  # First day after trial_end
 
@@ -810,7 +811,7 @@ class TestInvoiceGenerationCommand(TestCase):
             start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 3),
             consumed_units=consumed_during_second_trial_part)
 
-        ## TEST ##
+        # # TEST ##
         call_command('generate_docs', billing_date=prev_billing_date,
                      stdout=self.output)
 
@@ -852,7 +853,7 @@ class TestInvoiceGenerationCommand(TestCase):
         been consumed.
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-06-01')
         curr_billing_date = generate_docs_date('2015-06-04')  # First day after trial_end
 
@@ -885,7 +886,7 @@ class TestInvoiceGenerationCommand(TestCase):
             start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 3),
             consumed_units=consumed_during_second_trial_part)
 
-        ## TEST ##
+        # # TEST ##
         call_command('generate_docs', billing_date=prev_billing_date,
                      stdout=self.output)
 
@@ -927,7 +928,7 @@ class TestInvoiceGenerationCommand(TestCase):
         been consumed => a part remain for the 2015-06-01->2015-06-03
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-06-01')
         curr_billing_date = generate_docs_date('2015-06-04')  # First day after trial_end
 
@@ -960,7 +961,7 @@ class TestInvoiceGenerationCommand(TestCase):
             start_date=dt.date(2015, 6, 1), end_date=dt.date(2015, 6, 3),
             consumed_units=consumed_during_second_trial_part)
 
-        ## TEST ##
+        # # TEST ##
         call_command('generate_docs', billing_date=prev_billing_date,
                      stdout=self.output)
 
@@ -1002,7 +1003,7 @@ class TestInvoiceGenerationCommand(TestCase):
         It has 0 consumed units during 2015-05-20 -> 2015-06-01.
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-05-20')
         curr_billing_date = generate_docs_date('2015-06-01')
 
@@ -1021,7 +1022,7 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.activate()
         subscription.save()
 
-        ## TEST ##
+        # # TEST ##
         call_command('generate_docs', date=prev_billing_date,
                      subscription=subscription.id, stdout=self.output)
 
@@ -1111,7 +1112,7 @@ class TestInvoiceGenerationCommand(TestCase):
             return_value=dt.date(2015, 6, 1))  # was billed last month
         mocked_is_billed_first_time = PropertyMock(return_value=False)
         with patch.multiple('silver.models.Subscription',
-                           last_billing_date=mocked_last_billing_date,
+                            last_billing_date=mocked_last_billing_date,
                             is_billed_first_time=mocked_is_billed_first_time):
             call_command('generate_docs', date=billing_date, stdout=self.output)
 
@@ -1165,13 +1166,13 @@ class TestInvoiceGenerationCommand(TestCase):
             default_document_state='issued')
         plan_price = Decimal('200.00')
         plan1 = PlanFactory.create(interval='month', interval_count=1,
-                                  generate_after=120, enabled=True,
-                                  amount=plan_price, provider=provider_draft,
-                                  metered_features=[metered_feature])
+                                   generate_after=120, enabled=True,
+                                   amount=plan_price, provider=provider_draft,
+                                   metered_features=[metered_feature])
         plan2 = PlanFactory.create(interval='month', interval_count=1,
-                                  generate_after=120, enabled=True,
-                                  amount=plan_price, provider=provider_issued,
-                                  metered_features=[metered_feature])
+                                   generate_after=120, enabled=True,
+                                   amount=plan_price, provider=provider_issued,
+                                   metered_features=[metered_feature])
         start_date = dt.date(2015, 2, 14)
 
         # Create the prorated subscription
@@ -1212,7 +1213,7 @@ class TestInvoiceGenerationCommand(TestCase):
         It has consumed mfs between start_date -> end_of_month
         """
 
-        ## SETUP ##
+        # # SETUP ##
         prev_billing_date = generate_docs_date('2015-05-20')
         random_billing_date = generate_docs_date('2015-05-27')
         curr_billing_date = generate_docs_date('2015-06-01')
@@ -1235,7 +1236,7 @@ class TestInvoiceGenerationCommand(TestCase):
         subscription.activate()
         subscription.save()
 
-        ## TEST ##
+        # # TEST ##
 
         # RUN 1
         call_command('generate_docs', billing_date=prev_billing_date,
@@ -1513,7 +1514,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert doc.quantity == mf_units_log_after_trial.consumed_units
 
     def test_canceled_subscription_with_trial_and_trial_overflow(self):
-        billing_date = generate_docs_date( '2015-03-01' )
+        billing_date = generate_docs_date('2015-03-01')
 
         units_included_during_trial = Decimal('5.00')
         metered_feature = MeteredFeatureFactory(
@@ -1624,8 +1625,7 @@ class TestInvoiceGenerationCommand(TestCase):
                 subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                 subscription.save()
 
-                call_command('generate_docs', date=billing_date,
-                            subscription=subscription.pk, stdout=self.output)
+                call_command('generate_docs', date=billing_date, subscription=subscription.pk, stdout=self.output)
 
                 assert Subscription.objects.filter(state='ended').count() == 1
 
@@ -1667,8 +1667,7 @@ class TestInvoiceGenerationCommand(TestCase):
                     subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                     subscription.save()
 
-                call_command('generate_docs', billing_date=billing_date,
-                            stdout=self.output)
+                call_command('generate_docs', billing_date=billing_date, stdout=self.output)
 
                 # Expect 5 Proformas (2 active Subs, 3 canceled)
                 assert Proforma.objects.all().count() == 5
@@ -1678,8 +1677,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
                 Proforma.objects.all().delete()
 
-                call_command('generate_docs', billing_date=billing_date,
-                            stdout=self.output)
+                call_command('generate_docs', billing_date=billing_date, stdout=self.output)
 
                 # Expect 2 Proformas (2 active Subs, 3 ended)
                 assert Proforma.objects.all().count() == 2

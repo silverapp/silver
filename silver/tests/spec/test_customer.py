@@ -72,8 +72,8 @@ class TestCustomerEndpoints(APITestCase):
                                         content_type='application/json')
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            assert (response.data == {field: ['This field may not be blank.']}
-                    or response.data == {field: ['This field is required.']})
+            assert (response.data == {field: ['This field may not be blank.']} or
+                    response.data == {field: ['This field is required.']})
 
     def test_get_customer_list(self):
         CustomerFactory.create_batch(40)
@@ -175,7 +175,7 @@ class TestCustomerEndpoints(APITestCase):
         url = reverse('customer-detail', kwargs={'pk': 1})
 
         response = self.client.patch(url, data=json.dumps(changed_data),
-                                   content_type='application/json')
+                                     content_type='application/json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

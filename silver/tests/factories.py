@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 # Copyright (c) 2015 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +66,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
         model = MeteredFeature
 
     name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
-    unit = factory.Sequence(lambda n:'MeteredFeature{cnt}Unit'.format(cnt=n))
+    unit = factory.Sequence(lambda n: 'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
     included_units = factory.fuzzy.FuzzyDecimal(low=0.01, high=100000.00,
@@ -131,9 +131,8 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     start_date = timezone.now().date()
     trial_end = factory.LazyAttribute(
-        lambda obj: obj.start_date +\
-                        datetime.timedelta(days=obj.plan.trial_period_days)
-                    if obj.plan.trial_period_days else None)
+        lambda obj: obj.start_date + datetime.timedelta(days=obj.plan.trial_period_days)
+        if obj.plan.trial_period_days else None)
     reference = factory.Sequence(lambda n: "{}".format(n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 

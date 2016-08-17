@@ -30,7 +30,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='documententry',
             name='quantity',
-            field=models.DecimalField(max_digits=19, decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)]),
+            field=models.DecimalField(
+                max_digits=19,
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)]),
         ),
         migrations.AlterField(
             model_name='documententry',
@@ -40,26 +43,47 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='meteredfeature',
             name='included_units',
-            field=models.DecimalField(help_text=b'The number of included units per plan interval.', max_digits=19, decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)]),
+            field=models.DecimalField(
+                help_text=b'The number of included units per plan interval.',
+                max_digits=19,
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)]),
         ),
         migrations.AlterField(
             model_name='meteredfeature',
             name='included_units_during_trial',
-            field=models.DecimalField(decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)], max_digits=19, blank=True, help_text=b'The number of included units during the trial period.', null=True),
+            field=models.DecimalField(
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)],
+                max_digits=19,
+                blank=True,
+                help_text=b'The number of included units during the trial period.',
+                null=True),
         ),
         migrations.AlterField(
             model_name='meteredfeature',
             name='price_per_unit',
-            field=models.DecimalField(help_text=b'The price per unit.', max_digits=19, decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)]),
+            field=models.DecimalField(
+                help_text=b'The price per unit.',
+                max_digits=19,
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)]),
         ),
         migrations.AlterField(
             model_name='meteredfeatureunitslog',
             name='consumed_units',
-            field=models.DecimalField(max_digits=19, decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)]),
+            field=models.DecimalField(
+                max_digits=19,
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)]),
         ),
         migrations.AlterField(
             model_name='plan',
             name='amount',
-            field=models.DecimalField(help_text=b'The amount in the specified currency to be charged on the interval specified.', max_digits=19, decimal_places=4, validators=[django.core.validators.MinValueValidator(0.0)]),
+            field=models.DecimalField(
+                help_text=b'The amount in the specified currency to be charged on the interval specified.',
+                max_digits=19,
+                decimal_places=4,
+                validators=[django.core.validators.MinValueValidator(0.0)]),
         ),
     ]

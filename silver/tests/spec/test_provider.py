@@ -143,7 +143,6 @@ class TestProviderEndpoints(APITestCase):
              '<' + full_url + '?page=2; rel="last">')
 
         response = self.client.get(url + '?page=2')
-        
 
         assert response.status_code == status.HTTP_200_OK
         assert response._headers['link'] == \
@@ -197,7 +196,6 @@ class TestProviderEndpoints(APITestCase):
             'meta': {u'something': [1, 2]}
         }
         assert response.data == expected
-
 
     def test_get_unexisting_provider(self):
         url = reverse('provider-detail', kwargs={'pk': 1})

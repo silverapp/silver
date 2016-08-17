@@ -237,8 +237,8 @@ class SubscriptionAdmin(ModelAdmin):
     def cancel_at_end_of_cycle(self, request, queryset):
         self.perform_action(request, '_cancel_at_end_of_billing_cycle', queryset)
     cancel_at_end_of_cycle.short_description = 'Cancel the '\
-            'selected Subscription(s) at the end '\
-            'of the billing cycle'
+        'selected Subscription(s) at the end '\
+        'of the billing cycle'
 
     def end(self, request, queryset):
         self.perform_action(request, 'end', queryset)
@@ -580,7 +580,7 @@ class BillingDocumentAdmin(ModelAdmin):
                       'into {results}.'.format(
                           model_name=self._model_name.lower(), count=qs_count,
                           results=results
-                )
+                      )
             else:
                 msg = 'Successfully changed {count} {model_name}(s).'.format(
                     model_name=self._model_name.lower(), count=qs_count

@@ -34,6 +34,7 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
 class TestInvoiceEndpoints(APITestCase):
+
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
@@ -349,7 +350,8 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in issued state.']}
+        assert response.data == {'non_field_errors': [
+            'You cannot edit the document once it is in issued state.']}
 
     def test_edit_invoice_in_canceled_state(self):
         invoice = InvoiceFactory.create()
@@ -363,7 +365,8 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in canceled state.']}
+        assert response.data == {'non_field_errors': [
+            'You cannot edit the document once it is in canceled state.']}
 
     def test_edit_invoice_in_paid_state(self):
         invoice = InvoiceFactory.create()
@@ -377,7 +380,8 @@ class TestInvoiceEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in paid state.']}
+        assert response.data == {'non_field_errors': [
+            'You cannot edit the document once it is in paid state.']}
 
     def test_issue_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -387,7 +391,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -412,7 +416,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued', 'issue_date': '2014-01-01'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -442,7 +446,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         mandatory_content = {
@@ -468,9 +472,11 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
+        assert response.data == {
+            'detail': 'An invoice can be issued only if it is in draft state.'
+            }
 
     def test_issue_invoice_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -483,9 +489,11 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be issued only if it is in draft state.'}
+        assert response.data == {
+            'detail': 'An invoice can be issued only if it is in draft state.'
+            }
 
     def test_pay_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -497,7 +505,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -524,7 +532,7 @@ class TestInvoiceEndpoints(APITestCase):
             'paid_date': '2014-05-05'
         }
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -538,7 +546,6 @@ class TestInvoiceEndpoints(APITestCase):
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
-
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
@@ -547,9 +554,11 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be paid only if it is in issued state.'}
+        assert response.data == {
+            'detail': 'An invoice can be paid only if it is in issued state.'
+            }
 
     def test_pay_invoice_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -562,9 +571,11 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be paid only if it is in issued state.'}
+        assert response.data == {
+            'detail': 'An invoice can be paid only if it is in issued state.'
+            }
 
     def test_cancel_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -576,7 +587,7 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-state', kwargs={'pk': 1})
         data = {'state': 'canceled'}
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -604,7 +615,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
@@ -627,10 +638,11 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be canceled only if it is in issued state.'}
+        assert response.data == {
+            'detail': 'An invoice can be canceled only if it is in issued state.'}
 
     def test_cancel_invoice_in_canceled_state(self):
         provider = ProviderFactory.create()
@@ -644,10 +656,12 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be canceled only if it is in issued state.'}
+        assert response.data == {
+            'detail': 'An invoice can be canceled only if it is in issued state.'
+            }
 
     def test_cancel_invoice_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -661,10 +675,12 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'An invoice can be canceled only if it is in issued state.'}
+        assert response.data == {
+            'detail': 'An invoice can be canceled only if it is in issued state.'
+            }
 
     def test_illegal_state_change_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -675,7 +691,7 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
@@ -691,7 +707,7 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
@@ -708,7 +724,7 @@ class TestInvoiceEndpoints(APITestCase):
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),
-                                     content_type='application/json')
+                                   content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'Illegal state value.'}
