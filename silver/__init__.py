@@ -14,7 +14,7 @@
 
 
 # -*- coding: utf-8 -*-
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 HOOK_EVENTS = {
     # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
