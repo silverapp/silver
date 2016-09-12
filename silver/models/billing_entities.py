@@ -25,8 +25,6 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 
-from .documents import Invoice, Proforma
-from .subscriptions import Subscription
 from silver.utils.international import countries
 from silver.validators import validate_reference
 
@@ -126,16 +124,6 @@ class Customer(AbstractBillingEntity):
                 {'sales_tax_number': 'The sales tax number is not valid.'}
             )
 
-    def delete(self):
-        subscriptions = Subscription.objects.filter(customer=self)
-        for sub in subscriptions:
-            try:
-                sub.cancel()
-                sub.save()
-            except TransitionNotAllowed:
-                pass
-        super(Customer, self).delete()
-
     def get_archivable_field_values(self):
         base_fields = super(Customer, self).get_archivable_field_values()
         customer_fields = ['customer_reference', 'consolidated_billing',
@@ -145,13 +133,6 @@ class Customer(AbstractBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
-
-    def should_get_free_trial(self, provider):
-        return self.subscriptions.filter(
-            plan__provider=provider,
-            state__in=[Subscription.STATES.ACTIVE, Subscription.STATES.CANCELED,
-                       Subscription.STATES.ENDED]
-        ).count() == 0
 
 
 class Provider(AbstractBillingEntity):
@@ -232,7 +213,3 @@ class Provider(AbstractBillingEntity):
         base_fields = super(Provider, self).get_archivable_field_values()
         base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
         return base_fields
-
-    @property
-    def model_corresponding_to_default_flow(self):
-        return Proforma if self.flow == self.FLOWS.PROFORMA else Invoice

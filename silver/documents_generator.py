@@ -18,7 +18,7 @@ import logging
 
 from django.utils import timezone
 
-from silver.models import Customer, Subscription, Provider
+from silver.models import Customer, Subscription, Proforma, Invoice, Provider
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,8 @@ class DocumentsGenerator(object):
             document.save()
 
     def _create_document(self, provider, customer, subscription, billing_date):
-        DocumentModel = provider.model_corresponding_to_default_flow
+        DocumentModel = (Proforma if provider.flow == provider.FLOWS.PROFORMA
+                         else Invoice)
 
         payment_due_days = dt.timedelta(days=customer.payment_due_days)
         due_date = billing_date + payment_due_days

@@ -20,18 +20,21 @@ from decimal import Decimal
 
 from annoying.functions import get_object_or_None
 from dateutil import rrule
-from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from jsonfield import JSONField
 from model_utils import Choices
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
+from .billing_entities import Customer
 from .documents import DocumentEntry
 from silver.utils import next_month, prev_month
 from silver.validators import validate_reference
@@ -538,6 +541,14 @@ class Subscription(models.Model):
             # It should never get here.
             return None
 
+    def _should_activate_with_free_trial(self):
+        return Subscription.objects.filter(
+            plan__provider=self.plan.provider,
+            customer=self.customer,
+            state__in=[Subscription.STATES.ACTIVE, Subscription.STATES.CANCELED,
+                       Subscription.STATES.ENDED]
+        ).count() == 0
+
     ##########################################################################
     # STATE MACHINE TRANSITIONS
     ##########################################################################
@@ -552,7 +563,7 @@ class Subscription(models.Model):
             else:
                 self.start_date = timezone.now().date()
 
-        if self.customer.should_get_free_trial(self.plan.provider):
+        if self._should_activate_with_free_trial():
             if trial_end_date:
                 self.trial_end = max(self.start_date, trial_end_date)
             else:
@@ -1240,3 +1251,23 @@ class BillingLog(models.Model):
         return u'{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)
+
+
+@receiver(pre_delete, sender=Customer)
+def cancel_billing_documents(sender, instance, **kwargs):
+    if instance.pk and not kwargs.get('raw', False):
+        subscriptions = Subscription.objects.filter(
+            customer=instance, state=Subscription.STATES.ACTIVE
+        )
+        for subscription in subscriptions:
+            try:
+                subscription.cancel()
+                subscription.end()
+                subscription.save()
+            except TransitionNotAllowed:
+                logger.error(
+                    'Couldn\'t end subscription on customer delete: %s', {
+                        'subscription': subscription.id,
+                    }
+                )
+                pass
