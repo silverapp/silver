@@ -214,7 +214,7 @@ class TestSubscription(TestCase):
         subscription.activate()
         subscription.save()
 
-        with patch('silver.models.timezone') as mock_timezone:
+        with patch('silver.models.subscriptions.timezone') as mock_timezone:
             # Every month, 16 days of trial
             subscription.plan.interval = Plan.INTERVALS.MONTH
             subscription.plan.interval_count = 1
