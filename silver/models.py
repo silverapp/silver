@@ -1295,13 +1295,6 @@ def update_draft_billing_documents(sender, instance, **kwargs):
                 proforma.save()
 
 
-class ProductCode(models.Model):
-    value = models.CharField(max_length=128, unique=True)
-
-    def __unicode__(self):
-        return unicode(self.value)
-
-
 class BillingDocument(models.Model):
     class STATES(object):
         DRAFT = 'draft'
