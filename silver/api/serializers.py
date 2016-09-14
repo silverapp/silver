@@ -104,10 +104,10 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
-                  'email', 'address_1', 'address_2', 'city', 'state',
-                  'zip_code', 'country', 'extra', 'invoice_series',
-                  'invoice_starting_number', 'proforma_series',
-                  'proforma_starting_number', 'meta')
+                  'display_email', 'internal_email', 'address_1', 'address_2',
+                  'city', 'state', 'zip_code', 'country', 'extra',
+                  'invoice_series', 'invoice_starting_number',
+                  'proforma_series', 'proforma_starting_number', 'meta')
 
     def validate(self, data):
         flow = data.get('flow', None)
@@ -235,11 +235,11 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
-                  'address_1', 'address_2', 'city', 'state', 'zip_code',
-                  'country', 'extra', 'sales_tax_number', 'sales_tax_name',
-                  'sales_tax_percent', 'consolidated_billing', 'subscriptions',
-                  'meta')
+        fields = ('id', 'url', 'customer_reference', 'name', 'company',
+                  'emails', 'address_1', 'address_2', 'city', 'state',
+                  'zip_code', 'country', 'extra', 'sales_tax_number',
+                  'sales_tax_name', 'sales_tax_percent', 'consolidated_billing',
+                  'subscriptions', 'meta')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):

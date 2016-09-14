@@ -27,7 +27,7 @@ from silver.models.billing_entities import Provider
 
 class Invoice(BillingDocument):
     proforma = models.ForeignKey('Proforma', blank=True, null=True,
-                                 related_name='related_proforma')
+                                 related_name='related_invoice')
 
     kind = 'Invoice'
 
