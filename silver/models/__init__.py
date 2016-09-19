@@ -17,3 +17,4 @@ from documents import Proforma, Invoice, BillingDocument, DocumentEntry
 from plans import Plan, MeteredFeature
 from product_codes import ProductCode
 from subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog
+from payments import Payment

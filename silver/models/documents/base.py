@@ -13,9 +13,11 @@
 # limitations under the License.
 
 
+import logging
 from datetime import datetime, timedelta
 
-from django_fsm import FSMField, transition
+from django_fsm import TransitionNotAllowed, FSMField, transition
+from django_fsm import post_transition
 from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
@@ -27,6 +29,7 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Max
+from django.dispatch import receiver
 from django.http import HttpResponse
 from django.template.loader import select_template
 from django.utils import timezone
@@ -34,8 +37,11 @@ from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
+
 from .entries import DocumentEntry
 from silver.models.billing_entities import Customer, Provider
+from silver.models.payments import Payment
+
 from silver.utils.international import currencies
 
 
@@ -46,6 +52,8 @@ if _storage:
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
+
+logger = logging.getLogger(__name__)
 
 
 def documents_pdf_path(document, filename):
@@ -90,7 +98,8 @@ class BillingDocument(models.Model):
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(
         choices=currencies, max_length=4, default='USD',
-        help_text='The currency used for billing.')
+        help_text='The currency used for billing.'
+    )
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.DRAFT,
@@ -107,6 +116,10 @@ class BillingDocument(models.Model):
     def __init__(self, *args, **kwargs):
         super(BillingDocument, self).__init__(*args, **kwargs)
         self._last_state = self.state
+
+    @property
+    def payment(self):
+        raise NotImplementedError
 
     def _issue(self, issue_date=None, due_date=None):
         if issue_date:
@@ -368,3 +381,61 @@ class BillingDocument(models.Model):
                 'id': self.id
             }
         }
+
+    @property
+    def fields_for_payment_creation(self):
+        fields = {
+            'customer': self.customer,
+            'provider': self.provider,
+            'due_date': self.due_date,
+            'amount': self.total,
+            'currency': self.currency,
+            'visible': (self.state in [BillingDocument.STATES.ISSUED,
+                                       BillingDocument.STATES.PAID]),
+            'currency_rate_date': timezone.now().date(),
+            'status': (Payment.Status.Unpaid if self.total else
+                       Payment.Status.Paid),
+        }
+
+        return fields
+
+    def create_payment(self):
+        fields = self.fields_for_payment_creation
+
+        return Payment.objects.create(**fields)
+
+
+@receiver(post_transition)
+def post_transition_callback(sender, instance, name, source, target, **kwargs):
+    if isinstance(instance, BillingDocument):
+        if target == BillingDocument.STATES.ISSUED:
+            if not instance.payment:
+                if instance.related_document and \
+                        instance.related_document.payment:
+                    payment = instance.related_document.payment
+
+                    document_type_name = instance.__class__.__name__.lower()
+                    setattr(payment, document_type_name, instance)
+                    payment.save()
+                else:
+                    payment = instance.create_payment()
+
+                    logger.info('[Models][Documents]: %s', {
+                        'detail': 'Payment automatically created for document.',
+                        'payment_id': payment.id,
+                        'customer_id': payment.customer.id,
+                        'document_id': instance.id,
+                        'document_type': sender.kind,
+                        'document_state': target
+                    })
+            else:
+                if not instance.payment.visible:
+                    instance.payment.visible = True
+                    instance.payment.save()
+        elif target == BillingDocument.STATES.CANCELED:
+            if instance.payment:
+                try:
+                    instance.payment.cancel()
+                    instance.payment.save()
+                except TransitionNotAllowed:
+                    pass

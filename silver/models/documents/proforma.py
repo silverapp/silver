@@ -26,6 +26,7 @@ from .base import BillingDocument
 from .entries import DocumentEntry
 from .invoice import Invoice
 from silver.models.billing_entities import Provider
+from silver.models.payments import Payment
 
 
 class Proforma(BillingDocument):
@@ -42,6 +43,13 @@ class Proforma(BillingDocument):
 
         customer_field = self._meta.get_field("customer")
         customer_field.related_name = "proformas"
+
+    @property
+    def payment(self):
+        try:
+            return self.proforma_payment
+        except Payment.DoesNotExist:
+            return None
 
     def clean(self):
         super(Proforma, self).clean()
@@ -168,6 +176,19 @@ class Proforma(BillingDocument):
     @property
     def related_document(self):
         return self.invoice
+
+    @property
+    def fields_for_payment_creation(self):
+        fields = super(Proforma, self).fields_for_payment_creation
+
+        proforma_fields = {
+            'proforma': self,
+            'invoice': self.related_document
+        }
+
+        fields.update(proforma_fields)
+
+        return fields
 
 
 @receiver(pre_delete, sender=Proforma)
