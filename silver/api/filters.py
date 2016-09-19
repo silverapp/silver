@@ -18,7 +18,7 @@ from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
 from django_filters.fields import Lookup
 
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
-                           Plan, Invoice, Proforma)
+                           Plan, Invoice, Proforma, Payment)
 
 
 class MultipleCharFilter(CharFilter):
@@ -130,3 +130,13 @@ class ProformaFilter(BillingDocumentFilter):
     class Meta(BillingDocumentFilter.Meta):
         model = Proforma
         fields = BillingDocumentFilter.Meta.fields + ['series', ]
+
+
+class PaymentFilter(FilterSet):
+    is_overdue = BooleanFilter(name='overdue', lookup_type='exact')
+    visible = BooleanFilter(name='visible', lookup_type='exact')
+    status = CharFilter(name='status', lookup_type='exact')
+
+    class Meta:
+        model = Payment
+        fields = ['is_overdue', 'visible', 'status']
