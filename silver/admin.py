@@ -17,11 +17,14 @@ import os
 import errno
 import logging
 import requests
+import pytz
 from collections import OrderedDict
+from datetime import datetime, timedelta
 
 from django import forms
 from django.contrib import messages
-from django.contrib.admin import helpers, site, TabularInline, ModelAdmin
+from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
+                                  SimpleListFilter)
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
@@ -36,7 +39,7 @@ from django.http import HttpResponse
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
+                    MeteredFeatureUnitsLog, Invoice, DocumentEntry, Payment,
                     ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
 
@@ -783,6 +786,165 @@ class ProformaAdmin(BillingDocumentAdmin):
     related_invoice.allow_tags = True
 
 
+class DueDateFilter(SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = 'due date'
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'due_date_filter'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return (
+            ('due_this_month', _('All due this month')),
+            ('due_today', _('All due today')),
+            ('overdue_since_last_month', _('All overdue since last month')),
+            ('overdue_all', _('All overdue'))
+        )
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+        if self.value() == 'due_this_month':
+            return queryset.filter(
+                due_date__gte=datetime.now().replace(day=1)
+            )
+        if self.value() == 'due_today':
+            return queryset.filter(
+                due_date__exact=datetime.now()
+            )
+        if self.value() == 'overdue_since_last_month':
+            return queryset.filter(
+                due_date__lt=datetime.now(),
+                due_date__gte=(datetime.now().replace(day=1) -
+                               timedelta(days=1)).replace(day=1),
+                status='unpaid'
+            )
+        if self.value() == 'overdue_all':
+            return queryset.filter(
+                due_date__lt=datetime.now(pytz.utc),
+                status='unpaid'
+            )
+
+        return queryset
+
+
+class PaymentAdmin(ModelAdmin):
+    fields = ('customer', 'provider', 'amount', 'currency', 'proforma',
+              'invoice', 'currency_rate_date', 'due_date', 'status', 'visible',)
+    readonly_fields = ('status',)
+
+    list_display = ('__unicode__', 'related_invoice', 'related_proforma',
+                    'customer', 'due_date', 'amount', 'visible', 'status',)
+    list_filter = ('customer', 'visible', 'status', DueDateFilter)
+    date_hierarchy = 'due_date'
+    actions = ['process', 'cancel', 'succeed', 'fail']
+
+    def perform_action(self, request, queryset, action, display_verb=None):
+        failed_count = 0
+        payments_count = len(queryset)
+
+        try:
+            method = getattr(Payment, action)
+        except AttributeError:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
+
+        for payment in queryset:
+            try:
+                method(payment)
+                payment.save()
+            except (ValueError, AttributeError, TransitionNotAllowed) as e:
+                failed_count += 1
+
+        succeeded_count = payments_count - failed_count
+
+        if not failed_count:
+            self.message_user(
+                request,
+                'Successfully %s %d payments.' % (
+                    display_verb or action, payments_count
+                )
+            )
+        elif failed_count != payments_count:
+
+            self.message_user(
+                request,
+                '%s %d payments, %d failed.' % (
+                    display_verb or action, succeeded_count, failed_count
+                ),
+                level=messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                'Couldn\'t %s any of the selected payments.' % action,
+                level=messages.ERROR
+            )
+
+        action = action.capitalize()
+
+        logger.info('[Admin][%s Payment]: %s', action, {
+            'detail': '%s Payment action initiated by user.' % action,
+            'user_id': request.user.id,
+            'user_staff': request.user.is_staff,
+            'failed_count': failed_count,
+            'succeeded_count': succeeded_count
+        })
+
+    def process(self, request, queryset):
+        self.perform_action(request, queryset, 'process', 'processed')
+    process.short_description = 'Process the selected payments'
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, queryset, 'cancel', 'canceled')
+    cancel.short_description = 'Cancel the selected payments'
+
+    def succeed(self, request, queryset):
+        self.perform_action(request, queryset, 'succeed', 'succeeded')
+    succeed.short_description = 'Succeed the selected payments'
+
+    def fail(self, request, queryset):
+        self.perform_action(request, queryset, 'fail', 'failed')
+    fail.short_description = 'Fail the selected payments'
+
+    def related_invoice(self, obj):
+        if obj.invoice:
+            url = reverse('admin:silver_invoice_change', args=(obj.invoice.pk,))
+            return '<a href="%s">%s</a>' % (
+                url, obj.invoice.series_number
+            )
+        else:
+            return '(None)'
+    related_invoice.allow_tags = True
+    related_invoice.short_description = 'Invoice'
+
+    def related_proforma(self, obj):
+        if obj.proforma:
+            url = reverse(
+                'admin:silver_proforma_change', args=(obj.proforma.pk,)
+            )
+            return '<a href="%s">%s</a>' % (
+                url, obj.proforma.series_number
+            )
+        else:
+            return '(None)'
+    related_proforma.allow_tags = True
+    related_proforma.short_description = 'Proforma'
+
+site.register(Payment, PaymentAdmin)
 site.register(Plan, PlanAdmin)
 site.register(Subscription, SubscriptionAdmin)
 site.register(Customer, CustomerAdmin)
