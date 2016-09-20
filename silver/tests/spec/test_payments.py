@@ -304,7 +304,6 @@ class TestPaymentEndpoints(APITestCase):
                 url, json.dumps(data), content_type='application/json'
             )
 
-            print response.status_code, response.data
             assert response.status_code == status.HTTP_200_OK
             assert process_mock.call_count == 1
 
