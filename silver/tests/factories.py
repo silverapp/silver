@@ -25,7 +25,8 @@ from django.utils import timezone
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
-                           Proforma, MeteredFeatureUnitsLog, DocumentEntry)
+                           Proforma, MeteredFeatureUnitsLog, DocumentEntry,
+                           Payment)
 from silver.utils.international import countries
 
 
@@ -233,3 +234,16 @@ class AdminUserFactory(factory.django.DjangoModelFactory):
     is_active = True
     is_superuser = True
     is_staff = True
+
+
+class PaymentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Payment
+
+    amount = factory.Sequence(lambda n: (n + 1) % 4 * 1000 + 10)
+    currency = 'USD'
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    proforma = factory.SubFactory(ProformaFactory)
+    invoice = factory.SubFactory(InvoiceFactory)
+    status = Payment.Status.Unpaid
