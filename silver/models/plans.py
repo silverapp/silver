@@ -20,10 +20,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from silver.utils.international import currencies
-
-
-class UnsavedForeignKey(models.ForeignKey):
-    allow_unsaved_instance_assignment = True
+from silver.utils.models import UnsavedForeignKey
 
 
 class Plan(models.Model):

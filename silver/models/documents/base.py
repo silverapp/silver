@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, timedelta
-from decimal import Decimal
 
-from django_fsm import TransitionNotAllowed, FSMField, transition
+from datetime import datetime, timedelta
+
+from django_fsm import FSMField, transition
 from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
@@ -27,8 +27,6 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Max
-from django.db.models.signals import pre_delete, pre_save
-from django.dispatch import receiver
 from django.http import HttpResponse
 from django.template.loader import select_template
 from django.utils import timezone
@@ -36,7 +34,8 @@ from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
-from .billing_entities import Customer, Provider
+from .entries import DocumentEntry
+from silver.models.billing_entities import Customer, Provider
 from silver.utils.international import currencies
 
 
@@ -175,15 +174,10 @@ class BillingDocument(models.Model):
 
         # clone entries too
         for entry in self._entries:
-            entry.pk = None
-            entry.id = None
-            if isinstance(self, Proforma):
-                entry.proforma = clone
-                entry.invoice = None
-            elif isinstance(self, Invoice):
-                entry.invoice = clone
-                entry.proforma = None
-            entry.save()
+            entry_clone = entry.clone()
+            document_type_name = self.__class__.__name__.lower()
+            setattr(entry_clone, document_type_name, clone)
+            entry_clone.save()
 
         clone.save()
 
@@ -374,333 +368,3 @@ class BillingDocument(models.Model):
                 'id': self.id
             }
         }
-
-
-class Invoice(BillingDocument):
-    proforma = models.ForeignKey('Proforma', blank=True, null=True,
-                                 related_name='related_proforma')
-
-    kind = 'Invoice'
-
-    def __init__(self, *args, **kwargs):
-        super(Invoice, self).__init__(*args, **kwargs)
-
-        provider_field = self._meta.get_field("provider")
-        provider_field.related_name = "invoices"
-
-        customer_field = self._meta.get_field("customer")
-        customer_field.related_name = "invoices"
-
-    @transition(field='state', source=BillingDocument.STATES.DRAFT,
-                target=BillingDocument.STATES.ISSUED)
-    def issue(self, issue_date=None, due_date=None):
-        self.archived_provider = self.provider.get_invoice_archivable_field_values()
-
-        super(Invoice, self)._issue(issue_date, due_date)
-
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.PAID)
-    def pay(self, paid_date=None, affect_related_document=True):
-        super(Invoice, self)._pay(paid_date)
-
-        if self.proforma and affect_related_document:
-            try:
-                self.proforma.pay(paid_date=paid_date,
-                                  affect_related_document=False)
-                self.proforma.save()
-            except TransitionNotAllowed:
-                # the related proforma is already paid
-                # other inconsistencies should've been fixed before
-                pass
-
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.CANCELED)
-    def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Invoice, self)._cancel(cancel_date)
-
-        if self.proforma and affect_related_document:
-            self.proforma.cancel(cancel_date=cancel_date,
-                                 affect_related_document=False)
-            self.proforma.save()
-
-    @property
-    def _starting_number(self):
-        return self.provider.invoice_starting_number
-
-    @property
-    def default_series(self):
-        try:
-            return self.provider.invoice_series
-        except Provider.DoesNotExist:
-            return ''
-
-    @property
-    def total(self):
-        entries_total = [Decimal(item.total)
-                         for item in self.invoice_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def total_before_tax(self):
-        entries_total = [Decimal(item.total_before_tax)
-                         for item in self.invoice_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def tax_value(self):
-        entries_total = [Decimal(item.tax_value)
-                         for item in self.invoice_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def related_document(self):
-        return self.proforma
-
-
-@receiver(pre_delete, sender=Invoice)
-def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
-    if instance.pdf:
-        # Delete the invoice's PDF
-        instance.pdf.delete(False)
-
-    # If exists, delete the PDF of the related proforma
-    if instance.proforma:
-        if instance.proforma.pdf:
-            instance.proforma.pdf.delete(False)
-
-
-class Proforma(BillingDocument):
-    invoice = models.ForeignKey('Invoice', blank=True, null=True,
-                                related_name='related_invoice')
-
-    kind = 'Proforma'
-
-    def __init__(self, *args, **kwargs):
-        super(Proforma, self).__init__(*args, **kwargs)
-
-        provider_field = self._meta.get_field("provider")
-        provider_field.related_name = "proformas"
-
-        customer_field = self._meta.get_field("customer")
-        customer_field.related_name = "proformas"
-
-    def clean(self):
-        super(Proforma, self).clean()
-        if not self.series:
-            if not hasattr(self, 'provider'):
-                # the clean method is called even if the clean_fields method
-                # raises exceptions, to we check if the provider was specified
-                pass
-            elif not self.provider.proforma_series:
-                err_msg = {'series': 'You must either specify the series or '
-                                     'set a default proforma_series for the '
-                                     'provider.'}
-                raise ValidationError(err_msg)
-
-    @transition(field='state', source=BillingDocument.STATES.DRAFT,
-                target=BillingDocument.STATES.ISSUED)
-    def issue(self, issue_date=None, due_date=None):
-        self.archived_provider = self.provider.get_proforma_archivable_field_values()
-
-        super(Proforma, self)._issue(issue_date, due_date)
-
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.PAID)
-    def pay(self, paid_date=None, affect_related_document=True):
-        super(Proforma, self)._pay(paid_date)
-
-        if not self.invoice:
-            self.invoice = self._new_invoice()
-            self.invoice.issue()
-            self.invoice.pay(paid_date=paid_date,
-                             affect_related_document=False)
-
-            # if the proforma is paid, the invoice due_date should be issue_date
-            self.invoice.due_date = self.invoice.issue_date
-
-            self.invoice.save()
-            self.save()
-
-        elif affect_related_document:
-            try:
-                self.invoice.pay(paid_date=paid_date,
-                                 affect_related_document=False)
-                self.invoice.save()
-            except TransitionNotAllowed:
-                # the related invoice is already paid
-                # other inconsistencies should've been fixed before
-                pass
-
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.CANCELED)
-    def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Proforma, self)._cancel(cancel_date)
-
-        if self.invoice and affect_related_document:
-            self.invoice.cancel(cancel_date=cancel_date,
-                                affect_related_document=False)
-            self.invoice.save()
-
-    def create_invoice(self):
-        if self.state != BillingDocument.STATES.ISSUED:
-            raise ValueError("You can't create an invoice from a %s proforma, "
-                             "only from an issued one" % self.state)
-
-        if self.invoice:
-            raise ValueError("This proforma already has an invoice { %s }"
-                             % self.invoice)
-
-        self.invoice = self._new_invoice()
-        self.invoice.issue()
-        self.invoice.save()
-
-        self.save()
-
-    def _new_invoice(self):
-        # Generate the new invoice based this proforma
-        invoice_fields = self.fields_for_automatic_invoice_generation
-        invoice_fields.update({'proforma': self})
-        invoice = Invoice.objects.create(**invoice_fields)
-
-        # For all the entries in the proforma => add the link to the new
-        # invoice
-        DocumentEntry.objects.filter(proforma=self).update(invoice=invoice)
-        return invoice
-
-    @property
-    def _starting_number(self):
-        return self.provider.proforma_starting_number
-
-    @property
-    def default_series(self):
-        try:
-            return self.provider.proforma_series
-        except Provider.DoesNotExist:
-            return ''
-
-    @property
-    def fields_for_automatic_invoice_generation(self):
-        fields = ['customer', 'provider', 'archived_customer',
-                  'archived_provider', 'paid_date', 'cancel_date',
-                  'sales_tax_percent', 'sales_tax_name', 'currency']
-        return {field: getattr(self, field, None) for field in fields}
-
-    @property
-    def total(self):
-        entries_total = [Decimal(item.total)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def total_before_tax(self):
-        entries_total = [Decimal(item.total_before_tax)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def tax_value(self):
-        entries_total = [Decimal(item.tax_value)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def related_document(self):
-        return self.invoice
-
-
-@receiver(pre_delete, sender=Proforma)
-def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
-    if instance.pdf:
-        # Delete the proforma's PDF
-        instance.pdf.delete(False)
-
-    # If exists, delete the PDF of the related invoice
-    if instance.invoice:
-        if instance.invoice.pdf:
-            instance.invoice.pdf.delete(False)
-
-
-class DocumentEntry(models.Model):
-    description = models.CharField(max_length=1024)
-    unit = models.CharField(max_length=1024, blank=True, null=True)
-    quantity = models.DecimalField(max_digits=19, decimal_places=4,
-                                   validators=[MinValueValidator(0.0)])
-    unit_price = models.DecimalField(max_digits=19, decimal_places=4)
-    product_code = models.ForeignKey('ProductCode', null=True, blank=True,
-                                     related_name='invoices')
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
-    prorated = models.BooleanField(default=False)
-    invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
-                                blank=True, null=True)
-    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
-                                 blank=True, null=True)
-
-    class Meta:
-        verbose_name = 'Entry'
-        verbose_name_plural = 'Entries'
-
-    @property
-    def total(self):
-        res = self.total_before_tax + self.tax_value
-        return res.quantize(Decimal('0.00'))
-
-    @property
-    def total_before_tax(self):
-        res = Decimal(self.quantity * self.unit_price)
-        return res.quantize(Decimal('0.00'))
-
-    @property
-    def tax_value(self):
-        if self.invoice:
-            sales_tax_percent = self.invoice.sales_tax_percent
-        elif self.proforma:
-            sales_tax_percent = self.proforma.sales_tax_percent
-        else:
-            sales_tax_percent = None
-
-        if not sales_tax_percent:
-            return Decimal(0)
-
-        res = Decimal(self.total_before_tax * sales_tax_percent / 100)
-        return res.quantize(Decimal('0.00'))
-
-    def __unicode__(self):
-        s = u'{descr} - {unit} - {unit_price} - {quantity} - {product_code}'
-        return s.format(
-            descr=self.description,
-            unit=self.unit,
-            unit_price=self.unit_price,
-            quantity=self.quantity,
-            product_code=self.product_code
-        )
-
-
-@receiver(pre_save, sender=Provider)
-def update_draft_billing_documents(sender, instance, **kwargs):
-    if instance.pk and not kwargs.get('raw', False):
-        provider = Provider.objects.get(pk=instance.pk)
-        old_invoice_series = provider.invoice_series
-        old_proforma_series = provider.proforma_series
-
-        if instance.invoice_series != old_invoice_series:
-            for invoice in Invoice.objects.filter(state='draft',
-                                                  provider=provider):
-                # update the series for draft invoices
-                invoice.series = instance.invoice_series
-                invoice.number = None
-                invoice.save()
-
-        if instance.proforma_series != old_proforma_series:
-            for proforma in Proforma.objects.filter(state='draft',
-                                                    provider=provider):
-                # update the series for draft invoices
-                proforma.series = instance.proforma_series
-                proforma.number = None
-                proforma.save()
