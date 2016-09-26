@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,4 +13,5 @@
 # limitations under the License.
 
 
-from .dates import next_month, prev_month
+from .customer import Customer
+from .provider import Provider

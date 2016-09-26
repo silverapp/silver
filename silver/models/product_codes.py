@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,5 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.db import models
 
-from .dates import next_month, prev_month
+
+class ProductCode(models.Model):
+    value = models.CharField(max_length=128, unique=True)
+
+    def __unicode__(self):
+        return unicode(self.value)

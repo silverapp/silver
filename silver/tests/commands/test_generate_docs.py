@@ -1619,7 +1619,7 @@ class TestInvoiceGenerationCommand(TestCase):
                             on_trial=mocked_on_trial,
                             bucket_start_date=mocked_bsd,
                             bucket_end_date=mocked_bed):
-            with patch('silver.models.timezone') as mocked_timezone:
+            with patch('silver.models.subscriptions.timezone') as mocked_timezone:
                 mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 6)
 
                 subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
@@ -1660,7 +1660,7 @@ class TestInvoiceGenerationCommand(TestCase):
                             on_trial=mocked_on_trial,
                             bucket_start_date=mocked_bsd,
                             bucket_end_date=mocked_bed):
-            with patch('silver.models.timezone') as mocked_timezone:
+            with patch('silver.models.subscriptions.timezone') as mocked_timezone:
                 mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 29)
 
                 for subscription in Subscription.objects.filter(id__in=range(2, 5)):

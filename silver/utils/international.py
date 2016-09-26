@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,5 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pycountry
 
-from .dates import next_month, prev_month
+
+countries = [(country.alpha2, country.name) for country in pycountry.countries]
+currencies = [(currency.letter, currency.name) for currency in pycountry.currencies]
