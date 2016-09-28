@@ -21,7 +21,8 @@ from django.http.response import Http404
 from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import (get_object_or_404, ListCreateAPIView,
-                                     RetrieveUpdateAPIView)
+                                     RetrieveUpdateAPIView, ListAPIView,
+                                     RetrieveAPIView)
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -31,13 +32,15 @@ from annoying.functions import get_object_or_None
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma, BillingDocument, Payment)
+from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
-                                    DocumentEntrySerializer, PaymentSerializer)
+                                    DocumentEntrySerializer, PaymentSerializer,
+                                    PaymentProcessorSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter, PaymentFilter)
@@ -802,3 +805,28 @@ class PaymentDetail(RetrieveUpdateAPIView):
         payment_pk = self.kwargs.get('payment_pk', None)
         return get_object_or_404(Payment, customer__id=customer_pk,
                                  pk=payment_pk)
+
+
+class PaymentProcessorList(ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_queryset(self):
+        return PaymentProcessorManager.all()
+
+
+class PaymentProcessorDetail(RetrieveAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_object(self):
+        processor_name = self.kwargs.get('processor_name', '')
+        processor = PaymentProcessorManager.get(processor_name)
+
+        if processor:
+            return processor
+        else:
+            raise Http404
+

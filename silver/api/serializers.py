@@ -462,3 +462,27 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
                 })
 
         return super(PaymentSerializer, self).update(instance, validated_data)
+
+
+class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
+    def __init__(self, view_name=None, **kwargs):
+        assert view_name is not None, 'The `view_name` argument is required.'
+        kwargs['read_only'] = True
+
+        super(PaymentProcessorUrl, self).__init__(view_name, **kwargs)
+
+    def to_representation(self, value):
+        kwargs = {'processor_name': value.name}
+        request = self.context.get('request', None)
+        format = self.context.get('format', None)
+
+        return reverse(self.view_name, kwargs=kwargs, request=request,
+                       format=format)
+
+
+class PaymentProcessorSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=64)
+    type = serializers.CharField(max_length=64)
+    url = PaymentProcessorUrl(
+        view_name='payment-processor-detail', source='*',
+    )

@@ -23,6 +23,7 @@ urlpatterns = [
         views.CustomerList.as_view(), name='customer-list'),
     url(r'^customers/(?P<pk>[0-9]+)/$',
         views.CustomerDetail.as_view(), name='customer-detail'),
+
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/$',
         views.SubscriptionList.as_view(), name='subscription-list'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/$',
@@ -35,26 +36,37 @@ urlpatterns = [
         views.SubscriptionCancel.as_view(), name='sub-cancel'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/reactivate/$',
         views.SubscriptionReactivate.as_view(), name='sub-reactivate'),
+
     url(r'^customers/(?P<customer_pk>[0-9]+)/payments/$',
         views.PaymentList.as_view(), name='payment-list'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/payments/(?P<payment_pk>[0-9]+)/$',
         views.PaymentDetail.as_view(), name='payment-detail'),
+
+    url(r'^payment_processors/$',
+        views.PaymentProcessorList.as_view(), name='payment-processor-list'),
+    url(r'^payment_processors/(?P<processor_name>[a-zA-Z]+)/$',
+        views.PaymentProcessorDetail.as_view(), name='payment-processor-detail'),
+
     url(r'^plans/$',
         views.PlanList.as_view(), name='plan-list'),
     url(r'^plans/(?P<pk>[0-9]+)/$',
         views.PlanDetail.as_view(), name='plan-detail'),
     url(r'plans/(?P<pk>[0-9]+)/metered-features/$',
         views.PlanMeteredFeatures.as_view(), name='plans-metered-features'),
+
     url(r'^metered-features/$',
         views.MeteredFeatureList.as_view(), name='metered-feature-list'),
+
     url(r'^providers/$',
         views.ProviderListCreate.as_view(), name='provider-list'),
     url(r'^providers/(?P<pk>[0-9]+)/$',
         views.ProviderRetrieveUpdateDestroy.as_view(), name='provider-detail'),
+
     url(r'^product-codes/$',
         views.ProductCodeListCreate.as_view(), name='productcode-list'),
     url(r'^product-codes/(?P<pk>[0-9]+)/$',
         views.ProductCodeRetrieveUpdate.as_view(), name='productcode-detail'),
+
     url(r'^invoices/$',
         views.InvoiceListCreate.as_view(), name='invoice-list'),
     url(r'^invoices/(?P<pk>[0-9]+)/$',
@@ -67,6 +79,7 @@ urlpatterns = [
         views.InvoiceStateHandler.as_view(), name='invoice-state'),
     url(r'^invoices/(?P<invoice_id>\d+).pdf$',
         silver_views.invoice_pdf, name='invoice-pdf'),
+
     url(r'^proformas/$',
         views.ProformaListCreate.as_view(), name='proforma-list'),
     url(r'^proformas/(?P<pk>[0-9]+)/$',
