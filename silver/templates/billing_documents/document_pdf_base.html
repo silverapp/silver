@@ -156,8 +156,8 @@
                     {{ provider.zip_code }}<br>
                 {% endif %}
 
-                {% if provider.email %}
-                    <strong>Email</strong>: {{ provider.email }}<br>
+                {% if provider.display_email %}
+                    <strong>Email</strong>: {{ provider.display_email }}<br>
                 {% endif %}
 
                 {% if provider.extra %}
@@ -187,8 +187,8 @@
                     {{ customer.zip_code }}<br>
                 {% endif %}
 
-                {% if customer.email %}
-                    <strong>Email</strong>: {{ customer.email }}<br>
+                {% if customer.emails %}
+                    <strong>Email</strong>: {{ customer.emails|first }}<br>
                 {% endif %}
 
                 {% if customer.company %}

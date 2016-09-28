@@ -20,3 +20,4 @@ django-xhtml2pdf
 pyvat
 PyPDF2
 html5lib==0.999
+django-multi-email-field==0.4

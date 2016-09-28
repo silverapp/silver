@@ -49,7 +49,7 @@ class SubscriptionFilter(FilterSet):
 
 class CustomerFilter(FilterSet):
     active = BooleanFilter(name='is_active', lookup_type='iexact')
-    email = CharFilter(name='email', lookup_type='icontains')
+    email = CharFilter(name='emails', lookup_type='icontains')
     company = CharFilter(name='company', lookup_type='icontains')
     name = CharFilter(name='name', lookup_type='icontains')
     country = CharFilter(name='country', lookup_type='icontains')
@@ -68,12 +68,13 @@ class CustomerFilter(FilterSet):
 
 
 class ProviderFilter(FilterSet):
-    email = CharFilter(name='email', lookup_type='icontains')
+    display_email = CharFilter(name='display_email', lookup_type='icontains')
+    internal_email = CharFilter(name='internal_email', lookup_type='icontains')
     company = CharFilter(name='company', lookup_type='icontains')
 
     class Meta:
         model = Provider
-        fields = ['email', 'company']
+        fields = ['display_email', 'internal_email', 'company']
 
 
 class PlanFilter(FilterSet):

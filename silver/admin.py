@@ -16,9 +16,9 @@
 import os
 import errno
 import logging
+import requests
 from collections import OrderedDict
 
-import requests
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import helpers, site, TabularInline, ModelAdmin
@@ -39,6 +39,7 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
+
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +247,7 @@ class SubscriptionAdmin(ModelAdmin):
 
 
 class CustomerAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
+    fields = ['company', 'name', 'customer_reference', 'emails', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
               'sales_tax_percent', 'sales_tax_number', 'extra', 'meta']
@@ -254,7 +255,7 @@ class CustomerAdmin(LiveModelAdmin):
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email', 'meta']
+                     'emails', 'meta']
     actions = ['generate_all_documents']
     exclude = ['live']
 
@@ -303,16 +304,16 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
-              'state', 'zip_code', 'country', 'flow', 'invoice_series',
-              'invoice_starting_number', 'proforma_series',
+    fields = ['company', 'name', 'display_email', 'internal_email', 'address_1',
+              'address_2', 'city', 'state', 'zip_code', 'country', 'flow',
+              'invoice_series', 'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra',
               'meta']
     list_display = ['__unicode__', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email', 'meta']
+                     'emails', 'meta']
     actions = ['generate_monthly_totals']
     exclude = ['live']
 
@@ -499,12 +500,13 @@ class BillingDocumentAdmin(ModelAdmin):
 
     list_filter = ('provider__company', 'state')
 
-    common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
+    common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields]
+                              for field in common_fields] + ['emails']
     provider_search_fields = ['provider__{field}'.format(field=field)
-                              for field in common_fields]
+                              for field in common_fields] + ['display_email',
+                                                             'internal_email']
     search_fields = (customer_search_fields + provider_search_fields +
                      ['series', 'number'])
 
@@ -779,6 +781,7 @@ class ProformaAdmin(BillingDocumentAdmin):
         return obj.invoice.admin_change_url if obj.invoice else 'None'
     related_invoice.short_description = 'Related invoice'
     related_invoice.allow_tags = True
+
 
 site.register(Plan, PlanAdmin)
 site.register(Subscription, SubscriptionAdmin)
