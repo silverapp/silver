@@ -18,7 +18,6 @@ from pyvat import is_vat_number_format_valid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMessage
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -77,15 +76,3 @@ class Customer(BaseBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
-
-    def send_email(self, subject, body, from_email=None, cc=None, bcc=None):
-        to = self.emails
-        cc = [cc] if cc else []
-        bcc = [bcc] if bcc else []
-
-        EmailMessage(subject=subject,
-                     body=body,
-                     from_email=(from_email or settings.PAYMENTS_FROM_EMAIL),
-                     to=to,
-                     bcc=bcc,
-                     cc=cc).send()
