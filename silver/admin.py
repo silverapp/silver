@@ -307,7 +307,7 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'display_email', 'internal_email', 'address_1',
+    fields = ['company', 'name', 'display_email', 'notification_email', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country', 'flow',
               'invoice_series', 'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra',
@@ -509,7 +509,7 @@ class BillingDocumentAdmin(ModelAdmin):
                               for field in common_fields] + ['emails']
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields] + ['display_email',
-                                                             'internal_email']
+                                                             'notification_email']
     search_fields = (customer_search_fields + provider_search_fields +
                      ['series', 'number'])
 

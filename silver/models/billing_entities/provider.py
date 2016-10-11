@@ -51,7 +51,7 @@ class Provider(BaseBillingEntity):
     display_email = models.EmailField(
         blank=True, null=True, help_text='The email that the customers see.'
     )
-    internal_email = models.EmailField(
+    notification_email = models.EmailField(
         blank=True, null=True,
         help_text='The email used by Silver in CC and system notifications.'
     )
@@ -108,7 +108,7 @@ class Provider(BaseBillingEntity):
 
     def get_archivable_field_values(self):
         base_fields = super(Provider, self).get_archivable_field_values()
-        provider_fields = ['display_email', 'internal_email']
+        provider_fields = ['display_email', 'notification_email']
         fields_dict = {field: getattr(self, field, '') for field in
                        provider_fields}
         base_fields.update(fields_dict)

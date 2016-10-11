@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='provider',
-            name='internal_email',
+            name='notification_email',
             field=models.EmailField(help_text=b'The email used by Silver in CC and system notifications.', max_length=254, null=True, blank=True),
         ),
     ]
