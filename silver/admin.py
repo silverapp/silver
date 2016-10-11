@@ -854,7 +854,7 @@ class PaymentAdmin(ModelAdmin):
             try:
                 method(payment)
                 payment.save()
-            except (ValueError, AttributeError, TransitionNotAllowed) as e:
+            except TransitionNotAllowed:
                 failed_count += 1
 
         succeeded_count = payments_count - failed_count
