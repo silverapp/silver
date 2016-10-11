@@ -162,7 +162,7 @@ class Payment(models.Model):
     def __unicode__(self):
         return '#%0#5d' % self.pk
 
-    def __sub__(self, other_payment):
+    def diff(self, other_payment):
         changes = {}
         for attr in ['visible']:
             if attr not in other_payment.__dict__:
@@ -261,7 +261,8 @@ def post_payment_save(sender, instance, **kwargs):
         })
 
     if instance.old_value:
-        changes = instance.old_value - instance
+        changes = instance.diff(instance.old_value)
+
         if ('visible' in changes and
                 not changes['visible']['from'] and
                 changes['visible']['to']):
