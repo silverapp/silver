@@ -278,7 +278,7 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     """
     Syncs the related documents of a payment state with the payment status
     """
-    if sender is Payment:
+    if issubclass(sender, Payment):
         if target == Payment.Status.Paid:
             send_mail = False
 
