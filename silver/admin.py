@@ -806,7 +806,7 @@ class DueDateFilter(SimpleListFilter):
             ('due_this_month', _('All due this month')),
             ('due_today', _('All due today')),
             ('overdue_since_last_month', _('All overdue since last month')),
-            ('overdue_all', _('All overdue'))
+            ('overdue', _('All overdue'))
         )
 
     def queryset(self, request, queryset):
@@ -818,25 +818,13 @@ class DueDateFilter(SimpleListFilter):
         # Compare the requested value (either '80s' or '90s')
         # to decide how to filter the queryset.
         if self.value() == 'due_this_month':
-            return queryset.filter(
-                due_date__gte=datetime.now().replace(day=1)
-            )
+            return queryset.due_this_month()
         if self.value() == 'due_today':
-            return queryset.filter(
-                due_date__exact=datetime.now()
-            )
+            return queryset.due_today()
         if self.value() == 'overdue_since_last_month':
-            return queryset.filter(
-                due_date__lt=datetime.now(),
-                due_date__gte=(datetime.now().replace(day=1) -
-                               timedelta(days=1)).replace(day=1),
-                status='unpaid'
-            )
-        if self.value() == 'overdue_all':
-            return queryset.filter(
-                due_date__lt=datetime.now(pytz.utc),
-                status='unpaid'
-            )
+            return queryset.overdue_since_last_month()
+        if self.value() == 'overdue':
+            return queryset.overdue()
 
         return queryset
 

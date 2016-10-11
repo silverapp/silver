@@ -13,14 +13,16 @@
 # limitations under the License.
 
 import logging
-from datetime import date
+from datetime import date, datetime
 
+import pytz
 from annoying.functions import get_object_or_None
 from django_fsm import (post_transition, TransitionNotAllowed, transition,
                         FSMField)
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.manager import Manager
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.template.loader import select_template
@@ -34,7 +36,35 @@ from .billing_entities import Customer, Provider
 logger = logging.getLogger(__name__)
 
 
+class PaymentQuerySet(models.QuerySet):
+    def _pending_and_unpaid(self):
+        return self.filter(status__in=[Payment.Status.Unpaid,
+                                       Payment.Status.Pending])
+
+    def due_this_month(self):
+        return self._pending_and_unpaid().filter(
+            due_date__gte=datetime.now(pytz.utc).date().replace(day=1)
+        )
+
+    def due_today(self):
+        return self._pending_and_unpaid().filter(
+            due_date__exact=datetime.now(pytz.utc).date()
+        )
+
+    def overdue(self):
+        return self._pending_and_unpaid().filter(
+            due_date__lt=datetime.now(pytz.utc).date()
+        )
+
+    def overdue_since_last_month(self):
+        return self._pending_and_unpaid().filter(
+            due_date__lt=datetime.now(pytz.utc).date().replace(day=1)
+        )
+
+
 class Payment(models.Model):
+    objects = Manager.from_queryset(PaymentQuerySet)()
+
     amount = models.DecimalField(decimal_places=2, max_digits=8)
     due_date = models.DateField(null=True, blank=True, default=None)
 
