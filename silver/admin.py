@@ -844,11 +844,11 @@ class PaymentAdmin(ModelAdmin):
         failed_count = 0
         payments_count = len(queryset)
 
-        try:
-            method = getattr(Payment, action)
-        except AttributeError:
+        if not action in self.actions:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
+
+        method = getattr(Payment, action)
 
         for payment in queryset:
             try:
