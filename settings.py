@@ -141,3 +141,5 @@ LOGGING['formatters']['verbose'] = {
     'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
     'datefmt': "%d/%b/%Y %H:%M:%S"
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
