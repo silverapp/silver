@@ -270,7 +270,7 @@ class TestPaymentEndpoints(APITestCase):
             u'non_field_errors': [u"Cannot update a payment with 'canceled' status."]
         }
 
-    def test_valid_status_transitions(self):
+    def test_valid_status_transition_from_unpaid_to_pending(self):
         process_mock = MagicMock()
         fail_mock = MagicMock()
         succeed_mock = MagicMock()
@@ -304,8 +304,35 @@ class TestPaymentEndpoints(APITestCase):
                 url, json.dumps(data), content_type='application/json'
             )
 
+            print response.status_code, response.data
             assert response.status_code == status.HTTP_200_OK
             assert process_mock.call_count == 1
+
+    def test_valid_status_transitions_from_pending_to_unpaid(self):
+        process_mock = MagicMock()
+        fail_mock = MagicMock()
+        succeed_mock = MagicMock()
+        cancel_mock = MagicMock()
+
+        with patch.multiple('silver.models.payments.Payment',
+                            process=process_mock,
+                            fail=fail_mock,
+                            succeed=succeed_mock,
+                            cancel=cancel_mock):
+            payment = PaymentFactory.create()
+            invoice = payment.invoice
+            proforma = payment.proforma
+            invoice.proforma = proforma
+            invoice.save()
+            payment.provider = invoice.provider
+            payment.customer = invoice.customer
+            payment.save()
+
+            url = reverse(
+                'payment-detail',
+                kwargs={'customer_pk': payment.customer.pk,
+                        'payment_pk': payment.pk}
+            )
 
             payment.status = payment.Status.Pending
             payment.save()
@@ -320,7 +347,32 @@ class TestPaymentEndpoints(APITestCase):
             assert response.status_code == status.HTTP_200_OK
             assert fail_mock.call_count == 1
 
+    def test_valid_status_transitions_from_unpaid_to_cancel(self):
+        process_mock = MagicMock()
+        fail_mock = MagicMock()
+        succeed_mock = MagicMock()
+        cancel_mock = MagicMock()
+
+        with patch.multiple('silver.models.payments.Payment',
+                            process=process_mock,
+                            fail=fail_mock,
+                            succeed=succeed_mock,
+                            cancel=cancel_mock):
+            payment = PaymentFactory.create()
+            invoice = payment.invoice
+            proforma = payment.proforma
+            invoice.proforma = proforma
+            invoice.save()
+            payment.provider = invoice.provider
+            payment.customer = invoice.customer
             payment.save()
+
+            url = reverse(
+                'payment-detail',
+                kwargs={'customer_pk': payment.customer.pk,
+                        'payment_pk': payment.pk}
+            )
+
             data = {
                 'status': payment.Status.Canceled
             }
@@ -332,7 +384,32 @@ class TestPaymentEndpoints(APITestCase):
             assert response.status_code == status.HTTP_200_OK
             assert cancel_mock.call_count == 1
 
+    def test_valid_status_transition_from_unpaid_to_paid(self):
+        process_mock = MagicMock()
+        fail_mock = MagicMock()
+        succeed_mock = MagicMock()
+        cancel_mock = MagicMock()
+
+        with patch.multiple('silver.models.payments.Payment',
+                            process=process_mock,
+                            fail=fail_mock,
+                            succeed=succeed_mock,
+                            cancel=cancel_mock):
+            payment = PaymentFactory.create()
+            invoice = payment.invoice
+            proforma = payment.proforma
+            invoice.proforma = proforma
+            invoice.save()
+            payment.provider = invoice.provider
+            payment.customer = invoice.customer
             payment.save()
+
+            url = reverse(
+                'payment-detail',
+                kwargs={'customer_pk': payment.customer.pk,
+                        'payment_pk': payment.pk}
+            )
+
             data = {
                 'status': payment.Status.Paid
             }
