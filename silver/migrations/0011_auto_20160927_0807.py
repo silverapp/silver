@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from decimal import Decimal
+
 from django.db import migrations, models
+import django.core.validators
 import django_fsm
 
 
@@ -16,7 +19,7 @@ class Migration(migrations.Migration):
             name='Payment',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('amount', models.DecimalField(max_digits=8, decimal_places=2)),
+                ('amount', models.DecimalField(max_digits=8, decimal_places=2, validators=[django.core.validators.MinValueValidator(Decimal('0.00'))])),
                 ('due_date', models.DateField(default=None, null=True, blank=True)),
                 ('status', django_fsm.FSMField(default=b'unpaid', max_length=8, choices=[(b'unpaid', 'Unpaid'), (b'pending', 'Pending'), (b'paid', 'Paid'), (b'canceled', 'Canceled')])),
                 ('visible', models.BooleanField(default=True)),

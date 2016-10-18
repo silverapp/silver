@@ -14,6 +14,7 @@
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 
 import pytz
 from annoying.functions import get_object_or_None
@@ -21,6 +22,7 @@ from django_fsm import (post_transition, TransitionNotAllowed, transition,
                         FSMField)
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.manager import Manager
 from django.db.models.signals import post_save, pre_save
@@ -65,7 +67,10 @@ class PaymentQuerySet(models.QuerySet):
 class Payment(models.Model):
     objects = Manager.from_queryset(PaymentQuerySet)()
 
-    amount = models.DecimalField(decimal_places=2, max_digits=8)
+    amount = models.DecimalField(
+        decimal_places=2, max_digits=8,
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
     due_date = models.DateField(null=True, blank=True, default=None)
 
     class Status(object):
@@ -164,12 +169,14 @@ class Payment(models.Model):
 
     def diff(self, other_payment):
         changes = {}
-        for attr in ['visible']:
-            if attr not in other_payment.__dict__:
+        for attr in ['amount', 'due_date', 'status', 'customer', 'provider',
+                     'proforma', 'invoice', 'visible', 'currency',
+                     'currency_rate_date']:
+            if not hasattr(other_payment, attr) or not hasattr(self, attr):
                 continue
 
-            current = self.__dict__[attr]
-            other = other_payment.__dict__[attr]
+            current = getattr(self, attr, None)
+            other = getattr(other_payment, attr, None)
 
             if current != other:
                 changes[attr] = {
@@ -266,7 +273,7 @@ def post_payment_save(sender, instance, **kwargs):
         if ('visible' in changes and
                 not changes['visible']['from'] and
                 changes['visible']['to']):
-            instance.send_new_payment_email()
+            send_new_payment_email(instance)
     elif instance.visible and \
             instance.status not in [Payment.Status.Paid,
                                     Payment.Status.Canceled]:

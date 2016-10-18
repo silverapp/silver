@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from silver.models import Payment
 from silver.tests.factories import InvoiceFactory, AdminUserFactory, PaymentFactory
 
 
@@ -134,8 +135,48 @@ class TestPaymentEndpoints(APITestCase):
         for key in expected_data:
             assert expected_data[key] == response.data[key]
 
+        payment_id = response.data['id']
+
+        assert Payment.objects.filter(id=payment_id)
+
     def test_post_payment_with_invalid_fields(self):
-        pass
+        invoice = InvoiceFactory.create()
+        customer = invoice.customer
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': invoice.customer.pk}
+        )
+
+        data = {
+            'due_date': "yesterday",
+            'visible': "maybe",
+            'amount': -10.00,
+            'currency': 'USD',
+            'status': 'prepaid',
+            'provider': 'http://testserver/providers/1234/',
+            'invoice': 'http://testserver/invoices/4321/'
+        }
+
+        response = self.client.post(
+            url, json.dumps(data), content_type='application/json'
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        self.assertEquals(
+            response.data,
+            {
+                'status': [u'"prepaid" is not a valid choice.'],
+                'due_date': [
+                    u'Date has wrong format. '
+                    u'Use one of these formats instead: YYYY[-MM[-DD]].'
+                ],
+                'visible': [u'"maybe" is not a valid boolean.'],
+                'amount': [u'Ensure this value is greater than or equal to 0.00.'],
+                'invoice': [u'Invalid hyperlink - Object does not exist.'],
+                'provider': [u'Invalid hyperlink - Object does not exist.']
+            }
+        )
 
     def test_patch_payment(self):
         payment = PaymentFactory.create()
@@ -179,7 +220,7 @@ class TestPaymentEndpoints(APITestCase):
             'id': payment.pk
         }
 
-    def test_final_status_payment_no_updates(self):
+    def test_paid_status_payment_no_updates(self):
         payment = PaymentFactory.create()
 
         url = reverse(
@@ -203,6 +244,14 @@ class TestPaymentEndpoints(APITestCase):
         assert response.data == {
             u'non_field_errors': [u"Cannot update a payment with 'paid' status."]
         }
+
+    def test_canceled_status_payment_no_updates(self):
+        payment = PaymentFactory.create()
+
+        url = reverse(
+            'payment-detail', kwargs={'customer_pk': payment.customer.pk,
+                                      'payment_pk': payment.pk}
+        )
 
         payment.status = payment.Status.Canceled
         payment.save()

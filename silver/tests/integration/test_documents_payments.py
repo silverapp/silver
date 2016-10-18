@@ -20,8 +20,7 @@ class TestPayments(TestCase):
 
         assert proforma.total == payment.amount
 
-        if proforma.related_document:
-            assert payment.invoice == proforma.related_document
+        assert payment.invoice == proforma.related_document
 
     def test_create_payment_when_issuing_invoice(self):
         invoice = InvoiceFactory.create()
@@ -36,8 +35,7 @@ class TestPayments(TestCase):
 
             assert invoice.total == payment.amount
 
-            if invoice.related_document:
-                assert payment.invoice == invoice.related_document
+            assert payment.proforma == invoice.related_document
 
     def test_pay_documents_on_payment_succeed(self):
         payment = PaymentFactory.create()
@@ -46,14 +44,8 @@ class TestPayments(TestCase):
                 patch.object(Proforma, '_save_pdf', return_value=None):
             payment.invoice.issue()
 
-            assert payment.invoice.state != BillingDocument.STATES.PAID
-
-            assert payment.invoice.state != BillingDocument.STATES.PAID
-
             payment.succeed()
 
             assert payment.status == Payment.Status.Paid
-
-            assert payment.invoice.state == BillingDocument.STATES.PAID
 
             assert payment.invoice.state == BillingDocument.STATES.PAID

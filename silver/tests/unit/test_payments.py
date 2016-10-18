@@ -13,12 +13,12 @@
 # limitations under the License.
 
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from django.test import TestCase
 
 from silver.models import Payment
-from silver.tests.factories import PaymentFactory
+from silver.tests.factories import PaymentFactory, CustomerFactory
 
 
 class TestPayment(TestCase):
@@ -106,3 +106,28 @@ class TestPayment(TestCase):
 
         assert queryset.count() == 1
         assert payments[2] in queryset
+
+    def test_payment_diff(self):
+        payment, other_payment = PaymentFactory.create_batch(2)
+        payment.amount = 10
+
+        other_payment.amount = 1010
+        other_payment.status = Payment.Status.Paid
+        other_payment.due_date = date(2016, 9, 11)
+        other_payment.customer = CustomerFactory.create()
+
+        self.maxDiff = None
+        self.assertEqual(payment.diff(other_payment),
+                         {
+                             'status': {'to': 'paid', 'from': 'unpaid'},
+                             'due_date': {'to': date(2016, 9, 11), 'from': None},
+                             'amount': {'to': 1010, 'from': 10},
+                             'customer': {'to': other_payment.customer,
+                                          'from': payment.customer},
+                             'invoice': {'to': other_payment.invoice,
+                                         'from': payment.invoice},
+                             'proforma': {'to': other_payment.proforma,
+                                          'from': payment.proforma},
+                             'provider': {'to': other_payment.provider,
+                                          'from': payment.provider}
+                        })
