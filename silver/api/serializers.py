@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+
+from django_fsm import TransitionNotAllowed
 from rest_framework import serializers
 from rest_framework.reverse import reverse
+from rest_framework.exceptions import ValidationError as APIValidationError
+
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
-                           DocumentEntry, ProductCode, Proforma)
+                           DocumentEntry, ProductCode, Proforma, Payment)
 
 
 class ProductCodeRelatedField(serializers.SlugRelatedField):
@@ -104,10 +108,10 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
-                  'email', 'address_1', 'address_2', 'city', 'state',
-                  'zip_code', 'country', 'extra', 'invoice_series',
-                  'invoice_starting_number', 'proforma_series',
-                  'proforma_starting_number', 'meta')
+                  'display_email', 'notification_email', 'address_1', 'address_2',
+                  'city', 'state', 'zip_code', 'country', 'extra',
+                  'invoice_series', 'invoice_starting_number',
+                  'proforma_series', 'proforma_starting_number', 'meta')
 
     def validate(self, data):
         flow = data.get('flow', None)
@@ -231,15 +235,18 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
     subscriptions = SubscriptionUrl(view_name='subscription-detail', many=True,
                                     read_only=True)
+    payments = serializers.HyperlinkedIdentityField(
+        view_name='payment-list', source='*', lookup_url_kwarg='customer_pk'
+    )
     meta = JSONSerializerField(required=False)
 
     class Meta:
         model = Customer
-        fields = ('id', 'url', 'customer_reference', 'name', 'company', 'email',
-                  'address_1', 'address_2', 'city', 'state', 'zip_code',
-                  'country', 'extra', 'sales_tax_number', 'sales_tax_name',
-                  'sales_tax_percent', 'consolidated_billing', 'subscriptions',
-                  'meta')
+        fields = ('id', 'url', 'customer_reference', 'name', 'company',
+                  'emails', 'address_1', 'address_2', 'city', 'state',
+                  'zip_code', 'country', 'extra', 'sales_tax_number',
+                  'sales_tax_name', 'sales_tax_percent', 'consolidated_billing',
+                  'subscriptions', 'payments', 'meta')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
@@ -378,3 +385,80 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)
         return data
+
+
+class PaymentUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'customer_pk': obj.customer.pk, 'payment_pk': obj.pk}
+        return reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        return self.queryset.get(pk=view_kwargs['payment_pk'])
+
+
+class PaymentSerializer(serializers.HyperlinkedModelSerializer):
+    url = PaymentUrl(view_name='payment-detail', source='*',
+                     read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
+                  'due_date', 'status', 'visible', 'proforma', 'invoice')
+
+    def validate(self, attrs):
+        if self.instance and self.instance.status in Payment.Status.FinalStatuses:
+            message = "Cannot update a payment with '{}' status.".format(
+                self.instance.status
+            )
+            raise serializers.ValidationError(message)
+
+        # Run model clean and handle ValidationErrors
+        try:
+            # Use the existing instance to avoid unique field errors
+            if self.instance:
+                payment = self.instance
+                payment_dict = payment.__dict__.copy()
+
+                for attribute, value in attrs.items():
+                    setattr(payment, attribute, value)
+
+                payment.full_clean()
+
+                # Revert changes to existing instance
+                payment.__dict__ = payment_dict
+            else:
+                payment = Payment(**attrs)
+                payment.full_clean()
+
+        except ValidationError as e:
+            errors = e.error_dict
+            non_field_errors = errors.pop('__all__', None)
+            if non_field_errors:
+                errors['non_field_errors'] = [
+                    error for sublist in non_field_errors for error in sublist
+                ]
+
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        status = validated_data.pop('status', None)
+
+        if status != instance.status:
+            try:
+                if status == Payment.Status.Paid:
+                    instance.succeed()
+                elif status == Payment.Status.Unpaid:
+                    instance.fail()
+                elif status == Payment.Status.Pending:
+                    instance.process()
+                elif status == Payment.Status.Canceled:
+                    instance.cancel()
+            except TransitionNotAllowed:
+                raise APIValidationError({
+                    'status': "The payment could not be transitioned to '{}' "
+                              "status.".format(status)
+                })
+
+        return super(PaymentSerializer, self).update(instance, validated_data)

@@ -16,12 +16,15 @@
 import os
 import errno
 import logging
-from collections import OrderedDict
-
 import requests
+import pytz
+from collections import OrderedDict
+from datetime import datetime, timedelta
+
 from django import forms
 from django.contrib import messages
-from django.contrib.admin import helpers, site, TabularInline, ModelAdmin
+from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
+                                  SimpleListFilter)
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
@@ -36,9 +39,10 @@ from django.http import HttpResponse
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
+                    MeteredFeatureUnitsLog, Invoice, DocumentEntry, Payment,
                     ProductCode, Proforma, BillingLog, BillingDocument)
 from documents_generator import DocumentsGenerator
+
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +250,7 @@ class SubscriptionAdmin(ModelAdmin):
 
 
 class CustomerAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'customer_reference', 'email', 'address_1',
+    fields = ['company', 'name', 'customer_reference', 'emails', 'address_1',
               'address_2', 'city', 'state', 'zip_code', 'country',
               'consolidated_billing', 'payment_due_days', 'sales_tax_name',
               'sales_tax_percent', 'sales_tax_number', 'extra', 'meta']
@@ -254,7 +258,7 @@ class CustomerAdmin(LiveModelAdmin):
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email', 'meta']
+                     'emails', 'meta']
     actions = ['generate_all_documents']
     exclude = ['live']
 
@@ -303,16 +307,16 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
-              'state', 'zip_code', 'country', 'flow', 'invoice_series',
-              'invoice_starting_number', 'proforma_series',
+    fields = ['company', 'name', 'display_email', 'notification_email', 'address_1',
+              'address_2', 'city', 'state', 'zip_code', 'country', 'flow',
+              'invoice_series', 'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra',
               'meta']
     list_display = ['__unicode__', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email', 'meta']
+                     'emails', 'meta']
     actions = ['generate_monthly_totals']
     exclude = ['live']
 
@@ -499,12 +503,13 @@ class BillingDocumentAdmin(ModelAdmin):
 
     list_filter = ('provider__company', 'state')
 
-    common_fields = ['company', 'email', 'address_1', 'address_2', 'city',
+    common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields]
+                              for field in common_fields] + ['emails']
     provider_search_fields = ['provider__{field}'.format(field=field)
-                              for field in common_fields]
+                              for field in common_fields] + ['display_email',
+                                                             'notification_email']
     search_fields = (customer_search_fields + provider_search_fields +
                      ['series', 'number'])
 
@@ -780,6 +785,154 @@ class ProformaAdmin(BillingDocumentAdmin):
     related_invoice.short_description = 'Related invoice'
     related_invoice.allow_tags = True
 
+
+class DueDateFilter(SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = 'due date'
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'due_date_filter'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return (
+            ('due_this_month', _('All due this month')),
+            ('due_today', _('All due today')),
+            ('overdue_since_last_month', _('All overdue since last month')),
+            ('overdue', _('All overdue'))
+        )
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+        if self.value() == 'due_this_month':
+            return queryset.due_this_month()
+        if self.value() == 'due_today':
+            return queryset.due_today()
+        if self.value() == 'overdue_since_last_month':
+            return queryset.overdue_since_last_month()
+        if self.value() == 'overdue':
+            return queryset.overdue()
+
+        return queryset
+
+
+class PaymentAdmin(ModelAdmin):
+    fields = ('customer', 'provider', 'amount', 'currency', 'proforma',
+              'invoice', 'currency_rate_date', 'due_date', 'status', 'visible',)
+    readonly_fields = ('status',)
+
+    list_display = ('__unicode__', 'related_invoice', 'related_proforma',
+                    'customer', 'due_date', 'amount', 'visible', 'status',)
+    list_filter = ('customer', 'visible', 'status', DueDateFilter)
+    date_hierarchy = 'due_date'
+    actions = ['process', 'cancel', 'succeed', 'fail']
+
+    def perform_action(self, request, queryset, action, display_verb=None):
+        failed_count = 0
+        payments_count = len(queryset)
+
+        if not action in self.actions:
+            self.message_user(request, 'Illegal action.', level=messages.ERROR)
+            return
+
+        method = getattr(Payment, action)
+
+        for payment in queryset:
+            try:
+                method(payment)
+                payment.save()
+            except TransitionNotAllowed:
+                failed_count += 1
+
+        succeeded_count = payments_count - failed_count
+
+        if not failed_count:
+            self.message_user(
+                request,
+                'Successfully %s %d payments.' % (
+                    display_verb or action, payments_count
+                )
+            )
+        elif failed_count != payments_count:
+
+            self.message_user(
+                request,
+                '%s %d payments, %d failed.' % (
+                    display_verb or action, succeeded_count, failed_count
+                ),
+                level=messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                'Couldn\'t %s any of the selected payments.' % action,
+                level=messages.ERROR
+            )
+
+        action = action.capitalize()
+
+        logger.info('[Admin][%s Payment]: %s', action, {
+            'detail': '%s Payment action initiated by user.' % action,
+            'user_id': request.user.id,
+            'user_staff': request.user.is_staff,
+            'failed_count': failed_count,
+            'succeeded_count': succeeded_count
+        })
+
+    def process(self, request, queryset):
+        self.perform_action(request, queryset, 'process', 'processed')
+    process.short_description = 'Process the selected payments'
+
+    def cancel(self, request, queryset):
+        self.perform_action(request, queryset, 'cancel', 'canceled')
+    cancel.short_description = 'Cancel the selected payments'
+
+    def succeed(self, request, queryset):
+        self.perform_action(request, queryset, 'succeed', 'succeeded')
+    succeed.short_description = 'Succeed the selected payments'
+
+    def fail(self, request, queryset):
+        self.perform_action(request, queryset, 'fail', 'failed')
+    fail.short_description = 'Fail the selected payments'
+
+    def related_invoice(self, obj):
+        if obj.invoice:
+            url = reverse('admin:silver_invoice_change', args=(obj.invoice.pk,))
+            return '<a href="%s">%s</a>' % (
+                url, obj.invoice.series_number
+            )
+        else:
+            return '(None)'
+    related_invoice.allow_tags = True
+    related_invoice.short_description = 'Invoice'
+
+    def related_proforma(self, obj):
+        if obj.proforma:
+            url = reverse(
+                'admin:silver_proforma_change', args=(obj.proforma.pk,)
+            )
+            return '<a href="%s">%s</a>' % (
+                url, obj.proforma.series_number
+            )
+        else:
+            return '(None)'
+    related_proforma.allow_tags = True
+    related_proforma.short_description = 'Proforma'
+
+site.register(Payment, PaymentAdmin)
 site.register(Plan, PlanAdmin)
 site.register(Subscription, SubscriptionAdmin)
 site.register(Customer, CustomerAdmin)

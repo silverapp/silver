@@ -32,7 +32,7 @@ class TestCustomerEndpoints(APITestCase):
             "customer_reference": "123456",
             "name": "Batman",
             "company": "Wayne Enterprises",
-            "email": "bruce@wayneenterprises.com",
+            "emails": "bruce@wayneenterprises.com",
             "address_1": "Batcave St.",
             "address_2": "Some other address info",
             "city": "Gotham",
@@ -145,7 +145,8 @@ class TestCustomerEndpoints(APITestCase):
 
         changed_data = self.complete_data.copy()
 
-        unchanged_fields = ['email', 'address_2']
+        unchanged_fields = ['emails', 'address_2']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payments']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -156,7 +157,7 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        for e in ['url', 'id', 'subscriptions']:
+        for e in ignore_fields:
             response.data.pop(e)
         for field in response.data:
             if field not in unchanged_fields:
@@ -167,8 +168,9 @@ class TestCustomerEndpoints(APITestCase):
         CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['email', 'zip_code', 'company',
+        unchanged_fields = ['emails', 'zip_code', 'company',
                             'payment_due_days']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payments']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -179,7 +181,7 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        for e in ['url', 'id', 'subscriptions']:
+        for e in ignore_fields:
             response.data.pop(e)
         for field in response.data:
             if field not in unchanged_fields:

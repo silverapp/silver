@@ -14,21 +14,20 @@
 # limitations under the License.
 
 
-from decimal import Decimal
 import datetime
+from decimal import Decimal
 
-import pycountry
 import factory
 import factory.fuzzy
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
-                           Proforma, MeteredFeatureUnitsLog, DocumentEntry)
-
-
-countries = [(country.alpha2, country.name) for country in pycountry.countries]
+                           Proforma, MeteredFeatureUnitsLog, DocumentEntry,
+                           Payment)
+from silver.utils.international import countries
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -44,7 +43,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
-    email = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
+    emails = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
     address_1 = factory.Sequence(lambda n: u'Addrâss1{cnt}'.format(cnt=n))
     address_2 = factory.Sequence(lambda n: u'Addrãess2{cnt}'.format(cnt=n))
     country = factory.Sequence(lambda n: countries[n % len(countries)][0])
@@ -80,7 +79,12 @@ class ProviderFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
-    email = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
+    display_email = factory.Sequence(
+        lambda n: u'display{cnt}@email.com'.format(cnt=n)
+    )
+    notification_email = factory.Sequence(
+        lambda n: u'internal{cnt}@email.com'.format(cnt=n)
+    )
     address_1 = factory.Sequence(lambda n: u'Addãress1{cnt}'.format(cnt=n))
     address_2 = factory.Sequence(lambda n: u'Addåress2{cnt}'.format(cnt=n))
     country = factory.Sequence(lambda n: countries[n % len(countries)][0])
@@ -230,3 +234,16 @@ class AdminUserFactory(factory.django.DjangoModelFactory):
     is_active = True
     is_superuser = True
     is_staff = True
+
+
+class PaymentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Payment
+
+    amount = factory.Sequence(lambda n: (n + 1) % 4 * 1000 + 10)
+    currency = 'USD'
+    customer = factory.SubFactory(CustomerFactory)
+    provider = factory.SubFactory(ProviderFactory)
+    proforma = factory.SubFactory(ProformaFactory)
+    invoice = factory.SubFactory(InvoiceFactory)
+    status = Payment.Status.Unpaid

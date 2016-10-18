@@ -20,7 +20,8 @@ from decimal import Decimal
 from django.http.response import Http404
 from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import (get_object_or_404, ListCreateAPIView,
+                                     RetrieveUpdateAPIView)
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -29,17 +30,17 @@ from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, BillingDocument)
+                           DocumentEntry, Proforma, BillingDocument, Payment)
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
-                                    DocumentEntrySerializer)
+                                    DocumentEntrySerializer, PaymentSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
-                                InvoiceFilter, ProformaFilter)
+                                InvoiceFilter, ProformaFilter, PaymentFilter)
 
 
 logger = logging.getLogger(__name__)
@@ -769,3 +770,35 @@ class ProformaStateHandler(APIView):
 
         serializer = ProformaSerializer(proforma, context={'request': request})
         return Response(serializer.data)
+
+
+class PaymentList(ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentSerializer
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
+    filter_class = PaymentFilter
+    ordering = ('-due_date',)
+
+    def get_queryset(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        queryset = Payment.objects.filter(customer__id=customer_pk)
+        return queryset.order_by('due_date')
+
+    def post(self, request, *args, **kwargs):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        url = reverse('customer-detail', kwargs={'pk': customer_pk},
+                      request=request)
+        request.data.update({unicode('customer'): unicode(url)})
+
+        return super(PaymentList, self).post(request, *args, **kwargs)
+
+
+class PaymentDetail(RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentSerializer
+
+    def get_object(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+        payment_pk = self.kwargs.get('payment_pk', None)
+        return get_object_or_404(Payment, customer__id=customer_pk,
+                                 pk=payment_pk)
