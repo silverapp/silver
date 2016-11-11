@@ -42,6 +42,18 @@ urlpatterns = [
     url(r'^customers/(?P<customer_pk>[0-9]+)/payments/(?P<payment_pk>[0-9]+)/$',
         views.PaymentDetail.as_view(), name='payment-detail'),
 
+    url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/$',
+        views.PaymentMethodList.as_view(), name='payment-method-list'),
+    url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/$',
+        views.PaymentMethodDetail.as_view(), name='payment-method-detail'),
+
+    url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/transactions/$',
+        views.TransactionList.as_view(), name='payment-method-transaction-list'),
+    url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/$',
+        views.TransactionList.as_view(), name='transaction-list'),
+    url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/$',
+        views.TransactionDetail.as_view(), name='transaction-detail'),
+
     url(r'^payment_processors/$',
         views.PaymentProcessorList.as_view(), name='payment-processor-list'),
     url(r'^payment_processors/(?P<processor_name>[a-zA-Z]+)/$',
