@@ -14,6 +14,5 @@
 
 import pycountry
 
-
-countries = [(country.alpha2, country.name) for country in pycountry.countries]
-currencies = [(currency.letter, currency.name) for currency in pycountry.currencies]
+countries = [(country.alpha_2, country.name) for country in pycountry.countries]
+currencies = [(currency.alpha_3, currency.name) for currency in pycountry.currencies]
