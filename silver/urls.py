@@ -15,8 +15,10 @@
 
 """URLs for the silver app."""
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.contrib import admin
+
+from silver.views import pay_transaction_view
 
 admin.autodiscover()
 
@@ -24,5 +26,7 @@ urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
-    url(r'', include('silver.api.urls'))
+    url(r'', include('silver.api.urls')),
+    url(r'pay/(?P<transaction_uuid>[0-9a-z-]+)/$',
+        pay_transaction_view, name='pay-transaction')
 ]
