@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2016 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,13 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from uuid import UUID
 
-
-from django.http import HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseGone
+from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
-from silver.models import Proforma, Invoice
+from silver.models import Proforma, Invoice, Transaction
 
 
 @login_required
@@ -30,3 +33,27 @@ def proforma_pdf(request, proforma_id):
 def invoice_pdf(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     return HttpResponseRedirect(invoice.pdf.url)
+
+
+@csrf_exempt
+def pay_transaction_view(request, transaction_uuid):
+    try:
+        uuid = UUID(transaction_uuid, version=4)
+    except ValueError:
+        raise Http404
+
+    transaction = get_object_or_404(Transaction, uuid=uuid)
+
+    payment = transaction.payment
+    if not transaction.is_usable or payment.status != payment.Status.Unpaid:
+        return HttpResponseGone("The transaction is no longer available.")
+
+    transaction.last_access = timezone.now()
+    transaction.save()
+
+    payment_processor = transaction.payment_processor
+
+    try:
+        return payment_processor.handle_customer_request(request, transaction)
+    except NotImplementedError:
+        raise Http404
