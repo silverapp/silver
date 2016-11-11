@@ -10,7 +10,11 @@ class PaymentProcessorField(CharField):
         max_length = 64
         kwargs['max_length'] = max_length
         super(PaymentProcessorField, self).__init__(*args, **kwargs)
-        self.validators = []
+        self.validators = [self._not_empty_string_validator]
+
+    def _not_empty_string_validator(self, value):
+        if value == '':
+            raise self.ValidationErorr
 
     def get_internal_type(self):
         return "CharField"
@@ -19,7 +23,7 @@ class PaymentProcessorField(CharField):
         return PaymentProcessorManager.get(name=value) or value
 
     def value_to_string(self, obj):
-        return smart_text(obj) if obj else u''
+        return smart_text(obj) if obj else None
 
     def from_db_value(self, value, *args, **kwargs):
         return self.to_python(value)

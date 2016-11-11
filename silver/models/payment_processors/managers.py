@@ -19,11 +19,11 @@ class PaymentProcessorManager(object):
     _processors_registered = False
 
     @classmethod
-    def register(cls, processor, setup_data=None):
-        name = processor.name.lower()
+    def register(cls, processor_class, setup_data=None):
+        name = processor_class.name.lower()
         if name not in cls.processors:
-            processor.setup(setup_data)
-            cls.processors[name] = processor()
+            cls.processors[name] = processor_class()
+            cls.processors[name].setup(setup_data)
 
     @classmethod
     @ready
@@ -59,5 +59,5 @@ class PaymentProcessorManager(object):
     def get_choices(cls):
         return list(
             (processor, processor.name) for name, processor in
-            cls.processors.items()  # if processor.state != 'disabled'
+            cls.processors.items()
         )
