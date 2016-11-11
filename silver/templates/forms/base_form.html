@@ -1,0 +1,12 @@
+{% block payment_processor %}
+{% endblock %}
+
+{% block payment %}
+{% endblock %}
+
+{% block form %}
+    <form action="{{ request.path }}" method="post">
+        {{ form }}
+        <input type="submit" value="Pay" />
+    </form>
+{% endblock %}
