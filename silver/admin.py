@@ -40,9 +40,9 @@ from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry, Payment,
-                    ProductCode, Proforma, BillingLog, BillingDocument)
+                    ProductCode, Proforma, BillingLog, BillingDocument,
+                    Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
-
 
 logger = logging.getLogger(__name__)
 
@@ -932,6 +932,27 @@ class PaymentAdmin(ModelAdmin):
     related_proforma.allow_tags = True
     related_proforma.short_description = 'Proforma'
 
+
+class PaymentMethodAdmin(ModelAdmin):
+    list_display = ('customer', 'payment_processor', 'added_at', 'verified_at',
+                    'state')
+
+    fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
+              'data', 'state')
+
+
+class TransactionAdmin(ModelAdmin):
+    list_display = ('customer', 'payment_method', 'uuid', 'valid_until',
+                    'last_access', 'disabled')
+
+    fields = ('payment_method', 'uuid', 'valid_until', 'last_access',
+              'disabled')
+
+    readonly_fields = ('uuid', 'last_access')
+
+
+site.register(Transaction, TransactionAdmin)
+site.register(PaymentMethod, PaymentMethodAdmin)
 site.register(Payment, PaymentAdmin)
 site.register(Plan, PlanAdmin)
 site.register(Subscription, SubscriptionAdmin)
