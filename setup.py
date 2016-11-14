@@ -54,17 +54,6 @@ install_requires = [line.strip()
 install_requires = [l for l in install_requires if l != '']
 
 
-def get_django_major_version(requirements):
-    import re
-
-    for requirement in requirements:
-        match = re.search('(?<=django==)\d+\.\d+', requirement)
-
-        if match:
-            return match.group(0)
-    return ''
-
-
 def read(fname):
     try:
         return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -87,7 +76,7 @@ setup(
     install_requires=install_requires,
     classifiers=[
         'Environment :: Web Environment',
-        'Framework :: Django :: {0}'.format(get_django_major_version(install_requires)),
+        'Framework :: Django ::1.8', 
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2.7'

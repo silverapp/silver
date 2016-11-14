@@ -5,6 +5,7 @@ include CHANGELOG.txt
 include README.md
 recursive-include silver/templates *
 recursive-include silver/static *
+include requirements/common.txt
 graft silver
 global-exclude *.orig *.pyc *.log *.swp
 prune silver/tests/coverage
