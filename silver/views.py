@@ -14,13 +14,16 @@
 from uuid import UUID
 
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.http import HttpResponseGone
 from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from silver.models import Proforma, Invoice, Transaction
+from silver.models.documents import Proforma, Invoice
+from silver.models.transactions import Transaction
+from silver.forms import GenericTransactionForm
 
 
 @login_required
@@ -44,6 +47,10 @@ def pay_transaction_view(request, transaction_uuid):
 
     transaction = get_object_or_404(Transaction, uuid=uuid)
 
+    view_class = transaction.payment_processor.view_class
+    if not view_class:
+        raise Http404
+
     payment = transaction.payment
     if not transaction.is_usable or payment.status != payment.Status.Unpaid:
         return HttpResponseGone("The transaction is no longer available.")
@@ -51,9 +58,21 @@ def pay_transaction_view(request, transaction_uuid):
     transaction.last_access = timezone.now()
     transaction.save()
 
-    payment_processor = transaction.payment_processor
-
     try:
-        return payment_processor.handle_customer_request(request, transaction)
+        return view_class().handle_transaction_request(request, transaction)
     except NotImplementedError:
         raise Http404
+
+
+class GenericTransactionView(object):
+    form_class = GenericTransactionForm
+
+    def render_form(self, request, transaction):
+        return self.form_class(payment_method=transaction.payment_method,
+                               payment=transaction.payment).render()
+
+    def handle_transaction_request(self, request, transaction):
+        if self.form_class:
+            return HttpResponse(self.render_form(request, transaction))
+        else:
+            raise NotImplementedError

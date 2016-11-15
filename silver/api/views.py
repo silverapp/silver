@@ -882,10 +882,21 @@ class TransactionList(ListCreateAPIView):
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
 
-        return Transaction.objects.filter(
-            payment_method__customer__id=customer_pk
-        )
+        payment_method_id = self.kwargs.get('payment_method_id')
+        if payment_method_id:
+            payment_method = get_object_or_404(PaymentMethod,
+                                               id=payment_method_id)
+            if not payment_method.payment_processor.transaction_class:
+                raise Http404
 
+            return Transaction.objects.filter(
+                payment_method__customer__id=customer_pk,
+                payment_processor=payment_method.payment_processor
+            )
+        else:
+            return Transaction.objects.filter(
+                payment_method__customer__id=customer_pk
+            )
 
     def perform_create(self, serializer):
         payment_method_id = self.kwargs.get('payment_method_id')

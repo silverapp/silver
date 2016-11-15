@@ -513,6 +513,17 @@ class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
         return self.queryset.get(id=view_kwargs['payment_method_id'])
 
 
+class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
+    def get_url(self, obj, view_name, request, format):
+        if not obj.payment_processor.transaction_class:
+            return None
+
+        lookup_value = getattr(obj, self.lookup_field)
+        kwargs = {'transaction_uuid': str(lookup_value),
+                  'customer_pk': obj.customer.id}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+
 class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     url = PaymentMethodUrl(view_name='payment-method-detail', source="*",
                            read_only=True)
@@ -520,12 +531,16 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         view_name='payment-processor-detail', lookup_field='name',
         queryset=PaymentProcessorManager.all()
     )
+
+    transactions = PaymentMethodTransactionsUrl(
+        view_name='payment-method-transaction-list', source='*'
+    )
     additional_data = serializers.JSONField(required=False, write_only=True)
 
     class Meta:
         model = PaymentMethod
-        fields = ('url', 'customer', 'payment_processor', 'added_at',
-                  'verified_at', 'state', 'additional_data')
+        fields = ('url', 'transactions', 'customer', 'payment_processor',
+                  'added_at', 'verified_at', 'state', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
             'verified_at': {'read_only': True},
