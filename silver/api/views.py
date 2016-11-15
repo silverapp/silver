@@ -820,6 +820,15 @@ class PaymentProcessorList(ListAPIView):
         return PaymentProcessorManager.all()
 
 
+class ProviderPaymentProcessorList(ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_queryset(self):
+        return PaymentProcessorManager.all()
+
+
 class PaymentProcessorDetail(RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentProcessorSerializer
@@ -885,7 +894,6 @@ class TransactionList(ListCreateAPIView):
         return Transaction.objects.filter(
             payment_method__customer__id=customer_pk
         )
-
 
     def perform_create(self, serializer):
         payment_method_id = self.kwargs.get('payment_method_id')

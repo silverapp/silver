@@ -106,8 +106,30 @@ class JSONSerializerField(serializers.Field):
         return value
 
 
+class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
+    default_validators = [validate_payment_processor]
+
+    def __init__(self, view_name=None, **kwargs):
+        super(PaymentProcessorUrl, self).__init__(view_name, **kwargs)
+
+    def get_url(self, obj, view_name, request, format):
+        lookup_value = getattr(obj, self.lookup_field)
+        kwargs = {'processor_name': lookup_value}
+        return self.reverse(
+            view_name, kwargs=kwargs, request=request, format=format
+        )
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        return PaymentProcessorManager.get(view_kwargs['processor_name']) or \
+            view_kwargs['processor_name']
+
+
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
     meta = JSONSerializerField(required=False)
+    payment_processors = serializers.HyperlinkedIdentityField(
+        view_name='provider-payment-processor-list', source='*', lookup_field="pk",
+        read_only=True
+    )
 
     class Meta:
         model = Provider
@@ -115,7 +137,7 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'display_email', 'notification_email', 'address_1', 'address_2',
                   'city', 'state', 'zip_code', 'country', 'extra',
                   'invoice_series', 'invoice_starting_number',
-                  'proforma_series', 'proforma_starting_number', 'meta')
+                  'proforma_series', 'proforma_starting_number', 'meta', 'payment_processors')
 
     def validate(self, data):
         flow = data.get('flow', None)
@@ -473,25 +495,6 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
                 })
 
         return super(PaymentSerializer, self).update(instance, validated_data)
-
-
-class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
-    default_validators = [validate_payment_processor]
-
-    def __init__(self, view_name=None, **kwargs):
-        super(PaymentProcessorUrl, self).__init__(view_name, **kwargs)
-
-    def get_url(self, obj, view_name, request, format):
-        lookup_value = getattr(obj, self.lookup_field)
-        kwargs = {'processor_name': lookup_value}
-        return self.reverse(
-            view_name, kwargs=kwargs, request=request, format=format
-        )
-
-    def get_object(self, view_name, view_args, view_kwargs):
-        return PaymentProcessorManager.get(view_kwargs['processor_name']) or \
-            view_kwargs['processor_name']
-
 
 
 class PaymentProcessorSerializer(serializers.Serializer):
