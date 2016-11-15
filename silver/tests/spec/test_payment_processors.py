@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.models.payment_processors.generics import (GenericPaymentProcessor,
                                                        TriggeredProcessorMixin)
-from silver.tests.factories import AdminUserFactory
+from silver.tests.factories import AdminUserFactory, ProviderFactory
 
 
 class TestPaymentProcessorsEndpoints(APITestCase):
@@ -16,7 +16,8 @@ class TestPaymentProcessorsEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def test_payment_processors_list(self):
-        url = reverse('payment-processor-list')
+        provider = ProviderFactory.create()
+        url = reverse('provider-payment-processor-list', kwargs={'pk': provider.pk})
         response = self.client.get(url, format='json')
 
         assert response.status_code == status.HTTP_200_OK
