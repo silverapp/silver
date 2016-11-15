@@ -16,12 +16,14 @@
 import datetime
 import logging
 from decimal import Decimal
+from uuid import UUID
 
 from django.http.response import Http404
 from django.utils import timezone
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import (get_object_or_404, ListCreateAPIView,
-                                     RetrieveUpdateAPIView)
+                                     RetrieveUpdateAPIView, ListAPIView,
+                                     RetrieveAPIView)
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -30,14 +32,19 @@ from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, BillingDocument, Payment)
+                           DocumentEntry, Proforma, BillingDocument, Payment,
+                           PaymentMethod, Transaction)
+from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
-                                    DocumentEntrySerializer, PaymentSerializer)
+                                    DocumentEntrySerializer, PaymentSerializer,
+                                    PaymentProcessorSerializer,
+                                    PaymentMethodSerializer,
+                                    TransactionSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter, PaymentFilter)
@@ -802,3 +809,112 @@ class PaymentDetail(RetrieveUpdateAPIView):
         payment_pk = self.kwargs.get('payment_pk', None)
         return get_object_or_404(Payment, customer__id=customer_pk,
                                  pk=payment_pk)
+
+
+class PaymentProcessorList(ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_queryset(self):
+        return PaymentProcessorManager.all()
+
+
+class PaymentProcessorDetail(RetrieveAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_object(self):
+        processor_name = self.kwargs.get('processor_name', '')
+        try:
+            return PaymentProcessorManager.get(processor_name)
+        except PaymentProcessorManager.DoesNotExist:
+            raise Http404
+
+
+class PaymentMethodList(ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentMethodSerializer
+
+    def get_queryset(self):
+        return PaymentMethod.objects.filter(customer=self.customer)
+
+    def get_customer(self, request):
+        context = self.get_parser_context(request)
+        kwargs = context['kwargs']
+
+        customer_pk = kwargs.get('customer_pk', None)
+
+        return get_object_or_404(Customer, id=customer_pk)
+
+    def list(self, request, *args, **kwargs):
+        customer = self.get_customer(request)
+
+        self.customer = customer
+
+        return super(PaymentMethodList, self).list(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        customer = self.get_customer(self.request)
+        serializer.save(customer=customer)
+
+
+class PaymentMethodDetail(RetrieveUpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentMethodSerializer
+
+    def get_object(self):
+        payment_method_id = self.kwargs.get('payment_method_id')
+
+        return get_object_or_404(
+            PaymentMethod.objects.all().select_subclasses(),
+            id=payment_method_id
+        )
+
+
+class TransactionList(ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = TransactionSerializer
+
+    def get_queryset(self):
+        customer_pk = self.kwargs.get('customer_pk', None)
+
+        payment_method_id = self.kwargs.get('payment_method_id')
+        if payment_method_id:
+            payment_method = get_object_or_404(PaymentMethod,
+                                               id=payment_method_id)
+            if not payment_method.payment_processor.transaction_class:
+                raise Http404
+
+            return Transaction.objects.filter(
+                payment_method__customer__id=customer_pk,
+                payment_processor=payment_method.payment_processor
+            )
+        else:
+            return Transaction.objects.filter(
+                payment_method__customer__id=customer_pk
+            )
+
+    def perform_create(self, serializer):
+        payment_method_id = self.kwargs.get('payment_method_id')
+        if payment_method_id:
+            payment_method = get_object_or_404(PaymentMethod,
+                                               id=payment_method_id)
+            serializer.save(payment_method=payment_method)
+        else:
+            serializer.save()
+
+
+class TransactionDetail(RetrieveAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = TransactionSerializer
+
+    def get_object(self):
+        transaction_uuid = self.kwargs.get('transaction_uuid', None)
+        try:
+            uuid = UUID(transaction_uuid, version=4)
+        except ValueError:
+            raise Http404
+
+        return get_object_or_404(Transaction, uuid=uuid)

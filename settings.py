@@ -143,3 +143,8 @@ LOGGING['formatters']['verbose'] = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+PAYMENT_PROCESSORS = [
+    # (processor.path, setup.data)
+    ('silver.models.payment_processors.manual.ManualProcessor', {}),
+]

@@ -45,7 +45,8 @@ class TestCustomerEndpoints(APITestCase):
             "sales_tax_percent": '3.00',
             "payment_due_days": 5,
             "consolidated_billing": False,
-            "meta": {'water': ['plants', '5']}
+            "meta": {'water': ['plants', '5']},
+            "payment_methods": u'http://testserver/customers/1/payment_methods/'
         }
 
     def test_create_post_customer(self):
@@ -146,7 +147,8 @@ class TestCustomerEndpoints(APITestCase):
         changed_data = self.complete_data.copy()
 
         unchanged_fields = ['emails', 'address_2']
-        ignore_fields = ['url', 'id', 'subscriptions', 'payments']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payments',
+                         'payment_methods', 'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -170,7 +172,8 @@ class TestCustomerEndpoints(APITestCase):
         changed_data = self.complete_data.copy()
         unchanged_fields = ['emails', 'zip_code', 'company',
                             'payment_due_days']
-        ignore_fields = ['url', 'id', 'subscriptions', 'payments']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payments',
+                         'payment_methods', 'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 

@@ -79,9 +79,9 @@ class TestPaymentEndpoints(APITestCase):
 
         response = self.client.get(url, format='json')
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        assert response.data == {
+        self.assertEqual(response.data, {
             'customer': 'http://testserver/customers/%d/' % customer.pk,
             'provider': 'http://testserver/providers/%d/' % provider.pk,
             'due_date': None,
@@ -95,7 +95,7 @@ class TestPaymentEndpoints(APITestCase):
             'status': 'unpaid',
             'invoice': 'http://testserver/invoices/%d/' % invoice.pk,
             'id': payment.pk,
-        }
+        })
 
     def test_post_payment(self):
         invoice = InvoiceFactory.create()
@@ -119,7 +119,7 @@ class TestPaymentEndpoints(APITestCase):
             url, json.dumps(data), content_type='application/json'
         )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         expected_data = {
             'customer': 'http://testserver/customers/%d/' % customer.pk,
@@ -133,7 +133,7 @@ class TestPaymentEndpoints(APITestCase):
         }
 
         for key in expected_data:
-            assert expected_data[key] == response.data[key]
+            self.assertEqual(expected_data[key], response.data[key])
 
         payment_id = response.data['id']
 
@@ -304,7 +304,6 @@ class TestPaymentEndpoints(APITestCase):
                 url, json.dumps(data), content_type='application/json'
             )
 
-            print response.status_code, response.data
             assert response.status_code == status.HTTP_200_OK
             assert process_mock.call_count == 1
 
