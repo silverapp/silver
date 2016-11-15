@@ -489,9 +489,10 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
         )
 
     def get_object(self, view_name, view_args, view_kwargs):
-        return PaymentProcessorManager.get(view_kwargs['processor_name']) or \
-            view_kwargs['processor_name']
-
+        try:
+            return PaymentProcessorManager.get(view_kwargs['processor_name'])
+        except PaymentProcessorManager.DoesNotExist:
+            raise ObjectDoesNotExist
 
 
 class PaymentProcessorSerializer(serializers.Serializer):
@@ -505,8 +506,8 @@ class PaymentProcessorSerializer(serializers.Serializer):
 
 class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        kwargs = {'payment_method_id': obj.id,
-                  'customer_pk': obj.customer.id}
+        kwargs = {'payment_method_id': obj.pk,
+                  'customer_pk': obj.customer.pk}
         return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
     def get_object(self, view_name, view_args, view_kwargs):
@@ -520,7 +521,7 @@ class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
 
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'transaction_uuid': str(lookup_value),
-                  'customer_pk': obj.customer.id}
+                  'customer_pk': obj.customer.pk}
         return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
 
@@ -590,24 +591,24 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
             message = "Illegal state transition from {} to {}."
             if value == PaymentMethod.States.Uninitialized:
-                message.format(self.instance.state, value)
+                message = message.format(self.instance.state, value)
                 raise serializers.ValidationError(message)
 
             elif (value == PaymentMethod.States.Unverified and
                     self.instance.state != PaymentMethod.States.Uninitialized):
-                message.format(self.instance.state, value)
+                message = message.format(self.instance.state, value)
                 raise serializers.ValidationError(message)
 
             elif (self.instance.state == PaymentMethod.States.Enabled and
                     value not in [PaymentMethod.States.Disabled,
                                   PaymentMethod.States.Removed]):
-                message.format(self.instance.state, value)
+                message = message.format(self.instance.state, value)
                 raise serializers.ValidationError(message)
 
             elif (self.instance.state == PaymentMethod.States.Disabled and
                     value not in [PaymentMethod.States.Enabled,
                                   PaymentMethod.States.Removed]):
-                message.format(self.instance.state, value)
+                message = message.format(self.instance.state, value)
                 raise serializers.ValidationError(message)
 
         return value
@@ -692,7 +693,7 @@ class TransactionUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'transaction_uuid': str(lookup_value),
-                  'customer_pk': obj.customer.id}
+                  'customer_pk': obj.customer.pk}
         return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
     def get_object(self, view_name, view_args, view_kwargs):

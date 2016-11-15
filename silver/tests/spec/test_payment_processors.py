@@ -28,18 +28,28 @@ class TestPaymentProcessorsEndpoints(APITestCase):
 
         class SomeProcessor(GenericPaymentProcessor, TriggeredProcessorMixin):
             name = "SomeProcessor"
+
             @staticmethod
             def setup(data=None):
                 pass
 
         PaymentProcessorManager.register(SomeProcessor)
 
+        response = self.client.get(url, format='json')
+
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == [OrderedDict([
-            ('name', u'Manual'),
-            ('type', u'manual'),
-            ('url', 'http://testserver/payment_processors/Manual/')
-        ])]
+        assert response.data == [
+            OrderedDict([
+                ('name', u'SomeProcessor'),
+                ('type', u'triggered'),
+                ('url', 'http://testserver/payment_processors/SomeProcessor/')
+            ]),
+            OrderedDict([
+                ('name', u'Manual'),
+                ('type', u'manual'),
+                ('url', 'http://testserver/payment_processors/Manual/')
+            ])
+        ]
 
     def test_payment_processors_detail(self):
         url = reverse('payment-processor-detail', kwargs={

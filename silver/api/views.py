@@ -827,11 +827,9 @@ class PaymentProcessorDetail(RetrieveAPIView):
 
     def get_object(self):
         processor_name = self.kwargs.get('processor_name', '')
-        processor = PaymentProcessorManager.get(processor_name)
-
-        if processor:
-            return processor
-        else:
+        try:
+            return PaymentProcessorManager.get(processor_name)
+        except PaymentProcessorManager.DoesNotExist:
             raise Http404
 
 

@@ -19,9 +19,8 @@ class Transaction(models.Model):
 
     @property
     def is_usable(self):
-        return not self.disabled and \
-               not self.valid_until or \
-               self.valid_until > timezone.now()
+        return not self.disabled and (not self.valid_until or
+                                      self.valid_until > timezone.now())
 
     @property
     def customer(self):

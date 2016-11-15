@@ -148,7 +148,7 @@ class TestCustomerEndpoints(APITestCase):
 
         unchanged_fields = ['emails', 'address_2']
         ignore_fields = ['url', 'id', 'subscriptions', 'payments',
-                         'payment_methods']
+                         'payment_methods', 'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 
@@ -173,7 +173,7 @@ class TestCustomerEndpoints(APITestCase):
         unchanged_fields = ['emails', 'zip_code', 'company',
                             'payment_due_days']
         ignore_fields = ['url', 'id', 'subscriptions', 'payments',
-                         'payment_methods']
+                         'payment_methods', 'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 

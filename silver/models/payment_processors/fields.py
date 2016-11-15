@@ -20,7 +20,10 @@ class PaymentProcessorField(CharField):
         return "CharField"
 
     def from_string_value(self, value):
-        return PaymentProcessorManager.get(name=value) or value
+        try:
+            return PaymentProcessorManager.get(name=value)
+        except PaymentProcessorManager.DoesNotExist:
+            return value + " (Inactive)"
 
     def value_to_string(self, obj):
         return smart_text(obj) if obj else None

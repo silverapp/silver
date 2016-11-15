@@ -18,6 +18,9 @@ class PaymentProcessorManager(object):
 
     _processors_registered = False
 
+    class DoesNotExist(Exception):
+        pass
+
     @classmethod
     def register(cls, processor_class, setup_data=None):
         name = processor_class.name.lower()
@@ -28,7 +31,10 @@ class PaymentProcessorManager(object):
     @classmethod
     @ready
     def get(cls, name):
-        return cls.processors.get(name.lower())
+        try:
+            return cls.processors[name.lower()]
+        except KeyError:
+            raise cls.DoesNotExist
 
     @classmethod
     @ready
