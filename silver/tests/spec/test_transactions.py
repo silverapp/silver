@@ -125,15 +125,15 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.patch(url, format='json', data=data)
         self.assertEquals(response.data['detail'], 'Method "PATCH" not allowed.')
 
-    def test_creeate_one_without_requred_fields(self):
+    def test_create_one_without_required_fields(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
         payment = PaymentFactory(customer=customer)
-        transaction_1 = TransactionFactory.create(payment_method=payment_method, payment=payment)
+        transaction = TransactionFactory.create(payment_method=payment_method, payment=payment)
         valid_until = datetime.now()
         url = reverse('transaction-detail',
                       kwargs={'customer_pk': customer.id,
-                              'transaction_uuid': transaction_1.uuid})
+                              'transaction_uuid': transaction.uuid})
         data = {
             'payment': reverse('payment-detail', kwargs={'customer_pk': customer.id,
                                                          'payment_pk': payment.id}),
