@@ -10,3 +10,4 @@ if [ "$SILVER_LOAD_DEV_DATA" == "yes" ] ; then
 fi
 
 exec /usr/local/bin/python2 /silver/manage.py runserver 0.0.0.0:8080
+
