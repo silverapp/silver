@@ -421,6 +421,11 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
                   'due_date', 'status', 'visible', 'proforma', 'invoice')
 
     def validate(self, attrs):
+        if self.instance and list(attrs.keys()) != ['status']:
+            message = "Existing payment only accepts updating its status.{} given".format(
+                list(attrs.keys())
+            )
+            raise serializers.ValidationError(message)
         if self.instance and self.instance.status in Payment.Status.FinalStatuses:
             message = "Cannot update a payment with '{}' status.".format(
                 self.instance.status
