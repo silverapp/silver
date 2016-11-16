@@ -20,6 +20,7 @@ from django.utils.log import DEFAULT_LOGGING as LOGGING
 These settings are used by the ``manage.py`` command.
 
 """
+
 import os
 
 DEBUG = False
