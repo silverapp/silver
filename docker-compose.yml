@@ -1,0 +1,18 @@
+version: '2'
+services:
+  silver:
+    image: presslabs/silver:latest
+    command: dockerize -wait tcp://db:3306 -timeout 30s /silver/docker-entrypoint
+    env_file: ./docker-compose.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/silver
+
+  db:
+    image: mysql:5.5
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: silver
+      MYSQL_USER: silver
+      MYSQL_PASSWORD: password
