@@ -34,10 +34,3 @@ if 'test' in sys.argv:
     ]
     DEBUG = False
     TEMPLATE_DEBUG = False
-
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': 'db.sqlite',
-        }
-    }
