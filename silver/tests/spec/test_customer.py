@@ -46,7 +46,8 @@ class TestCustomerEndpoints(APITestCase):
             "payment_due_days": 5,
             "consolidated_billing": False,
             "meta": {'water': ['plants', '5']},
-            "payment_methods": u'http://testserver/customers/1/payment_methods/'
+            "payment_methods": u'http://testserver/customers/1/payment_methods/',
+            "transactions": u'http://testserver/customers/1/transactions/'
         }
 
     def test_create_post_customer(self):
