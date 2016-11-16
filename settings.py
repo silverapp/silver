@@ -67,6 +67,11 @@ INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 ROOT_URLCONF = 'silver.urls'
 PROJECT_ROOT = os.path.dirname(__file__)
 
+FIXTURE_DIRS = (
+    PROJECT_ROOT,
+    PROJECT_ROOT + '/silver/'
+)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
