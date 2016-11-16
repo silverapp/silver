@@ -804,6 +804,12 @@ class PaymentDetail(RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentSerializer
 
+    @property
+    def allowed_methods(self):
+        _allowed_methods = super(PaymentDetail, self).allowed_methods
+        _allowed_methods.pop(_allowed_methods.index('PUT'))
+        return _allowed_methods
+
     def get_object(self):
         customer_pk = self.kwargs.get('customer_pk', None)
         payment_pk = self.kwargs.get('payment_pk', None)
