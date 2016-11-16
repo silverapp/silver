@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "$SILVER_MIGRATE" == "yes" ] ; then
+/usr/local/bin/python2 /silver/manage.py migrate --noinput
+fi
+
+if [ "$SILVER_LOAD_DEV_DATA" == "yes" ] ; then
+    /usr/local/bin/python2 /silver/manage.py loaddata -i fixtures/initial_dev_data.json
+fi
+
+exec /usr/local/bin/python2 /silver/manage.py runserver 0.0.0.0:8080
+
