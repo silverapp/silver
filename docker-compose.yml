@@ -1,7 +1,7 @@
 version: '2'
 services:
   silver:
-    image: silver
+    image: presslabs/silver:latest
     command: dockerize -wait tcp://db:3306 -timeout 30s /silver/docker-entrypoint
     env_file: ./docker-compose.env
     ports:
