@@ -820,6 +820,15 @@ class PaymentProcessorList(ListAPIView):
         return PaymentProcessorManager.all()
 
 
+class ProviderPaymentProcessorList(ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PaymentProcessorSerializer
+    ordering = ('-name', )
+
+    def get_queryset(self):
+        return PaymentProcessorManager.all()
+
+
 class PaymentProcessorDetail(RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentProcessorSerializer

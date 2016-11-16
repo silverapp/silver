@@ -71,7 +71,8 @@ class TestProviderEndpoints(APITestCase):
             "invoice_starting_number": 1,
             "proforma_series": "TestSeries",
             "proforma_starting_number": 1,
-            "meta": None
+            "meta": None,
+            'payment_processors': 'http://testserver/providers/1/payment_processors/'
         }
         qs = self._filter_providers()
         assert qs.count() == 1
@@ -171,7 +172,7 @@ class TestProviderEndpoints(APITestCase):
         ProviderFactory.reset_sequence(1)
         provider = ProviderFactory.create()
 
-        url = reverse('provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': provider.pk})
 
         response = self.client.get(url)
 
@@ -195,7 +196,8 @@ class TestProviderEndpoints(APITestCase):
             'zip_code': provider.zip_code,
             'country': provider.country,
             'extra': provider.extra,
-            'meta': {u'something': [1, 2]}
+            'meta': {u'something': [1, 2]},
+            'payment_processors': 'http://testserver/providers/1/payment_processors/'
         }
         assert response.data == expected
 
@@ -252,7 +254,8 @@ class TestProviderEndpoints(APITestCase):
             'invoice_starting_number': 1,
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
-            'meta': {u'something': [1, 2]}
+            'meta': {u'something': [1, 2]},
+            'payment_processors': 'http://testserver/providers/1/payment_processors/'
         }
 
     def test_put_provider_without_required_field(self):
@@ -292,6 +295,7 @@ class TestProviderEndpoints(APITestCase):
         ProviderFactory.create()
 
         url = reverse('provider-detail', kwargs={'pk': 1})
+
         new_data = {
             'company': 'TheNewCompany',  # The changed field
             'address_1': 'Address11',
@@ -327,7 +331,8 @@ class TestProviderEndpoints(APITestCase):
             'zip_code': '1',
             'country': u'AL',
             'extra': 'Extra1',
-            'meta': {u'something': [1, 2]}
+            'meta': {u'something': [1, 2]},
+            'payment_processors': 'http://testserver/providers/1/payment_processors/'
         }
 
     def test_delete_provider(self):

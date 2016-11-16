@@ -108,6 +108,10 @@ class JSONSerializerField(serializers.Field):
 
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
     meta = JSONSerializerField(required=False)
+    payment_processors = serializers.HyperlinkedIdentityField(
+        view_name='provider-payment-processor-list', source='*', lookup_field="pk",
+        read_only=True
+    )
 
     class Meta:
         model = Provider
@@ -115,7 +119,7 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'display_email', 'notification_email', 'address_1', 'address_2',
                   'city', 'state', 'zip_code', 'country', 'extra',
                   'invoice_series', 'invoice_starting_number',
-                  'proforma_series', 'proforma_starting_number', 'meta')
+                  'proforma_series', 'proforma_starting_number', 'meta', 'payment_processors')
 
     def validate(self, data):
         flow = data.get('flow', None)
