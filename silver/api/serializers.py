@@ -422,7 +422,7 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
 
     def validate(self, attrs):
         if self.instance and list(attrs.keys()) != ['status']:
-            message = "Existing payment only accepts updating its status.{} given".format(
+            message = "Existing payments only accept updating their status. {} given.".format(
                 list(attrs.keys())
             )
             raise serializers.ValidationError(message)
@@ -430,6 +430,10 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
             message = "Cannot update a payment with '{}' status.".format(
                 self.instance.status
             )
+            raise serializers.ValidationError(message)
+        if (self.instance and getattr(self.instance, 'transactions', None) and
+           self.instance.transactions.exclude(state='canceled').exists()):
+            message = "Cannot update a payment with active transactions."
             raise serializers.ValidationError(message)
 
         # Run model clean and handle ValidationErrors
