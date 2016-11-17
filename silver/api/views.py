@@ -875,10 +875,12 @@ class PaymentMethodDetail(RetrieveUpdateAPIView):
 
     def get_object(self):
         payment_method_id = self.kwargs.get('payment_method_id')
+        customer_pk = self.kwargs.get('customer_pk')
 
         return get_object_or_404(
             PaymentMethod.objects.all().select_subclasses(),
-            id=payment_method_id
+            id=payment_method_id,
+            customer__pk=customer_pk
         )
 
 
