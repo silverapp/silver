@@ -59,7 +59,10 @@ def pay_transaction_view(request, transaction_uuid):
     transaction.save()
 
     try:
-        return view_class().handle_transaction_request(request, transaction)
+        if transaction.state == Transaction.State.Uninitialized:
+            return view_class().handle_transaction_request(request, transaction)
+
+        return HttpResponse("Transaction is in {} state.".format(transaction.state.upper()))
     except NotImplementedError:
         raise Http404
 
