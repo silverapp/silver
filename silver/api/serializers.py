@@ -524,7 +524,7 @@ class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
             return None
 
         lookup_value = getattr(obj, self.lookup_field)
-        kwargs = {'transaction_uuid': str(lookup_value),
+        kwargs = {'payment_method_id': str(lookup_value),
                   'customer_pk': obj.customer.pk}
         return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
@@ -538,7 +538,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     transactions = PaymentMethodTransactionsUrl(
-        view_name='payment-method-transaction-list', source='*'
+        view_name='payment-method-transaction-list', source='*',
     )
     additional_data = serializers.JSONField(required=False, write_only=True)
 

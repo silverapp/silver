@@ -900,7 +900,7 @@ class TransactionList(ListCreateAPIView):
 
             return Transaction.objects.filter(
                 payment_method__customer__id=customer_pk,
-                payment_processor=payment_method.payment_processor
+                payment_method=payment_method
             )
         else:
             return Transaction.objects.filter(
