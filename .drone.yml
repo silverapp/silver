@@ -23,3 +23,22 @@ compose:
       - MYSQL_ROOT_PASSWORD=secret
       - MYSQL_USER=silver
       - MYSQL_PASSWORD=silver
+
+publish:
+  docker:
+    username: presslabsbot
+    password: $$DOCKER_PASSWORD
+    email: ping@presslabs.com
+    repo: presslabs/silver
+    tag: $${BRANCH/master/latest}
+    when:
+      event: push
+      branch: master
+  docker:
+    username: presslabsbot
+    password: $$DOCKER_PASSWORD
+    email: ping@presslabs.com
+    repo: presslabs/silver
+    tag: "$${TAG##v}"
+    when:
+      event: tag
