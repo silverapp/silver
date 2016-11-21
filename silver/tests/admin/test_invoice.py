@@ -26,7 +26,7 @@ from silver.tests.factories import InvoiceFactory
 
 class InvoiceAdminTestCase(TestCase):
     def setUp(self):
-        User.objects.create_superuser('user', 'myemail@test.com', 'password')
+        self.user = User.objects.create_superuser('user', 'myemail@test.com', 'password')
 
         self.admin = Client()
 
@@ -57,7 +57,7 @@ class InvoiceAdminTestCase(TestCase):
             for action in actions:
                 self.admin.post(url, {
                     'action': action,
-                    '_selected_action': [u'1']
+                    '_selected_action': [str(invoice.pk)]
                 })
 
                 assert mock_action.call_count
@@ -68,9 +68,9 @@ class InvoiceAdminTestCase(TestCase):
                     action = 'clone_into_draft'
 
                 mock_log_action.assert_called_with(
-                    user_id=1,
+                    user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(invoice).pk,
-                    object_id=1,
+                    object_id=invoice.pk,
                     object_repr=unicode(invoice),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
@@ -79,7 +79,7 @@ class InvoiceAdminTestCase(TestCase):
                 )
 
     def test_actions_failed_no_log_entries(self):
-        InvoiceFactory.create()
+        invoice = InvoiceFactory.create()
 
         url = reverse('admin:silver_invoice_changelist')
 
@@ -109,7 +109,7 @@ class InvoiceAdminTestCase(TestCase):
             for action in actions:
                 self.admin.post(url, {
                     'action': action,
-                    '_selected_action': [u'1']
+                    '_selected_action': [str(invoice.pk)]
                 })
 
                 assert not mock_log_action.call_count
