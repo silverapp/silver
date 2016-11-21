@@ -33,6 +33,7 @@ from django.utils.translation import ugettext_lazy as _
 from silver.utils.international import currencies
 from silver.utils.mail import send_customer_email
 from .billing_entities import Customer, Provider
+from .transactions import Transaction
 
 
 logger = logging.getLogger(__name__)
@@ -323,3 +324,23 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
 
             if send_mail:
                 send_payment_paid_email(instance)
+
+    elif isinstance(instance, Transaction):
+        try:
+            if target == Transaction.States.Canceled:
+                instance.payment.fail()
+            elif target == Transaction.States.Pending:
+                instance.payment.process()
+            elif target == Transaction.States.Succeded:
+                instance.payment.succeed()
+            elif target == Transaction.States.Failed:
+                instance.payment.fail()
+            else:
+                logger.error('Undefined target state (%s) for Transaction.', target)
+                return
+            instance.payment.save()
+        except TransitionNotAllowed:
+            logger.error('The payment is not in the right state for transit.'
+                         'Transaction target state: %s, Payment state: %s',
+                         target, instance.payment.status)
+            raise

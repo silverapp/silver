@@ -15,7 +15,7 @@ class Transaction(models.Model):
 
     status = FSMField(default='uninitialized')
 
-    class State(object):
+    class States(object):
         Uninitialized = 'uninitialized'
         Pending = 'pending'
         Succeded = 'succeded'
@@ -40,31 +40,30 @@ class Transaction(models.Model):
     def payment_processor(self):
         return self.payment_method.payment_processor
 
-    @transition(field=status, source='*', target=State.Canceled)
+    @transition(field=status, source='*', target=States.Canceled)
     def cancel(self):
         """
         The transaction is canceled.
         """
-        self.payment.fail()
+        pass
 
-    @transition(field=status, source=State.Uninitialized, target=State.Pending,
+    @transition(field=status, source=States.Uninitialized, target=States.Pending,
                 conditions=[lambda t: t.payment.status == t.payment.Status.Unpaid])
-    def pending(self):
+    def process(self):
         """
         Transit to the Pending state.
         """
-        self.payment.process()
 
-    @transition(field=status, source=State.Pending, target=State.Succeded)
+    @transition(field=status, source=States.Pending, target=States.Succeded)
     def succeed(self):
         """
         Finish the transaction successful.
         """
-        self.payment.succeed()
+        pass
 
-    @transition(field=status, source=State.Pending, target=State.Failed)
+    @transition(field=status, source=States.Pending, target=States.Failed)
     def fail(self):
         """
         The transaction had faild.
         """
-        self.payment.fail()
+        pass
