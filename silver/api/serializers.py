@@ -432,7 +432,7 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
             )
             raise serializers.ValidationError(message)
         if (self.instance and getattr(self.instance, 'transactions', None) and
-           self.instance.transactions.exclude(state='canceled').exists()):
+           self.instance.transaction_set.exclude(state='canceled').exists()):
             message = "Cannot update a payment with active transactions."
             raise serializers.ValidationError(message)
 

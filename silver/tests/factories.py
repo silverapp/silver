@@ -261,5 +261,5 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Transaction
 
-    payment_method  = factory.SubFactory(PaymentMethodFactory)
+    payment_method = factory.SubFactory(PaymentMethodFactory)
     payment = factory.SubFactory(PaymentFactory)

@@ -30,7 +30,6 @@ from django.dispatch import receiver
 from django.template.loader import select_template
 from django.utils.translation import ugettext_lazy as _
 
-from silver.models.transactions import Transaction
 from silver.utils.international import currencies
 from silver.utils.mail import send_customer_email
 from .billing_entities import Customer, Provider
@@ -153,10 +152,6 @@ class Payment(models.Model):
             'payment_id': self.id,
             'customer_id': self.customer.id
         })
-
-    @property
-    def transactions(self):
-        return Transaction.objects.filter(payment=self).all()
 
     @property
     def is_overdue(self):

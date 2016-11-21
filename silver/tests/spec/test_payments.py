@@ -247,7 +247,7 @@ class TestPaymentEndpoints(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data == []
 
-    def test_put_payment(self):
+    def test_put_payment_not_allowed(self):
         payment = PaymentFactory.create()
         invoice = payment.invoice
         proforma = payment.proforma
@@ -273,92 +273,10 @@ class TestPaymentEndpoints(APITestCase):
             url, json.dumps(data), content_type='application/json'
         )
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
-            'id': payment.pk,
-            'customer': u'http://testserver/customers/%d/' % payment.customer.pk,
-            'due_date': None,
-            'visible': True,
-            'url': u'http://testserver/customers/%d/payments/%d/' % (payment.customer.pk, payment.pk),
-            'currency': u'RON',
-            'amount': u'0.10',
-            'status': 'unpaid',
-            'proforma': u'http://testserver/proformas/%d/' % proforma.pk,
-            'invoice': u'http://testserver/invoices/%d/' % invoice.pk,
-            'provider': u'http://testserver/providers/%d/' % payment.provider.pk
-        }
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+        assert response.data == {u'detail': u'Method "PUT" not allowed.'}
 
-    def test_put_get_payment(self):
-        payment = PaymentFactory.create()
-        invoice = payment.invoice
-        proforma = payment.proforma
-        invoice.proforma = proforma
-        invoice.save()
-        payment.provider = invoice.provider
-        payment.customer = invoice.customer
-        payment.save()
-
-        url = reverse(
-            'payment-detail', kwargs={'customer_pk': payment.customer.pk,
-                                      'payment_pk': payment.pk}
-        )
-
-        data = {
-            'customer': 'http://testserver/customers/%d/' % payment.customer.pk,
-            'amount': 0.10,
-            'currency': 'RON',
-            'provider': 'http://testserver/providers/%d/' % payment.provider.pk
-        }
-
-        self.client.put(
-            url, json.dumps(data), content_type='application/json'
-        )
-
-        response = self.client.get(url, content_type='application/json')
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
-            'id': payment.pk,
-            'customer': u'http://testserver/customers/%d/' % payment.customer.pk,
-            'due_date': None,
-            'visible': True,
-            'url': u'http://testserver/customers/%d/payments/%d/' % (payment.customer.pk, payment.pk),
-            'currency': u'RON',
-            'amount': u'0.10',
-            'status': 'unpaid',
-            'proforma': u'http://testserver/proformas/%d/' % proforma.pk,
-            'invoice': u'http://testserver/invoices/%d/' % invoice.pk,
-            'provider': u'http://testserver/providers/%d/' % payment.provider.pk
-        }
-
-    def test_put_payment_incomplete_body(self):
-        payment = PaymentFactory.create()
-        invoice = payment.invoice
-        proforma = payment.proforma
-        invoice.proforma = proforma
-        invoice.save()
-        payment.provider = invoice.provider
-        payment.customer = invoice.customer
-        payment.save()
-
-        url = reverse(
-            'payment-detail', kwargs={'customer_pk': payment.customer.pk,
-                                      'payment_pk': payment.pk}
-        )
-
-        data = {'amount': 50.0}
-
-        response = self.client.put(
-            url, json.dumps(data), content_type='application/json'
-        )
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {
-            'customer': ['This field is required.'],
-            'provider': ['This field is required.']
-        }
-
-    def test_put_payment_incomplete_body_get(self):
+    def test_put_payment_not_allowed_get(self):
         payment = PaymentFactory.create()
         invoice = payment.invoice
         proforma = payment.proforma
@@ -377,15 +295,18 @@ class TestPaymentEndpoints(APITestCase):
             url, content_type='application/json'
         ).data
 
-        data = {'amount': 50.0}
+        data = {
+            'customer': 'http://testserver/customers/%d/' % payment.customer.pk,
+            'amount': 0.10,
+            'currency': 'RON',
+            'provider': 'http://testserver/providers/%d/' % payment.provider.pk
+        }
 
         self.client.put(
             url, json.dumps(data), content_type='application/json'
         )
 
-        response = self.client.get(
-            url, content_type='application/json'
-        )
+        response = self.client.get(url, content_type='application/json')
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data == initial_payment
@@ -405,34 +326,22 @@ class TestPaymentEndpoints(APITestCase):
                                       'payment_pk': payment.pk}
         )
 
-        data = {
-            'due_date': '2016-10-20',
-            'visible': False,
-            'amount': 330.00,
-            'currency': 'RON',
-        }
+        final_payment = self.client.get(
+            url, content_type='application/json'
+        ).data
+
+        final_payment['status'] = 'paid'
+
+        data = {'status': payment.Status.Paid}
 
         response = self.client.patch(
             url, json.dumps(data), content_type='application/json'
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
-            'customer': u'http://testserver/customers/%d/' % payment.customer.pk,
-            'due_date': '2016-10-20',
-            'visible': False,
-            'url': u'http://testserver/customers/%d/payments/%d/' % (payment.customer.pk,
-                                                                     payment.pk),
-            'currency': u'RON',
-            'amount': u'330.00',
-            'status': 'unpaid',
-            'proforma': u'http://testserver/proformas/%d/' % proforma.pk,
-            'invoice': u'http://testserver/invoices/%d/' % invoice.pk,
-            'provider': u'http://testserver/providers/%d/' % payment.provider.pk,
-            'id': payment.pk
-        }
+        assert response.data == final_payment
 
-    def test_patch_payment_get(self):
+    def test_patch_other_than_status_fail(self):
         payment = PaymentFactory.create()
         invoice = payment.invoice
         proforma = payment.proforma
@@ -448,10 +357,41 @@ class TestPaymentEndpoints(APITestCase):
         )
 
         data = {
-            'due_date': '2016-10-20',
-            'visible': False,
-            'amount': 330.00,
-            'currency': 'RON',
+            'amount': 100.00,
+            'currency': u'RON'
+        }
+
+        response = self.client.patch(
+            url, json.dumps(data), content_type='application/json'
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            u'non_field_errors': [u"Existing payments only accept updating their status. [u'amount', u'currency'] given."]
+        }
+
+    def test_patch_other_than_status_fail_and_get(self):
+        payment = PaymentFactory.create()
+        invoice = payment.invoice
+        proforma = payment.proforma
+        invoice.proforma = proforma
+        invoice.save()
+        payment.provider = invoice.provider
+        payment.customer = invoice.customer
+        payment.save()
+
+        url = reverse(
+            'payment-detail', kwargs={'customer_pk': payment.customer.pk,
+                                      'payment_pk': payment.pk}
+        )
+
+        initial_payment = self.client.get(
+            url, content_type='application/json'
+        ).data
+
+        data = {
+            'amount': 100.00,
+            'currency': u'RON'
         }
 
         self.client.patch(
@@ -463,22 +403,9 @@ class TestPaymentEndpoints(APITestCase):
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
-            'customer': u'http://testserver/customers/%d/' % payment.customer.pk,
-            'due_date': '2016-10-20',
-            'visible': False,
-            'url': u'http://testserver/customers/%d/payments/%d/' % (payment.customer.pk,
-                                                                     payment.pk),
-            'currency': u'RON',
-            'amount': u'330.00',
-            'status': 'unpaid',
-            'proforma': u'http://testserver/proformas/%d/' % proforma.pk,
-            'invoice': u'http://testserver/invoices/%d/' % invoice.pk,
-            'provider': u'http://testserver/providers/%d/' % payment.provider.pk,
-            'id': payment.pk
-        }
+        assert response.data == initial_payment
 
-    def test_paid_status_payment_no_updates(self):
+    def test_paid_status_payment_failed_status_update(self):
         payment = PaymentFactory.create()
 
         url = reverse(
@@ -489,10 +416,7 @@ class TestPaymentEndpoints(APITestCase):
         payment.status = payment.Status.Paid
         payment.save()
 
-        data = {
-            'due_date': '2016-10-20',
-            'visible': False,
-        }
+        data = {'status': payment.Status.Pending}
 
         response = self.client.patch(
             url, json.dumps(data), content_type='application/json'
@@ -534,7 +458,7 @@ class TestPaymentEndpoints(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data == initial_payment
 
-    def test_canceled_status_payment_no_updates(self):
+    def test_canceled_status_payment_failed_status_update(self):
         payment = PaymentFactory.create()
 
         url = reverse(
@@ -545,10 +469,7 @@ class TestPaymentEndpoints(APITestCase):
         payment.status = payment.Status.Canceled
         payment.save()
 
-        data = {
-            'due_date': '2016-10-20',
-            'visible': False,
-        }
+        data = {'status': payment.Status.Unpaid}
 
         response = self.client.patch(
             url, json.dumps(data), content_type='application/json'
