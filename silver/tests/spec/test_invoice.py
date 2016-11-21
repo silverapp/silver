@@ -40,14 +40,14 @@ class TestInvoiceEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def test_post_invoice_without_invoice_entries(self):
-        CustomerFactory.create()
-        ProviderFactory.create()
+        customer = CustomerFactory.create()
+        provider = ProviderFactory.create()
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
         data = {
-            'provider': 'http://testserver/providers/1/',
-            'customer': 'http://testserver/customers/1/',
+            'provider': 'http://testserver/providers/%s/' % provider.pk,
+            'customer': 'http://testserver/customers/%s/' % customer.pk,
             'series': "",
             'number': "",
             'currency': 'RON',
@@ -57,11 +57,11 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=data)
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
-            "id": 1,
+            "id": response.data["id"],
             "series": "InvoiceSeries",
             "number": None,
-            "provider": "http://testserver/providers/1/",
-            "customer": "http://testserver/customers/1/",
+            "provider": "http://testserver/providers/%s/" % provider.pk,
+            "customer": "http://testserver/customers/%s/" % customer.pk,
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -79,14 +79,14 @@ class TestInvoiceEndpoints(APITestCase):
         }
 
     def test_post_invoice_with_invoice_entries(self):
-        CustomerFactory.create()
-        ProviderFactory.create()
+        customer = CustomerFactory.create()
+        provider = ProviderFactory.create()
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
         data = {
-            'provider': 'http://testserver/providers/1/',
-            'customer': 'http://testserver/customers/1/',
+            'provider': 'http://testserver/providers/%s/' % provider.pk,
+            'customer': 'http://testserver/customers/%s/' % customer.pk,
             'series': None,
             'number': None,
             'currency': 'RON',
@@ -118,18 +118,18 @@ class TestInvoiceEndpoints(APITestCase):
 
     def test_get_invoice(self):
         InvoiceFactory.reset_sequence(1)
-        InvoiceFactory.create()
+        invoice = InvoiceFactory.create()
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {
-            "id": 1,
+            "id": invoice.pk,
             "series": "InvoiceSeries",
             "number": 1,
-            "provider": "http://testserver/providers/1/",
-            "customer": "http://testserver/customers/1/",
+            "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
+            "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -154,9 +154,9 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "DELETE" not allowed.'}
 
     def test_add_single_invoice_entry(self):
-        InvoiceFactory.create_batch(10)
+        invoice = InvoiceFactory.create()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -165,7 +165,7 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
-        invoice = Invoice.objects.get(pk=1)
+        invoice = Invoice.objects.all()[0]
         total = Decimal(200.0) * Decimal(1 + invoice.sales_tax_percent / 100)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -182,7 +182,7 @@ class TestInvoiceEndpoints(APITestCase):
             'total_before_tax': Decimal(200.0)
         }
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
 
         invoice_entries = response.data.get('invoice_entries', None)
@@ -208,16 +208,16 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "GET" not allowed.'}
 
     def test_add_multiple_invoice_entries(self):
-        InvoiceFactory.create_batch(10)
+        invoice = InvoiceFactory.create()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
 
-        invoice = Invoice.objects.get(pk=1)
+        invoice = Invoice.objects.all()[0]
         total = Decimal(200.0) * Decimal(1 + invoice.sales_tax_percent / 100)
 
         entries_count = 10
@@ -239,15 +239,15 @@ class TestInvoiceEndpoints(APITestCase):
                 'total_before_tax': Decimal(200.0)
             }
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == entries_count
 
     def test_delete_invoice_entry(self):
-        InvoiceFactory.create()
+        invoice = InvoiceFactory.create()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -258,12 +258,12 @@ class TestInvoiceEndpoints(APITestCase):
             self.client.post(url, data=json.dumps(entry_data),
                              content_type='application/json')
 
-        url = reverse('invoice-entry-update', kwargs={'document_pk': 1,
-                                                      'entry_pk': 1})
+        url = reverse('invoice-entry-update', kwargs={'document_pk': invoice.pk,
+                                                      'entry_pk': list(invoice._entries)[0].pk})
         response = self.client.delete(url)
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == entries_count - 1
@@ -273,7 +273,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -286,7 +286,7 @@ class TestInvoiceEndpoints(APITestCase):
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
@@ -297,7 +297,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.cancel()
         invoice.save()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -310,7 +310,7 @@ class TestInvoiceEndpoints(APITestCase):
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
@@ -321,7 +321,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
+        url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -334,7 +334,7 @@ class TestInvoiceEndpoints(APITestCase):
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
         assert len(invoice_entries) == 0
@@ -344,7 +344,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -359,7 +359,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.cancel()
         invoice.save()
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -374,7 +374,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-detail', kwargs={'pk': 1})
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -386,9 +386,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_issue_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -411,9 +411,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_issue_invoice_with_custom_issue_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued', 'issue_date': '2014-01-01'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -436,9 +436,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_issue_invoice_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {
             'state': 'issued',
             'issue_date': '2014-01-01',
@@ -469,7 +469,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -486,7 +486,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -502,7 +502,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -526,7 +526,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {
             'state': 'paid',
             'paid_date': '2014-05-05'
@@ -549,9 +549,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -568,7 +568,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -584,7 +584,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
@@ -608,7 +608,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {
             'state': 'canceled',
             'cancel_date': '2014-10-10'
@@ -632,9 +632,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
@@ -642,7 +642,8 @@ class TestInvoiceEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
-            'detail': 'An invoice can be canceled only if it is in issued state.'}
+            'detail': 'An invoice can be canceled only if it is in issued state.'
+        }
 
     def test_cancel_invoice_in_canceled_state(self):
         provider = ProviderFactory.create()
@@ -652,7 +653,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.cancel()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
@@ -661,7 +662,7 @@ class TestInvoiceEndpoints(APITestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {
             'detail': 'An invoice can be canceled only if it is in issued state.'
-            }
+        }
 
     def test_cancel_invoice_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -671,7 +672,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data),
@@ -685,9 +686,9 @@ class TestInvoiceEndpoints(APITestCase):
     def test_illegal_state_change_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        InvoiceFactory.create(provider=provider, customer=customer)
+        invoice = InvoiceFactory.create(provider=provider, customer=customer)
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),
@@ -703,7 +704,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.issue()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),
@@ -720,7 +721,7 @@ class TestInvoiceEndpoints(APITestCase):
         invoice.pay()
         invoice.save()
 
-        url = reverse('invoice-state', kwargs={'pk': 1})
+        url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data),

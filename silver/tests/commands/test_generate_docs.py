@@ -1208,8 +1208,8 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 2
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.all()[0].state == Proforma.STATES.DRAFT
-            assert Proforma.objects.all()[1].state == Proforma.STATES.ISSUED
+            assert Proforma.objects.all()[0].state == Proforma.STATES.ISSUED
+            assert Proforma.objects.all()[1].state == Proforma.STATES.DRAFT
 
     def test_cancel_sub_without_trial_at_end_of_billing_cycle(self):
         """
@@ -1669,7 +1669,7 @@ class TestInvoiceGenerationCommand(TestCase):
             with patch('silver.models.subscriptions.timezone') as mocked_timezone:
                 mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 29)
 
-                for subscription in Subscription.objects.filter(id__in=range(2, 5)):
+                for subscription in Subscription.objects.all()[2:5]:
                     subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                     subscription.save()
 
