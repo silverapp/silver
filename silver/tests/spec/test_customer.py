@@ -143,7 +143,7 @@ class TestCustomerEndpoints(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_edit_put_customer(self):
-        CustomerFactory.create()
+        customer = CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
 
@@ -153,7 +153,7 @@ class TestCustomerEndpoints(APITestCase):
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('customer-detail', kwargs={'pk': 1})
+        url = reverse('customer-detail', kwargs={'pk': customer.pk})
 
         response = self.client.put(url, data=json.dumps(changed_data),
                                    content_type='application/json')
@@ -168,7 +168,7 @@ class TestCustomerEndpoints(APITestCase):
                                  self.complete_data[field])
 
     def test_edit_patch_customer(self):
-        CustomerFactory.create()
+        customer = CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
         unchanged_fields = ['emails', 'zip_code', 'company',
@@ -178,7 +178,7 @@ class TestCustomerEndpoints(APITestCase):
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('customer-detail', kwargs={'pk': 1})
+        url = reverse('customer-detail', kwargs={'pk': customer.pk})
 
         response = self.client.patch(url, data=json.dumps(changed_data),
                                      content_type='application/json')

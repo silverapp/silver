@@ -33,8 +33,8 @@ class TestPlanEndpoint(APITestCase):
         url = reverse('plan-list')
 
         ProductCodeFactory.create_batch(2)
-        feature1_pc = ProductCode.objects.get(id=1).value
-        plan_pc = ProductCode.objects.get(id=2).value
+        feature1_pc = ProductCode.objects.all()[0].value
+        plan_pc = ProductCode.objects.all()[1].value
         provider = ProviderFactory.create()
         provider_url = reverse('provider-detail',
                                kwargs={'pk': provider.pk})
@@ -170,7 +170,7 @@ class TestPlanEndpoint(APITestCase):
         plan.enabled = True
         plan.save()
 
-        url = reverse('plan-detail', kwargs={'pk': 1})
+        url = reverse('plan-detail', kwargs={'pk': plan.pk})
 
         response = self.client.delete(url)
 

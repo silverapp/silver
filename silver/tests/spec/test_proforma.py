@@ -39,14 +39,14 @@ class TestProformaEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def test_post_proforma_without_proforma_entries(self):
-        CustomerFactory.create()
-        ProviderFactory.create()
+        customer = CustomerFactory.create()
+        provider = ProviderFactory.create()
         SubscriptionFactory.create()
 
         url = reverse('proforma-list')
         data = {
-            'provider': 'http://testserver/providers/1/',
-            'customer': 'http://testserver/customers/1/',
+            'provider': 'http://testserver/providers/%s/' % provider.pk,
+            'customer': 'http://testserver/customers/%s/' % customer.pk,
             'series': "",
             'number': "",
             'currency': 'RON',
@@ -57,11 +57,11 @@ class TestProformaEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data == {
-            "id": 1,
+            "id": response.data["id"],
             "series": "ProformaSeries",
             "number": None,
-            "provider": "http://testserver/providers/1/",
-            "customer": "http://testserver/customers/1/",
+            "provider": "http://testserver/providers/%s/" % provider.pk,
+            "customer": "http://testserver/customers/%s/" % customer.pk,
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -79,14 +79,14 @@ class TestProformaEndpoints(APITestCase):
         }
 
     def test_post_proforma_with_proforma_entries(self):
-        CustomerFactory.create()
-        ProviderFactory.create()
+        customer = CustomerFactory.create()
+        provider = ProviderFactory.create()
         SubscriptionFactory.create()
 
         url = reverse('proforma-list')
         data = {
-            'provider': 'http://testserver/providers/1/',
-            'customer': 'http://testserver/customers/1/',
+            'provider': 'http://testserver/providers/%s/' % provider.pk,
+            'customer': 'http://testserver/customers/%s/' % customer.pk,
             'series': None,
             'number': None,
             'currency': 'RON',
@@ -119,18 +119,18 @@ class TestProformaEndpoints(APITestCase):
 
     def test_get_proforma(self):
         ProformaFactory.reset_sequence(1)
-        ProformaFactory.create()
+        proforma = ProformaFactory.create()
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {
-            "id": 1,
+            "id": proforma.pk,
             "series": "ProformaSeries",
             "number": 1,
-            "provider": "http://testserver/providers/1/",
-            "customer": "http://testserver/customers/1/",
+            "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
+            "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
             "archived_provider": {},
             "archived_customer": {},
             "due_date": None,
@@ -155,9 +155,9 @@ class TestProformaEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "DELETE" not allowed.'}
 
     def test_add_single_proforma_entry(self):
-        ProformaFactory.create_batch(10)
+        proforma = ProformaFactory.create()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -166,7 +166,7 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
-        proforma = Proforma.objects.get(pk=1)
+        proforma.refresh_from_db()
 
         total = Decimal(200.0) * Decimal(1 + proforma.sales_tax_percent / 100)
 
@@ -184,7 +184,7 @@ class TestProformaEndpoints(APITestCase):
             'total_before_tax': Decimal(200.0)
         }
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
 
         invoice_entries = response.data.get('proforma_entries', None)
@@ -210,9 +210,9 @@ class TestProformaEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "GET" not allowed.'}
 
     def test_add_multiple_proforma_entries(self):
-        ProformaFactory.create_batch(10)
+        proforma = ProformaFactory.create()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -226,7 +226,7 @@ class TestProformaEndpoints(APITestCase):
 
             assert response.status_code == status.HTTP_201_CREATED
 
-            proforma = Proforma.objects.get(pk=1)
+            proforma.refresh_from_db()
             total = Decimal(200.0) * Decimal(1 +
                                              proforma.sales_tax_percent / 100)
             assert response.data == {
@@ -242,15 +242,15 @@ class TestProformaEndpoints(APITestCase):
                 'total_before_tax': Decimal(200.0)
             }
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == entries_count
 
     def test_delete_proforma_entry(self):
-        ProformaFactory.create()
+        proforma = ProformaFactory.create()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -261,12 +261,12 @@ class TestProformaEndpoints(APITestCase):
             self.client.post(url, data=json.dumps(entry_data),
                              content_type='application/json')
 
-        url = reverse('proforma-entry-update', kwargs={'document_pk': 1,
-                                                       'entry_pk': 1})
+        url = reverse('proforma-entry-update', kwargs={'document_pk': proforma.pk,
+                                                       'entry_pk': list(proforma._entries)[0].pk})
         response = self.client.delete(url)
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == entries_count - 1
@@ -276,7 +276,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -289,7 +289,7 @@ class TestProformaEndpoints(APITestCase):
         msg = 'Proforma entries can be added only when the proforma is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
@@ -300,7 +300,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.cancel()
         proforma.save()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -313,7 +313,7 @@ class TestProformaEndpoints(APITestCase):
         msg = 'Proforma entries can be added only when the proforma is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
@@ -324,7 +324,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
+        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
             "unit_price": 10.0,
@@ -337,7 +337,7 @@ class TestProformaEndpoints(APITestCase):
         msg = 'Proforma entries can be added only when the proforma is in draft state.'
         assert response.data == {'detail': msg}
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('proforma_entries', None)
         assert len(invoice_entries) == 0
@@ -347,7 +347,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -361,7 +361,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.cancel()
         proforma.save()
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -375,7 +375,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-detail', kwargs={'pk': 1})
+        url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
@@ -388,7 +388,7 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
@@ -406,14 +406,12 @@ class TestProformaEndpoints(APITestCase):
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
 
-        proforma = get_object_or_None(Proforma, pk=1)
-
     def test_issue_proforma_with_custom_issue_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued', 'issue_date': '2014-01-01'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
@@ -436,9 +434,9 @@ class TestProformaEndpoints(APITestCase):
     def test_issue_proforma_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {
             'state': 'issued',
             'issue_date': '2014-01-01',
@@ -469,7 +467,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -484,7 +482,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -498,10 +496,11 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
+        proforma.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
@@ -509,14 +508,13 @@ class TestProformaEndpoints(APITestCase):
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/1/'
+            'invoice': 'http://testserver/invoices/%s/' % proforma.invoice.pk
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
-        invoice = get_object_or_None(Invoice, pk=1)
-        proforma = get_object_or_None(Proforma, pk=1)
+        invoice = Invoice.objects.all()[0]
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
 
@@ -529,13 +527,14 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {
             'state': 'paid',
             'paid_date': '2014-05-05'
         }
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
+        proforma.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
@@ -543,14 +542,13 @@ class TestProformaEndpoints(APITestCase):
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/1/'
+            'invoice': 'http://testserver/invoices/%s/' % proforma.invoice.pk
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
-        invoice = get_object_or_None(Invoice, pk=1)
-        proforma = get_object_or_None(Proforma, pk=1)
+        invoice = Invoice.objects.all()[0]
         assert proforma.invoice == invoice
         assert invoice.proforma == proforma
 
@@ -559,9 +557,9 @@ class TestProformaEndpoints(APITestCase):
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -576,7 +574,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'paid'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -590,7 +588,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
@@ -614,7 +612,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {
             'state': 'canceled',
             'cancel_date': '2014-10-10'
@@ -638,9 +636,9 @@ class TestProformaEndpoints(APITestCase):
     def test_cancel_proforma_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
@@ -657,7 +655,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.cancel()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
@@ -674,7 +672,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
@@ -686,9 +684,9 @@ class TestProformaEndpoints(APITestCase):
     def test_illegal_state_change_when_in_draft_state(self):
         provider = ProviderFactory.create()
         customer = CustomerFactory.create()
-        ProformaFactory.create(provider=provider, customer=customer)
+        proforma = ProformaFactory.create(provider=provider, customer=customer)
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
@@ -704,7 +702,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
@@ -721,7 +719,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
         proforma.save()
 
-        url = reverse('proforma-state', kwargs={'pk': 1})
+        url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'illegal-state'}
 
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')

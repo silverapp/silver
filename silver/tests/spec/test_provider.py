@@ -51,10 +51,7 @@ class TestProviderEndpoints(APITestCase):
         }
         response = self.client.post(url, data)
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data == {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+        expected_data = {
             'name': u'TestProviderá',
             'company': u'S.C. Timisoará S.R.L',
             'display_email': None,
@@ -72,8 +69,13 @@ class TestProviderEndpoints(APITestCase):
             "proforma_series": "TestSeries",
             "proforma_starting_number": 1,
             "meta": None,
-            'payment_processors': 'http://testserver/providers/1/payment_processors/'
         }
+
+        for attr, value in expected_data.iteritems():
+            assert response.data[attr] == value
+
+        assert response.status_code == status.HTTP_201_CREATED
+
         qs = self._filter_providers()
         assert qs.count() == 1
 
@@ -178,8 +180,8 @@ class TestProviderEndpoints(APITestCase):
 
         assert response.status_code == 200
         expected = {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+            'id': provider.pk,
+            'url': 'http://testserver/providers/%s/' % provider.pk,
             'name': provider.name,
             'company': provider.company,
             'flow': provider.flow,
@@ -197,7 +199,7 @@ class TestProviderEndpoints(APITestCase):
             'country': provider.country,
             'extra': provider.extra,
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/1/payment_processors/'
+            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
         assert response.data == expected
 
@@ -209,12 +211,12 @@ class TestProviderEndpoints(APITestCase):
 
     def test_put_provider_correctly(self):
         ProviderFactory.reset_sequence(1)
-        ProviderFactory.create()
+        provider = ProviderFactory.create()
 
-        url = reverse('provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': provider.pk})
         new_data = {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+            'id': provider.pk,
+            'url': 'http://testserver/providers/%s/' % provider.pk,
             'name': 'TestProvider',
             'company': 'TheNewCompany',
             'display_email': 'a@a.com',
@@ -235,8 +237,8 @@ class TestProviderEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+            'id': provider.pk,
+            'url': 'http://testserver/providers/%s/' % provider.pk,
             'name': 'TestProvider',
             'company': 'TheNewCompany',
             'flow': 'proforma',
@@ -255,7 +257,7 @@ class TestProviderEndpoints(APITestCase):
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/1/payment_processors/'
+            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
 
     def test_put_provider_without_required_field(self):
@@ -269,12 +271,12 @@ class TestProviderEndpoints(APITestCase):
          what's supposed to do for at least one field.
          """
 
-        ProviderFactory.create()
+        provider = ProviderFactory.create()
 
-        url = reverse('provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': provider.pk})
         new_data = {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+            'id': provider.pk,
+            'url': 'http://testserver/providers/%s/' % provider.pk,
             'email': 'a@a.com',
             'address_1': 'address',
             'city': 'City',
@@ -292,9 +294,9 @@ class TestProviderEndpoints(APITestCase):
 
     def test_patch_provider(self):
         ProviderFactory.reset_sequence(1)
-        ProviderFactory.create()
+        provider = ProviderFactory.create()
 
-        url = reverse('provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': provider.pk})
 
         new_data = {
             'company': 'TheNewCompany',  # The changed field
@@ -313,8 +315,8 @@ class TestProviderEndpoints(APITestCase):
 
         assert response.status_code == 200
         assert response.data == {
-            'id': 1,
-            'url': 'http://testserver/providers/1/',
+            'id': provider.pk,
+            'url': 'http://testserver/providers/%s/' % provider.pk,
             'name': u'Náme1',
             'company': u'TheNewCompany',
             'flow': 'proforma',
@@ -332,13 +334,13 @@ class TestProviderEndpoints(APITestCase):
             'country': u'AL',
             'extra': 'Extra1',
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/1/payment_processors/'
+            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
 
     def test_delete_provider(self):
-        ProviderFactory.create()
+        provider = ProviderFactory.create()
 
-        url = reverse('provider-detail', kwargs={'pk': 1})
+        url = reverse('provider-detail', kwargs={'pk': provider.pk})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT

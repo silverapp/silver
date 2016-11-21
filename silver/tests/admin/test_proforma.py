@@ -26,7 +26,7 @@ from silver.tests.factories import ProformaFactory
 
 class ProformaAdminTestCase(TestCase):
     def setUp(self):
-        User.objects.create_superuser('user', 'myemail@test.com', 'password')
+        self.user = User.objects.create_superuser('user', 'myemail@test.com', 'password')
 
         self.admin = Client()
 
@@ -58,7 +58,7 @@ class ProformaAdminTestCase(TestCase):
             for action in actions:
                 self.admin.post(url, {
                     'action': action,
-                    '_selected_action': [u'1']
+                    '_selected_action': [str(proforma.pk)]
                 })
 
                 assert mock_action.call_count
@@ -69,9 +69,9 @@ class ProformaAdminTestCase(TestCase):
                     action = 'clone_into_draft'
 
                 mock_log_action.assert_called_with(
-                    user_id=1,
+                    user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(proforma).pk,
-                    object_id=1,
+                    object_id=proforma.pk,
                     object_repr=unicode(proforma),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
@@ -80,7 +80,7 @@ class ProformaAdminTestCase(TestCase):
                 )
 
     def test_actions_failed_no_log_entries(self):
-        ProformaFactory.create()
+        proforma = ProformaFactory.create()
 
         url = reverse('admin:silver_proforma_changelist')
 
@@ -110,7 +110,7 @@ class ProformaAdminTestCase(TestCase):
             for action in actions:
                 self.admin.post(url, {
                     'action': action,
-                    '_selected_action': [u'1']
+                    '_selected_action': [str(proforma.pk)]
                 })
 
                 assert not mock_log_action.call_count
