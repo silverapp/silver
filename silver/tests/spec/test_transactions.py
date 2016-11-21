@@ -19,13 +19,13 @@ class TestTransactionEndpoint(APITestCase):
     def test_transaction_list(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        payment = PaymentFactory(customer=customer)
+        payment = PaymentFactory.create(customer=customer)
         transaction_1 = TransactionFactory.create(payment_method=payment_method, payment=payment)
         expected_t1 = OrderedDict([
             ('url', reverse('transaction-detail',
                             kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_1.uuid})),
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                        'payment_method_id': payment.id})),
+                                                                        'payment_method_id': payment_method.id})),
             ('payment', reverse('payment-detail', kwargs={'customer_pk': customer.id,
                                                           'payment_pk': transaction_1.payment.id})),
             ('is_usable', True),
@@ -37,7 +37,7 @@ class TestTransactionEndpoint(APITestCase):
             ('url', reverse('transaction-detail',
                             kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_2.uuid})),
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                        'payment_method_id': payment.id})),
+                                                                        'payment_method_id': payment_method.id})),
             ('payment', reverse('payment-detail', kwargs={'customer_pk': customer.id,
                                                           'payment_pk': transaction_2.payment.id})),
             ('is_usable', True),
@@ -58,14 +58,14 @@ class TestTransactionEndpoint(APITestCase):
         payment = PaymentFactory.create(customer=customer)
         valid_until = datetime.now()
         payment_method_url = reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                      'payment_method_id': payment.pk})
+                                                                      'payment_method_id': payment_method.id})
         payment_url = reverse('payment-detail', kwargs={'customer_pk': customer.pk,
                                                         'payment_pk': payment.pk})
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
         data = {
             'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment.pk}),
+                                                                       'payment_method_id': payment_method.id}),
             'payment': reverse('payment-detail', kwargs={'customer_pk': customer.pk,
                                                          'payment_pk': payment.pk}),
             'valid_until': valid_until
@@ -87,7 +87,7 @@ class TestTransactionEndpoint(APITestCase):
             ('url', reverse('transaction-detail',
                             kwargs={'customer_pk': customer.pk, 'transaction_uuid': transaction_1.uuid})),
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                        'payment_method_id': payment.pk})),
+                                                                        'payment_method_id': payment_method.id})),
             ('payment', reverse('payment-detail', kwargs={'customer_pk': customer.pk,
                                                           'payment_pk': transaction_1.payment.pk})),
             ('is_usable', True),
@@ -104,7 +104,7 @@ class TestTransactionEndpoint(APITestCase):
     def test_modify_one(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        payment = PaymentFactory(customer=customer)
+        payment = PaymentFactory.create(customer=customer)
         transaction_1 = TransactionFactory.create(payment_method=payment_method, payment=payment)
         valid_until = datetime.now()
         url = reverse('transaction-detail',
@@ -112,7 +112,7 @@ class TestTransactionEndpoint(APITestCase):
                               'transaction_uuid': transaction_1.uuid})
         data = {
             'payment': reverse('payment-detail', kwargs={'customer_pk': customer.id,
-                                                         'payment_pk': payment.id}),
+                                                         'payment_pk': payment_method.id}),
             'valid_until': valid_until
         }
 
@@ -128,7 +128,7 @@ class TestTransactionEndpoint(APITestCase):
     def test_create_one_without_required_fields(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        payment = PaymentFactory(customer=customer)
+        payment = PaymentFactory.create(customer=customer)
         transaction = TransactionFactory.create(payment_method=payment_method, payment=payment)
         valid_until = datetime.now()
         url = reverse('transaction-detail',
