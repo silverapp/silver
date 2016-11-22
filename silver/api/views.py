@@ -803,6 +803,7 @@ class PaymentList(ListCreateAPIView):
 class PaymentDetail(RetrieveUpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentSerializer
+    http_method_names = ('get', 'patch', 'head', 'options')
 
     def get_object(self):
         customer_pk = self.kwargs.get('customer_pk', None)
