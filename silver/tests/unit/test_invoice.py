@@ -15,6 +15,9 @@
 
 from decimal import Decimal
 
+from datetime import date
+
+from datetime import timedelta
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Proforma, Invoice
@@ -140,3 +143,88 @@ class TestInvoice(TestCase):
 
         assert invoice.series_number == '%s-%s' % (invoice.series,
                                                    invoice.number)
+
+    def test_invoice_due_today_queryset(self):
+        invoices = InvoiceFactory.create_batch(4)
+
+        invoices[0].due_date = date.today()
+        invoices[0].save()
+
+        invoices[1].status = Invoice.Status.Pending
+        invoices[1].due_date = date.today()
+        invoices[1].save()
+
+        invoices[2].status = Invoice.Status.Paid
+        invoices[2].due_date = date.today() - timedelta(days=1)
+        invoices[2].save()
+
+        invoices[3].status = Invoice.Status.Canceled
+        invoices[3].due_date = date.today()
+        invoices[3].save()
+
+        queryset = Invoice.objects.due_today()
+
+        assert queryset.count() == 2
+        for payment in invoices[0:1]:
+            assert payment in queryset
+
+    def test_invoice_due_this_month_queryset(self):
+        invoices = InvoiceFactory.create_batch(4)
+
+        invoices[0].due_date = date.today().replace(day=20)
+        invoices[0].save()
+
+        invoices[1].status = Invoice.Status.Pending
+        invoices[1].due_date = date.today().replace(day=1)
+        invoices[1].save()
+
+        invoices[2].due_date = date.today() - timedelta(days=31)
+        invoices[2].save()
+
+        invoices[3].status = Invoice.Status.Canceled
+        invoices[3].save()
+
+        queryset = Invoice.objects.due_this_month()
+
+        assert queryset.count() == 2
+        for payment in invoices[0:1]:
+            assert payment in queryset
+
+    def test_invoice_overdue_queryset(self):
+        invoices = InvoiceFactory.create_batch(3)
+
+        invoices[0].due_date = date.today() - timedelta(days=1)
+        invoices[0].save()
+
+        invoices[1].status = Invoice.Status.Pending
+        invoices[1].due_date = date.today() - timedelta(days=3)
+        invoices[1].save()
+
+        invoices[2].status = Invoice.Status.Paid
+        invoices[2].due_date = date.today() - timedelta(days=31)
+        invoices[2].save()
+
+        queryset = Invoice.objects.overdue()
+
+        assert queryset.count() == 2
+        for payment in invoices[0:1]:
+            assert payment in queryset
+
+    def test_invoice_overdue_since_last_month_queryset(self):
+        invoices = InvoiceFactory.create_batch(3)
+
+        invoices[0].due_date = date.today().replace(day=1)
+        invoices[0].save()
+
+        invoices[1].status = Invoice.Status.Pending
+        invoices[1].due_date = date.today().replace(day=1)
+        invoices[1].save()
+
+        invoices[2].status = Invoice.Status.Unpaid
+        invoices[2].due_date = date.today() - timedelta(days=31)
+        invoices[2].save()
+
+        queryset = Invoice.objects.overdue_since_last_month()
+
+        assert queryset.count() == 1
+        assert invoices[2] in queryset

@@ -3,9 +3,9 @@ from django.template.loader import select_template
 
 
 class GenericTransactionForm(Form):
-    def __init__(self, payment_method, payment, request=None, *args, **kwargs):
+    def __init__(self, payment_method, transaction, request=None, *args, **kwargs):
         self.payment_method = payment_method
-        self.payment = payment
+        self.transaction = transaction
         self.request = request
 
         super(GenericTransactionForm, self).__init__(*args, **kwargs)
@@ -20,6 +20,6 @@ class GenericTransactionForm(Form):
 
         return template.render(context={
             'payment_method': self.payment_method,
-            'payment': self.payment,
+            'transaction': self.transaction,
             'form': self
         }, request=self.request)

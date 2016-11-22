@@ -129,9 +129,9 @@ class PaymentMethod(models.Model):
 
         super(PaymentMethod, self).delete(using=using)
 
-    def pay(self, payment):
+    def pay_billing_document(self, document):
         if self.state == self.States.Enabled:
-            self.payment_processor.charge_payment(payment, self)
+            self.payment_processor.pay_billing_document(document, self)
         else:
             raise PaymentMethodInvalid
 
