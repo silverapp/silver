@@ -832,14 +832,20 @@ class ProformaAdmin(BillingDocumentAdmin):
 class TransactionAdmin(ModelAdmin):
     fields = ('amount', 'currency', 'proforma', 'invoice', 'currency_rate_date',
               'state', 'payment_method', 'uuid', 'valid_until', 'last_access',
-              'disabled')
+              'consumable')
 
     readonly_fields = ('state', 'uuid', 'last_access')
-
+    create_only_fields = ('amount', 'currency', 'proforma', 'invoice',
+                         'payment_method', 'valid_until')
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
                     'amount', 'state',)
     list_filter = ('payment_method__customer', 'state')
     actions = ['process', 'cancel', 'settle', 'fail']
+
+    def get_readonly_fields(self, request, instance=None):
+        if instance:
+            return self.readonly_fields + self.create_only_fields
+        return self.readonly_fields
 
     def perform_action(self, request, queryset, action, display_verb=None):
         failed_count = 0
