@@ -1,20 +1,22 @@
 import json
 from collections import OrderedDict
+from datetime import timedelta, datetime
 from decimal import Decimal
-from mock import patch, MagicMock
 
+import pytz
+from mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.reverse import reverse
-from rest_framework.test import APITestCase
 
-from silver.models import Payment
-from silver.tests.factories import InvoiceFactory, AdminUserFactory, PaymentFactory
+from silver.api.serializers import PaymentSerializer
+from silver.models import Payment, Provider
+from silver.tests.factories import InvoiceFactory, PaymentFactory, \
+    CustomerFactory
+from silver.tests.spec.util.api_get_assert import APIGetAssert
 
 
-class TestPaymentEndpoints(APITestCase):
-    def setUp(self):
-        admin_user = AdminUserFactory.create()
-        self.client.force_authenticate(user=admin_user)
+class TestPaymentEndpoints(APIGetAssert):
+    serializer_class = PaymentSerializer
 
     def test_get_payment_list(self):
         initial_payment = PaymentFactory.create()
@@ -160,7 +162,8 @@ class TestPaymentEndpoints(APITestCase):
         payment = self.client.post(
             url, json.dumps(data), content_type='application/json'
         ).data
-        payment_url = 'http://testserver/customers/%d/payments/%d/' % (customer.pk, payment['id'])
+        payment_url = 'http://testserver/customers/%d/payments/%d/' % (
+            customer.pk, payment['id'])
 
         expected_data = [{
             'customer': 'http://testserver/customers/%d/' % customer.pk,
@@ -214,7 +217,8 @@ class TestPaymentEndpoints(APITestCase):
                     u'Use one of these formats instead: YYYY[-MM[-DD]].'
                 ],
                 'visible': [u'"maybe" is not a valid boolean.'],
-                'amount': [u'Ensure this value is greater than or equal to 0.00.'],
+                'amount': [
+                    u'Ensure this value is greater than or equal to 0.00.'],
                 'invoice': [u'Invalid hyperlink - Object does not exist.'],
                 'provider': [u'Invalid hyperlink - Object does not exist.']
             }
@@ -367,7 +371,8 @@ class TestPaymentEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {
-            u'non_field_errors': [u"Existing payments only accept updating their status. [u'amount', u'currency'] given."]
+            u'non_field_errors': [
+                u"Existing payments only accept updating their status. [u'amount', u'currency'] given."]
         }
 
     def test_patch_other_than_status_fail_and_get(self):
@@ -424,7 +429,8 @@ class TestPaymentEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {
-            u'non_field_errors': [u"Cannot update a payment with 'paid' status."]
+            u'non_field_errors': [
+                u"Cannot update a payment with 'paid' status."]
         }
 
     def test_paid_status_payment_no_updates_on_get(self):
@@ -477,7 +483,8 @@ class TestPaymentEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {
-            u'non_field_errors': [u"Cannot update a payment with 'canceled' status."]
+            u'non_field_errors': [
+                u"Cannot update a payment with 'canceled' status."]
         }
 
     def test_canceled_status_payment_no_updates_on_get(self):
@@ -522,7 +529,6 @@ class TestPaymentEndpoints(APITestCase):
                             fail=fail_mock,
                             succeed=succeed_mock,
                             cancel=cancel_mock):
-
             payment = PaymentFactory.create()
             invoice = payment.invoice
             proforma = payment.proforma
@@ -825,3 +831,197 @@ class TestPaymentEndpoints(APITestCase):
 
             assert response.status_code == status.HTTP_200_OK
             assert response.data.get('currency') == initial_currency
+
+    def test_filters_is_overdue(self):
+        today = datetime.now(pytz.utc).date()
+        yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+
+        customer = CustomerFactory()
+
+        payment_unpaid_overdue = PaymentFactory.create(
+            customer=customer,
+            due_date=yesterday,
+            status=Payment.Status.Unpaid)
+        payment_unpaied_not_due = PaymentFactory.create(
+            customer=customer,
+            due_date=tomorrow,
+            status=Payment.Status.Unpaid)
+        payment_paid_not_due = PaymentFactory.create(
+            customer=payment_unpaid_overdue.customer,
+            due_date=tomorrow,
+            status=Payment.Status.Paid)
+        payment_canceled = PaymentFactory.create(
+            customer=customer,
+            due_date=yesterday,
+            status=Payment.Status.Canceled)
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        overdue_url = url + '?is_overdue=True'
+        not_overdue_url = url + '?is_overdue=False'
+
+        self.assert_get_data(overdue_url, [payment_unpaid_overdue])
+        self.assert_get_data(not_overdue_url, [payment_unpaied_not_due,
+                                               payment_paid_not_due,
+                                               payment_canceled])
+
+    def test_filter_visible(self):
+        customer = CustomerFactory()
+
+        payment_visible = PaymentFactory.create(
+            customer=customer,
+            visible=True)
+        payment_not_visible = PaymentFactory.create(
+            customer=customer,
+            visible=False)
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        visible_url = url + '?visible=True'
+        not_visible_url = url + '?visible=False'
+
+        self.assert_get_data(visible_url, [payment_visible])
+        self.assert_get_data(not_visible_url, [payment_not_visible])
+
+    def test_filter_status(self):
+        pstatus = Payment.Status
+        customer = CustomerFactory()
+
+        payment_correct_status = PaymentFactory.create(
+            customer=customer,
+            status=pstatus.Paid)
+        payment_correct_status2 = PaymentFactory.create(
+            customer=customer,
+            status=pstatus.Canceled)
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        correct_status_url = url + '?status=' + pstatus.Paid
+        correct_status_url2 = url + '?status=' + pstatus.Canceled
+        incorrect_status_url = url + '?status=RANDOM'
+
+        self.assert_get_data(correct_status_url, [payment_correct_status])
+        self.assert_get_data(correct_status_url2, [payment_correct_status2])
+        self.assert_get_data(incorrect_status_url, [])
+
+    def test_filter_flow(self):
+        flows = Provider.FLOWS
+        customer = CustomerFactory()
+
+        payment_flow_invoice = PaymentFactory.create(
+            customer=customer,
+            provider__flow=flows.INVOICE)
+        payment_flow_proforma = PaymentFactory.create(
+            customer=customer,
+            provider__flow=flows.PROFORMA)
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        invoice_url = url + '?flow=' + flows.INVOICE
+        proforma_url = url + '?flow=' + flows.PROFORMA
+        wrong_url = url + '?flow=RANDOM'
+
+        self.assert_get_data(invoice_url, [payment_flow_invoice])
+        self.assert_get_data(proforma_url, [payment_flow_proforma])
+        self.assert_get_data(wrong_url, [])
+
+    def test_filter_provider(self):
+        customer = CustomerFactory()
+
+        payment = PaymentFactory.create(
+            customer=customer,
+            provider__name='Gigel')
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        iexact_url = url + '?provider=gigel'
+        exact_url = url + '?provider=Gigel'
+        random_url = url + '?provider=RANDOM'
+
+        self.assert_get_data(iexact_url, [payment])
+        self.assert_get_data(exact_url, [payment])
+        self.assert_get_data(random_url, [])
+
+    def test_filters_min_max_amount(self):
+        customer = CustomerFactory()
+
+        payment_below_min = PaymentFactory.create(
+            customer=customer,
+            amount=9.99)
+        payment_min = PaymentFactory.create(
+            customer=customer,
+            amount=10.00)
+        payment_above_min = PaymentFactory.create(
+            customer=customer,
+            amount=10.01)
+        payment_center = PaymentFactory.create(
+            customer=customer,
+            amount=60)
+        payment_below_max = PaymentFactory.create(
+            customer=customer,
+            amount=99.99)
+        payment_max = PaymentFactory.create(
+            customer=customer,
+            amount=100.00)
+        payment_above_max = PaymentFactory.create(
+            customer=customer,
+            amount=100.01)
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        range_url = url + '?min_amount=10&max_amount=100'
+        range_url_all = url + '?min_amount=9.99&max_amount=100.01'
+        exact_1_url = url + '?min_amount=60&max_amount=60'
+        no_intersection = url + '?min_amount=100&max_amount=0'
+
+        self.assert_get_data(range_url, [payment_min,
+                                         payment_above_min,
+                                         payment_center,
+                                         payment_below_max,
+                                         payment_max])
+        self.assert_get_data(range_url_all, [payment_below_min,
+                                             payment_min,
+                                             payment_above_min,
+                                             payment_center,
+                                             payment_below_max,
+                                             payment_max,
+                                             payment_above_max])
+        self.assert_get_data(exact_1_url, [payment_center])
+        self.assert_get_data(no_intersection, [])
+
+    def test_filters_currency(self):
+        customer = CustomerFactory()
+
+        payment_usd = PaymentFactory.create(
+            customer=customer,
+            currency='USD')
+        payment_std = PaymentFactory.create(
+            customer=customer,
+            currency='STD')
+
+        url = reverse(
+            'payment-list', kwargs={'customer_pk': customer.pk}
+        )
+
+        usd_iexact_url = url + '?currency=UsD'
+        usd_exact_url = url + '?currency=USD'
+        std_url = url + '?currency=STD'
+        random_url = url + '?currency=RANDOM'
+
+        self.assert_get_data(usd_iexact_url, [payment_usd])
+        self.assert_get_data(usd_exact_url, [payment_usd])
+        self.assert_get_data(std_url, [payment_std])
+        self.assert_get_data(random_url, [])

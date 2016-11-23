@@ -52,6 +52,8 @@ class TestPaymentProcessorsEndpoints(APITestCase):
             ])
         ]
 
+        PaymentProcessorManager.unregister(SomeProcessor)
+
     def test_payment_processors_detail(self):
         url = reverse('payment-processor-detail', kwargs={
             'processor_name': 'Manual'

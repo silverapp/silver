@@ -47,7 +47,8 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     TransactionSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
-                                InvoiceFilter, ProformaFilter, PaymentFilter)
+                                InvoiceFilter, ProformaFilter, PaymentFilter,
+                                PaymentMethodFilter, TransactionFilter)
 
 
 logger = logging.getLogger(__name__)
@@ -846,6 +847,8 @@ class PaymentProcessorDetail(RetrieveAPIView):
 class PaymentMethodList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentMethodSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = PaymentMethodFilter
 
     def get_queryset(self):
         return PaymentMethod.objects.filter(customer=self.customer)
@@ -888,6 +891,8 @@ class PaymentMethodDetail(RetrieveUpdateAPIView):
 class TransactionList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = TransactionSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = TransactionFilter
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
@@ -896,6 +901,7 @@ class TransactionList(ListCreateAPIView):
         if payment_method_id:
             payment_method = get_object_or_404(PaymentMethod,
                                                id=payment_method_id)
+
             if not payment_method.payment_processor.transaction_class:
                 raise Http404
 

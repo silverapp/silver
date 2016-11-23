@@ -18,6 +18,7 @@ from decimal import Decimal
 
 import pytz
 from annoying.functions import get_object_or_None
+from django.db.models import Q
 from django_fsm import (post_transition, TransitionNotAllowed, transition,
                         FSMField)
 
@@ -57,6 +58,13 @@ class PaymentQuerySet(models.QuerySet):
         return self._pending_and_unpaid().filter(
             due_date__lt=datetime.now(pytz.utc).date()
         )
+
+    def not_overdue(self):
+        overdue_statuses = [Payment.Status.Unpaid, Payment.Status.Pending]
+        now = datetime.now(pytz.utc).date()
+
+        return self.filter(~Q(status__in=overdue_statuses) |
+                           Q(status__in=overdue_statuses, due_date__gte=now))
 
     def overdue_since_last_month(self):
         return self._pending_and_unpaid().filter(
