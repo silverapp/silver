@@ -1,9 +1,9 @@
+import logging
 import uuid
 from decimal import Decimal
 
-import logging
-
 from annoying.functions import get_object_or_None
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -19,8 +19,17 @@ from silver.mail import (send_new_transaction_email,
                          send_refunded_transaction_email,
                          send_settled_transaction_email)
 
+from silver.utils.international import currencies
+
 
 logger = logging.getLogger(__name__)
+
+
+class _States(type):
+    def __getattr__(cls, item):
+        if item == 'All':
+            return [getattr(cls, state) for state in vars(cls).keys() if
+                    not state.startswith('_')]
 
 
 class Transaction(models.Model):
@@ -28,8 +37,15 @@ class Transaction(models.Model):
         decimal_places=2, max_digits=8,
         validators=[MinValueValidator(Decimal('0.00'))]
     )
+    currency = models.CharField(
+        choices=currencies, max_length=4, default='USD',
+        help_text='The currency used for billing.'
+    )
+    currency_rate_date = models.DateField(blank=True, null=True)
 
-    class States(object):
+    class States:
+        __metaclass__ = _States
+
         Initial = 'initial'
         Pending = 'pending'
         Settled = 'settled'
@@ -53,7 +69,7 @@ class Transaction(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
-    disabled = models.BooleanField(default=False)
+    consumable = models.BooleanField(default=True)
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -83,14 +99,14 @@ class Transaction(models.Model):
                 raise ValidationError('Invoice and proforma are not related.')
 
     @property
-    def is_consumable(self):
-        if self.disabled:
+    def can_be_consumed(self):
+        if not self.consumable:
             return False
 
-        if self.valid_until and self.valid_until > timezone.now():
+        if self.valid_until and self.valid_until < timezone.now():
             return False
 
-        if self.state is not Transaction.States.Initial:
+        if self.state != Transaction.States.Initial:
             return False
 
         return True
@@ -116,15 +132,15 @@ class Transaction(models.Model):
 
 
 def send_email_with_current_state(transaction):
-    if transaction.state is Transaction.States.Initial:
+    if transaction.state == Transaction.States.Initial:
         send_new_transaction_email(transaction)
-    elif transaction.state is Transaction.States.Pending:
+    elif transaction.state == Transaction.States.Pending:
         send_pending_transaction_email(transaction)
-    elif transaction.state is Transaction.States.Failed:
+    elif transaction.state == Transaction.States.Failed:
         send_failed_transaction_email(transaction)
-    elif transaction.state is Transaction.States.Settled:
+    elif transaction.state == Transaction.States.Settled:
         send_settled_transaction_email(transaction)
-    elif transaction.state is Transaction.States.Refunded:
+    elif transaction.state == Transaction.States.Refunded:
         send_refunded_transaction_email(transaction)
 
 
@@ -148,7 +164,7 @@ def post_transaction_save(sender, instance, **kwargs):
 
         send_new_transaction_email(instance)
 
-        if instance.state is not Transaction.States.Initial:
+        if instance.state != Transaction.States.Initial:
             # The transaction was created with a state other than the initial
             # one
             send_email_with_current_state(instance)
