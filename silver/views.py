@@ -51,7 +51,7 @@ def pay_transaction_view(request, transaction_uuid):
     if not view_class:
         raise Http404
 
-    if not transaction.is_usable:
+    if not transaction.can_be_consumed:
         return HttpResponseGone("The transaction is no longer available.")
 
     transaction.last_access = timezone.now()

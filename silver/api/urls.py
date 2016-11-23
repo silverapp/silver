@@ -21,7 +21,7 @@ from silver.api import views
 urlpatterns = [
     url(r'^customers/$',
         views.CustomerList.as_view(), name='customer-list'),
-    url(r'^customers/(?P<pk>[0-9]+)/$',
+    url(r'^customers/(?P<customer_pk>[0-9]+)/$',
         views.CustomerDetail.as_view(), name='customer-detail'),
 
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/$',
@@ -36,11 +36,6 @@ urlpatterns = [
         views.SubscriptionCancel.as_view(), name='sub-cancel'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/reactivate/$',
         views.SubscriptionReactivate.as_view(), name='sub-reactivate'),
-
-    url(r'^customers/(?P<customer_pk>[0-9]+)/payments/$',
-        views.PaymentList.as_view(), name='payment-list'),
-    url(r'^customers/(?P<customer_pk>[0-9]+)/payments/(?P<payment_pk>[0-9]+)/$',
-        views.PaymentDetail.as_view(), name='payment-detail'),
 
     url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/$',
         views.PaymentMethodList.as_view(), name='payment-method-list'),
