@@ -154,3 +154,8 @@ PAYMENT_PROCESSORS = [
     # (processor.path, setup.data)
     ('silver.models.payment_processors.manual.ManualProcessor', {}),
 ]
+
+try:
+    from settings_local import *
+except ImportError:
+    pass
