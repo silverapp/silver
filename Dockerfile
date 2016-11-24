@@ -6,7 +6,7 @@ MAINTAINER Presslabs ping@presslabs.com
 ENV PYTHONUNBUFFERED 1
 
 # Set default django settings module
-ENV DJANGO_SETTINGS_MODULE settings_local
+ENV DJANGO_SETTINGS_MODULE settings
 
 # silver app runs on port 8080
 EXPOSE 8080
