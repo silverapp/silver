@@ -1,4 +1,5 @@
-from rest_framework import permissions
+import sys
+from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
 from silver.api.serializers import PaymentMethodSerializer
@@ -54,16 +55,69 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         pass
 
     def test_get_listing_no_customer(self):
-        pass
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': sys.maxint
+        })
+
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_detail_no_customer(self):
-        pass
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': sys.maxint,
+            'payment_method_id': 0
+        })
+
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_detail_no_payment_method(self):
-        pass
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': sys.maxint
+        })
+
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_post_listing_no_customer(self):
-        pass
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': sys.maxint
+        })
+
+        response = self.client.post(url, data={
+            'payment_processor': processor_url,
+            'state': PaymentMethod.States.Uninitialized
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_post_listing_incomplete_body_1(self):
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': 0
+        })
+
+        response = self.client.post(url, data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_post_listing_incomplete_body_2(self):
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': 0
+        })
+
+        response = self.client.post(url, data={
+            'payment_processor': processor_url
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_put_patch_detail_no_customer(self):
         pass
