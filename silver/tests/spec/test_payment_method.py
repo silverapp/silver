@@ -49,10 +49,131 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url, method)
 
     def test_post_listing(self):
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        response = self.client.post(url, data={
+            'payment_processor': processor_url,
+            'state': PaymentMethod.States.Uninitialized
+        }, format='json')
+
+        method = PaymentMethod.objects.get(customer=self.customer)
+        self.assert_get_data(response.data['url'], method)
+
+    def test_post_listing_additional_data_wrong_state(self):
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        response = self.client.post(url, data={
+            'payment_processor': processor_url,
+            'state': PaymentMethod.States.Uninitialized,
+            'additional_data': '{"random": "value"}'
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_post_listing_invalid_initial_state(self):
+        invalid_initial_states = list(
+            set([s[0] for s in PaymentMethod.States.Choices]) -
+            {PaymentMethod.States.Uninitialized,
+             PaymentMethod.States.Unverified,
+             PaymentMethod.States.Enabled})
+
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        for state in invalid_initial_states:
+            response = self.client.post(url, data={
+                'payment_processor': processor_url,
+                'state': state
+            }, format='json')
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_detail_invalid_state_transitions(self):
+        # TODO add all of them here...
+        method = self.create_payment_method(customer=self.customer,
+                                            state=PaymentMethod.States.Enabled)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': method.pk
+        })
+        response = self.client.get(url, format='json')
+
+        data = response.data
+        data['state'] = PaymentMethod.States.Uninitialized
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_detail_additional_data_disabled_state(self):
+        method = self.create_payment_method(customer=self.customer,
+                                            state=PaymentMethod.States.Disabled)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': method.pk
+        })
+        response = self.client.get(url, format='json')
+
+        data = response.data
+        data['additional_data'] = '{"random":"value"}'
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_detail_change_customer(self):
+        # TODO fix this
+        # serializer compares an url with the customer object
+        method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': method.pk
+        })
+        response = self.client.get(url, format='json')
+
+        data = response.data
+        data['customer'] = sys.maxint
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_detail_change_processor(self):
+        # TODO
         pass
 
-    def test_put_patch_detail(self):
-        pass
+    def test_put_detail(self):
+        method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': method.pk
+        })
+
+        response = self.client.get(url, format='json')
+        data = response.data
+        data['state'] = PaymentMethod.States.Enabled
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, data)
 
     def test_get_listing_no_customer(self):
         url = reverse('payment-method-list', kwargs={
@@ -119,10 +240,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_put_patch_detail_no_customer(self):
+    def test_put_detail_no_customer(self):
+        # TODO
         pass
 
-    def test_put_patch_detail_no_payment_method(self):
+    def test_put_detail_no_payment_method(self):
+        # TODO
         pass
 
     def test_permissions(self):
