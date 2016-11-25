@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date
-
-from django.db.models import Q
-
 from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
                             NumberFilter)
 from django_filters.fields import Lookup

@@ -24,26 +24,26 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'customer_pk': customer.pk
         })
 
-        good_url = url + '?processor=manual'
-        bad_url = url + '?processor=random'
+        url_manual_processor = url + '?processor=manual'
+        url_no_output = url + '?processor=random'
 
-        self.assert_get_data(good_url, [payment_method])
-        self.assert_get_data(bad_url, [])
+        self.assert_get_data(url_manual_processor, [payment_method])
+        self.assert_get_data(url_no_output, [])
 
     def test_filter_state(self):
         customer = CustomerFactory.create()
-        payment_method = PaymentMethodFactory.create(
+        payment_method_enabled = PaymentMethodFactory.create(
             customer=customer,
             state=PaymentMethod.States.Enabled,
         )
-        payment_method.refresh_from_db()
+        payment_method_enabled.refresh_from_db()
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': customer.pk
         })
 
-        good_url = url + '?state=' + PaymentMethod.States.Enabled
-        bad_url = url + '?state=' + PaymentMethod.States.Disabled
+        url_state_enabled = url + '?state=' + PaymentMethod.States.Enabled
+        url_no_output = url + '?state=' + PaymentMethod.States.Disabled
 
-        self.assert_get_data(good_url, [payment_method])
-        self.assert_get_data(bad_url, [])
+        self.assert_get_data(url_state_enabled, [payment_method_enabled])
+        self.assert_get_data(url_no_output, [])

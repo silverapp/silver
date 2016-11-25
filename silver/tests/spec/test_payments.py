@@ -10,8 +10,8 @@ from rest_framework.reverse import reverse
 
 from silver.api.serializers import PaymentSerializer
 from silver.models import Payment, Provider
-from silver.tests.factories import InvoiceFactory, PaymentFactory, \
-    CustomerFactory
+from silver.tests.factories import (InvoiceFactory, PaymentFactory,
+                                    CustomerFactory)
 from silver.tests.spec.util.api_get_assert import APIGetAssert
 
 
@@ -889,50 +889,48 @@ class TestPaymentEndpoints(APIGetAssert):
         self.assert_get_data(not_visible_url, [payment_not_visible])
 
     def test_filter_status(self):
-        pstatus = Payment.Status
         customer = CustomerFactory()
 
-        payment_correct_status = PaymentFactory.create(
+        payment_paid_status = PaymentFactory.create(
             customer=customer,
-            status=pstatus.Paid)
-        payment_correct_status2 = PaymentFactory.create(
+            status=Payment.Status.Paid)
+        payment_canceled_status = PaymentFactory.create(
             customer=customer,
-            status=pstatus.Canceled)
+            status=Payment.Status.Canceled)
 
         url = reverse(
             'payment-list', kwargs={'customer_pk': customer.pk}
         )
 
-        correct_status_url = url + '?status=' + pstatus.Paid
-        correct_status_url2 = url + '?status=' + pstatus.Canceled
-        incorrect_status_url = url + '?status=RANDOM'
+        url_paid_only = url + '?status=' + Payment.Status.Paid
+        url_canceled_only = url + '?status=' + Payment.Status.Canceled
+        url_no_output = url + '?status=RANDOM'
 
-        self.assert_get_data(correct_status_url, [payment_correct_status])
-        self.assert_get_data(correct_status_url2, [payment_correct_status2])
-        self.assert_get_data(incorrect_status_url, [])
+        self.assert_get_data(url_paid_only, [payment_paid_status])
+        self.assert_get_data(url_canceled_only, [payment_canceled_status])
+        self.assert_get_data(url_no_output, [])
 
     def test_filter_flow(self):
-        flows = Provider.FLOWS
         customer = CustomerFactory()
 
         payment_flow_invoice = PaymentFactory.create(
             customer=customer,
-            provider__flow=flows.INVOICE)
+            provider__flow=Provider.FLOWS.INVOICE)
         payment_flow_proforma = PaymentFactory.create(
             customer=customer,
-            provider__flow=flows.PROFORMA)
+            provider__flow=Provider.FLOWS.PROFORMA)
 
         url = reverse(
             'payment-list', kwargs={'customer_pk': customer.pk}
         )
 
-        invoice_url = url + '?flow=' + flows.INVOICE
-        proforma_url = url + '?flow=' + flows.PROFORMA
-        wrong_url = url + '?flow=RANDOM'
+        invoice_url = url + '?flow=' + Provider.FLOWS.INVOICE
+        proforma_url = url + '?flow=' + Provider.FLOWS.PROFORMA
+        url_no_output = url + '?flow=RANDOM'
 
         self.assert_get_data(invoice_url, [payment_flow_invoice])
         self.assert_get_data(proforma_url, [payment_flow_proforma])
-        self.assert_get_data(wrong_url, [])
+        self.assert_get_data(url_no_output, [])
 
     def test_filter_provider(self):
         customer = CustomerFactory()
@@ -947,11 +945,11 @@ class TestPaymentEndpoints(APIGetAssert):
 
         iexact_url = url + '?provider=gigel'
         exact_url = url + '?provider=Gigel'
-        random_url = url + '?provider=RANDOM'
+        url_no_output = url + '?provider=RANDOM'
 
         self.assert_get_data(iexact_url, [payment])
         self.assert_get_data(exact_url, [payment])
-        self.assert_get_data(random_url, [])
+        self.assert_get_data(url_no_output, [])
 
     def test_filters_min_max_amount(self):
         customer = CustomerFactory()
@@ -982,25 +980,25 @@ class TestPaymentEndpoints(APIGetAssert):
             'payment-list', kwargs={'customer_pk': customer.pk}
         )
 
-        range_url = url + '?min_amount=10&max_amount=100'
-        range_url_all = url + '?min_amount=9.99&max_amount=100.01'
-        exact_1_url = url + '?min_amount=60&max_amount=60'
-        no_intersection = url + '?min_amount=100&max_amount=0'
+        url_range_slice = url + '?min_amount=10&max_amount=100'
+        url_range_all_entries = url + '?min_amount=9.99&max_amount=100.01'
+        url_exact_amount = url + '?min_amount=60&max_amount=60'
+        url_no_intersection = url + '?min_amount=100&max_amount=0'
 
-        self.assert_get_data(range_url, [payment_min,
-                                         payment_above_min,
-                                         payment_center,
-                                         payment_below_max,
-                                         payment_max])
-        self.assert_get_data(range_url_all, [payment_below_min,
-                                             payment_min,
-                                             payment_above_min,
-                                             payment_center,
-                                             payment_below_max,
-                                             payment_max,
-                                             payment_above_max])
-        self.assert_get_data(exact_1_url, [payment_center])
-        self.assert_get_data(no_intersection, [])
+        self.assert_get_data(url_range_slice, [payment_min,
+                                               payment_above_min,
+                                               payment_center,
+                                               payment_below_max,
+                                               payment_max])
+        self.assert_get_data(url_range_all_entries, [payment_below_min,
+                                                     payment_min,
+                                                     payment_above_min,
+                                                     payment_center,
+                                                     payment_below_max,
+                                                     payment_max,
+                                                     payment_above_max])
+        self.assert_get_data(url_exact_amount, [payment_center])
+        self.assert_get_data(url_no_intersection, [])
 
     def test_filters_currency(self):
         customer = CustomerFactory()
@@ -1016,12 +1014,12 @@ class TestPaymentEndpoints(APIGetAssert):
             'payment-list', kwargs={'customer_pk': customer.pk}
         )
 
-        usd_iexact_url = url + '?currency=UsD'
-        usd_exact_url = url + '?currency=USD'
-        std_url = url + '?currency=STD'
-        random_url = url + '?currency=RANDOM'
+        url_usd_iexact = url + '?currency=UsD'
+        url_usd_exact = url + '?currency=USD'
+        url_std = url + '?currency=STD'
+        url_no_output = url + '?currency=RANDOM'
 
-        self.assert_get_data(usd_iexact_url, [payment_usd])
-        self.assert_get_data(usd_exact_url, [payment_usd])
-        self.assert_get_data(std_url, [payment_std])
-        self.assert_get_data(random_url, [])
+        self.assert_get_data(url_usd_iexact, [payment_usd])
+        self.assert_get_data(url_usd_exact, [payment_usd])
+        self.assert_get_data(url_std, [payment_std])
+        self.assert_get_data(url_no_output, [])

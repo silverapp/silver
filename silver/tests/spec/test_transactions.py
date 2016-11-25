@@ -12,7 +12,6 @@ from silver.models.payment_processors.generics import TriggeredProcessorMixin
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory)
 from silver.tests.factories import CustomerFactory, PaymentFactory
-from silver.models import Customer
 
 
 def reverse(*args, **kwargs):
@@ -34,6 +33,7 @@ def register(func):
         result = func(cls, *args, **kwargs)
         PaymentProcessorManager.unregister(SomeProcessor)
         return result
+
     return func_wrapper
 
 
@@ -69,17 +69,22 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(customer=customer)
         payment = PaymentFactory.create(customer=customer)
         valid_until = datetime.now()
-        payment_method_url = reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                      'payment_method_id': payment_method.id})
-        payment_url = reverse('payment-detail', kwargs={'customer_pk': customer.pk,
-                                                        'payment_pk': payment.pk})
+        payment_method_url = reverse('payment-method-detail',
+                                     kwargs={'customer_pk': customer.pk,
+                                             'payment_method_id': payment_method.id})
+        payment_url = reverse('payment-detail',
+                              kwargs={'customer_pk': customer.pk,
+                                      'payment_pk': payment.pk})
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
-            'payment': reverse('payment-detail', kwargs={'customer_pk': customer.pk,
-                                                         'payment_pk': payment.pk}),
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
+            'payment': reverse('payment-detail',
+                               kwargs={'customer_pk': customer.pk,
+                                       'payment_pk': payment.pk}),
             'valid_until': valid_until
         }
 
@@ -94,16 +99,21 @@ class TestTransactionEndpoint(APITestCase):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
         payment = PaymentFactory.create(customer=customer)
-        transaction_1 = TransactionFactory.create(payment_method=payment_method, payment=payment)
+        transaction_1 = TransactionFactory.create(
+            payment_method=payment_method, payment=payment)
         expected_t1 = OrderedDict([
             ('url', reverse('transaction-detail',
-                            kwargs={'customer_pk': customer.pk, 'transaction_uuid': transaction_1.uuid})),
-            ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                        'payment_method_id': payment_method.id})),
-            ('payment', reverse('payment-detail', kwargs={'customer_pk': customer.pk,
-                                                          'payment_pk': transaction_1.payment.pk})),
+                            kwargs={'customer_pk': customer.pk,
+                                    'transaction_uuid': transaction_1.uuid})),
+            ('payment_method', reverse('payment-method-detail',
+                                       kwargs={'customer_pk': customer.pk,
+                                               'payment_method_id': payment_method.id})),
+            ('payment',
+             reverse('payment-detail', kwargs={'customer_pk': customer.pk,
+                                               'payment_pk': transaction_1.payment.pk})),
             ('is_usable', True),
-            ('pay_url', reverse('pay-transaction', kwargs={'transaction_uuid': transaction_1.uuid})),
+            ('pay_url', reverse('pay-transaction', kwargs={
+                'transaction_uuid': transaction_1.uuid})),
             ('valid_until', None),
         ])
 
@@ -117,14 +127,16 @@ class TestTransactionEndpoint(APITestCase):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
         payment = PaymentFactory.create(customer=customer)
-        transaction_1 = TransactionFactory.create(payment_method=payment_method, payment=payment)
+        transaction_1 = TransactionFactory.create(
+            payment_method=payment_method, payment=payment)
         valid_until = datetime.now()
         url = reverse('transaction-detail',
                       kwargs={'customer_pk': customer.id,
                               'transaction_uuid': transaction_1.uuid})
         data = {
-            'payment': reverse('payment-detail', kwargs={'customer_pk': customer.id,
-                                                         'payment_pk': payment_method.id}),
+            'payment': reverse('payment-detail',
+                               kwargs={'customer_pk': customer.id,
+                                       'payment_pk': payment_method.id}),
             'valid_until': valid_until
         }
 
@@ -135,69 +147,76 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['detail'], 'Method "POST" not allowed.')
 
         response = self.client.patch(url, format='json', data=data)
-        self.assertEqual(response.data['detail'], 'Method "PATCH" not allowed.')
+        self.assertEqual(response.data['detail'],
+                         'Method "PATCH" not allowed.')
 
     def test_create_one_without_required_fields(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
         payment = PaymentFactory.create(customer=customer)
-        transaction = TransactionFactory.create(payment_method=payment_method, payment=payment)
+        transaction = TransactionFactory.create(payment_method=payment_method,
+                                                payment=payment)
         valid_until = datetime.now()
         url = reverse('transaction-detail',
                       kwargs={'customer_pk': customer.id,
                               'transaction_uuid': transaction.uuid})
         data = {
-            'payment': reverse('payment-detail', kwargs={'customer_pk': customer.id,
-                                                         'payment_pk': payment.id}),
+            'payment': reverse('payment-detail',
+                               kwargs={'customer_pk': customer.id,
+                                       'payment_pk': payment.id}),
             'valid_until': valid_until
         }
 
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.id, 'payment_method_id': payment_method.id})
+                      kwargs={'customer_pk': customer.id,
+                              'payment_method_id': payment_method.id})
 
         response = self.client.post(url, format='json', data=data)
-        self.assertEqual(response.data['payment_method'], ['This field is required.'])
+        self.assertEqual(response.data['payment_method'],
+                         ['This field is required.'])
 
     @register
     def test_filter_payment_method(self):
         customer = CustomerFactory.create()
         payment = PaymentFactory.create(customer=customer)
-        payment_method_ok = PaymentMethodFactory.create(
+        payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor',
             customer=customer)
 
-        transaction = TransactionFactory.create(
-            payment_method=payment_method_ok,
+        transaction1 = TransactionFactory.create(
+            payment_method=payment_method,
             payment=payment
         )
-        expected_1 = self._transaction_data(customer, payment,
-                                            payment_method_ok, transaction)
+        transaction_data_1 = self._transaction_data(customer, payment,
+                                                    payment_method,
+                                                    transaction1)
 
         transaction2 = TransactionFactory.create(
-            payment_method=payment_method_ok,
+            payment_method=payment_method,
             payment=payment
         )
-        expected_2 = self._transaction_data(customer, payment,
-                                            payment_method_ok, transaction2)
+        transaction_data_2 = self._transaction_data(customer, payment,
+                                                    payment_method,
+                                                    transaction2)
 
         urls = [
             reverse(
                 'payment-method-transaction-list', kwargs={
                     'customer_pk': customer.pk,
-                    'payment_method_id': payment_method_ok.pk}),
+                    'payment_method_id': payment_method.pk}),
             reverse(
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
         for url in urls:
-            good_url = url + '?payment_method=someprocessor'
-            wrong_url = url + '?payment_method=Random'
+            url_method_someprocessor = url + '?payment_method=someprocessor'
+            url_no_output = url + '?payment_method=Random'
 
-            response = self.client.get(good_url, format='json')
+            response = self.client.get(url_method_someprocessor, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data[0], expected_1)
-            self.assertEqual(response.data[1], expected_2)
+            self.assertEqual(response.data[0], transaction_data_1)
+            self.assertEqual(response.data[1], transaction_data_2)
 
-            response = self.client.get(wrong_url, format='json')
+            response = self.client.get(url_no_output, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
@@ -213,8 +232,9 @@ class TestTransactionEndpoint(APITestCase):
             payment_method=payment_method_ok,
             payment=payment
         )
-        expected_1 = self._transaction_data(customer, payment,
-                                            payment_method_ok, transaction)
+        transaction_data = self._transaction_data(customer, payment,
+                                                  payment_method_ok,
+                                                  transaction)
 
         urls = [
             reverse(
@@ -225,25 +245,25 @@ class TestTransactionEndpoint(APITestCase):
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
         for url in urls:
-            good_url = url + '?min_amount=10'
-            wrong_url = url + '?min_amount=150'
+            url_with_filterable_data = url + '?min_amount=10'
+            url_no_output = url + '?min_amount=150'
 
-            response = self.client.get(good_url, format='json')
+            response = self.client.get(url_with_filterable_data, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data[0], expected_1)
+            self.assertEqual(response.data[0], transaction_data)
 
-            response = self.client.get(wrong_url, format='json')
+            response = self.client.get(url_no_output, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
-            good_url = url + '?max_amount=1050'
-            wrong_url = url + '?max_amount=10'
+            url_with_filterable_data = url + '?max_amount=1050'
+            url_no_output = url + '?max_amount=10'
 
-            response = self.client.get(good_url, format='json')
+            response = self.client.get(url_with_filterable_data, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data[0], expected_1)
+            self.assertEqual(response.data[0], transaction_data)
 
-            response = self.client.get(wrong_url, format='json')
+            response = self.client.get(url_no_output, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
@@ -251,41 +271,41 @@ class TestTransactionEndpoint(APITestCase):
     def test_filter_disabled(self):
         customer = CustomerFactory.create()
         payment = PaymentFactory.create(customer=customer, amount=100)
-        payment_method_ok = PaymentMethodFactory.create(
+        payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor',
             customer=customer)
 
         transaction = TransactionFactory.create(
-            payment_method=payment_method_ok,
+            payment_method=payment_method,
             payment=payment,
             disabled=False
         )
-        expected_1 = self._transaction_data(customer, payment,
-                                            payment_method_ok, transaction)
+        transaction_data = self._transaction_data(customer, payment,
+                                                      payment_method,
+                                                      transaction)
 
         urls = [
             reverse(
                 'payment-method-transaction-list', kwargs={
                     'customer_pk': customer.pk,
-                    'payment_method_id': payment_method_ok.pk}),
+                    'payment_method_id': payment_method.pk}),
             reverse(
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
-        assert Customer.objects.exists()
-
         for url in urls:
-            good_url = url + '?disabled=False'
-            wrong_url = url + '?disabled=True'
+            url_not_disabled = url + '?disabled=False'
+            url_no_output = url + '?disabled=True'
 
-            response = self.client.get(good_url, format='json')
+            response = self.client.get(url_not_disabled, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data[0], expected_1)
+            self.assertEqual(response.data[0], transaction_data)
 
-            response = self.client.get(wrong_url, format='json')
+            response = self.client.get(url_no_output, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
-    def _transaction_data(self, customer, payment, payment_method, transaction):
+    def _transaction_data(self, customer, payment, payment_method,
+                          transaction):
         return OrderedDict([
             ('url', reverse('transaction-detail',
                             kwargs={'customer_pk': customer.pk,
@@ -298,7 +318,6 @@ class TestTransactionEndpoint(APITestCase):
                                         'payment_pk': payment.pk})),
             ('is_usable', True),
             ('pay_url', reverse('pay-transaction',
-                                kwargs={
-                                    'transaction_uuid': transaction.uuid})),
+                                kwargs={'transaction_uuid': transaction.uuid})),
             ('valid_until', None),
         ])
