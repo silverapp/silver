@@ -9,6 +9,43 @@ from silver.tests.spec.util.api_get_assert import APIGetAssert
 class TestPaymentMethodEndpoints(APIGetAssert):
     serializer_class = PaymentMethodSerializer
 
+    def setUp(self):
+
+    def test_get_listing(self):
+        pass
+
+    def test_post_listing(self):
+        pass
+
+    def test_get_detail(self):
+        pass
+
+    def test_put_patch_detail(self):
+        pass
+
+    def test_get_listing_no_customer(self):
+        pass
+
+    def test_get_detail_no_customer(self):
+        pass
+
+    def test_get_detail_no_payment_method(self):
+        pass
+
+    def test_post_listing_no_customer(self):
+        pass
+
+    def test_put_patch_detail_no_customer(self):
+        pass
+
+    def test_put_patch_detail_no_payment_method(self):
+        pass
+
+    def test_permissions(self):
+        # TODO check for the permission classes on the view object for the urls
+        # detail + listing
+        pass
+
     def test_filter_processor(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(
