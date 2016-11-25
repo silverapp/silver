@@ -141,6 +141,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
     def test_put_detail_change_customer(self):
         # TODO fix this
         # serializer compares an url with the customer object
+        other_customer = CustomerFactory.create()
         method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-detail', kwargs={
@@ -150,9 +151,14 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.get(url, format='json')
 
         data = response.data
-        data['customer'] = sys.maxint
+        data['customer'] = reverse('customer-detail',
+                                   request=response.wsgi_request,
+                                   kwargs={'pk': other_customer.pk})
+
+        print data['customer']
 
         response = self.client.put(url, data=data, format='json')
+        print(response.data['customer'])
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_put_detail_change_processor(self):
