@@ -10,3 +10,4 @@ app_static/
 settings_local.py
 
 *.swp
+.drone.sec.yml

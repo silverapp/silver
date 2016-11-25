@@ -543,12 +543,9 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
                            read_only=True)
     payment_processor = PaymentProcessorUrl(
         view_name='payment-processor-detail', lookup_field='name',
-        queryset=PaymentProcessorManager.all()
-    )
-
+        queryset=PaymentProcessorManager.all())
     transactions = PaymentMethodTransactionsUrl(
-        view_name='payment-method-transaction-list', source='*',
-    )
+        view_name='payment-method-transaction-list', source='*')
     additional_data = serializers.JSONField(required=False, write_only=True)
 
     class Meta:

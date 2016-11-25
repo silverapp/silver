@@ -945,8 +945,8 @@ class TransactionAdmin(ModelAdmin):
     list_display = ('customer', 'payment_method', 'uuid', 'valid_until',
                     'last_access', 'disabled')
 
-    fields = ('payment_method', 'uuid', 'valid_until', 'last_access',
-              'disabled')
+    fields = ('payment_method', 'payment', 'uuid', 'valid_until',
+              'last_access', 'disabled')
 
     readonly_fields = ('uuid', 'last_access')
 

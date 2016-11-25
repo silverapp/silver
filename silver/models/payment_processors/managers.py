@@ -29,6 +29,12 @@ class PaymentProcessorManager(object):
             cls.processors[name].setup(setup_data)
 
     @classmethod
+    def unregister(cls, processor_class):
+        name = processor_class.name.lower()
+        if name in cls.processors:
+            del cls.processors[name]
+
+    @classmethod
     @ready
     def get(cls, name):
         try:

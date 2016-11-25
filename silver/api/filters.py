@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
                             NumberFilter)
 from django_filters.fields import Lookup
 
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
-                           Plan, Invoice, Proforma, Payment)
+                           Plan, Invoice, Proforma, Payment, Transaction,
+                           PaymentMethod)
 
 
 class MultipleCharFilter(CharFilter):
@@ -133,10 +133,42 @@ class ProformaFilter(BillingDocumentFilter):
 
 
 class PaymentFilter(FilterSet):
-    is_overdue = BooleanFilter(name='overdue', lookup_type='exact')
-    visible = BooleanFilter(name='visible', lookup_type='exact')
-    status = CharFilter(name='status', lookup_type='exact')
+    is_overdue = BooleanFilter(name='overdue', method='filter_is_overdue')
+    visible = BooleanFilter(name='visible')
+    status = CharFilter(name='status')
+    flow = CharFilter(name='provider__flow')
+    provider = CharFilter(name='provider__name', lookup_type='iexact')
+    min_amount = NumberFilter(name='amount', lookup_expr='gte')
+    max_amount = NumberFilter(name='amount', lookup_expr='lte')
+    currency = CharFilter(name='currency', lookup_type='iexact')
+
+    def filter_is_overdue(self, queryset, _, value):
+        if value:
+            return queryset.overdue()
+        return queryset.not_overdue()
 
     class Meta:
         model = Payment
-        fields = ['is_overdue', 'visible', 'status']
+        fields = ['is_overdue', 'visible', 'status', 'flow', 'provider',
+                  'min_amount', 'max_amount', 'currency']
+
+
+class TransactionFilter(FilterSet):
+    payment_method = CharFilter(name='payment_method__payment_processor',
+                                lookup_type='iexact')
+    min_amount = NumberFilter(name='payment__amount', lookup_expr='gte')
+    max_amount = NumberFilter(name='payment__amount', lookup_expr='lte')
+    disabled = BooleanFilter(name='disabled')
+
+    class Meta:
+        model = Transaction
+        fields = ['payment_method', 'min_amount', 'max_amount', 'disabled']
+
+
+class PaymentMethodFilter(FilterSet):
+    processor = CharFilter(name='payment_processor', lookup_type='iexact')
+    state = CharFilter(name='state')
+
+    class Meta:
+        model = PaymentMethod
+        fields = ['processor', 'state']
