@@ -206,7 +206,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         })
         response = self.client.get(url, format='json')
 
-        expected_data = deepcopy(response.data)
         data = response.data
         data['payment_processor'] = reverse('payment-processor-detail',
                                             kwargs={'processor_name': 'someprocessor'},
@@ -214,10 +213,10 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, expected_data)
 
     def test_put_detail(self):
-        method = self.create_payment_method(customer=self.customer)
+        method = self.create_payment_method(customer=self.customer,
+                                            state=PaymentMethod.States.Unverified)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
