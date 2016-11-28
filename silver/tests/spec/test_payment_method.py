@@ -1,11 +1,15 @@
 import sys
+from copy import deepcopy
+
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
+from six import iteritems
 
 from silver.api.serializers import PaymentMethodSerializer
 from silver.models import PaymentMethod
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 from silver.tests.factories import CustomerFactory, PaymentMethodFactory
+from silver.tests.spec.test_transactions import register
 from silver.tests.spec.util.api_get_assert import APIGetAssert
 
 
@@ -105,22 +109,56 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_put_detail_invalid_state_transitions(self):
-        # TODO add all of them here...
-        method = self.create_payment_method(customer=self.customer,
-                                            state=PaymentMethod.States.Enabled)
+    def test_put_detail_state_transitions(self):
+        states = [x[0] for x in PaymentMethod.States.Choices]
+        permutations = [(old, new) for old in states for new in states]
 
-        url = reverse('payment-method-detail', kwargs={
-            'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
-        })
-        response = self.client.get(url, format='json')
+        valid_transitions = set()
+        for _, transition in iteritems(PaymentMethod.registered_transitions):
+            if isinstance(transition['source'], (tuple, list)):
+                unmerged_transitions = set([(old, transition['target']) for
+                                            old in transition['source']])
+            else:
+                unmerged_transitions = {(transition['source'],
+                                         transition['target'])}
 
-        data = response.data
-        data['state'] = PaymentMethod.States.Uninitialized
+            valid_transitions = valid_transitions.union(unmerged_transitions)
 
-        response = self.client.put(url, data=data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # add x -> x transactions as they are allowed
+        valid_transitions = valid_transitions.union(
+            set([(x, x) for x in states]))
+
+        valid_transition_list = list(valid_transitions)
+
+        for old, new in permutations:
+            method = self.create_payment_method(customer=self.customer,
+                                                state=old)
+
+            url = reverse('payment-method-detail', kwargs={
+                'customer_pk': self.customer.pk,
+                'payment_method_id': method.pk
+            })
+            response = self.client.get(url, format='json')
+
+            data = response.data
+            data['state'] = new
+
+            response = self.client.put(url, data=data, format='json')
+
+            message = '{} -> {}: code got {{}} expected {{}}'.format(old, new)
+            if (old, new) in valid_transition_list:
+                self.assertEqual(response.status_code,
+                                 status.HTTP_200_OK,
+                                 message.format(response.status_code,
+                                                status.HTTP_200_OK))
+                self.assertEqual(data, response.data,
+                                 message.format(response.status_code,
+                                                status.HTTP_200_OK))
+            else:
+                self.assertEqual(response.status_code,
+                                 status.HTTP_409_CONFLICT,
+                                 message.format(response.status_code,
+                                                status.HTTP_409_CONFLICT))
 
     def test_put_detail_additional_data_disabled_state(self):
         method = self.create_payment_method(customer=self.customer,
@@ -138,9 +176,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_put_detail_change_customer(self):
-        # TODO fix this
-        # serializer compares an url with the customer object
+    def test_put_detail_ignore_customer_change(self):
         other_customer = CustomerFactory.create()
         method = self.create_payment_method(customer=self.customer)
 
@@ -150,20 +186,35 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         })
         response = self.client.get(url, format='json')
 
+        expected_data = deepcopy(response.data)
         data = response.data
         data['customer'] = reverse('customer-detail',
                                    request=response.wsgi_request,
                                    kwargs={'pk': other_customer.pk})
 
-        print data['customer']
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_data)
+
+    @register
+    def test_put_detail_cannot_change_processor(self):
+        method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': method.pk
+        })
+        response = self.client.get(url, format='json')
+
+        expected_data = deepcopy(response.data)
+        data = response.data
+        data['payment_processor'] = reverse('payment-processor-detail',
+                                            kwargs={'processor_name': 'someprocessor'},
+                                            request=response.wsgi_request)
 
         response = self.client.put(url, data=data, format='json')
-        print(response.data['customer'])
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_put_detail_change_processor(self):
-        # TODO
-        pass
+        self.assertEqual(response.data, expected_data)
 
     def test_put_detail(self):
         method = self.create_payment_method(customer=self.customer)
@@ -245,14 +296,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_put_detail_no_customer(self):
-        # TODO
-        pass
-
-    def test_put_detail_no_payment_method(self):
-        # TODO
-        pass
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,

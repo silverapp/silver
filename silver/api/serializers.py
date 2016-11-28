@@ -20,6 +20,8 @@ from rest_framework.reverse import reverse
 from rest_framework.exceptions import ValidationError as APIValidationError
 
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from six import iteritems
+
 from silver.api.exceptions import APIConflictException
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
@@ -599,36 +601,12 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
             if value == self.instance.state:
                 return self.instance.state
 
-            message = "Illegal state transition from {} to {}."
-            if value == PaymentMethod.States.Uninitialized:
-                message = message.format(self.instance.state, value)
-                raise serializers.ValidationError(message)
-
-            elif (value == PaymentMethod.States.Unverified and
-                    self.instance.state != PaymentMethod.States.Uninitialized):
-                message = message.format(self.instance.state, value)
-                raise serializers.ValidationError(message)
-
-            elif (self.instance.state == PaymentMethod.States.Enabled and
-                    value not in [PaymentMethod.States.Disabled,
-                                  PaymentMethod.States.Removed]):
-                message = message.format(self.instance.state, value)
-                raise serializers.ValidationError(message)
-
-            elif (self.instance.state == PaymentMethod.States.Disabled and
-                    value not in [PaymentMethod.States.Enabled,
-                                  PaymentMethod.States.Removed]):
-                message = message.format(self.instance.state, value)
-                raise serializers.ValidationError(message)
+        if value not in [x[0] for x in PaymentMethod.States.Choices]:
+            raise serializers.ValidationError('Unknown state {}'.format(value))
 
         return value
 
-    def validate_customer(self, value):
-        if self.instance and value != self.instance.customer:
-            message = "The 'customer' field cannot be altered."
-            raise serializers.ValidationError(message)
-
-    def validated_payment_processor(self, value):
+    def validate_payment_processor(self, value):
         if self.instance and value != self.instance.payment_processor:
             message = "The 'payment_processor' field cannot be altered."
             raise serializers.ValidationError(message)
@@ -660,40 +638,38 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return payment_method
 
     def update(self, instance, validated_data):
-        state = validated_data.pop('state', None)
+        old_state = instance.state
+        new_state = validated_data.pop('state', None)
         additional_data = validated_data.pop('additional_data', None)
+        payload = {'additional_data': additional_data} if additional_data else {}
 
-        if state != instance.state:
-            if state == PaymentMethod.States.Unverified:
-                try:
-                    instance.initialize_unverified(additional_data)
-                except TransitionNotAllowed:
-                    raise APIConflictException("The given 'state' could not be "
-                                               "applied.")
+        if new_state == old_state:
+            return super(PaymentMethodSerializer, self).update(instance,
+                                                               validated_data)
 
-            elif state == PaymentMethod.States.Enabled:
-                try:
-                    if instance.state == PaymentMethod.States.Uninitialized:
-                        instance.initialize_enabled(additional_data)
-                    elif instance.state == PaymentMethod.States.Unverified:
-                        instance.verify()
-                    elif instance.state == PaymentMethod.States.Disabled:
-                        instance.reenable()
-                except TransitionNotAllowed:
-                    raise APIConflictException("The given 'state' could not be "
-                                               "applied.")
-            elif state == PaymentMethod.States.Disabled:
-                try:
-                    instance.disable()
-                except TransitionNotAllowed:
-                    raise APIConflictException("The given 'state' could not be "
-                                               "applied.")
-            elif state == PaymentMethod.States.Removed:
-                try:
-                    instance.remove()
-                except TransitionNotAllowed:
-                    raise APIConflictException("The given 'state' could not be "
-                                               "applied.")
+        registered_transactions = PaymentMethod.registered_transitions
+        callback = None
+        for trans_callback, transition in iteritems(registered_transactions):
+            if new_state != transition['target']:
+                continue
+
+            if isinstance(transition['source'], (list, tuple)) \
+               and old_state in transition['source']:
+                callback = trans_callback
+                break
+            elif old_state == transition['source']:
+                callback = trans_callback
+                break
+
+        if not callback:
+            raise APIConflictException("The given 'state' could not be "
+                                       "applied.")
+
+        try:
+            getattr(instance, callback)(**payload)
+        except TransitionNotAllowed:
+            raise APIConflictException("The given 'state' could not be "
+                                       "applied.")
 
         return super(PaymentMethodSerializer, self).update(instance,
                                                            validated_data)
