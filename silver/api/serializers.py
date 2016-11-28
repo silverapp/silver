@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from django_fsm import TransitionNotAllowed
 from rest_framework import serializers
 from rest_framework.relations import HyperlinkedIdentityField
@@ -610,6 +609,8 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         if self.instance and value != self.instance.payment_processor:
             message = "The 'payment_processor' field cannot be altered."
             raise serializers.ValidationError(message)
+
+        return value
 
     def create(self, validated_data):
         state = validated_data.pop('state', None)
