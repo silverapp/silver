@@ -11,7 +11,7 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django_fsm import FSMField, TransitionNotAllowed
+from django_fsm import FSMField, TransitionNotAllowed, transition
 from django_fsm import post_transition
 from silver.mail import (send_new_transaction_email,
                          send_pending_transaction_email,
@@ -75,6 +75,27 @@ class Transaction(models.Model):
         self.form_class = kwargs.pop('form_class', None)
 
         super(Transaction, self).__init__(*args, **kwargs)
+
+    @transition(field=state, source=States.Initial, target=States.Pending)
+    def process(self):
+        pass
+
+    @transition(field=state, source=States.Pending, target=States.Settled)
+    def settle(self):
+        pass
+
+    @transition(field=state, source=[States.Initial, States.Pending],
+                target=States.Canceled)
+    def cancel(self):
+        pass
+
+    @transition(field=state, source=States.Pending, target=States.Failed)
+    def fail(self):
+        pass
+
+    @transition(field=state, source=States.Settled, target=States.Refunded)
+    def refund(self):
+        pass
 
     def clean(self):
         document = self.document
