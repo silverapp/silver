@@ -496,7 +496,8 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                 "Ths field must take one of the following values %s." %
                 ', '.join(Transaction.States.All)
             )
-        if not self.instance:
+
+        if not self.instance and state and state != Transaction.States.Initial:
             raise ValidationError(
                 "This field must initially be %s." % Transaction.States.Initial
             )
@@ -524,11 +525,14 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     def validate(self, attrs):
         attrs = super(TransactionSerializer, self).validate(attrs)
 
+        if not attrs:
+            return attrs
+
         if self.instance:
-            if self.instance.state != Transaction.States.Initial:
-                message = "Cannot update a transaction with '{}' state.".format(
-                    self.instance.state
-                )
+            if self.instance.state != Transaction.States.Initial and \
+                    (len(attrs) > 1 or 'state' not in attrs):
+                message = "Only the 'state' field can be changed when the " \
+                          "transaction is {}.".format(self.instance.state)
                 raise serializers.ValidationError(message)
 
         # Run model clean and handle ValidationErrors
@@ -563,7 +567,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     def update(self, instance, validated_data):
         state = validated_data.pop('state', None)
 
-        if state != instance.state:
+        if state and state != instance.state:
             try:
                 if state == Transaction.States.Settled:
                     instance.settle()
