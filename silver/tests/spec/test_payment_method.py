@@ -8,9 +8,9 @@ from six import iteritems
 from silver.api.serializers import PaymentMethodSerializer
 from silver.models import PaymentMethod
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
-from silver.tests.factories import CustomerFactory, PaymentMethodFactory
-from silver.tests.spec.test_transactions import register
 from silver.tests.spec.util.api_get_assert import APIGetAssert
+from silver.tests.factories import CustomerFactory, PaymentMethodFactory
+from silver.tests.utils import register_processor
 
 
 class TestPaymentMethodEndpoints(APIGetAssert):
@@ -196,7 +196,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    @register
+    @register_processor()
     def test_put_detail_cannot_change_processor(self):
         method = self.create_payment_method(customer=self.customer)
 
