@@ -41,6 +41,10 @@ class PaymentMethod(models.Model):
             (Removed, 'Removed')
         )
 
+        @classmethod
+        def as_list(cls):
+            return [choice[0] for choice in cls.Choices]
+
     state = FSMField(choices=States.Choices, default=States.Uninitialized)
     state_transitions = {
         'initialize_unverified': {

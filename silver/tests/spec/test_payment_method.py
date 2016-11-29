@@ -83,11 +83,10 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_post_listing_invalid_initial_state(self):
-        invalid_initial_states = list(
-            set([s[0] for s in PaymentMethod.States.Choices]) -
-            {PaymentMethod.States.Uninitialized,
-             PaymentMethod.States.Unverified,
-             PaymentMethod.States.Enabled})
+        invalid_initial_states = list(set(PaymentMethod.States.as_list()) - {
+            PaymentMethod.States.Uninitialized,
+            PaymentMethod.States.Unverified,
+            PaymentMethod.States.Enabled})
 
         processor_url = reverse('payment-processor-detail', kwargs={
             'processor_name': 'manual'
@@ -106,7 +105,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_put_detail_state_transitions(self):
-        states = [x[0] for x in PaymentMethod.States.Choices]
+        states = PaymentMethod.States.as_list()
         permutations = [(old, new) for old in states for new in states]
 
         valid_transitions = set()
@@ -120,7 +119,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
             valid_transitions = valid_transitions.union(unmerged_transitions)
 
-        # add x -> x transactions as they are allowed
+        # add x -> x transitions as they are allowed
         valid_transitions = valid_transitions.union(
             set([(x, x) for x in states]))
 
@@ -167,7 +166,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.get(url, format='json')
 
         data = response.data
-        data['additional_data'] = '{"random":"value"}'
+        data['additional_data'] = '{"random": "value"}'
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
