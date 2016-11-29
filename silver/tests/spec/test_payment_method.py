@@ -22,35 +22,31 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         super(TestPaymentMethodEndpoints, self).setUp()
 
     def create_payment_method(self, *args, **kwargs):
-        method = PaymentMethodFactory.create(*args, **kwargs)
+        payment_method = PaymentMethodFactory.create(*args, **kwargs)
+        payment_method.added_at.replace(microsecond=0)
 
-        # mysql does not store fractional time units but the object
-        # created will have them so we can't use it directly
-        #  to check the output
-        method.refresh_from_db()
-
-        return method
+        return payment_method
 
     def test_get_listing(self):
         PaymentMethodFactory.create(customer=CustomerFactory.create())
-        method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
         })
 
-        self.assert_get_data(url, [method])
+        self.assert_get_data(url, [payment_method])
 
     def test_get_detail(self):
         PaymentMethodFactory.create(customer=CustomerFactory.create())
-        method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
+            'payment_method_id': payment_method.pk
         })
 
-        self.assert_get_data(url, method)
+        self.assert_get_data(url, payment_method)
 
     def test_post_listing(self):
         processor_url = reverse('payment-processor-detail', kwargs={
@@ -66,8 +62,8 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'state': PaymentMethod.States.Uninitialized
         }, format='json')
 
-        method = PaymentMethod.objects.get(customer=self.customer)
-        self.assert_get_data(response.data['url'], method)
+        payment_method = PaymentMethod.objects.get(customer=self.customer)
+        self.assert_get_data(response.data['url'], payment_method)
 
     def test_post_listing_additional_data_wrong_state(self):
         processor_url = reverse('payment-processor-detail', kwargs={
@@ -114,7 +110,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         permutations = [(old, new) for old in states for new in states]
 
         valid_transitions = set()
-        for _, transition in iteritems(PaymentMethod.registered_transitions):
+        for _, transition in iteritems(PaymentMethod.state_transitions):
             if isinstance(transition['source'], (tuple, list)):
                 unmerged_transitions = set([(old, transition['target']) for
                                             old in transition['source']])
@@ -131,12 +127,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         valid_transition_list = list(valid_transitions)
 
         for old, new in permutations:
-            method = self.create_payment_method(customer=self.customer,
-                                                state=old)
+            payment_method = self.create_payment_method(customer=self.customer,
+                                                        state=old)
 
             url = reverse('payment-method-detail', kwargs={
                 'customer_pk': self.customer.pk,
-                'payment_method_id': method.pk
+                'payment_method_id': payment_method.pk
             })
             response = self.client.get(url, format='json')
 
@@ -161,12 +157,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
                                                 status.HTTP_409_CONFLICT))
 
     def test_put_detail_additional_data_disabled_state(self):
-        method = self.create_payment_method(customer=self.customer,
-                                            state=PaymentMethod.States.Disabled)
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    state=PaymentMethod.States.Disabled)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
+            'payment_method_id': payment_method.pk
         })
         response = self.client.get(url, format='json')
 
@@ -178,11 +174,11 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_put_detail_ignore_customer_change(self):
         other_customer = CustomerFactory.create()
-        method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
+            'payment_method_id': payment_method.pk
         })
         response = self.client.get(url, format='json')
 
@@ -198,29 +194,30 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     @register_processor()
     def test_put_detail_cannot_change_processor(self):
-        method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
+            'payment_method_id': payment_method.pk
         })
         response = self.client.get(url, format='json')
 
         data = response.data
-        data['payment_processor'] = reverse('payment-processor-detail',
-                                            kwargs={'processor_name': 'someprocessor'},
-                                            request=response.wsgi_request)
+        payment_processor = reverse('payment-processor-detail',
+                                    kwargs={'processor_name': 'someprocessor'},
+                                    request=response.wsgi_request)
+        data['payment_processor'] = payment_processor
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_put_detail(self):
-        method = self.create_payment_method(customer=self.customer,
-                                            state=PaymentMethod.States.Unverified)
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    state=PaymentMethod.States.Unverified)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': method.pk
+            'payment_method_id': payment_method.pk
         })
 
         response = self.client.get(url, format='json')
@@ -303,7 +300,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
                          (permissions.IsAuthenticated,))
 
     def test_filter_processor(self):
-        method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
@@ -312,12 +309,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         url_manual_processor = url + '?processor=manual'
         url_no_output = url + '?processor=random'
 
-        self.assert_get_data(url_manual_processor, [method])
+        self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
 
     def test_filter_state(self):
-        method = self.create_payment_method(customer=self.customer,
-                                            state=PaymentMethod.States.Enabled)
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    state=PaymentMethod.States.Enabled)
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
@@ -326,5 +323,5 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         url_state_enabled = url + '?state=' + PaymentMethod.States.Enabled
         url_no_output = url + '?state=' + PaymentMethod.States.Disabled
 
-        self.assert_get_data(url_state_enabled, [method])
+        self.assert_get_data(url_state_enabled, [payment_method])
         self.assert_get_data(url_no_output, [])

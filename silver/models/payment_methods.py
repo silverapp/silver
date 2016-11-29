@@ -42,7 +42,7 @@ class PaymentMethod(models.Model):
         )
 
     state = FSMField(choices=States.Choices, default=States.Uninitialized)
-    registered_transitions = {
+    state_transitions = {
         'initialize_unverified': {
             'source': States.Uninitialized,
             'target': States.Unverified
@@ -82,22 +82,22 @@ class PaymentMethod(models.Model):
                 pass
 
     @transition(field='state',
-                **registered_transitions['initialize_unverified'])
+                **state_transitions['initialize_unverified'])
     def initialize_unverified(self, initial_data=None):
         pass
 
     @transition(field='state',
-                **registered_transitions['initialize_enabled'])
+                **state_transitions['initialize_enabled'])
     def initialize_enabled(self, initial_data=None):
         pass
 
     @transition(field='state',
-                **registered_transitions['verify'])
+                **state_transitions['verify'])
     def verify(self):
         pass
 
     @transition(field='state',
-                **registered_transitions['remove'])
+                **state_transitions['remove'])
     def remove(self):
         """
         Methods that implement this, need to remove the payment method from
@@ -106,12 +106,12 @@ class PaymentMethod(models.Model):
         pass
 
     @transition(field='state',
-                **registered_transitions['disable'])
+                **state_transitions['disable'])
     def disable(self):
         pass
 
     @transition(field='state',
-                **registered_transitions['reenable'])
+                **state_transitions['reenable'])
     def reenable(self):
         pass
 
