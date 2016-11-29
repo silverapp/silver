@@ -479,6 +479,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                                        lookup_url_kwarg='transaction_uuid')
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
+    id = serializers.CharField(source='uuid', read_only=True)
 
     class Meta:
         model = Transaction
@@ -558,18 +559,6 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(errors)
 
         return attrs
-
-    def create(self, validated_data):
-        kwargs = {
-            'invoice': validated_data.get('invoice'),
-            'proforma': validated_data.get('proforma'),
-            'currency': validated_data.get('currency'),
-            'currency_rate_date': validated_data.get('currency_rate_date'),
-            'payment_method': validated_data['payment_method'],
-            'valid_until': validated_data.get('valid_until')
-        }
-
-        return Transaction.objects.create(**kwargs)
 
     def update(self, instance, validated_data):
         state = validated_data.pop('state', None)
