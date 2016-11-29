@@ -36,8 +36,8 @@ class BaseActionableProcessor(object):
 
     def manage_transaction(self, transaction):
         """
-            Only gets called for initial or pending payments that point to this
-            specific Processor
+            Only gets called for initial or pending transactions that point to
+            this specific Processor
         """
 
         raise NotImplementedError
@@ -56,14 +56,6 @@ class AutomaticProcessorMixin(BaseActionableProcessor):
 
 class TriggeredProcessorMixin(BaseActionableProcessor):
     type = PaymentProcessorTypes.Triggered
-
-    def pay_billing_document(self, document, payment_method):
-        """
-            Used to convert a Payment to a specific Payment type for a specific
-            Processor
-        """
-
-        raise NotImplementedError
 
 
 class GenericPaymentProcessor(object):
