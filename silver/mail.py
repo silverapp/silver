@@ -48,8 +48,8 @@ def send_settled_transaction_email(transaction):
     subject = u'{} transaction settled'.format(transaction.provider.name)
 
     templates = [
-        'payments/{}/payment_settled_email.html'.format(transaction.provider.slug),
-        'payments/payment_settled_email.html'
+        'payments/{}/payment_paid_email.html'.format(transaction.provider.slug),
+        'payments/payment_paid_email.html'
     ]
 
     template = select_template(templates)

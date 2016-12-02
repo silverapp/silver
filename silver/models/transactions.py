@@ -203,35 +203,17 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
 
             if instance.proforma and \
                     instance.proforma.state != instance.proforma.STATES.PAID:
-                try:
-                    instance.proforma.pay()
-                    instance.proforma.save()
+                instance.proforma.pay()
+                instance.proforma.save()
 
-                    send_mail = True
-                except TransitionNotAllowed:
-                    logger.warning('[Models][Transaction]: %s', {
-                        'detail': 'Couldn\'t automatically pay proforma.',
-                        'transaction_id': instance.id,
-                        'transaction_state': instance.state,
-                        'proforma_id': instance.proforma.id,
-                        'proforma_state': instance.proforma.state
-                    })
+                send_mail = True
 
             if instance.invoice and \
                     instance.invoice.state != instance.invoice.STATES.PAID:
-                try:
-                    instance.invoice.pay()
-                    instance.invoice.save()
+                instance.invoice.pay()
+                instance.invoice.save()
 
-                    send_mail = True
-                except TransitionNotAllowed:
-                    logger.warning('[Models][Transaction]: %s', {
-                        'detail': 'Couldn\'t automatically pay invoice.',
-                        'transaction_id': instance.id,
-                        'transaction_state': instance.state,
-                        'invoice_id': instance.invoice.id,
-                        'invoice_state': instance.invoice.state
-                    })
+                send_mail = True
 
             if send_mail:
                 send_email_with_current_state(instance)

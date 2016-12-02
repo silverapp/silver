@@ -115,6 +115,8 @@ class Proforma(BillingDocument):
 
         self.save()
 
+        return self.invoice
+
     def _new_invoice(self):
         # Generate the new invoice based this proforma
         invoice_fields = self.fields_for_automatic_invoice_generation
