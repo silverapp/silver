@@ -251,6 +251,20 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     payment_method = factory.SubFactory(PaymentMethodFactory)
     amount = factory.Sequence(lambda n: (n + 1) % 4 * 1000 + 10)
     currency = 'USD'
-    proforma = factory.SubFactory(ProformaFactory)
-    invoice = factory.SubFactory(InvoiceFactory)
+    proforma = factory.SubFactory(
+        ProformaFactory,
+        customer=factory.SelfAttribute('..payment_method.customer'))
+    invoice = factory.SubFactory(
+        InvoiceFactory,
+        customer=factory.SelfAttribute('..payment_method.customer')
+    )
     state = Transaction.States.Initial
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        kwargs['invoice'].proforma = kwargs['proforma']
+        kwargs['invoice'].save()
+        kwargs['proforma'].invoice = kwargs['invoice']
+        kwargs['proforma'].save()
+
+        return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)

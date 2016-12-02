@@ -487,22 +487,8 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                   'currency_rate_date', 'state', 'proforma', 'invoice',
                   'can_be_consumed', 'payment_method', 'pay_url', 'valid_until')
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
-                            'id', 'url')
+                            'id', 'url', 'state')
         write_only_fields = ('valid_until',)
-
-    def validate_state(self, state):
-        if state not in Transaction.States.All:
-            raise ValidationError(
-                "Ths field must take one of the following values %s." %
-                ', '.join(Transaction.States.All)
-            )
-
-        if not self.instance and state and state != Transaction.States.Initial:
-            raise ValidationError(
-                "This field must initially be %s." % Transaction.States.Initial
-            )
-
-        return state
 
     def validate_proforma(self, proforma):
         if self.instance and proforma != self.instance.proforma:
@@ -529,10 +515,9 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
             return attrs
 
         if self.instance:
-            if self.instance.state != Transaction.States.Initial and \
-                    (len(attrs) > 1 or 'state' not in attrs):
-                message = "Only the 'state' field can be changed when the " \
-                          "transaction is {}.".format(self.instance.state)
+            if self.instance.state != Transaction.States.Initial:
+                message = "The transaction cannot be modified once it is in {}"\
+                          " state.".format(self.instance.state)
                 raise serializers.ValidationError(message)
 
         # Run model clean and handle ValidationErrors
@@ -563,27 +548,6 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(errors)
 
         return attrs
-
-    def update(self, instance, validated_data):
-        state = validated_data.pop('state', None)
-
-        if state and state != instance.state:
-            try:
-                if state == Transaction.States.Settled:
-                    instance.settle()
-                elif state == Transaction.States.Unpaid:
-                    instance.fail()
-                elif state == Transaction.States.Pending:
-                    instance.process()
-                elif state == Transaction.States.Canceled:
-                    instance.cancel()
-            except TransitionNotAllowed:
-                raise APIValidationError({
-                    'state': "The transaction could not be transitioned to "
-                             "'{}' state.".format(state)
-                })
-
-        return super(TransactionSerializer, self).update(instance, validated_data)
 
 
 class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
