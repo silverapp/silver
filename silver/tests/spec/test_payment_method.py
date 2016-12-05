@@ -308,11 +308,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'payment_processor': processor_url
         }, format='json')
 
-        payment_method = PaymentMethod.objects.get(customer=self.customer)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assert_get_data(response.data['url'], payment_method)
         self.assertEqual(response.data['state'],
                          PaymentMethod.States.Uninitialized)
+
+        payment_method = PaymentMethod.objects.get(customer=self.customer)
+        self.assert_get_data(response.data['url'], payment_method)
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,
