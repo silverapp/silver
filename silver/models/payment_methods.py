@@ -41,7 +41,41 @@ class PaymentMethod(models.Model):
             (Removed, 'Removed')
         )
 
+        @classmethod
+        def as_list(cls):
+            return [choice[0] for choice in cls.Choices]
+
+        @classmethod
+        def invalid_initial_states(cls):
+            return [cls.Disabled, cls.Removed]
+
     state = FSMField(choices=States.Choices, default=States.Uninitialized)
+    state_transitions = {
+        'initialize_unverified': {
+            'source': States.Uninitialized,
+            'target': States.Unverified
+        },
+        'initialize_enabled': {
+            'source': States.Uninitialized,
+            'target': States.Enabled
+        },
+        'verify': {
+            'source': States.Unverified,
+            'target': States.Enabled
+        },
+        'remove': {
+            'source': [States.Enabled, States.Disabled, States.Unverified],
+            'target': States.Removed
+        },
+        'disable': {
+            'source': States.Enabled,
+            'target': States.Disabled
+        },
+        'reenable': {
+            'source': States.Disabled,
+            'target': States.Enabled
+        }
+    }
 
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
@@ -56,26 +90,22 @@ class PaymentMethod(models.Model):
                 pass
 
     @transition(field='state',
-                source=States.Uninitialized,
-                target=States.Unverified)
+                **state_transitions['initialize_unverified'])
     def initialize_unverified(self, initial_data=None):
         pass
 
     @transition(field='state',
-                source=States.Uninitialized,
-                target=States.Enabled)
+                **state_transitions['initialize_enabled'])
     def initialize_enabled(self, initial_data=None):
         pass
 
     @transition(field='state',
-                source=States.Unverified,
-                target=States.Enabled)
+                **state_transitions['verify'])
     def verify(self):
         pass
 
     @transition(field='state',
-                source=[States.Enabled, States.Disabled, States.Unverified],
-                target=States.Removed)
+                **state_transitions['remove'])
     def remove(self):
         """
         Methods that implement this, need to remove the payment method from
@@ -84,14 +114,12 @@ class PaymentMethod(models.Model):
         pass
 
     @transition(field='state',
-                source=States.Enabled,
-                target=States.Disabled)
+                **state_transitions['disable'])
     def disable(self):
         pass
 
     @transition(field='state',
-                source=States.Disabled,
-                target=States.Enabled)
+                **state_transitions['reenable'])
     def reenable(self):
         pass
 

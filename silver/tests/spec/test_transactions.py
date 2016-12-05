@@ -1,40 +1,18 @@
 from datetime import datetime
 from collections import OrderedDict
-from functools import wraps
 
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Transaction, PaymentProcessorManager
-from silver.models.payment_processors.generics import GenericPaymentProcessor
-from silver.models.payment_processors.generics import TriggeredProcessorMixin
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory)
 from silver.tests.factories import CustomerFactory, PaymentFactory
+from silver.tests.utils import register_processor
 
 
 def reverse(*args, **kwargs):
     return u'http://testserver' + _reverse(*args, **kwargs)
-
-
-def register(func):
-    class SomeProcessor(GenericPaymentProcessor, TriggeredProcessorMixin):
-        name = 'SomeProcessor'
-        transaction_class = Transaction
-
-        @staticmethod
-        def setup(data=None):
-            pass
-
-    @wraps(func)
-    def func_wrapper(cls, *args, **kwargs):
-        PaymentProcessorManager.register(SomeProcessor)
-        result = func(cls, *args, **kwargs)
-        PaymentProcessorManager.unregister(SomeProcessor)
-        return result
-
-    return func_wrapper
 
 
 class TestTransactionEndpoint(APITestCase):
@@ -175,7 +153,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['payment_method'],
                          ['This field is required.'])
 
-    @register
+    @register_processor()
     def test_filter_payment_method(self):
         customer = CustomerFactory.create()
         payment = PaymentFactory.create(customer=customer)
@@ -220,7 +198,7 @@ class TestTransactionEndpoint(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
-    @register
+    @register_processor()
     def test_filter_min_max_amount(self):
         customer = CustomerFactory.create()
         payment = PaymentFactory.create(customer=customer, amount=100)
@@ -267,7 +245,7 @@ class TestTransactionEndpoint(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
-    @register
+    @register_processor()
     def test_filter_disabled(self):
         customer = CustomerFactory.create()
         payment = PaymentFactory.create(customer=customer, amount=100)
@@ -281,8 +259,8 @@ class TestTransactionEndpoint(APITestCase):
             disabled=False
         )
         transaction_data = self._transaction_data(customer, payment,
-                                                      payment_method,
-                                                      transaction)
+                                                  payment_method,
+                                                  transaction)
 
         urls = [
             reverse(
@@ -318,6 +296,7 @@ class TestTransactionEndpoint(APITestCase):
                                         'payment_pk': payment.pk})),
             ('is_usable', True),
             ('pay_url', reverse('pay-transaction',
-                                kwargs={'transaction_uuid': transaction.uuid})),
+                                kwargs={
+                                    'transaction_uuid': transaction.uuid})),
             ('valid_until', None),
         ])
