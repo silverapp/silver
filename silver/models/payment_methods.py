@@ -45,6 +45,10 @@ class PaymentMethod(models.Model):
         def as_list(cls):
             return [choice[0] for choice in cls.Choices]
 
+        @classmethod
+        def invalid_initial_states(cls):
+            return [cls.Disabled, cls.Removed]
+
     state = FSMField(choices=States.Choices, default=States.Uninitialized)
     state_transitions = {
         'initialize_unverified': {
@@ -52,7 +56,7 @@ class PaymentMethod(models.Model):
             'target': States.Unverified
         },
         'initialize_enabled': {
-            'source': States.Unverified,
+            'source': States.Uninitialized,
             'target': States.Enabled
         },
         'verify': {

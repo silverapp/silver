@@ -1,9 +1,10 @@
 import sys
+
 from copy import deepcopy
+from six import iteritems
 
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
-from six import iteritems
 
 from silver.api.serializers import PaymentMethodSerializer
 from silver.models import PaymentMethod
@@ -81,13 +82,13 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'non_field_errors':
+                ["If 'additional_data' is specified,"
+                 " then 'state' must be one of (unverified, enabled)."]})
 
     def test_post_listing_invalid_initial_state(self):
-        invalid_initial_states = list(set(PaymentMethod.States.as_list()) - {
-            PaymentMethod.States.Uninitialized,
-            PaymentMethod.States.Unverified,
-            PaymentMethod.States.Enabled})
-
+        invalid_initial_states = PaymentMethod.States.invalid_initial_states()
         processor_url = reverse('payment-processor-detail', kwargs={
             'processor_name': 'manual'
         })
@@ -103,6 +104,10 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             }, format='json')
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data, {
+                'non_field_errors':
+                    ["'state' must initially be one of "
+                     "(uninitialized, unverified, enabled)."]})
 
     def test_put_detail_state_transitions(self):
         states = PaymentMethod.States.as_list()
@@ -170,6 +175,10 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'non_field_errors':
+                ["'additional_data' must not be given after "
+                 "the paymentmethod has been enabled once."]})
 
     def test_put_detail_ignore_customer_change(self):
         other_customer = CustomerFactory.create()
@@ -209,6 +218,9 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'payment_processor':
+                ["The 'payment_processor' field cannot be altered."]})
 
     def test_put_detail(self):
         payment_method = self.create_payment_method(customer=self.customer,
@@ -234,6 +246,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {'detail': 'Not found.'})
 
     def test_get_detail_no_customer(self):
         url = reverse('payment-method-detail', kwargs={
@@ -243,6 +256,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {'detail': 'Not found.'})
 
     def test_get_detail_no_payment_method(self):
         url = reverse('payment-method-detail', kwargs={
@@ -252,6 +266,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {'detail': 'Not found.'})
 
     def test_post_listing_no_customer(self):
         processor_url = reverse('payment-processor-detail', kwargs={
@@ -268,6 +283,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, {'detail': 'Not found.'})
 
     def test_post_listing_incomplete_body_1(self):
         url = reverse('payment-method-list', kwargs={
@@ -276,6 +292,8 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'payment_processor': ['This field is required.']})
 
     def test_post_listing_incomplete_body_2(self):
         processor_url = reverse('payment-processor-detail', kwargs={
@@ -291,6 +309,9 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'non_field_errors': ["'state' must initially be one of "
+                                 "(uninitialized, unverified, enabled)."]})
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,
