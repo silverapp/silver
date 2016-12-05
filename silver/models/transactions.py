@@ -11,25 +11,14 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django_fsm import FSMField, TransitionNotAllowed, transition
+from django_fsm import FSMField, transition
 from django_fsm import post_transition
-from silver.mail import (send_new_transaction_email,
-                         send_pending_transaction_email,
-                         send_failed_transaction_email,
-                         send_refunded_transaction_email,
-                         send_settled_transaction_email)
 
+from silver.mail import send_transaction_email
 from silver.utils.international import currencies
 
 
 logger = logging.getLogger(__name__)
-
-
-class _States(type):
-    def __getattr__(cls, item):
-        if item == 'All':
-            return [getattr(cls, state) for state in vars(cls).keys() if
-                    not state.startswith('_')]
 
 
 class Transaction(models.Model):
@@ -44,8 +33,6 @@ class Transaction(models.Model):
     currency_rate_date = models.DateField(blank=True, null=True)
 
     class States:
-        __metaclass__ = _States
-
         Initial = 'initial'
         Pending = 'pending'
         Settled = 'settled'
@@ -53,15 +40,18 @@ class Transaction(models.Model):
         Canceled = 'canceled'
         Refunded = 'refunded'
 
-    STATE_CHOICES = (
-        (States.Initial, _('Initial')),
-        (States.Pending, _('Pending')),
-        (States.Settled, _('Settled')),
-        (States.Canceled, _('Canceled')),
-        (States.Failed, _('Failed')),
-        (States.Refunded, _('Refunded')),
-    )
-    state = FSMField(max_length=8, choices=STATE_CHOICES,
+        @classmethod
+        def as_list(cls):
+            return [getattr(cls, state) for state in vars(cls).keys() if
+                    state[0].isupper()]
+
+        @classmethod
+        def as_choices(cls):
+            return (
+                (state, _(state.capitalize())) for state in cls.as_list()
+            )
+
+    state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
     proforma = models.OneToOneField("Proforma", null=True, blank=True)
     invoice = models.OneToOneField("Invoice", null=True, blank=True)
@@ -152,19 +142,6 @@ class Transaction(models.Model):
         return unicode(self.uuid)
 
 
-def send_email_with_current_state(transaction):
-    if transaction.state == Transaction.States.Initial:
-        send_new_transaction_email(transaction)
-    elif transaction.state == Transaction.States.Pending:
-        send_pending_transaction_email(transaction)
-    elif transaction.state == Transaction.States.Failed:
-        send_failed_transaction_email(transaction)
-    elif transaction.state == Transaction.States.Settled:
-        send_settled_transaction_email(transaction)
-    elif transaction.state == Transaction.States.Refunded:
-        send_refunded_transaction_email(transaction)
-
-
 @receiver(pre_save, sender=Transaction)
 def pre_transaction_save(sender, instance=None, **kwargs):
     old = get_object_or_None(Transaction, pk=instance.pk)
@@ -173,22 +150,20 @@ def pre_transaction_save(sender, instance=None, **kwargs):
 
 @receiver(post_save, sender=Transaction)
 def post_transaction_save(sender, instance, **kwargs):
-    if not instance.old_value:
-        logger.info('[Models][Transaction]: %s', {
-            'detail': 'A transaction was created.',
-            'transaction_id': instance.id,
-            'customer_id': instance.customer.id,
-            'invoice_id': instance.invoice.id if instance.invoice else None,
-            'proforma_id':
-                instance.proforma.id if instance.proforma else None
-        })
+    if instance.old_value:
+        return
 
-        send_new_transaction_email(instance)
+    # we know this instance is freshly made as it doesn't have an old_value
+    logger.info('[Models][Transaction]: %s', {
+        'detail': 'A transaction was created.',
+        'transaction_id': instance.id,
+        'customer_id': instance.customer.id,
+        'invoice_id': instance.invoice.id if instance.invoice else None,
+        'proforma_id':
+            instance.proforma.id if instance.proforma else None
+    })
 
-        if instance.state != Transaction.States.Initial:
-            # The transaction was created with a state other than the initial
-            # one
-            send_email_with_current_state(instance)
+    send_transaction_email(instance)
 
 
 @receiver(post_transition)
@@ -197,23 +172,13 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     Syncs the state of the related documents of the transaction with the
     transaction state
     """
-    if issubclass(sender, Transaction):
-        if target == Transaction.States.Settled:
-            send_mail = False
+    if not issubclass(sender, Transaction):
+        return
 
-            if instance.proforma and \
-                    instance.proforma.state != instance.proforma.STATES.PAID:
-                instance.proforma.pay()
-                instance.proforma.save()
+    if target == Transaction.States.Settled:
+        if instance.document and \
+                instance.document.state != instance.document.STATES.PAID:
+            instance.document.pay()
+            instance.document.save()
 
-                send_mail = True
-
-            if instance.invoice and \
-                    instance.invoice.state != instance.invoice.STATES.PAID:
-                instance.invoice.pay()
-                instance.invoice.save()
-
-                send_mail = True
-
-            if send_mail:
-                send_email_with_current_state(instance)
+    send_transaction_email(instance)
