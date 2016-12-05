@@ -193,7 +193,7 @@ class TestInvoice(TestCase):
         queryset = Invoice.objects.due_this_month()
 
         assert queryset.count() == 2
-        for invoice in invoices[0:2]:
+        for invoice in invoices[:2]:
             assert invoice in queryset
 
     def test_invoice_overdue_queryset(self):
@@ -214,7 +214,7 @@ class TestInvoice(TestCase):
         queryset = Invoice.objects.overdue()
 
         assert queryset.count() == 2
-        for invoice in invoices[0:2]:
+        for invoice in invoices[:2]:
             assert invoice in queryset
 
     def test_invoice_overdue_since_last_month_queryset(self):
