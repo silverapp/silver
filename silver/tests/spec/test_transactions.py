@@ -240,7 +240,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @register_processor
+    @register_processor()
     def test_patch_transaction_with_initial_status(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
@@ -270,7 +270,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(transaction.currency_rate_date, currency_rate_date)
         self.assertEqual(transaction.amount, 200)
 
-    @register_processor
+    @register_processor()
     def test_patch_transaction_documents(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
@@ -300,7 +300,7 @@ class TestTransactionEndpoint(APITestCase):
             'invoice': [u'This field may not be modified.']
         })
 
-    @register_processor
+    @register_processor()
     def test_patch_after_initial_state(self):
         transaction = TransactionFactory.create(state=Transaction.States.Pending)
 

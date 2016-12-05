@@ -38,9 +38,10 @@ class TestPaymentMethodSerializer(TestCase):
         })
 
         expected_data = OrderedDict([
-            ('url', 'http://testserver/customers/1/payment_methods/1/'),
+            ('url', 'http://testserver/customers/{}/payment_methods/{}/'.format(payment_method.customer.pk,
+                                                                                payment_method.pk)),
             ('transactions', None),
-            ('customer', 'http://testserver/customers/1/'),
+            ('customer', 'http://testserver/customers/{}/'.format(payment_method.customer.pk)),
             ('payment_processor', 'http://testserver/payment_processors/Manual/'),
             ('added_at', payment_method.added_at),
             ('verified_at', None),

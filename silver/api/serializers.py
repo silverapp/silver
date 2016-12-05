@@ -600,8 +600,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
     additional_data = serializers.JSONField(required=False, write_only=True)
-    customer = CustomerUrl(view_name='customer-detail',
-                           queryset=Customer.objects.all())
+    customer = CustomerUrl(view_name='customer-detail', read_only=True)
 
     class Meta:
         model = PaymentMethod
@@ -610,7 +609,6 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'added_at': {'read_only': True},
             'verified_at': {'read_only': True},
-            'customer': {'read_only': True},
             'state': {'default': PaymentMethod.States.Uninitialized}
         }
 
@@ -643,8 +641,18 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return attrs
 
     def validate_state(self, state):
-        if state not in [choice[0] for choice in PaymentMethod.States.Choices]:
+        if state not in PaymentMethod.States.as_list():
             raise serializers.ValidationError('Unknown state {}'.format(state))
+
+        # Create
+        if not self.instance:
+            allowed_states = PaymentMethod.States.allowed_initial_states()
+
+            if state not in allowed_states:
+                message = "Must initially be one of ({}).".format(
+                    ', '.join(allowed_states)
+                )
+                raise serializers.ValidationError(message)
 
         return state
 
