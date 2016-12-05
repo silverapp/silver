@@ -564,7 +564,8 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'added_at': {'read_only': True},
             'verified_at': {'read_only': True},
-            'customer': {'read_only': True}
+            'customer': {'read_only': True},
+            'state': {'default': PaymentMethod.States.Uninitialized}
         }
 
     def validate(self, attrs):

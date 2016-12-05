@@ -295,23 +295,25 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.data, {
             'payment_processor': ['This field is required.']})
 
-    def test_post_listing_incomplete_body_2(self):
+    def test_post_listing_missing_initial_state(self):
         processor_url = reverse('payment-processor-detail', kwargs={
             'processor_name': 'manual'
         })
 
         url = reverse('payment-method-list', kwargs={
-            'customer_pk': 0
+            'customer_pk': self.customer.pk
         })
 
         response = self.client.post(url, data={
             'payment_processor': processor_url
         }, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {
-            'non_field_errors': ["'state' must initially be one of "
-                                 "(uninitialized, unverified, enabled)."]})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['state'],
+                         PaymentMethod.States.Uninitialized)
+
+        payment_method = PaymentMethod.objects.get(customer=self.customer)
+        self.assert_get_data(response.data['url'], payment_method)
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,
