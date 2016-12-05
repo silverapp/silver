@@ -23,7 +23,6 @@ from django.dispatch import receiver
 
 from .base import BillingDocument
 from silver.models.billing_entities import Provider
-from silver.models.payments import Payment
 
 
 class Invoice(BillingDocument):
@@ -40,13 +39,6 @@ class Invoice(BillingDocument):
 
         customer_field = self._meta.get_field("customer")
         customer_field.related_name = "invoices"
-
-    @property
-    def payment(self):
-        try:
-            return self.invoice_payment
-        except Payment.DoesNotExist:
-            return None
 
     @transition(field='state', source=BillingDocument.STATES.DRAFT,
                 target=BillingDocument.STATES.ISSUED)
@@ -115,19 +107,6 @@ class Invoice(BillingDocument):
     @property
     def related_document(self):
         return self.proforma
-
-    @property
-    def fields_for_payment_creation(self):
-        fields = super(Invoice, self).fields_for_payment_creation
-
-        invoice_fields = {
-            'invoice': self,
-            'proforma': self.related_document
-        }
-
-        fields.update(invoice_fields)
-
-        return fields
 
 
 @receiver(pre_delete, sender=Invoice)

@@ -51,8 +51,7 @@ def pay_transaction_view(request, transaction_uuid):
     if not view_class:
         raise Http404
 
-    payment = transaction.payment
-    if not transaction.is_usable or payment.status != payment.Status.Unpaid:
+    if not transaction.can_be_consumed:
         return HttpResponseGone("The transaction is no longer available.")
 
     transaction.last_access = timezone.now()
@@ -69,7 +68,7 @@ class GenericTransactionView(object):
 
     def render_form(self, request, transaction):
         return self.form_class(payment_method=transaction.payment_method,
-                               payment=transaction.payment).render()
+                               transaction=transaction).render()
 
     def handle_transaction_request(self, request, transaction):
         if self.form_class:

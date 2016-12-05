@@ -105,9 +105,9 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(response.data, {
-                'non_field_errors':
-                    ["'state' must initially be one of "
-                     "(uninitialized, unverified, enabled)."]})
+                'state': [u'Must initially be one of (uninitialized, '
+                          u'unverified, enabled).']
+            })
 
     def test_put_detail_state_transitions(self):
         states = PaymentMethod.States.as_list()
@@ -176,9 +176,9 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            'non_field_errors':
-                ["'additional_data' must not be given after "
-                 "the paymentmethod has been enabled once."]})
+            u'non_field_errors': [u"'additional_data' must not be given after "
+                                  u"the payment method has been enabled once."]
+        })
 
     def test_put_detail_ignore_customer_change(self):
         other_customer = CustomerFactory.create()
@@ -194,7 +194,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         data = response.data
         data['customer'] = reverse('customer-detail',
                                    request=response.wsgi_request,
-                                   kwargs={'pk': other_customer.pk})
+                                   kwargs={'customer_pk': other_customer.pk})
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -219,8 +219,8 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            'payment_processor':
-                ["The 'payment_processor' field cannot be altered."]})
+            'payment_processor': [u'This field may not be modified.']
+        })
 
     def test_put_detail(self):
         payment_method = self.create_payment_method(customer=self.customer,

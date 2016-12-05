@@ -32,7 +32,7 @@ from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, BillingDocument, Payment,
+                           DocumentEntry, Proforma, BillingDocument,
                            PaymentMethod, Transaction)
 from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.api.serializers import (MFUnitsLogSerializer,
@@ -41,13 +41,13 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     PlanSerializer, MeteredFeatureSerializer,
                                     ProviderSerializer, InvoiceSerializer,
                                     ProductCodeSerializer, ProformaSerializer,
-                                    DocumentEntrySerializer, PaymentSerializer,
+                                    DocumentEntrySerializer,
                                     PaymentProcessorSerializer,
                                     PaymentMethodSerializer,
                                     TransactionSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
-                                InvoiceFilter, ProformaFilter, PaymentFilter,
+                                InvoiceFilter, ProformaFilter,
                                 PaymentMethodFilter, TransactionFilter)
 
 
@@ -113,8 +113,8 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
     model = MeteredFeature
 
     def get_object(self):
-        pk = self.kwargs.get('pk', None)
-        return get_object_or_404(MeteredFeature, pk=pk)
+        customer_pk = self.kwargs.get('pk', None)
+        return get_object_or_404(MeteredFeature, pk=customer_pk)
 
 
 class SubscriptionList(generics.ListCreateAPIView):
@@ -125,12 +125,12 @@ class SubscriptionList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
-        queryset = Subscription.objects.filter(customer__id=customer_pk)
+        queryset = Subscription.objects.filter(customer__pk=customer_pk)
         return queryset.order_by('start_date')
 
     def post(self, request, *args, **kwargs):
         customer_pk = self.kwargs.get('customer_pk', None)
-        url = reverse('customer-detail', kwargs={'pk': customer_pk},
+        url = reverse('customer-detail', kwargs={'customer_pk': customer_pk},
                       request=request)
         request.data.update({unicode('customer'): unicode(url)})
 
@@ -415,7 +415,7 @@ class CustomerList(generics.ListCreateAPIView):
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
-        pk = self.kwargs.get('pk', None)
+        pk = self.kwargs.get('customer_pk', None)
         try:
             return Customer.objects.get(pk=pk)
         except (TypeError, ValueError, Customer.DoesNotExist):
@@ -780,39 +780,6 @@ class ProformaStateHandler(APIView):
         return Response(serializer.data)
 
 
-class PaymentList(ListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = PaymentSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_class = PaymentFilter
-    ordering = ('-due_date',)
-
-    def get_queryset(self):
-        customer_pk = self.kwargs.get('customer_pk', None)
-        queryset = Payment.objects.filter(customer__id=customer_pk)
-        return queryset.order_by('due_date')
-
-    def post(self, request, *args, **kwargs):
-        customer_pk = self.kwargs.get('customer_pk', None)
-        url = reverse('customer-detail', kwargs={'pk': customer_pk},
-                      request=request)
-        request.data.update({unicode('customer'): unicode(url)})
-
-        return super(PaymentList, self).post(request, *args, **kwargs)
-
-
-class PaymentDetail(RetrieveUpdateAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = PaymentSerializer
-    http_method_names = ('get', 'patch', 'head', 'options')
-
-    def get_object(self):
-        customer_pk = self.kwargs.get('customer_pk', None)
-        payment_pk = self.kwargs.get('payment_pk', None)
-        return get_object_or_404(Payment, customer__id=customer_pk,
-                                 pk=payment_pk)
-
-
 class PaymentProcessorList(ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentProcessorSerializer
@@ -900,18 +867,17 @@ class TransactionList(ListCreateAPIView):
         payment_method_id = self.kwargs.get('payment_method_id')
         if payment_method_id:
             payment_method = get_object_or_404(PaymentMethod,
-                                               id=payment_method_id)
-
+                                               id=payment_method_id,
+                                               customer__pk=customer_pk)
             if not payment_method.payment_processor.transaction_class:
                 raise Http404
 
             return Transaction.objects.filter(
-                payment_method__customer__id=customer_pk,
                 payment_method=payment_method
             )
         else:
             return Transaction.objects.filter(
-                payment_method__customer__id=customer_pk
+                payment_method__customer__pk=customer_pk
             )
 
     def perform_create(self, serializer):
@@ -924,9 +890,10 @@ class TransactionList(ListCreateAPIView):
             serializer.save()
 
 
-class TransactionDetail(RetrieveAPIView):
+class TransactionDetail(RetrieveUpdateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = TransactionSerializer
+    http_method_names = ('get', 'patch', 'head', 'options')
 
     def get_object(self):
         transaction_uuid = self.kwargs.get('transaction_uuid', None)

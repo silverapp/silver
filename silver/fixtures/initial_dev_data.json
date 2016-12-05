@@ -117,22 +117,6 @@
   },
   {
     "fields":{
-      "status":"unpaid",
-      "due_date":"2016-11-18",
-      "visible":true,
-      "currency":"USD",
-      "customer":1,
-      "amount":"200.00",
-      "proforma":1,
-      "invoice":null,
-      "provider":1,
-      "currency_rate_date":"2016-11-16"
-    },
-    "model":"silver.payment",
-    "pk":1
-  },
-  {
-    "fields":{
       "customer":1,
       "due_date":"2016-11-18",
       "issue_date":"2016-11-16",

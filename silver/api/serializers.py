@@ -15,7 +15,8 @@
 
 from django_fsm import TransitionNotAllowed
 from rest_framework import serializers
-from rest_framework.relations import HyperlinkedIdentityField
+from rest_framework.relations import HyperlinkedIdentityField, \
+    HyperlinkedRelatedField
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import ValidationError as APIValidationError
 
@@ -26,8 +27,8 @@ from silver.api.exceptions import APIConflictException
 
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
-                           DocumentEntry, ProductCode, Proforma, Payment,
-                           PaymentMethod, PaymentProcessorManager, Transaction)
+                           DocumentEntry, ProductCode, Proforma, PaymentMethod,
+                           PaymentProcessorManager, Transaction)
 from silver.validators import validate_payment_processor
 
 
@@ -125,6 +126,8 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
                   'payment_processors')
 
     def validate(self, data):
+        data = super(ProviderSerializer, self).validate(data)
+
         flow = data.get('flow', None)
         if flow == Provider.FLOWS.PROFORMA:
             if not data.get('proforma_starting_number', None) and\
@@ -208,6 +211,34 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
 
+class ProviderUrl(HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'pk': obj.pk}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        return self.queryset.get(pk=view_kwargs['pk'])
+
+    def use_pk_only_optimization(self):
+        # We have the complete object instance already. We don't need
+        # to run the 'only get the pk for this relationship' code.
+        return False
+
+
+class CustomerUrl(HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'customer_pk': obj.pk}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        return self.queryset.get(pk=view_kwargs['customer_pk'])
+
+    def use_pk_only_optimization(self):
+        # We have the complete object instance already. We don't need
+        # to run the 'only get the pk for this relationship' code.
+        return False
+
+
 class SubscriptionUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
         kwargs = {'customer_pk': obj.customer.pk, 'subscription_pk': obj.pk}
@@ -223,6 +254,8 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
     meta = JSONSerializerField(required=False)
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
 
     class Meta:
         model = Subscription
@@ -232,6 +265,8 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('state', 'updateable_buckets')
 
     def validate(self, attrs):
+        attrs = super(SubscriptionSerializer, self).validate(attrs)
+
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
@@ -247,9 +282,6 @@ class SubscriptionDetailSerializer(SubscriptionSerializer):
 class CustomerSerializer(serializers.HyperlinkedModelSerializer):
     subscriptions = SubscriptionUrl(view_name='subscription-detail', many=True,
                                     read_only=True)
-    payments = serializers.HyperlinkedIdentityField(
-        view_name='payment-list', source='*', lookup_url_kwarg='customer_pk'
-    )
     payment_methods = serializers.HyperlinkedIdentityField(
         view_name='payment-method-list', source='*',
         lookup_url_kwarg='customer_pk'
@@ -259,15 +291,15 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         lookup_url_kwarg='customer_pk'
     )
     meta = JSONSerializerField(required=False)
+    url = CustomerUrl(view_name='customer-detail', read_only=True, source='*')
 
     class Meta:
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'name', 'company',
                   'emails', 'address_1', 'address_2', 'city', 'state',
                   'zip_code', 'country', 'extra', 'sales_tax_number',
-                  'sales_tax_name', 'sales_tax_percent',
-                  'consolidated_billing','subscriptions', 'payments',
-                  'payment_methods', 'transactions', 'meta')
+                  'sales_tax_name', 'sales_tax_percent', 'consolidated_billing',
+                  'subscriptions', 'payment_methods', 'transactions', 'meta')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):
@@ -297,6 +329,8 @@ class PDFUrl(serializers.HyperlinkedRelatedField):
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
     pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
 
     class Meta:
         model = Invoice
@@ -310,7 +344,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         entries = validated_data.pop('invoice_entries', None)
 
-        # Create the new invoice objectj
+        # Create the new invoice object
         invoice = Invoice.objects.create(**validated_data)
 
         # Add the invoice entries
@@ -342,6 +376,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def validate(self, data):
+        data = super(InvoiceSerializer, self).validate(data)
+
         if self.instance:
             self.instance.clean()
 
@@ -355,6 +391,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
     pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
 
     class Meta:
         model = Proforma
@@ -398,6 +436,8 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def validate(self, data):
+        data = super(ProformaSerializer, self).validate(data)
+
         if self.instance:
             self.instance.clean()
 
@@ -408,59 +448,95 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
-class PaymentUrl(serializers.HyperlinkedRelatedField):
+class TransactionUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
-        kwargs = {'customer_pk': obj.customer.pk, 'payment_pk': obj.pk}
-        return reverse(view_name, kwargs=kwargs,
-                       request=request, format=format)
+        lookup_value = getattr(obj, self.lookup_field)
+        kwargs = {'transaction_uuid': str(lookup_value),
+                  'customer_pk': obj.customer.pk}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
     def get_object(self, view_name, view_args, view_kwargs):
-        return self.queryset.get(pk=view_kwargs['payment_pk'])
+        return self.queryset.get(uuid=view_kwargs['transaction_uuid'])
 
 
-class PaymentSerializer(serializers.HyperlinkedModelSerializer):
-    url = PaymentUrl(view_name='payment-detail', source='*',
-                     read_only=True)
+class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        kwargs = {'payment_method_id': obj.pk,
+                  'customer_pk': obj.customer.pk}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        return self.queryset.get(id=view_kwargs['payment_method_id'])
+
+
+class TransactionSerializer(serializers.HyperlinkedModelSerializer):
+    payment_method = PaymentMethodUrl(view_name='payment-method-detail',
+                                      lookup_field='payment_method',
+                                      queryset=PaymentMethod.objects.all())
+    url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
+    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
+                                       lookup_field='uuid',
+                                       lookup_url_kwarg='transaction_uuid')
+    customer = CustomerUrl(view_name='customer-detail', read_only=True)
+    provider = ProviderUrl(view_name='provider-detail', read_only=True)
+    id = serializers.CharField(source='uuid', read_only=True)
 
     class Meta:
-        model = Payment
+        model = Transaction
         fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
-                  'due_date', 'status', 'visible', 'proforma', 'invoice')
+                  'currency_rate_date', 'state', 'proforma', 'invoice',
+                  'can_be_consumed', 'payment_method', 'pay_url', 'valid_until')
+        read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
+                            'id', 'url', 'state')
+        write_only_fields = ('valid_until',)
 
-    def validate(self, attrs):
-        if self.instance and list(attrs.keys()) != ['status']:
-            message = "Existing payments only accept updating their status. {} given.".format(
-                list(attrs.keys())
-            )
+    def validate_proforma(self, proforma):
+        if self.instance and proforma != self.instance.proforma:
+            message = "This field may not be modified."
             raise serializers.ValidationError(message)
-        if self.instance and self.instance.status in Payment.Status.FinalStatuses:
-            message = "Cannot update a payment with '{}' status.".format(
-                self.instance.status
-            )
+
+        return proforma
+
+    def validate_invoice(self, invoice):
+        if self.instance and invoice != self.instance.invoice:
+            message = "This field may not be modified."
             raise serializers.ValidationError(message)
         if (self.instance and getattr(self.instance, 'transactions', None) and
            self.instance.transaction_set.exclude(state='canceled').exists()):
             message = "Cannot update a payment with active transactions."
             raise serializers.ValidationError(message)
 
+        return invoice
+
+    def validate(self, attrs):
+        attrs = super(TransactionSerializer, self).validate(attrs)
+
+        if not attrs:
+            return attrs
+
+        if self.instance:
+            if self.instance.state != Transaction.States.Initial:
+                message = "The transaction cannot be modified once it is in {}"\
+                          " state.".format(self.instance.state)
+                raise serializers.ValidationError(message)
+
         # Run model clean and handle ValidationErrors
         try:
             # Use the existing instance to avoid unique field errors
             if self.instance:
-                payment = self.instance
-                payment_dict = payment.__dict__.copy()
+                transaction = self.instance
+                transaction_dict = transaction.__dict__.copy()
 
                 for attribute, value in attrs.items():
-                    setattr(payment, attribute, value)
+                    setattr(transaction, attribute, value)
 
-                payment.full_clean()
+                transaction.full_clean()
 
                 # Revert changes to existing instance
-                payment.__dict__ = payment_dict
+                transaction.__dict__ = transaction_dict
             else:
-                payment = Payment(**attrs)
-                payment.full_clean()
-
+                transaction = Transaction(**attrs)
+                transaction.full_clean()
         except ValidationError as e:
             errors = e.error_dict
             non_field_errors = errors.pop('__all__', None)
@@ -472,27 +548,6 @@ class PaymentSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(errors)
 
         return attrs
-
-    def update(self, instance, validated_data):
-        status = validated_data.pop('status', None)
-
-        if status != instance.status:
-            try:
-                if status == Payment.Status.Paid:
-                    instance.succeed()
-                elif status == Payment.Status.Unpaid:
-                    instance.fail()
-                elif status == Payment.Status.Pending:
-                    instance.process()
-                elif status == Payment.Status.Canceled:
-                    instance.cancel()
-            except TransitionNotAllowed:
-                raise APIValidationError({
-                    'status': "The payment could not be transitioned to '{}' "
-                              "status.".format(status)
-                })
-
-        return super(PaymentSerializer, self).update(instance, validated_data)
 
 
 class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
@@ -524,17 +579,6 @@ class PaymentProcessorSerializer(serializers.Serializer):
     )
 
 
-class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        kwargs = {'payment_method_id': obj.pk,
-                  'customer_pk': obj.customer.pk}
-        return self.reverse(view_name, kwargs=kwargs,
-                            request=request, format=format)
-
-    def get_object(self, view_name, view_args, view_kwargs):
-        return self.queryset.get(id=view_kwargs['payment_method_id'])
-
-
 class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
         if not obj.payment_processor.transaction_class:
@@ -556,6 +600,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
     additional_data = serializers.JSONField(required=False, write_only=True)
+    customer = CustomerUrl(view_name='customer-detail', read_only=True)
 
     class Meta:
         model = PaymentMethod
@@ -564,30 +609,21 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         extra_kwargs = {
             'added_at': {'read_only': True},
             'verified_at': {'read_only': True},
-            'customer': {'read_only': True},
             'state': {'default': PaymentMethod.States.Uninitialized}
         }
 
     def validate(self, attrs):
+        attrs = super(PaymentMethodSerializer, self).validate(attrs)
+
         state = attrs.get('state')
         additional_data = attrs.get('additional_data')
 
-        # Create
-        if not self.instance:
-            allowed_states = [PaymentMethod.States.Uninitialized,
-                              PaymentMethod.States.Unverified,
-                              PaymentMethod.States.Enabled]
-            if state not in allowed_states:
-                message = "'state' must initially be one of ({}).".format(
-                    ', '.join(allowed_states)
-                )
-                raise serializers.ValidationError(message)
         # Update
-        else:
+        if self.instance:
             if (additional_data and
-               self.instance.state == PaymentMethod.States.Disabled):
-                message = "'additional_data' must not be given after the payment" \
-                          "method has been enabled once."
+                    self.instance.state == PaymentMethod.States.Disabled):
+                message = "'additional_data' must not be given after the " \
+                          "payment method has been enabled once."
                 raise serializers.ValidationError(message)
         # Common
         if additional_data:
@@ -605,18 +641,24 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return attrs
 
     def validate_state(self, state):
-        if self.instance:
-            if state == self.instance.state:
-                return self.instance.state
-
-        if state not in [choice[0] for choice in PaymentMethod.States.Choices]:
+        if state not in PaymentMethod.States.as_list():
             raise serializers.ValidationError('Unknown state {}'.format(state))
+
+        # Create
+        if not self.instance:
+            allowed_states = PaymentMethod.States.allowed_initial_states()
+
+            if state not in allowed_states:
+                message = "Must initially be one of ({}).".format(
+                    ', '.join(allowed_states)
+                )
+                raise serializers.ValidationError(message)
 
         return state
 
     def validate_payment_processor(self, value):
         if self.instance and value != self.instance.payment_processor:
-            message = "The 'payment_processor' field cannot be altered."
+            message = "This field may not be modified."
             raise serializers.ValidationError(message)
 
         return value
@@ -685,42 +727,3 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
         return super(PaymentMethodSerializer, self).update(instance,
                                                            validated_data)
-
-
-class TransactionUrl(serializers.HyperlinkedIdentityField):
-    def get_url(self, obj, view_name, request, format):
-        lookup_value = getattr(obj, self.lookup_field)
-        kwargs = {'transaction_uuid': str(lookup_value),
-                  'customer_pk': obj.customer.pk}
-        return self.reverse(view_name, kwargs=kwargs,
-                            request=request, format=format)
-
-    def get_object(self, view_name, view_args, view_kwargs):
-        return self.queryset.get(uuid=view_kwargs['transaction_uuid'])
-
-
-class TransactionSerializer(serializers.HyperlinkedModelSerializer):
-    payment_method = PaymentMethodUrl(view_name='payment-method-detail',
-                                      lookup_field='payment_method',
-                                      queryset=PaymentMethod.objects.all())
-    payment = PaymentUrl(view_name='payment-detail', lookup_field='payment',
-                         queryset=Payment.objects.all())
-    url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid')
-    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
-                                       lookup_field='uuid',
-                                       lookup_url_kwarg='transaction_uuid')
-
-    class Meta:
-        model = Transaction
-        fields = ('url', 'payment_method', 'payment', 'is_usable', 'pay_url',
-                  'valid_until')
-        write_only_fields = ('valid_until', 'payment')
-
-    def create(self, validated_data):
-        kwargs = {
-            'payment': validated_data['payment'],
-            'payment_method': validated_data['payment_method'],
-            'valid_until': validated_data.get('valid_until')
-        }
-
-        return Transaction.objects.create(**kwargs)

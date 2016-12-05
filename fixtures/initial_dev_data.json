@@ -244,33 +244,6 @@
   },
   {
     "fields":{
-      "codename":"add_payment",
-      "name":"Can add payment",
-      "content_type":10
-    },
-    "model":"auth.permission",
-    "pk":28
-  },
-  {
-    "fields":{
-      "codename":"change_payment",
-      "name":"Can change payment",
-      "content_type":10
-    },
-    "model":"auth.permission",
-    "pk":29
-  },
-  {
-    "fields":{
-      "codename":"delete_payment",
-      "name":"Can delete payment",
-      "content_type":10
-    },
-    "model":"auth.permission",
-    "pk":30
-  },
-  {
-    "fields":{
       "codename":"add_invoice",
       "name":"Can add invoice",
       "content_type":11

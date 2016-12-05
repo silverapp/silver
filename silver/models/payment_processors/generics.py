@@ -19,24 +19,25 @@ class BaseActionableProcessor(object):
         Not a Manual type Processor
     """
 
-    def refund_payment(self, payment, payment_method=None):
+    def refund_transaction(self, transaction, payment_method=None):
         """
-            Refunds / returns the money to the customer
-        """
-
-        raise NotImplementedError
-
-    def void_payment(self, payment, payment_method=None):
-        """
-            Voids / interrupts an ongoing payment
+            Refunds / returns the money to the given payment_method or to the
+            transaction's payment method
         """
 
         raise NotImplementedError
 
-    def manage_payment(self, payment):
+    def void_transaction(self, transaction, payment_method=None):
         """
-            Only gets called for unpaid or pending payments that point to this
-            specific Processor
+            Voids / interrupts an ongoing transaction
+        """
+
+        raise NotImplementedError
+
+    def manage_transaction(self, transaction):
+        """
+            Only gets called for initial or pending transactions that point to
+            this specific Processor
         """
 
         raise NotImplementedError
@@ -55,14 +56,6 @@ class AutomaticProcessorMixin(BaseActionableProcessor):
 
 class TriggeredProcessorMixin(BaseActionableProcessor):
     type = PaymentProcessorTypes.Triggered
-
-    def charge_payment(self, payment, payment_method):
-        """
-            Used to convert a Payment to a specific Payment type for a specific
-            Processor
-        """
-
-        raise NotImplementedError
 
 
 class GenericPaymentProcessor(object):

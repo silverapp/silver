@@ -39,7 +39,7 @@ from django.http import HttpResponse
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, DocumentEntry, Payment,
+                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog, BillingDocument,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
@@ -496,12 +496,55 @@ class ProformaForm(BillingDocumentForm):
         fields = ()
 
 
+class DueDateFilter(SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = 'due date'
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'due_date_filter'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        return (
+            ('due_this_month', _('All due this month')),
+            ('due_today', _('All due today')),
+            ('overdue_since_last_month', _('All overdue since last month')),
+            ('overdue', _('All overdue'))
+        )
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        # Compare the requested value (either '80s' or '90s')
+        # to decide how to filter the queryset.
+        if self.value() == 'due_this_month':
+            return queryset.due_this_month()
+        if self.value() == 'due_today':
+            return queryset.due_today()
+        if self.value() == 'overdue_since_last_month':
+            return queryset.overdue_since_last_month()
+        if self.value() == 'overdue':
+            return queryset.overdue()
+
+        return queryset
+
+
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
                     'cancel_date', tax, 'total']
 
-    list_filter = ('provider__company', 'state')
+    list_filter = ('provider__company', 'state', DueDateFilter)
 
     common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
@@ -786,127 +829,91 @@ class ProformaAdmin(BillingDocumentAdmin):
     related_invoice.allow_tags = True
 
 
-class DueDateFilter(SimpleListFilter):
-    # Human-readable title which will be displayed in the
-    # right admin sidebar just above the filter options.
-    title = 'due date'
+class TransactionAdmin(ModelAdmin):
+    fields = ('amount', 'currency', 'proforma', 'invoice', 'currency_rate_date',
+              'state', 'payment_method', 'uuid', 'valid_until', 'last_access',
+              'consumable')
 
-    # Parameter for the filter that will be used in the URL query.
-    parameter_name = 'due_date_filter'
-
-    def lookups(self, request, model_admin):
-        """
-        Returns a list of tuples. The first element in each
-        tuple is the coded value for the option that will
-        appear in the URL query. The second element is the
-        human-readable name for the option that will appear
-        in the right sidebar.
-        """
-        return (
-            ('due_this_month', _('All due this month')),
-            ('due_today', _('All due today')),
-            ('overdue_since_last_month', _('All overdue since last month')),
-            ('overdue', _('All overdue'))
-        )
-
-    def queryset(self, request, queryset):
-        """
-        Returns the filtered queryset based on the value
-        provided in the query string and retrievable via
-        `self.value()`.
-        """
-        # Compare the requested value (either '80s' or '90s')
-        # to decide how to filter the queryset.
-        if self.value() == 'due_this_month':
-            return queryset.due_this_month()
-        if self.value() == 'due_today':
-            return queryset.due_today()
-        if self.value() == 'overdue_since_last_month':
-            return queryset.overdue_since_last_month()
-        if self.value() == 'overdue':
-            return queryset.overdue()
-
-        return queryset
-
-
-class PaymentAdmin(ModelAdmin):
-    fields = ('customer', 'provider', 'amount', 'currency', 'proforma',
-              'invoice', 'currency_rate_date', 'due_date', 'status', 'visible',)
-    readonly_fields = ('status',)
-
+    readonly_fields = ('state', 'uuid', 'last_access')
+    create_only_fields = ('amount', 'currency', 'proforma', 'invoice',
+                         'payment_method', 'valid_until')
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
-                    'customer', 'due_date', 'amount', 'visible', 'status',)
-    list_filter = ('customer', 'visible', 'status', DueDateFilter)
-    date_hierarchy = 'due_date'
-    actions = ['process', 'cancel', 'succeed', 'fail']
+                    'amount', 'state',)
+    list_filter = ('payment_method__customer', 'state')
+    actions = ['process', 'cancel', 'settle', 'fail']
+
+    def get_readonly_fields(self, request, instance=None):
+        if instance:
+            return self.readonly_fields + self.create_only_fields
+        return self.readonly_fields
 
     def perform_action(self, request, queryset, action, display_verb=None):
         failed_count = 0
-        payments_count = len(queryset)
+        transactions_count = len(queryset)
 
-        if not action in self.actions:
+        if action not in self.actions:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
-        method = getattr(Payment, action)
+        method = getattr(Transaction, action)
 
-        for payment in queryset:
+        for transaction in queryset:
             try:
-                method(payment)
-                payment.save()
+                method(transaction)
+                transaction.save()
             except TransitionNotAllowed:
                 failed_count += 1
 
-        succeeded_count = payments_count - failed_count
+        settled_count = transactions_count - failed_count
 
         if not failed_count:
             self.message_user(
                 request,
-                'Successfully %s %d payments.' % (
-                    display_verb or action, payments_count
+                'Successfully %s %d transactions.' % (
+                    display_verb or action, transactions_count
                 )
             )
-        elif failed_count != payments_count:
+        elif failed_count != transactions_count:
 
             self.message_user(
                 request,
-                '%s %d payments, %d failed.' % (
-                    display_verb or action, succeeded_count, failed_count
+                '%s %d transactions, %d failed.' % (
+                    display_verb or action, settled_count, failed_count
                 ),
                 level=messages.WARNING
             )
         else:
             self.message_user(
                 request,
-                'Couldn\'t %s any of the selected payments.' % action,
+                'Couldn\'t %s any of the selected transactions.' % action,
                 level=messages.ERROR
             )
 
         action = action.capitalize()
 
-        logger.info('[Admin][%s Payment]: %s', action, {
-            'detail': '%s Payment action initiated by user.' % action,
+        logger.info('[Admin][%s Transaction]: %s', action, {
+            'detail': '%s Transaction action initiated by user.' % action,
             'user_id': request.user.id,
             'user_staff': request.user.is_staff,
             'failed_count': failed_count,
-            'succeeded_count': succeeded_count
+            'settled_count': settled_count
         })
 
     def process(self, request, queryset):
         self.perform_action(request, queryset, 'process', 'processed')
-    process.short_description = 'Process the selected payments'
+    process.short_description = 'Process the selected transactions'
 
     def cancel(self, request, queryset):
         self.perform_action(request, queryset, 'cancel', 'canceled')
-    cancel.short_description = 'Cancel the selected payments'
+    cancel.short_description = 'Cancel the selected transactions'
 
-    def succeed(self, request, queryset):
-        self.perform_action(request, queryset, 'succeed', 'succeeded')
-    succeed.short_description = 'Succeed the selected payments'
+    def settle(self, request, queryset):
+        self.perform_action(request, queryset, 'settle', 'settled')
+    settle.short_description = 'settle the selected transactions'
 
     def fail(self, request, queryset):
         self.perform_action(request, queryset, 'fail', 'failed')
-    fail.short_description = 'Fail the selected payments'
+    fail.short_description = 'Fail the selected transactions'
 
     def related_invoice(self, obj):
         if obj.invoice:
@@ -941,19 +948,8 @@ class PaymentMethodAdmin(ModelAdmin):
               'data', 'state')
 
 
-class TransactionAdmin(ModelAdmin):
-    list_display = ('customer', 'payment_method', 'uuid', 'valid_until',
-                    'last_access', 'disabled')
-
-    fields = ('payment_method', 'payment', 'uuid', 'valid_until',
-              'last_access', 'disabled')
-
-    readonly_fields = ('uuid', 'last_access')
-
-
 site.register(Transaction, TransactionAdmin)
 site.register(PaymentMethod, PaymentMethodAdmin)
-site.register(Payment, PaymentAdmin)
 site.register(Plan, PlanAdmin)
 site.register(Subscription, SubscriptionAdmin)
 site.register(Customer, CustomerAdmin)

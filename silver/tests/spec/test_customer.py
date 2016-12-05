@@ -111,7 +111,7 @@ class TestCustomerEndpoints(APITestCase):
         customer = CustomerFactory.create()
 
         url = reverse('customer-detail',
-                      kwargs={'pk': customer.pk})
+                      kwargs={'customer_pk': customer.pk})
 
         response = self.client.get(url)
 
@@ -120,7 +120,7 @@ class TestCustomerEndpoints(APITestCase):
 
     def test_get_customer_detail_unexisting(self):
         url = reverse('customer-detail',
-                      kwargs={'pk': 42})
+                      kwargs={'customer_pk': 42})
 
         response = self.client.get(url)
 
@@ -130,14 +130,14 @@ class TestCustomerEndpoints(APITestCase):
     def test_delete_customer(self):
         customer = CustomerFactory.create()
 
-        url = reverse('customer-detail', kwargs={'pk': customer.pk})
+        url = reverse('customer-detail', kwargs={'customer_pk': customer.pk})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Customer.objects.all().count() == 0
 
     def test_delete_unexisting_customer(self):
-        url = reverse('customer-detail', kwargs={'pk': 42})
+        url = reverse('customer-detail', kwargs={'customer_pk': 42})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -148,12 +148,12 @@ class TestCustomerEndpoints(APITestCase):
         changed_data = self.complete_data.copy()
 
         unchanged_fields = ['emails', 'address_2']
-        ignore_fields = ['url', 'id', 'subscriptions', 'payments',
-                         'payment_methods', 'transactions']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payment_methods',
+                         'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('customer-detail', kwargs={'pk': customer.pk})
+        url = reverse('customer-detail', kwargs={'customer_pk': customer.pk})
 
         response = self.client.put(url, data=json.dumps(changed_data),
                                    content_type='application/json')
@@ -173,12 +173,12 @@ class TestCustomerEndpoints(APITestCase):
         changed_data = self.complete_data.copy()
         unchanged_fields = ['emails', 'zip_code', 'company',
                             'payment_due_days']
-        ignore_fields = ['url', 'id', 'subscriptions', 'payments',
-                         'payment_methods', 'transactions']
+        ignore_fields = ['url', 'id', 'subscriptions', 'payment_methods',
+                         'transactions']
         for field in unchanged_fields:
             changed_data.pop(field)
 
-        url = reverse('customer-detail', kwargs={'pk': customer.pk})
+        url = reverse('customer-detail', kwargs={'customer_pk': customer.pk})
 
         response = self.client.patch(url, data=json.dumps(changed_data),
                                      content_type='application/json')
