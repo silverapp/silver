@@ -17,7 +17,7 @@
     "payment_due_days": 5,
     "sales_tax_number": "",
     "customer_reference": "",
-    "emails": "[]",
+    "emails": "[u'[]']",
     "zip_code": ""
   },
   "model": "silver.customer",
@@ -41,7 +41,7 @@
     "payment_due_days": 5,
     "sales_tax_number": "",
     "customer_reference": "",
-    "emails": "[]",
+    "emails": "[u'[]']",
     "zip_code": ""
   },
   "model": "silver.customer",
@@ -91,20 +91,53 @@
 {
   "fields": {
     "customer": 1,
-    "due_date": null,
-    "issue_date": null,
-    "state": "draft",
+    "due_date": "2016-12-11",
+    "issue_date": "2016-12-06",
+    "state": "issued",
     "series": "pl",
     "sales_tax_name": "",
     "provider": 1,
-    "number": null,
+    "number": 1,
     "currency": "USD",
     "cancel_date": null,
     "paid_date": null,
     "invoice": null,
-    "archived_provider": {},
-    "pdf": "",
-    "archived_customer": {},
+    "archived_provider": {
+      "city": "Timisoara",
+      "name": "provider1",
+      "display_email": "random@test.com",
+      "extra": "",
+      "country": "RO",
+      "company": "",
+      "state": "",
+      "meta": null,
+      "address_1": "Random address",
+      "address_2": "",
+      "notification_email": "random@test.com",
+      "zip_code": "",
+      "proforma_series": "pl"
+    },
+    "pdf": "documents/provider1/proformas/2016/12/Proforma_pl-1.pdf",
+    "archived_customer": {
+      "city": "Timisoara",
+      "consolidated_billing": false,
+      "extra": "",
+      "country": "RO",
+      "company": "",
+      "sales_tax_percent": null,
+      "state": "",
+      "meta": null,
+      "address_1": "adresa 1",
+      "address_2": "",
+      "payment_due_days": 5,
+      "sales_tax_number": "",
+      "zip_code": "",
+      "customer_reference": "",
+      "emails": [
+        "[]"
+      ],
+      "name": "Gigel"
+    },
     "sales_tax_percent": null
   },
   "model": "silver.proforma",
@@ -116,6 +149,32 @@
   },
   "model": "silver.productcode",
   "pk": 1
+},
+{
+  "fields": {
+    "customer": 1,
+    "added_at": "2016-12-06T10:22:30Z",
+    "verified_at": null,
+    "state": "uninitialized",
+    "payment_processor": "Manual",
+    "data": null
+  },
+  "model": "silver.paymentmethod",
+  "pk": 1
+},
+{
+  "fields": {
+    "customer": 2,
+    "added_at": "2016-12-06T10:22:52Z",
+    "verified_at": null,
+    "state": "uninitialized",
+    "payment_processor": "Manual",
+    "data": {
+      "key": "random"
+    }
+  },
+  "model": "silver.paymentmethod",
+  "pk": 2
 },
 {
   "fields": {
@@ -133,31 +192,5 @@
   },
   "model": "silver.transaction",
   "pk": 1
-},
-{
-  "fields": {
-    "customer": 1,
-    "added_at": "2016-12-06T10:22:30Z",
-    "verified_at": null,
-    "state": "uninitialized",
-    "payment_processor": "Gigel - Manual",
-    "data": null
-  },
-  "model": "silver.paymentmethod",
-  "pk": 1
-},
-{
-  "fields": {
-    "customer": 2,
-    "added_at": "2016-12-06T10:22:52Z",
-    "verified_at": null,
-    "state": "uninitialized",
-    "payment_processor": "Ionica - Manual",
-    "data": {
-      "key": "random"
-    }
-  },
-  "model": "silver.paymentmethod",
-  "pk": 2
 }
 ]
