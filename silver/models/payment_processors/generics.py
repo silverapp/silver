@@ -1,5 +1,6 @@
 import logging
 
+from django.utils.deconstruct import deconstructible
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class TriggeredProcessorMixin(BaseActionableProcessor):
     type = PaymentProcessorTypes.Triggered
 
 
+@deconstructible
 class GenericPaymentProcessor(object):
     name = None
     payment_method_class = None

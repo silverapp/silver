@@ -54,6 +54,7 @@ EXTERNAL_APPS = [
     'rest_framework',
     'django_filters',
     'django_xhtml2pdf',
+    'payment_processors'
 
     # Dev tools
     # 'django_extensions',

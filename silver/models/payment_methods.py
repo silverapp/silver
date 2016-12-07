@@ -133,6 +133,10 @@ class PaymentMethod(models.Model):
 
         super(PaymentMethod, self).delete(using=using)
 
+    @property
+    def public_data(self):
+        return {}
+
     def pay_billing_document(self, document):
         if self.state == self.States.Enabled:
             self.payment_processor.pay_billing_document(document, self)
