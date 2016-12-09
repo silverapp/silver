@@ -56,10 +56,10 @@ class PaymentProcessorManager(object):
                     __import__(path, globals(), locals(), [processor], 0),
                     processor
                 )
-            except Exception:
+            except Exception as e:
                 traceback.print_exc()
                 raise ImportError(
-                    "Couldn't import '{}' from '{}'".format(processor, path)
+                    "Couldn't import '{}' from '{}'\nReason: {}".format(processor, path, e)
                 )
 
             cls.register(processor, setup_data)
