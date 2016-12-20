@@ -33,4 +33,7 @@ class BraintreeTriggered(GenericPaymentProcessor, TriggeredProcessorMixin):
         pass
 
     def manage_transaction(self, transaction):
-        pass
+        result = braintree.Transaction.sale({
+            'amount': transaction.amount,
+            'payment_method_nonce': ''
+        })
