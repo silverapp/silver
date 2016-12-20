@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block form %}
-    <form action="{{ request.path }}" method="post">
+    <form action="{{ form.request.path }}" method="post">
         {{ form }}
         <div id="payment-form"></div>
         <input type="submit" value="Pay"/>
@@ -17,7 +17,7 @@
     <script src="https://js.braintreegateway.com/js/braintree-2.27.0.min.js"></script>
     <script type="text/javascript">
         var client_token = "{{ form.payment_method.payment_processor.client_token }}";
-        braintree.setup(client_token, "dropin", {
+        braintree.setup(client_token, "paypal", {
             container: "payment-form"
         });
     </script>

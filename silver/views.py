@@ -69,7 +69,7 @@ class GenericTransactionView(View):
 
     def render_form(self, request, transaction):
         return self.form_class(payment_method=transaction.payment_method,
-                               transaction=transaction).render()
+                               transaction=transaction, request=request).render()
 
     def get(self, request, transaction):
         if self.form_class:
