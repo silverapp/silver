@@ -565,25 +565,23 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
 
     def get_object(self, view_name, view_args, view_kwargs):
         try:
-            return PaymentProcessorManager.get(view_kwargs['processor_name'])
+            return PaymentProcessorManager.get_instance(view_kwargs['processor_name'])
         except PaymentProcessorManager.DoesNotExist:
             raise ObjectDoesNotExist
 
 
 class PaymentProcessorSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=64)
     type = serializers.CharField(max_length=64)
+    display_name = serializers.CharField(max_length=64)
+    reference = serializers.CharField(max_length=256)
     url = PaymentProcessorUrl(
-        view_name='payment-processor-detail', source='*', lookup_field="name",
+        view_name='payment-processor-detail', source='*', lookup_field='reference',
         read_only=True
     )
 
 
 class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
-        if not obj.payment_processor.transaction_class:
-            return None
-
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'payment_method_id': str(lookup_value),
                   'customer_pk': obj.customer.pk}
@@ -595,8 +593,8 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     url = PaymentMethodUrl(view_name='payment-method-detail', source="*",
                            read_only=True)
     payment_processor = PaymentProcessorUrl(
-        view_name='payment-processor-detail', lookup_field='name',
-        queryset=PaymentProcessorManager.all())
+        view_name='payment-processor-detail', source="processor", lookup_field='reference',
+        queryset=PaymentProcessorManager.all_instances())
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
     additional_data = serializers.JSONField(required=False, write_only=True)
@@ -657,8 +655,9 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return state
 
     def validate_payment_processor(self, value):
-        if self.instance and value != self.instance.payment_processor:
+        if self.instance and value != self.instance.processor:
             message = "This field may not be modified."
+            print 'validate', value, self.instance.processor, value != self.instance.processor, 'equal'
             raise serializers.ValidationError(message)
 
         return value

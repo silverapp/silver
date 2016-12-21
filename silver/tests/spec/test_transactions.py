@@ -2,21 +2,41 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 from decimal import Decimal
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
 from django.utils import timezone
 from silver.models import Transaction
+from silver.models.payment_processors.base import PaymentProcessorBase
+from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory)
-from silver.tests.utils import register_processor
 
 
 def reverse(*args, **kwargs):
     return u'http://testserver' + _reverse(*args, **kwargs)
+
+
+class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
+    @staticmethod
+    def setup(data=None):
+        pass
+
+
+PAYMENT_PROCESSORS = {
+    'manual': {
+        'path': 'silver.models.payment_processors.manual.ManualProcessor',
+        'display_name': 'Manual'
+    },
+    'someprocessor': {
+        'path': 'silver.tests.spec.test_payment_processors.SomeProcessor',
+        'display_name': 'SomeProcessor'
+    }
+}
 
 
 class TestTransactionEndpoint(APITestCase):
@@ -240,7 +260,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @register_processor()
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_patch_transaction_with_initial_status(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
@@ -270,7 +290,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(transaction.currency_rate_date, currency_rate_date)
         self.assertEqual(transaction.amount, 200)
 
-    @register_processor()
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_patch_transaction_documents(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
@@ -300,7 +320,7 @@ class TestTransactionEndpoint(APITestCase):
             'invoice': [u'This field may not be modified.']
         })
 
-    @register_processor()
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_patch_after_initial_state(self):
         transaction = TransactionFactory.create(state=Transaction.States.Pending)
 
@@ -358,7 +378,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['payment_method'],
                          ['This field is required.'])
 
-    @register_processor()
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_filter_payment_method(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(
@@ -396,7 +416,7 @@ class TestTransactionEndpoint(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, [])
 
-    @register_processor()
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_filter_min_max_amount(self):
         customer = CustomerFactory.create()
         payment_method_ok = PaymentMethodFactory.create(

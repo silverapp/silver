@@ -152,10 +152,12 @@ LOGGING['formatters']['verbose'] = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-PAYMENT_PROCESSORS = [
-    # (processor.path, setup.data)
-    ('silver.models.payment_processors.manual.ManualProcessor', {}),
-]
+PAYMENT_PROCESSORS = {
+    'manual': {
+        'path': 'silver.models.payment_processors.manual.ManualProcessor',
+        'display_name': 'Manual'
+    },
+}
 
 try:
     from settings_local import *

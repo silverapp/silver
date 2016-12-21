@@ -1,3 +1,4 @@
+from django.db.models import CharField
 from django_fsm import FSMField, transition
 from jsonfield import JSONField
 from model_utils.managers import InheritanceManager
@@ -5,9 +6,9 @@ from model_utils.managers import InheritanceManager
 from django.db import models
 from django.utils import timezone
 
-from billing_entities import Customer
-from payment_processors import PaymentProcessorManager
-from payment_processors.fields import PaymentProcessorField
+from .billing_entities import Customer
+from .payment_processors import PaymentProcessorManager
+from silver.models.payment_processors.base import PaymentProcessorBase
 
 
 class PaymentMethodInvalid(Exception):
@@ -15,10 +16,26 @@ class PaymentMethodInvalid(Exception):
 
 
 class PaymentMethod(models.Model):
-    payment_processor = PaymentProcessorField(
+    payment_processor = CharField(
         choices=PaymentProcessorManager.get_choices(),
-        blank=False
+        blank=False, null=False, max_length=256
     )
+
+    @property
+    def processor(self):
+        return PaymentProcessorManager.get_instance(self.payment_processor)
+
+    @processor.setter
+    def processor(self, value):
+        if not isinstance(value, PaymentProcessorBase):
+            raise ValueError('Value must be an instance of PaymentProcessorBase')
+        if not hasattr(value, 'reference'):
+            raise AttributeError(
+                'The payment processor must have a reference. Try obtaining it '
+                'from PaymentProcessorManager.'
+            )
+        self.payment_processor = value.reference
+
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
     verified_at = models.DateTimeField(null=True, blank=True)
@@ -86,7 +103,7 @@ class PaymentMethod(models.Model):
 
         if self.id:
             try:
-                payment_method_class = self.payment_processor.payment_method_class
+                payment_method_class = self.processor.payment_method_class
 
                 if payment_method_class:
                     self.__class__ = payment_method_class
@@ -139,9 +156,9 @@ class PaymentMethod(models.Model):
 
     def pay_billing_document(self, document):
         if self.state == self.States.Enabled:
-            self.payment_processor.pay_billing_document(document, self)
+            self.processor.pay_billing_document(document, self)
         else:
             raise PaymentMethodInvalid
 
     def __unicode__(self):
-        return u'{} - {}'.format(self.customer, self.payment_processor)
+        return u'{} - {}'.format(self.customer, self.processor)

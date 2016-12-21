@@ -1,27 +1,26 @@
-import braintree
+import braintree as sdk
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
+
+from .payment_methods import BraintreePaymentMethod
 from .views import BraintreeTransactionView
-from silver.models.transactions import Transaction
-
-from silver.models.payment_processors.generics import (GenericPaymentProcessor,
-                                                       TriggeredProcessorMixin)
+from silver.models.payment_processors.base import PaymentProcessorBase
+from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 
 
-class BraintreeTriggered(GenericPaymentProcessor, TriggeredProcessorMixin):
-    name = 'BraintreeTriggered'
-    transaction_class = Transaction
+class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
     view_class = BraintreeTransactionView
+    payment_method_class = BraintreePaymentMethod
 
     def setup(self, data):
         environment = data.pop('environment', None)
-        braintree.Configuration.configure(environment, **data)
+        sdk.Configuration.configure(environment, **data)
 
     @property
     def client_token(self):
         try:
-            return braintree.ClientToken.generate()
+            return sdk.ClientToken.generate()
         except (AuthenticationError, AuthorizationError, DownForMaintenanceError,
                 ServerError, UpgradeRequiredError):
             return None

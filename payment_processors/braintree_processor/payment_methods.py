@@ -1,3 +1,4 @@
+import braintree as sdk
 from braintree.exceptions import (
     AuthenticationError, AuthorizationError, DownForMaintenanceError,
     ServerError, UpgradeRequiredError, NotFoundError
@@ -10,13 +11,9 @@ class BraintreePaymentMethod(PaymentMethod):
         proxy = True
 
     @property
-    def sdk(self):
-        return self.payment_processor.sdk
-
-    @property
     def braintree_transaction(self):
         try:
-            return self.sdk.Transaction.find(self.braintree_id)
+            return sdk.Transaction.find(self.braintree_id)
         except NotFoundError:
             return None
 
@@ -27,7 +24,7 @@ class BraintreePaymentMethod(PaymentMethod):
     @property
     def client_token(self):
         try:
-            return self.sdk.ClientToken.generate({
+            return sdk.ClientToken.generate({
                 'customer_id': self.braintree_id
             })
         except (AuthenticationError, AuthorizationError, DownForMaintenanceError,

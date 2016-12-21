@@ -5,7 +5,7 @@ from django.db import migrations, models
 import silver.models.payment_processors.fields
 import django_fsm
 import silver.models.payment_processors.manual
-import payment_processors.braintree.payment_processors
+import payment_processors.braintree_processor.payment_processors
 
 
 class Migration(migrations.Migration):
@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='paymentmethod',
             name='payment_processor',
-            field=silver.models.payment_processors.fields.PaymentProcessorField(max_length=64, choices=[(payment_processors.braintree.payment_processors.BraintreeTriggered(), b'BraintreeTriggered'), (silver.models.payment_processors.manual.ManualProcessor(), b'Manual')]),
+            field=silver.models.payment_processors.fields.PaymentProcessorField(max_length=64, choices=[(payment_processors.braintree_processor.payment_processors.BraintreeTriggered(), b'BraintreeTriggered'), (silver.models.payment_processors.manual.ManualProcessor(), b'Manual')]),
         ),
         migrations.AlterField(
             model_name='transaction',

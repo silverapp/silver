@@ -1,0 +1,194 @@
+{% load staticfiles %}
+
+    {% if payment_method %}
+        <h3>Current Payment Method</h3>
+        <img src="{{ payment_method.image_url }}" alt="{{ payment_method.name }}"/>
+        {% if payment_method.name == 'PayPalAccount' %}
+            <b>{{ payment_method.email }}</b>
+        {% elif payment_method.name == 'CreditCard' %}
+            <b>{{ payment_method.card_type }}</b>
+            xxxx xxxx xxxx <b>{{ payment_method.last_4 }}</b>
+        {% endif %}
+        <style type="text/css">
+            div:target {display: block; visibility: visible}
+        </style>
+        <a href="#payment-method-form">Change payment method</a>
+    {% else %}
+        {% if payments_recurring %}
+            <h3>Add Payment Method</h3>
+            <p>We're using recurring billing, meaning that all your invoices will be charged automatically{% if client_token %} after you define your payment method in the form below{% endif %}. No other action is required from your side and you'll get notifications regarding all payment activity at the billing e-mail defined on your <a href="{% url 'accounts_profile'%}">Profile</a>.</p>
+        {% else %}
+            <h4>Pay selected</h4>
+            <p>After providing a payment method below, Braintree will securely process the payment on our behalf.<br>
+               The transaction may take a while to process, time in which the payment will be <strong>pending</strong>.
+            </p>
+        {% endif %}
+    {% endif %}
+
+    <div id="payment-method-form"{% if payment_method %} class="hidden"{% endif %}>
+        {% if not client_token %}
+            <p>You can't pay at the moment. Please try again later.</p>
+        {% else %}
+            {% if payment_method %} <hr> {% endif %}
+            <ul id="braintree-tabs" class="nav nav-tabs">
+                <li class="active">
+                    <a data-toggle="credit-card" href="#credit-card">Credit card</a>
+                </li>
+                <li>
+                    <a data-toggle="paypal" href="#paypal">PayPal</a>
+                </li>
+            </ul>
+
+            {% if not payments_recurring %}
+            <form id="3ds-form" method="post" action="{{ endpoint }}">
+                <input id="3ds-payment-id" type="hidden" name="payment-id"/>
+                <input id="3ds-payment-nonce" type="hidden" name="3ds-payment-nonce"/>
+                <input id="3ds-cardholder-name" type="hidden" name="cardholder_name"/>
+                <input id="3ds-postal-code" type="hidden" name="postal_code"/>
+                <input type="hidden" name="payment-type" value="credit-card"/>
+                {% csrf_token %}
+            </form>
+            {% endif %}
+
+            <form class="form-horizontal" id="braintree-form" name="braintree-form" method="post" action="{{ endpoint }}">
+                {% if not payments_recurring %}
+                <input id="payment-id" type="hidden" name="payment-id"/>
+                {% endif %}
+                {% csrf_token %}
+                <input id="payment-type" type="hidden" name="payment-type"/>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="credit-card">
+                        <div id="card-error-message" class="alert alert-error hidden"></div>
+                        {% include "elements/form.html" with form=form %}
+                    </div>
+                    <div class="tab-pane" id="paypal">
+                        <div id="paypal-error-message" class="alert alert-error hidden"></div>
+                        <p>Click on the PayPal button below to reveal the login popup.</p>
+                        <div id="paypal-button"></div>
+                    </div>
+                </div>
+
+                {% if client_token %}
+                    <p><br><b>NOTE:</b> We do not store the billing details you provide here. Instead, we securely pass them to our payments service provider.</p>
+                {% endif %}
+
+                <div class="form-actions fixed">
+
+                    <button id="submit" type="submit" class="braintree-button">
+                        <img src={% if payments_recurring %}"{% static 'images/send-to-braintree.png' %}"{% else %}"{% static 'images/pay-now.png' %}"{% endif %} style="height:48px; border: 0;{% if not payments_recurring %}margin-left: 60px;{% endif %}"/>
+                    </button>
+
+                </div>
+            </form>
+        {% endif %}
+    </div>
+
+    <script src="https://js.braintreegateway.com/v2/braintree.js"></script>
+    <script>
+    var clientToken = "{{ client_token }}";
+
+    braintree.setup(clientToken, "custom", {
+        id: "braintree-form",
+        paypal: {
+            container: "paypal-button"
+        }
+    });
+
+    {% if not payments_recurring %}
+    document.getElementsByClassName("payment-radio")[0].checked = true;
+
+    var form = document.getElementById("braintree-form");
+    form.onsubmit = function() {
+        var payments = document.getElementsByClassName("payment-radio");
+
+        for (var i = 0; i < payments.length; i++) {
+            if (payments[i].checked) {
+                var input = document.getElementById("payment-id");
+                input.value = payments[i].value;
+            }
+        }
+    };
+
+    var client = new braintree.api.Client({
+        clientToken: clientToken
+    });
+
+    var modalIsRequested = false;
+    var modalIsReady = false;
+
+    function revealErrorMessage(error) {
+        message = document.getElementById("card-error-message");
+        message.innerHTML = error
+        if(message.classList.contains('hidden')) {
+            message.classList.remove('hidden');
+        }
+    }
+
+    function hideErrorMessage() {
+        message = document.getElementById("card-error-message");
+        if(!message.classList.contains('hidden')) {
+            message.classList.add('hidden');
+        }
+    }
+
+    function removeDefaultLoader() {
+        // check if braintree implemented a better way of doing this
+        svg = document.getElementById("loader-1");
+        if(svg) {
+            loader = svg.parentNode.parentNode.parentNode;
+            loader.parentNode.removeChild(loader);
+        }
+    }
+
+    function verify3DS(paymentDocumentIndex) {
+        hideErrorMessage();
+        modalIsRequested = true;
+
+        var amounts = document.getElementsByClassName("amount-due");
+
+        client.verify3DS({
+            amount: amounts[paymentDocumentIndex].innerHTML,
+            creditCard: {
+                // required parameters
+                number: document.getElementById("id-card-number").value,
+                expirationDate: document.getElementById("id-exp-date").value,
+
+                // optional parameters
+                cardholderName: document.getElementById("id-cardholder-name").value,
+                cvv: document.getElementById("id-cvv").value,
+                billingAddress: {
+                    postalCode: document.getElementById("id-postal-code").value,
+                }
+            },
+            onLookupComplete: function () {
+                modalIsReady = true;
+            },
+            onUserClose: function () {
+                modalIsReady = false;
+                modalIsRequested = false;
+                removeDefaultLoader();
+            }
+        }, function (error, response) {
+            removeDefaultLoader();
+            modalIsReady = false;
+            modalIsRequested = false;
+
+            if (!error) {
+                var input = document.getElementById("3ds-payment-nonce");
+                input.value = response.nonce;
+
+                input = document.getElementById("3ds-cardholder-name");
+                input.value = document.getElementById("id-cardholder-name").value;
+
+                input = document.getElementById("3ds-postal-code");
+                input.value = document.getElementById("id-postal-code").value;
+
+                //document.getElementById('3ds-form').submit();
+            }
+            else {
+                revealErrorMessage("There was a problem when going through the 3D Secure procedure. Make sure you have correctly filled the required fields.");
+            }
+        });
+    };
+    {% endif %}
+    </script>
