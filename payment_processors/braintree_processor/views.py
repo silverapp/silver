@@ -11,7 +11,7 @@ class BraintreeTransactionView(GenericTransactionView):
     form_class = BraintreeTransactionForm
 
     def post(self, request, transaction):
-        payment_method_nonce = request.data.get('payment_method_nonce')
+        payment_method_nonce = request.POST.get('payment_method_nonce')
         if not payment_method_nonce:
             message = 'The payment method nonce was not provided.'
             return HttpResponseBadRequest(message)
@@ -24,10 +24,10 @@ class BraintreeTransactionView(GenericTransactionView):
         # initialize the payment method
         initial_data = {
             'nonce': payment_method_nonce,
-            'is_recurring': request.data.get('is_recurring', False),
+            'is_recurring': request.POST.get('is_recurring', False),
             'billing_details': {
-                'cardholder_name': request.data.get('cardholder_name'),
-                'postal_code': request.data.get('postal_code')
+                'cardholder_name': request.POST.get('cardholder_name'),
+                'postal_code': request.POST.get('postal_code')
             }
         }
 
