@@ -4,177 +4,21 @@
 {% endblock %}
 
 {% block form %}
+    <form action="{{ form.request.path }}" method="post">
+        {{ form }}
+        <div id="payment-form"></div>
+        <input type="submit" value="Pay"/>
+    </form>
+
     {% include "forms/braintreetriggered/braintree_ui.html" %}
-    {{ block.super }}
 {% endblock %}
 
 {% block scripts %}
-    <script src="https://js.braintreegateway.com/v2/braintree.js"></script>
-    <script>
-    var clientToken = "{{ client_token }}";
-
-    braintree.setup(clientToken, "custom", {
-        id: "braintree-form",
-        paypal: {
-            container: "paypal-button"
-        }
-    });
-
-    {% if not payments_recurring %}
-    document.getElementsByClassName("payment-radio")[0].checked = true;
-
-    var form = document.getElementById("braintree-form");
-    form.onsubmit = function() {
-        var payments = document.getElementsByClassName("payment-radio");
-
-        for (var i = 0; i < payments.length; i++) {
-            if (payments[i].checked) {
-                var input = document.getElementById("payment-id");
-                input.value = payments[i].value;
-            }
-        }
-    };
-
-    var client = new braintree.api.Client({
-        clientToken: clientToken
-    });
-
-    var modalIsRequested = false;
-    var modalIsReady = false;
-
-    function revealErrorMessage(error) {
-        message = document.getElementById("card-error-message");
-        message.innerHTML = error
-        if(message.classList.contains('hidden')) {
-            message.classList.remove('hidden');
-        }
-    }
-
-    function hideErrorMessage() {
-        message = document.getElementById("card-error-message");
-        if(!message.classList.contains('hidden')) {
-            message.classList.add('hidden');
-        }
-    }
-
-    function removeDefaultLoader() {
-        // check if braintree implemented a better way of doing this
-        svg = document.getElementById("loader-1");
-        if(svg) {
-            loader = svg.parentNode.parentNode.parentNode;
-            loader.parentNode.removeChild(loader);
-        }
-    }
-
-    function verify3DS(paymentDocumentIndex) {
-        hideErrorMessage();
-        modalIsRequested = true;
-
-        var amounts = document.getElementsByClassName("amount-due");
-
-        client.verify3DS({
-            amount: amounts[paymentDocumentIndex].innerHTML,
-            creditCard: {
-                // required parameters
-                number: document.getElementById("id-card-number").value,
-                expirationDate: document.getElementById("id-exp-date").value,
-
-                // optional parameters
-                cardholderName: document.getElementById("id-cardholder-name").value,
-                cvv: document.getElementById("id-cvv").value,
-                billingAddress: {
-                    postalCode: document.getElementById("id-postal-code").value,
-                }
-            },
-            onLookupComplete: function () {
-                modalIsReady = true;
-            },
-            onUserClose: function () {
-                modalIsReady = false;
-                modalIsRequested = false;
-                removeDefaultLoader();
-            }
-        }, function (error, response) {
-            removeDefaultLoader();
-            modalIsReady = false;
-            modalIsRequested = false;
-
-            if (!error) {
-                var input = document.getElementById("3ds-payment-nonce");
-                input.value = response.nonce;
-
-                input = document.getElementById("3ds-cardholder-name");
-                input.value = document.getElementById("id-cardholder-name").value;
-
-                input = document.getElementById("3ds-postal-code");
-                input.value = document.getElementById("id-postal-code").value;
-
-                //document.getElementById('3ds-form').submit();
-            }
-            else {
-                revealErrorMessage("There was a problem when going through the 3D Secure procedure. Make sure you have correctly filled the required fields.");
-            }
+    <script src="https://js.braintreegateway.com/js/braintree-2.27.0.min.js"></script>
+    <script type="text/javascript">
+        var client_token = "{{ form.payment_method.payment_processor.client_token }}";
+        braintree.setup(client_token, "paypal", {
+            container: "payment-form"
         });
-    };
-    {% endif %}
-    </script>
-    <script>
-    function revealErrorMessage(error) {
-        message = document.getElementById("paypal-error-message");
-        message.innerHTML = error;
-        if(message.classList.contains('hidden')) {
-            message.classList.remove('hidden');
-        }
-    }
-
-    function hideErrorMessage() {
-        message = document.getElementById("paypal-error-message");
-        if(!message.classList.contains('hidden')) {
-            message.classList.add('hidden');
-        }
-    }
-
-    $('#submit').click(function(event) {
-        var type = $('#braintree-tabs li.active a').attr('data-toggle');
-        $('#payment-type').val(type);
-
-        if(type == 'paypal') {
-            var nonces = document.getElementsByName['payment_method_nonce'];
-            var nonce = document.forms["braintree-form"]["payment_method_nonce"].value
-            if(nonce == null || nonce == "") {
-                revealErrorMessage("You haven't entered your PayPal credentials.");
-                return false;
-            }
-        }
-    });
-
-    $('#payment-method-form').submit(function(event) {
-        var type = $('#braintree-tabs li.active a').attr('data-toggle');
-        $('#payment-type').val(type);
-
-        {% if not payments_recurring %}
-        if(type == 'credit-card') {
-            var input = document.getElementById("3ds-payment-nonce");
-
-            if(!input.value) {
-                event.preventDefault();
-
-                var paymentDocumentIndex = -1;
-                var payments = document.getElementsByClassName("payment-radio");
-                for (var i = 0; i < payments.length; i++) {
-                    if (payments[i].checked) {
-                        var input = document.getElementById("3ds-payment-id");
-                        input.value = payments[i].value;
-                        paymentDocumentIndex = i;
-                    }
-                }
-
-                if (!modalIsRequested) {
-                    verify3DS(paymentDocumentIndex);
-                }
-            }
-        }
-        {% endif %}
-    });
     </script>
 {% endblock %}

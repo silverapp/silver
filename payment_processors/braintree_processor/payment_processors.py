@@ -1,4 +1,4 @@
-import braintree as sdk
+import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
@@ -15,12 +15,12 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
     def setup(self, data):
         environment = data.pop('environment', None)
-        sdk.Configuration.configure(environment, **data)
+        braintree.Configuration.configure(environment, **data)
 
     @property
     def client_token(self):
         try:
-            return sdk.ClientToken.generate()
+            return braintree.ClientToken.generate()
         except (AuthenticationError, AuthorizationError, DownForMaintenanceError,
                 ServerError, UpgradeRequiredError):
             return None
@@ -32,4 +32,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         pass
 
     def manage_transaction(self, transaction):
-        pass
+        result = braintree.Transaction.sale({
+            'amount': transaction.amount,
+            'payment_method_nonce': ''
+        })

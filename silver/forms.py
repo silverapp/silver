@@ -29,4 +29,9 @@ class GenericTransactionForm(Form):
             'forms/transaction_form.html'
         ])
 
-        return template.render(context=self.get_context(), request=self.request)
+        return template.render(context={
+            'payment_method': self.payment_method,
+            'transaction': self.transaction,
+            'document': self.transaction.document,
+            'form': self
+        })
