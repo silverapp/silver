@@ -34,5 +34,5 @@ class BraintreeTransactionForm(GenericTransactionForm):
     def get_context(self):
         context = super(BraintreeTransactionForm, self).get_context()
         context['client_token'] = self.transaction.payment_method.client_token
-        print context['client_token'], 'client_token'
+
         return context
