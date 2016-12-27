@@ -68,7 +68,7 @@ class TestProviderEndpoints(APITestCase):
             "invoice_starting_number": 1,
             "proforma_series": "TestSeries",
             "proforma_starting_number": 1,
-            "meta": None,
+            "meta": {},
         }
 
         for attr, value in expected_data.iteritems():
