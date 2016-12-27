@@ -26,6 +26,7 @@ RUN set -ex \
         zlib \
         ca-certificates wget \
         openssl \
+        libffi-dev \
     && apk add --no-cache --virtual .build-deps \
         build-base \
         mariadb-dev \
