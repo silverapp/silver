@@ -1,0 +1,80 @@
+{% load staticfiles %}
+
+<!-- Load the client component. -->
+<script src="https://js.braintreegateway.com/web/3.6.3/js/client.min.js"></script>
+
+<!-- Load the PayPal component. -->
+<script src="https://js.braintreegateway.com/web/3.6.3/js/paypal.min.js"></script>
+
+<script>
+var paypalButton = document.querySelector('.paypal-button');
+
+// Create a client.
+braintree.client.create({
+  // The client_token should be loaded via an asynchronous request to reduce
+  // the page load time. But requires an authentication method for the customer.
+  authorization: "{{ client_token }}"
+}, function (clientErr, clientInstance) {
+
+  // Stop if there was a problem creating the client.
+  // This could happen if there is a network error or if the authorization
+  // is invalid.
+  if (clientErr) {
+    console.error('Error creating client:', clientErr);
+    return;
+  }
+
+  // Create a PayPal component.
+  braintree.paypal.create({
+    client: clientInstance
+  }, function (paypalErr, paypalInstance) {
+
+    // Stop if there was a problem creating PayPal.
+    // This could happen if there was a network error or if it's incorrectly
+    // configured.
+    if (paypalErr) {
+      console.error('Error creating PayPal:', paypalErr);
+      return;
+    }
+
+    // Enable the button.
+    paypalButton.removeAttribute('disabled');
+
+    // When the button is clicked, attempt to tokenize.
+    paypalButton.addEventListener('click', function (event) {
+
+      // Because tokenization opens a popup, this has to be called as a result of
+      // customer action, like clicking a button—you cannot call this at any time.
+      paypalInstance.tokenize({
+        flow: 'vault'
+      }, function (tokenizeErr, payload) {
+
+        // Stop if there was an error.
+        if (tokenizeErr) {
+          if (tokenizeErr.type !== 'CUSTOMER') {
+            console.error('Error tokenizing:', tokenizeErr);
+          }
+          return;
+        }
+
+        // Tokenization succeeded!
+        paypalButton.setAttribute('disabled', true);
+        console.log('Got a nonce! You should submit this to your server.');
+        console.log(payload.nonce);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', window.location.href, true);
+        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhr.onload = function () {
+            // do something to response
+            console.log(this.responseText);
+        };
+        xhr.send('payment_method_nonce='+payload.nonce);
+
+      });
+
+    }, false);
+
+  });
+
+});
+</script>

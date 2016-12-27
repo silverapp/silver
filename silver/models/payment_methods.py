@@ -41,7 +41,7 @@ class PaymentMethod(models.Model):
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
     verified_at = models.DateTimeField(null=True, blank=True)
-    data = JSONField(blank=True, null=True)
+    data = JSONField(blank=True, null=True, default={})
 
     objects = InheritanceManager()
 
@@ -172,10 +172,14 @@ class PaymentMethod(models.Model):
 
     @property
     def is_usable(self):
-        if not self.state in [self.States.Unverified, self.States.Enabled]:
+        if self.state not in [self.States.Unverified, self.States.Enabled]:
             return False
 
         return True
+
+    @property
+    def is_recurring(self):
+        return False
 
     def __unicode__(self):
         return u'{} - {}'.format(self.customer, self.processor)

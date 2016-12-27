@@ -2,10 +2,8 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import silver.models.payment_processors.fields
+import jsonfield.fields
 import django_fsm
-import silver.models.payment_processors.manual
-import payment_processors.braintree_processor.payment_processors
 
 
 class Migration(migrations.Migration):
@@ -17,8 +15,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterField(
             model_name='paymentmethod',
+            name='data',
+            field=jsonfield.fields.JSONField(default={}, null=True, blank=True),
+        ),
+        migrations.AlterField(
+            model_name='paymentmethod',
             name='payment_processor',
-            field=silver.models.payment_processors.fields.PaymentProcessorField(max_length=64, choices=[(payment_processors.braintree_processor.payment_processors.BraintreeTriggered(), b'BraintreeTriggered'), (silver.models.payment_processors.manual.ManualProcessor(), b'Manual')]),
+            field=models.CharField(max_length=256, choices=[(b'manual', b'Manual'), (b'braintree', b'Braintree')]),
         ),
         migrations.AlterField(
             model_name='transaction',

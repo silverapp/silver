@@ -107,22 +107,24 @@
         {% block payment_processor %}
         {% endblock %}
 
-        {% block form %}
-        <div id="form">
-            <h1>Amount: {{ transaction.amount }} {{ transaction.currency }}</h1>
-            <form action="{{ request.path }}" method="post">
+        {% if transaction.state == transaction.States.Initial %}
+            {% block form %}
+            <div id="form">
+                <h1>Amount: {{ transaction.amount }} {{ transaction.currency }}</h1>
                 {{ form }}
-                <input type="submit" value="Pay" />
-            </form>
-        </div>
-        {% endblock %}
+            {% endblock %}
+        {% else %}
+            {% block transaction %}
+                <h3> The payment is {{ transaction.state }}.</h3>
+            {% endblock %}
+        {% endif %}
 
         {% block document %}
             <div id="content">
                 <table id="parties">
                     <tr>
                         <td width="8cm">
-                            <h1>Issuer: {{ provider.billing_name }}</h1>
+                            <h3>Issuer: {{ provider.billing_name }}</h3>
 
                             <strong>Address</strong>: {{ provider.address_1 }}<br>
 
@@ -149,7 +151,7 @@
                             {% endif %}
                         </td>
                         <td width="8cm">
-                            <h1>Customer: {{ customer.billing_name }}</h1>
+                            <h3>Customer: {{ customer.billing_name }}</h3>
 
                             {% if customer.sales_tax_number %}
                                 <strong>Tax ID</strong>: {{ customer.sales_tax_number }}<br>

@@ -168,8 +168,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
             message = '{} -> {}: code got {{}} expected {{}}'.format(old, new)
             if (old, new) in valid_transition_list:
-                if old == new == 'uninitialized':
-                    print response
                 self.assertEqual(response.status_code,
                                  status.HTTP_200_OK,
                                  message.format(response.status_code,

@@ -11,6 +11,10 @@ class BraintreePaymentMethod(PaymentMethod):
     class Meta:
         proxy = True
 
+    class Type:
+        PayPal = 'PayPalAccount'
+        CreditCard = 'CreditCard'
+
     @transition(field='state',
                 **PaymentMethod.state_transitions['initialize_unverified'])
     def initialize_unverified(self, initial_data=None):
@@ -89,3 +93,7 @@ class BraintreePaymentMethod(PaymentMethod):
             return False
 
         return super(BraintreePaymentMethod, self).is_usable
+
+    @property
+    def public_data(self):
+        return self.data.get('details')

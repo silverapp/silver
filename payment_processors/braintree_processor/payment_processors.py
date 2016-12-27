@@ -15,9 +15,19 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
     view_class = BraintreeTransactionView
     payment_method_class = BraintreePaymentMethod
 
-    def setup(self, data):
-        environment = data.pop('environment', None)
-        braintree.Configuration.configure(environment, **data)
+    _has_been_setup = False
+
+    def __init__(self, *args, **kwargs):
+        if BraintreeTriggered._has_been_setup:
+            return
+
+        environment = kwargs.pop('environment', None)
+
+        braintree.Configuration.configure(environment, **kwargs)
+
+        BraintreeTriggered._has_been_setup = True
+
+        super(BraintreeTriggered, self).__init__(*args, **kwargs)
 
     @property
     def client_token(self):
@@ -42,20 +52,24 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                       braintreeSDK result payment method.
         """
 
-        payment_method.data['type'] = result_payment_method.__class__.__name__
+        payment_method_details = {
+            'type': result_payment_method.__class__.__name__
+        }
 
-        if payment_method.data['type'] == 'PayPalAccount':
-            payment_method.data['email'] = result_payment_method.email
-        elif payment_method.data['type'] == 'CreditCard':
-            payment_method.data.update({
+        if payment_method_details['type'] == payment_method.Type.PayPal:
+            payment_method_details['email'] = result_payment_method.email
+        elif payment_method_details['type'] == payment_method.Type.CreditCard:
+            payment_method_details.update({
                 'card_type': result_payment_method.card_type,
                 'last_4': result_payment_method.last_4,
             })
 
-        payment_method.data.update({
+        payment_method_details.update({
             'image_url': payment_method.image_url,
             'added_at': timezone.now().isoformat()
         })
+
+        payment_method.data['details'] = payment_method_details
 
         try:
             if payment_method.is_recurring:
@@ -79,6 +93,9 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         :description: Updates a given transaction's data with data from a
                       braintreeSDK result payment method.
         """
+
+        if not transaction.data:
+            transaction.data = {}
 
         transaction.data.update({
             'status': result_transaction.status,
