@@ -43,7 +43,7 @@ class BaseBillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    meta = JSONField(blank=True, null=True)
+    meta = JSONField(blank=True, null=True, default={})
 
     class Meta:
         abstract = True

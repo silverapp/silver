@@ -1,1 +1,1 @@
-from .payment_processors import BraintreeTriggered
+from .models import BraintreeTriggered

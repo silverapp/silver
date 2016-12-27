@@ -34,7 +34,7 @@ class BraintreeTransactionView(GenericTransactionView):
         try:
             payment_method.initialize_unverified(initial_data)
             payment_method.save()
-        except TransitionNotAllowed:
+        except TransitionNotAllowed as e:
             # TODO handle this
             return HttpResponse('Something went wrong!')
 
