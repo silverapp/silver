@@ -1,53 +1,59 @@
+import importlib
 import traceback
-from functools import wraps
 
 from django.conf import settings
 
 
-def ready(func):
-    @wraps(func)
-    def func_wrapper(cls, *args, **kwargs):
-        if not cls._processors_registered:
-            cls.register_processors()
-        return func(cls, *args, **kwargs)
-    return func_wrapper
-
-
 class PaymentProcessorManager(object):
-    processors = {}
-
-    _processors_registered = False
-
     class DoesNotExist(Exception):
         pass
 
     @classmethod
-    def register(cls, processor_class, setup_data=None):
-        name = processor_class.name.lower()
-        if name not in cls.processors:
-            cls.processors[name] = processor_class()
-            cls.processors[name].setup(setup_data)
-
-    @classmethod
-    def unregister(cls, processor_class):
-        name = processor_class.name.lower()
-        if name in cls.processors:
-            del cls.processors[name]
-
-    @classmethod
-    @ready
-    def get(cls, name):
+    def get_class(cls, reference):
         try:
-            return cls.processors[name.lower()]
+            data = settings.PAYMENT_PROCESSORS[reference]
         except KeyError:
             raise cls.DoesNotExist
 
-    @classmethod
-    @ready
-    def all(cls):
-        return [value for key, value in cls.processors.items()]
+        full_path = data['path']
+        path, processor = full_path.rsplit('.', 1)
+
+        try:
+            module = importlib.import_module(path)
+            klass = getattr(module, processor, None)
+        except Exception as e:
+            traceback.print_exc()
+            raise ImportError(
+                "Couldn't import '{}' from '{}'\nReason: {}".format(processor, path, e)
+            )
+        if not klass:
+            raise ImportError(
+                "Couldn't import '{}' from '{}'".format(processor, path)
+            )
+        return klass
 
     @classmethod
+    def get_instance(cls, reference):
+        try:
+            data = settings.PAYMENT_PROCESSORS[reference]
+        except KeyError:
+            raise cls.DoesNotExist
+        klass = cls.get_class(reference)
+
+        instance = klass(**data.get('settings', {}))
+        instance.reference = reference
+        instance.display_name = data.get('display_name')
+
+        return instance
+
+    @classmethod
+    def all(cls):
+        return settings.PAYMENT_PROCESSORS.keys()
+
+    @classmethod
+    def all_instances(cls):
+        return [cls.get_instance(processor_name) for processor_name in cls.all()]
+
     def register_processors(cls):
         for processor_path, setup_data in settings.PAYMENT_PROCESSORS:
             path, processor = processor_path.rsplit('.', 1)
@@ -67,9 +73,8 @@ class PaymentProcessorManager(object):
         cls._processors_registered = True
 
     @classmethod
-    @ready
     def get_choices(cls):
-        return list(
-            (processor, processor.name) for name, processor in
-            cls.processors.items()
-        )
+        return [
+            (name, data.get('display_name', name))
+            for name, data in settings.PAYMENT_PROCESSORS.items()
+        ]

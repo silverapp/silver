@@ -53,8 +53,8 @@ class Transaction(models.Model):
 
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
-    proforma = models.OneToOneField("Proforma", null=True, blank=True)
-    invoice = models.OneToOneField("Invoice", null=True, blank=True)
+    proforma = models.ForeignKey("Proforma", null=True, blank=True)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True)
     payment_method = models.ForeignKey('PaymentMethod')
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
@@ -136,7 +136,7 @@ class Transaction(models.Model):
 
     @property
     def payment_processor(self):
-        return self.payment_method.payment_processor
+        return self.payment_method.processor
 
     def __unicode__(self):
         return unicode(self.uuid)

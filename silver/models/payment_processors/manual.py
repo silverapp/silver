@@ -1,10 +1,9 @@
+from .base import PaymentProcessorBase
+from .mixins import ManualProcessorMixin
 from silver.views import GenericTransactionView
 
-from .generics import GenericPaymentProcessor, ManualProcessorMixin
 
-
-class ManualProcessor(GenericPaymentProcessor, ManualProcessorMixin):
-    name = "Manual"
+class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):
     view_class = GenericTransactionView
 
     @staticmethod

@@ -54,6 +54,7 @@ EXTERNAL_APPS = [
     'rest_framework',
     'django_filters',
     'django_xhtml2pdf',
+    'payment_processors'
 
     # Dev tools
     # 'django_extensions',
@@ -78,8 +79,9 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'APP_DIRS': True,
         'DIRS': [
+            PROJECT_ROOT + '/payment_processors/templates/',
             PROJECT_ROOT + '/templates/',
-            PROJECT_ROOT + '/silver/templates/'
+            PROJECT_ROOT + '/silver/templates/',
         ],
         'OPTIONS': {
             'context_processors': (
@@ -150,11 +152,14 @@ LOGGING['formatters']['verbose'] = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-PAYMENT_PROCESSORS = [
-    # (processor.path, setup.data)
-    ('silver.models.payment_processors.manual.ManualProcessor', {}),
-]
+PAYMENT_PROCESSORS = {
+    'manual': {
+        'path': 'silver.models.payment_processors.manual.ManualProcessor',
+        'display_name': 'Manual'
+    },
+}
 
+PAYMENT_METHOD_SECRET = b'YOUR_FERNET_KEY_HERE'  # Fernet.generate_key()
 try:
     from settings_local import *
 except ImportError:

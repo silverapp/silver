@@ -1,196 +1,200 @@
 [
-{
-  "fields": {
-    "city": "Timisoara",
-    "consolidated_billing": false,
-    "name": "Gigel",
-    "extra": "",
-    "sales_tax_name": "",
-    "country": "RO",
-    "company": "",
-    "state": "",
-    "sales_tax_percent": null,
-    "live": true,
-    "meta": null,
-    "address_1": "adresa 1",
-    "address_2": "",
-    "payment_due_days": 5,
-    "sales_tax_number": "",
-    "customer_reference": "",
-    "emails": "[u'[]']",
-    "zip_code": ""
-  },
-  "model": "silver.customer",
-  "pk": 1
-},
-{
-  "fields": {
-    "city": "London",
-    "consolidated_billing": false,
-    "name": "Ionica",
-    "extra": "",
-    "sales_tax_name": "",
-    "country": "GB",
-    "company": "",
-    "state": "",
-    "sales_tax_percent": null,
-    "live": true,
-    "meta": null,
-    "address_1": "adresa 2",
-    "address_2": "",
-    "payment_due_days": 5,
-    "sales_tax_number": "",
-    "customer_reference": "",
-    "emails": "[u'[]']",
-    "zip_code": ""
-  },
-  "model": "silver.customer",
-  "pk": 2
-},
-{
-  "fields": {
-    "city": "Timisoara",
-    "proforma_series": "pl",
-    "name": "provider1",
-    "display_email": "random@test.com",
-    "extra": "",
-    "country": "RO",
-    "company": "",
-    "flow": "proforma",
-    "state": "",
-    "invoice_starting_number": 1,
-    "live": true,
-    "meta": null,
-    "address_1": "Random address",
-    "address_2": "",
-    "proforma_starting_number": 1,
-    "notification_email": "random@test.com",
-    "invoice_series": "pl",
-    "default_document_state": "draft",
-    "zip_code": ""
-  },
-  "model": "silver.provider",
-  "pk": 1
-},
-{
-  "fields": {
-    "proforma": 1,
-    "description": "pageviews description",
-    "end_date": null,
-    "prorated": true,
-    "unit_price": "10.0000",
-    "invoice": null,
-    "product_code": 1,
-    "start_date": null,
-    "unit": "pageviews",
-    "quantity": "1000.0000"
-  },
-  "model": "silver.documententry",
-  "pk": 1
-},
-{
-  "fields": {
-    "customer": 1,
-    "due_date": "2016-12-11",
-    "issue_date": "2016-12-06",
-    "state": "issued",
-    "series": "pl",
-    "sales_tax_name": "",
-    "provider": 1,
-    "number": 1,
-    "currency": "USD",
-    "cancel_date": null,
-    "paid_date": null,
-    "invoice": null,
-    "archived_provider": {
-      "city": "Timisoara",
-      "name": "provider1",
-      "display_email": "random@test.com",
-      "extra": "",
-      "country": "RO",
-      "company": "",
-      "state": "",
-      "meta": null,
-      "address_1": "Random address",
-      "address_2": "",
-      "notification_email": "random@test.com",
-      "zip_code": "",
-      "proforma_series": "pl"
+    {
+        "fields": {
+            "city": "Timisoara",
+            "consolidated_billing": false,
+            "name": "Gigel",
+            "extra": "",
+            "sales_tax_name": "",
+            "country": "RO",
+            "company": "",
+            "state": "",
+            "sales_tax_percent": null,
+            "live": true,
+            "meta": null,
+            "address_1": "adresa 1",
+            "address_2": "",
+            "payment_due_days": 5,
+            "sales_tax_number": "",
+            "customer_reference": "",
+            "emails": "[u'[]']",
+            "zip_code": ""
+        },
+        "model": "silver.customer",
+        "pk": 1
     },
-    "pdf": "documents/provider1/proformas/2016/12/Proforma_pl-1.pdf",
-    "archived_customer": {
-      "city": "Timisoara",
-      "consolidated_billing": false,
-      "extra": "",
-      "country": "RO",
-      "company": "",
-      "sales_tax_percent": null,
-      "state": "",
-      "meta": null,
-      "address_1": "adresa 1",
-      "address_2": "",
-      "payment_due_days": 5,
-      "sales_tax_number": "",
-      "zip_code": "",
-      "customer_reference": "",
-      "emails": [
-        "[]"
-      ],
-      "name": "Gigel"
+    {
+        "fields": {
+            "city": "London",
+            "consolidated_billing": false,
+            "name": "Ionica",
+            "extra": "",
+            "sales_tax_name": "",
+            "country": "GB",
+            "company": "",
+            "state": "",
+            "sales_tax_percent": null,
+            "live": true,
+            "meta": null,
+            "address_1": "adresa 2",
+            "address_2": "",
+            "payment_due_days": 5,
+            "sales_tax_number": "",
+            "customer_reference": "",
+            "emails": "[u'[]']",
+            "zip_code": ""
+        },
+        "model": "silver.customer",
+        "pk": 2
     },
-    "sales_tax_percent": null
-  },
-  "model": "silver.proforma",
-  "pk": 1
-},
-{
-  "fields": {
-    "value": "pv"
-  },
-  "model": "silver.productcode",
-  "pk": 1
-},
-{
-  "fields": {
-    "customer": 1,
-    "added_at": "2016-12-06T10:22:30Z",
-    "verified_at": null,
-    "state": "uninitialized",
-    "payment_processor": "Manual",
-    "data": null
-  },
-  "model": "silver.paymentmethod",
-  "pk": 1
-},
-{
-  "fields": {
-    "customer": 2,
-    "added_at": "2016-12-06T10:22:52Z",
-    "verified_at": null,
-    "state": "uninitialized",
-    "payment_processor": "Manual",
-    "data": {
-      "key": "random"
+    {
+        "fields": {
+            "city": "Timisoara",
+            "proforma_series": "pl",
+            "name": "provider1",
+            "display_email": "random@test.com",
+            "extra": "",
+            "country": "RO",
+            "company": "",
+            "flow": "proforma",
+            "state": "",
+            "invoice_starting_number": 1,
+            "live": true,
+            "meta": null,
+            "address_1": "Random address",
+            "address_2": "",
+            "proforma_starting_number": 1,
+            "notification_email": "random@test.com",
+            "invoice_series": "pl",
+            "default_document_state": "draft",
+            "zip_code": ""
+        },
+        "model": "silver.provider",
+        "pk": 1
+    },
+    {
+        "fields": {
+            "proforma": 1,
+            "description": "pageviews description",
+            "end_date": null,
+            "prorated": true,
+            "unit_price": "10.0000",
+            "invoice": null,
+            "product_code": 1,
+            "start_date": null,
+            "unit": "pageviews",
+            "quantity": "1000.0000"
+        },
+        "model": "silver.documententry",
+        "pk": 1
+    },
+    {
+        "fields": {
+            "customer": 1,
+            "due_date": "2016-12-11",
+            "issue_date": "2016-12-06",
+            "state": "issued",
+            "series": "pl",
+            "sales_tax_name": "",
+            "provider": 1,
+            "number": 1,
+            "currency": "USD",
+            "cancel_date": null,
+            "paid_date": null,
+            "invoice": null,
+            "archived_provider": {
+                "city": "Timisoara",
+                "name": "provider1",
+                "display_email": "random@test.com",
+                "extra": "",
+                "country": "RO",
+                "company": "",
+                "state": "",
+                "meta": null,
+                "address_1": "Random address",
+                "address_2": "",
+                "notification_email": "random@test.com",
+                "zip_code": "",
+                "proforma_series": "pl"
+            },
+            "pdf": "documents/provider1/proformas/2016/12/Proforma_pl-1.pdf",
+            "archived_customer": {
+                "city": "Timisoara",
+                "consolidated_billing": false,
+                "extra": "",
+                "country": "RO",
+                "company": "",
+                "sales_tax_percent": null,
+                "state": "",
+                "meta": null,
+                "address_1": "adresa 1",
+                "address_2": "",
+                "payment_due_days": 5,
+                "sales_tax_number": "",
+                "zip_code": "",
+                "customer_reference": "",
+                "emails": [
+                    "[]"
+                ],
+                "name": "Gigel"
+            },
+            "sales_tax_percent": null
+        },
+        "model": "silver.proforma",
+        "pk": 1
+    },
+    {
+        "fields": {
+            "value": "pv"
+        },
+        "model": "silver.productcode",
+        "pk": 1
+    },
+    {
+        "fields":{
+            "customer":1,
+            "ended_at":null,
+            "description":"",
+            "reference":"BPWB1",
+            "state":"inactive",
+            "cancel_date":null,
+            "trial_end":"2016-11-26",
+            "meta":null,
+            "plan":1,
+            "start_date":"2016-11-16"
+        },
+        "model":"silver.subscription",
+        "pk":1
+    },
+    {
+        "fields":{
+            "customer":1,
+            "added_at":"2016-11-16T10:28:22Z",
+            "verified_at":null,
+            "state":"uninitialized",
+            "payment_processor":"manual",
+            "data":{
+                "token":"asdfqwerty1234"
+            }
+        },
+        "model":"silver.paymentmethod",
+        "pk":1
+    },
+    {
+        "fields": {
+            "proforma": 1,
+            "valid_until": null,
+            "uuid": "adbc1b82-f89f-470a-9905-ad154a14764e",
+            "payment_method": 1,
+            "state": "initial",
+            "currency": "USD",
+            "amount": "10000.00",
+            "invoice": null,
+            "last_access": null,
+            "consumable": true,
+            "currency_rate_date": null
+        },
+        "model": "silver.transaction",
+        "pk": 1
     }
-  },
-  "model": "silver.paymentmethod",
-  "pk": 2
-},
-{
-  "fields": {
-    "proforma": 1,
-    "valid_until": null,
-    "uuid": "adbc1b82-f89f-470a-9905-ad154a14764e",
-    "payment_method": 1,
-    "state": "initial",
-    "currency": "USD",
-    "amount": "10000.00",
-    "invoice": null,
-    "last_access": null,
-    "consumable": true,
-    "currency_rate_date": null
-  },
-  "model": "silver.transaction",
-  "pk": 1
-}
 ]

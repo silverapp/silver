@@ -1,0 +1,31 @@
+{% extends 'forms/transaction_form.html' %}
+
+{% block payment_processor %}
+{% endblock %}
+
+{% block form %}
+    {{ block.super }}
+    <script src="https://www.paypalobjects.com/api/button.js?"
+         data-merchant="braintree"
+         data-id="paypal-button"
+         data-button="checkout"
+         data-color="gold"
+         data-size="medium"
+         data-shape="pill"
+         data-button_type="submit"
+         data-button_disabled="false"
+     ></script>
+    <!-- Configuration options:
+      data-color: "blue", "gold", "silver"
+      data-size: "tiny", "small", "medium"
+      data-shape: "pill", "rect"
+      data-button_disabled: "false", "true"
+      data-button_type: "submit", "button"
+    --->
+    {% include "forms/braintree/braintree_ui.html" %}
+{% endblock %}
+
+{% block transaction %}
+    {{ block.super }}
+    {{ payment_method.data.details }}
+{% endblock %}

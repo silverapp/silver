@@ -786,7 +786,7 @@ class PaymentProcessorList(ListAPIView):
     ordering = ('-name', )
 
     def get_queryset(self):
-        return PaymentProcessorManager.all()
+        return PaymentProcessorManager.all_instances()
 
 
 class ProviderPaymentProcessorList(ListAPIView):
@@ -795,7 +795,7 @@ class ProviderPaymentProcessorList(ListAPIView):
     ordering = ('-name', )
 
     def get_queryset(self):
-        return PaymentProcessorManager.all()
+        return PaymentProcessorManager.all_instances()
 
 
 class PaymentProcessorDetail(RetrieveAPIView):
@@ -806,7 +806,7 @@ class PaymentProcessorDetail(RetrieveAPIView):
     def get_object(self):
         processor_name = self.kwargs.get('processor_name', '')
         try:
-            return PaymentProcessorManager.get(processor_name)
+            return PaymentProcessorManager.get_instance(processor_name)
         except PaymentProcessorManager.DoesNotExist:
             raise Http404
 
@@ -869,8 +869,6 @@ class TransactionList(ListCreateAPIView):
             payment_method = get_object_or_404(PaymentMethod,
                                                id=payment_method_id,
                                                customer__pk=customer_pk)
-            if not payment_method.payment_processor.transaction_class:
-                raise Http404
 
             return Transaction.objects.filter(
                 payment_method=payment_method

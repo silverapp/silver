@@ -324,7 +324,7 @@ class BillingDocument(models.Model):
     @property
     def _entries(self):
         # entries iterator which replaces the invoice/proforma from the DB with
-        # self. We need this in _generate_pdf so that the data in PDF has the
+        # self. We need this in generate_pdf so that the data in PDF has the
         # lastest state for the document. Without this we get in template:
         #
         # invoice.issue_date != entry.invoice.issue_date
@@ -340,13 +340,13 @@ class BillingDocument(models.Model):
                 entry.proforma = self
             yield(entry)
 
-    def _generate_pdf(self, state=None):
+    def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
         if state is None:
             state = self.state
 
-        context = {
+        return {
             'document': self,
             'provider': provider,
             'customer': customer,
@@ -354,6 +354,7 @@ class BillingDocument(models.Model):
             'state': state
         }
 
+    def get_template(self, state=None):
         provider_state_template = '{provider}/{kind}_{state}_pdf.html'.format(
             kind=self.kind, provider=self.provider.slug, state=state).lower()
         provider_template = '{provider}/{kind}_pdf.html'.format(
@@ -369,15 +370,25 @@ class BillingDocument(models.Model):
         for t in _templates:
             templates.append('billing_documents/' + t)
 
-        template = select_template(templates)
+        return select_template(templates)
 
+    def generate_pdf(self, state=None):
+        context = self.get_template_context(state)
+        template = self.get_template(state=context['state'])
         file_object = HttpResponse(content_type='application/pdf')
+
         generate_pdf_template_object(template, file_object, context)
 
         return file_object
 
+    def generate_html(self, state=None, request=None):
+        context = self.get_template_context(state)
+        template = self.get_template(state=context['state'])
+
+        return template.render(context, request)
+
     def _save_pdf(self, state=None):
-        file_object = self._generate_pdf(state)
+        file_object = self.generate_pdf(state)
 
         if file_object:
             pdf_content = ContentFile(file_object)

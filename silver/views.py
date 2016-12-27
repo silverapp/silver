@@ -20,6 +20,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import View
 
 from silver.models.documents import Proforma, Invoice
 from silver.models.transactions import Transaction
@@ -58,20 +59,23 @@ def pay_transaction_view(request, transaction_uuid):
     transaction.save()
 
     try:
-        return view_class().handle_transaction_request(request, transaction)
+        return view_class.as_view()(request, transaction)
     except NotImplementedError:
         raise Http404
 
 
-class GenericTransactionView(object):
+class GenericTransactionView(View):
     form_class = GenericTransactionForm
 
     def render_form(self, request, transaction):
         return self.form_class(payment_method=transaction.payment_method,
-                               transaction=transaction).render()
+                               transaction=transaction, request=request).render()
 
-    def handle_transaction_request(self, request, transaction):
+    def get(self, request, transaction):
         if self.form_class:
             return HttpResponse(self.render_form(request, transaction))
         else:
             raise NotImplementedError
+
+    def post(self, request, transaction):
+        raise NotImplementedError

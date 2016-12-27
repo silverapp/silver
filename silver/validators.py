@@ -11,5 +11,5 @@ validate_reference = validators.RegexValidator(
 
 
 def validate_payment_processor(value):
-    if value not in PaymentProcessorManager.all():
+    if value not in PaymentProcessorManager.all_instances():
         raise ValidationError("{} is not a valid payment processor.".format(value))
