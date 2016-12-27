@@ -54,6 +54,24 @@ class PaymentProcessorManager(object):
     def all_instances(cls):
         return [cls.get_instance(processor_name) for processor_name in cls.all()]
 
+    def register_processors(cls):
+        for processor_path, setup_data in settings.PAYMENT_PROCESSORS:
+            path, processor = processor_path.rsplit('.', 1)
+            try:
+                processor = getattr(
+                    __import__(path, globals(), locals(), [processor], 0),
+                    processor
+                )
+            except Exception as e:
+                traceback.print_exc()
+                raise ImportError(
+                    "Couldn't import '{}' from '{}'\nReason: {}".format(processor, path, e)
+                )
+
+            cls.register(processor, setup_data)
+
+        cls._processors_registered = True
+
     @classmethod
     def get_choices(cls):
         return [

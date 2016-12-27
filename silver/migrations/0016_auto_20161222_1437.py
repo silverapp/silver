@@ -9,7 +9,7 @@ import django_fsm
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0014_auto_20161122_1145'),
+        ('silver', '0015_auto_20161206_1016'),
     ]
 
     operations = [
