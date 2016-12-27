@@ -202,7 +202,7 @@
       "added_at":"2016-11-16T10:28:22Z",
       "verified_at":null,
       "state":"uninitialized",
-      "payment_processor":"We Buy (WeBuy S.R.L.) - Manual",
+      "payment_processor":"manual",
       "data":{
         "token":"asdfqwerty1234"
       }
