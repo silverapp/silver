@@ -1,16 +1,17 @@
-from cryptography.fernet import InvalidToken, Fernet
-from django.db.models import CharField
-from django_fsm import FSMField, transition
 from jsonfield import JSONField
+from django_fsm import FSMField, transition
+from cryptography.fernet import InvalidToken, Fernet
 from model_utils.managers import InheritanceManager
 
-from django.conf import settings
 from django.db import models
+from django.db.models import CharField
+from django.conf import settings
 from django.utils import timezone
+
+from silver.models.payment_processors.base import PaymentProcessorBase
 
 from .billing_entities import Customer
 from .payment_processors import PaymentProcessorManager
-from silver.models.payment_processors.base import PaymentProcessorBase
 
 
 class PaymentMethodInvalid(Exception):
@@ -154,15 +155,13 @@ class PaymentMethod(models.Model):
 
     def encrypt_data(self, data):
         key = settings.PAYMENT_METHOD_SECRET
-        f = Fernet(key)
-        return f.encrypt(bytes(data))
+        return Fernet(key).encrypt(bytes(data))
 
     def decrypt_data(self, crypted_data):
         key = settings.PAYMENT_METHOD_SECRET
-        f = Fernet(key)
 
         try:
-            return str(f.decrypt(bytes(crypted_data)))
+            return str(Fernet(key).decrypt(bytes(crypted_data)))
         except InvalidToken:
             return None
 
@@ -172,10 +171,7 @@ class PaymentMethod(models.Model):
 
     @property
     def is_usable(self):
-        if self.state not in [self.States.Unverified, self.States.Enabled]:
-            return False
-
-        return True
+        return self.state in [self.States.Unverified, self.States.Enabled]
 
     @property
     def is_recurring(self):

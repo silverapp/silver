@@ -2,13 +2,15 @@ import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
+
 from django.utils import timezone
 from django_fsm import TransitionNotAllowed
 
-from .payment_methods import BraintreePaymentMethod
-from .views import BraintreeTransactionView
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
+
+from .payment_methods import BraintreePaymentMethod
+from .views import BraintreeTransactionView
 
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
@@ -22,7 +24,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             return
 
         environment = kwargs.pop('environment', None)
-
         braintree.Configuration.configure(environment, **kwargs)
 
         BraintreeTriggered._has_been_setup = True
@@ -202,5 +203,5 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             self._update_transaction_status(transaction, result_transaction)
 
             return True
-        else:
-            return self._charge_transaction(transaction)
+
+        return self._charge_transaction(transaction)

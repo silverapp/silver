@@ -3,7 +3,9 @@ from braintree.exceptions import (
     AuthenticationError, AuthorizationError, DownForMaintenanceError,
     ServerError, UpgradeRequiredError, NotFoundError
 )
+
 from django_fsm import transition
+
 from silver.models import PaymentMethod
 
 
@@ -40,7 +42,6 @@ class BraintreePaymentMethod(PaymentMethod):
             return
 
         self.token = additional_data.get('token')
-        pass
 
     @property
     def braintree_transaction(self):
