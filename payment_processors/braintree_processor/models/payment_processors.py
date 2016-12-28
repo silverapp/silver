@@ -47,8 +47,10 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                                instrument_type):
         """
         :param payment_method: A BraintreePaymentMethod.
-        :param result_payment_method: A payment method from a braintreeSDK
-                                      result(response).
+        :param result_details: A (part of) braintreeSDK result(response)
+                               containing payment method information.
+        :param instrument_type: The type of the instrument (payment method);
+                                see BraintreePaymentMethod.Types.
         :description: Updates a given payment method's data with data from a
                       braintreeSDK result payment method.
         """
