@@ -9,9 +9,7 @@ from silver.tests.factories import AdminUserFactory, ProviderFactory
 
 
 class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    @staticmethod
-    def setup(data=None):
-        pass
+    pass
 
 
 PAYMENT_PROCESSORS = {
