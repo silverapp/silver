@@ -43,7 +43,8 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
     def void_transaction(self, transaction, payment_method=None):
         pass
 
-    def _update_payment_method(self, payment_method, result_details, type):
+    def _update_payment_method(self, payment_method, result_details,
+                               instrument_type):
         """
         :param payment_method: A BraintreePaymentMethod.
         :param result_payment_method: A payment method from a braintreeSDK
@@ -52,14 +53,14 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                       braintreeSDK result payment method.
         """
         payment_method_details = {
-            'type': type,
+            'type': instrument_type,
             'image_url': result_details.image_url,
             'updated_at': timezone.now().isoformat()
         }
 
-        if type == payment_method.Types.PayPal:
+        if instrument_type == payment_method.Types.PayPal:
             payment_method_details['email'] = result_details.payer_email
-        elif type == payment_method.Types.CreditCard:
+        elif instrument_type == payment_method.Types.CreditCard:
             payment_method_details.update({
                 'card_type': result_details.card_type,
                 'last_4': result_details.last_4,
@@ -180,17 +181,19 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         if result.is_success and result.transaction:
             self._update_customer(customer, result.transaction.customer_details)
 
-            type = result.transaction.payment_instrument_type
+            instrument_type = result.transaction.payment_instrument_type
 
-            if type == payment_method.Types.PayPal:
+            if instrument_type == payment_method.Types.PayPal:
                 details = result.transaction.paypal_details
-            elif type == payment_method.Types.CreditCard:
+            elif instrument_type == payment_method.Types.CreditCard:
                 details = result.transaction.credit_card_details
             else:
                 # Only PayPal and CreditCard are currently handled
                 return False
 
-            self._update_payment_method(payment_method, details, type)
+            self._update_payment_method(
+                payment_method, details, instrument_type
+            )
             self._update_transaction_status(transaction, result.transaction)
 
         return result.is_success
