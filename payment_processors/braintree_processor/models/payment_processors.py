@@ -220,4 +220,9 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
             return True
 
+        if transaction.state != transaction.States.Initial:
+            # this is an inconsistent state
+            # TODO handle this
+            return False
+
         return self._charge_transaction(transaction)
