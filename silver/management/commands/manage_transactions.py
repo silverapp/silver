@@ -51,12 +51,12 @@ class Command(BaseCommand):
 
         if options['transactions']:
             manageable_transactions = manageable_transactions.filter(
-                transaction__pk__in=options['transactions']
+                pk__in=options['transactions']
             )
 
         for transaction in manageable_transactions:
             try:
-                transaction.processor.manage_transaction(transaction)
-            except Exception as e:
-                logger.info('Encountered exception while managing transaction '
-                            'with id=%s: %s', transaction.id, str(e))
+                transaction.payment_processor.manage_transaction(transaction)
+            except Exception:
+                logger.error('Encountered exception while managing transaction '
+                             'with id=%s.', transaction.id, exc_info=True)
