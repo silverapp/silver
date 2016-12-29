@@ -17,7 +17,9 @@ import logging
 from datetime import datetime, timedelta
 
 import pytz
+from django.dispatch import receiver
 from django_fsm import FSMField, transition
+from django_fsm import post_transition
 from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
@@ -339,6 +341,10 @@ class BillingDocument(models.Model):
             if document_type_name.lower() == 'proforma':
                 entry.proforma = self
             yield(entry)
+
+    @property
+    def transactions(self):
+        return self.transaction_set.all()
 
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)

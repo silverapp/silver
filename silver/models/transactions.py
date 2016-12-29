@@ -16,6 +16,7 @@ from django_fsm import post_transition
 from jsonfield import JSONField
 
 from silver.mail import send_transaction_email
+from silver.models import BillingDocument, Invoice, PaymentMethod, Proforma
 from silver.utils.international import currencies
 
 
@@ -170,23 +171,54 @@ def post_transaction_save(sender, instance, **kwargs):
     send_transaction_email(instance)
 
 
+def _sync_transaction_state_with_document(transaction, target):
+    if target == Transaction.States.Settled:
+        if transaction.document and \
+                transaction.document.state != transaction.document.STATES.PAID:
+            transaction.document.pay()
+            transaction.document.save()
+
+    send_transaction_email(transaction)
+
+
+def create_transaction_for_document(document):
+    if not document.transactions.filter(
+        state__in=[Transaction.States.Initial, Transaction.States.Pending]
+    ):
+        # get a usable, recurring payment_method for the customer
+        payment_methods = PaymentMethod.objects.filter(
+            state=PaymentMethod.States.Enabled,
+            customer=document.customer
+        )
+        for payment_method in payment_methods:
+            if (payment_method.is_recurring and
+                    payment_method.is_usable):
+                # create transaction
+                kwargs = {
+                    'invoice': document if isinstance(document, Invoice) else
+                               document.related_document,
+                    'proforma': document if isinstance(document, Proforma) else
+                                document.related_document,
+                    'payment_method': payment_method,
+                    'amount': document.total
+                }
+
+                return Transaction.objects.create(**kwargs)
+
+
 @receiver(post_transition)
 def post_transition_callback(sender, instance, name, source, target, **kwargs):
     """
     Syncs the state of the related documents of the transaction with the
     transaction state
     """
-    if not issubclass(sender, Transaction):
-        return
 
-    if target == Transaction.States.Settled:
-        if instance.document and \
-                instance.document.state != instance.document.STATES.PAID:
-            try:
-                instance.document.pay()
-                instance.document.save()
-            except TransitionNotAllowed:
-                # TODO handle this
-                pass
+    if issubclass(sender, Transaction):
+        _sync_transaction_state_with_document(instance, target)
 
-    send_transaction_email(instance)
+    elif issubclass(sender, BillingDocument):
+        if target == BillingDocument.STATES.ISSUED:
+            transaction = create_transaction_for_document(instance)
+
+            if transaction:
+                transaction.payment_processor.manage_transaction(transaction)
