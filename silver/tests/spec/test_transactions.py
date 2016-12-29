@@ -22,9 +22,7 @@ def reverse(*args, **kwargs):
 
 
 class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    @staticmethod
-    def setup(data=None):
-        pass
+    pass
 
 
 PAYMENT_PROCESSORS = {
