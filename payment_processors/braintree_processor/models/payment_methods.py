@@ -13,9 +13,9 @@ class BraintreePaymentMethod(PaymentMethod):
     class Meta:
         proxy = True
 
-    class Type:
-        PayPal = 'PayPalAccount'
-        CreditCard = 'CreditCard'
+    class Types:
+        PayPal = 'paypal_account'
+        CreditCard = 'credit_card'
 
     @transition(field='state',
                 **PaymentMethod.state_transitions['initialize_unverified'])

@@ -11,8 +11,9 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from django_fsm import post_transition
+from jsonfield import JSONField
 
 from silver.mail import send_transaction_email
 from silver.utils.international import currencies
@@ -51,8 +52,11 @@ class Transaction(models.Model):
                 (state, _(state.capitalize())) for state in cls.as_list()
             )
 
+    external_reference = models.CharField(max_length=256, null=True, blank=True)
+    data = JSONField(default={}, null=True, blank=True)
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
+
     proforma = models.ForeignKey("Proforma", null=True, blank=True)
     invoice = models.ForeignKey("Invoice", null=True, blank=True)
     payment_method = models.ForeignKey('PaymentMethod')
@@ -178,7 +182,11 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     if target == Transaction.States.Settled:
         if instance.document and \
                 instance.document.state != instance.document.STATES.PAID:
-            instance.document.pay()
-            instance.document.save()
+            try:
+                instance.document.pay()
+                instance.document.save()
+            except TransitionNotAllowed:
+                # TODO handle this
+                pass
 
     send_transaction_email(instance)

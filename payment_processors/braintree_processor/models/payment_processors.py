@@ -6,11 +6,10 @@ from braintree.exceptions import (AuthenticationError, AuthorizationError,
 from django.utils import timezone
 from django_fsm import TransitionNotAllowed
 
+from .payment_methods import BraintreePaymentMethod
+from ..views import BraintreeTransactionView
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-
-from .payment_methods import BraintreePaymentMethod
-from .views import BraintreeTransactionView
 
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
@@ -44,43 +43,42 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
     def void_transaction(self, transaction, payment_method=None):
         pass
 
-    def _update_payment_method(self, payment_method, result_payment_method):
+    def _update_payment_method(self, payment_method, result_details,
+                               instrument_type):
         """
         :param payment_method: A BraintreePaymentMethod.
-        :param result_payment_method: A payment method from a braintreeSDK
-                                      result(response).
+        :param result_details: A (part of) braintreeSDK result(response)
+                               containing payment method information.
+        :param instrument_type: The type of the instrument (payment method);
+                                see BraintreePaymentMethod.Types.
         :description: Updates a given payment method's data with data from a
                       braintreeSDK result payment method.
         """
-
         payment_method_details = {
-            'type': result_payment_method.__class__.__name__
+            'type': instrument_type,
+            'image_url': result_details.image_url,
+            'updated_at': timezone.now().isoformat()
         }
 
-        if payment_method_details['type'] == payment_method.Type.PayPal:
-            payment_method_details['email'] = result_payment_method.email
-        elif payment_method_details['type'] == payment_method.Type.CreditCard:
+        if instrument_type == payment_method.Types.PayPal:
+            payment_method_details['email'] = result_details.payer_email
+        elif instrument_type == payment_method.Types.CreditCard:
             payment_method_details.update({
-                'card_type': result_payment_method.card_type,
-                'last_4': result_payment_method.last_4,
+                'card_type': result_details.card_type,
+                'last_4': result_details.last_4,
             })
-
-        payment_method_details.update({
-            'image_url': payment_method.image_url,
-            'added_at': timezone.now().isoformat()
-        })
 
         payment_method.data['details'] = payment_method_details
 
         try:
             if payment_method.is_recurring:
-                if payment_method.state == payment_method.State.Unverified:
+                if payment_method.state == payment_method.States.Unverified:
                     payment_method.verify({
-                        'token': result_payment_method.token
+                        'token': result_details.token
                     })
             else:
-                payment_method.disable()
-        except TransitionNotAllowed:
+                payment_method.remove()
+        except TransitionNotAllowed as e:
             # TODO handle this
             pass
 
@@ -94,18 +92,17 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         :description: Updates a given transaction's data with data from a
                       braintreeSDK result payment method.
         """
-
         if not transaction.data:
             transaction.data = {}
 
-        transaction.data.update({
-            'status': result_transaction.status,
-            'braintree_id': result_transaction.id
-        })
+        transaction.external_reference = result_transaction.id
+        status = result_transaction.status
 
-        status = transaction.data['status']
+        transaction.data['status'] = status
 
         try:
+            transaction.process()
+
             if status in [braintree.Transaction.Status.AuthorizationExpired,
                           braintree.Transaction.Status.SettlementDeclined,
                           braintree.Transaction.Status.Failed,
@@ -118,24 +115,22 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                 if transaction.state != transaction.States.Canceled:
                     transaction.cancel()
 
-            elif status in [braintree.Transaction.Status.Authorizing,
-                            braintree.Transaction.Status.Authorized,
-                            braintree.Transaction.Status.SubmittedForSettlement,
-                            braintree.Transaction.Status.SettlementConfirmed]:
-                if transaction.state != transaction.States.Pending:
-                    transaction.process()
-
             elif status in [braintree.Transaction.Status.Settling,
                             braintree.Transaction.Status.SettlementPending,
                             braintree.Transaction.Status.Settled]:
                 if transaction.state != transaction.States.Settled:
                     transaction.settle()
 
-        except TransitionNotAllowed:
+        except TransitionNotAllowed as e:
             # TODO handle this (probably throw something else)
             pass
 
         transaction.save()
+
+    def _update_customer(self, customer, result_details):
+        if not 'braintree_id' in customer.meta:
+            customer.meta['braintree_id'] = result_details.id
+            customer.save()
 
     def _charge_transaction(self, transaction):
         """
@@ -143,7 +138,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                             payment_method.
         :return: True on success, False on failure.
         """
-
         payment_method = transaction.payment_method
 
         if not payment_method.is_usable:
@@ -160,21 +154,48 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             'billing': {
                 'postal_code': payment_method.data.get('postal_code')
             },
-            'cardholder_name': payment_method.data.get('cardholder_name'),
+            # TODO check how firstname and lastname can be obtained (for both
+            # credit card and paypal)
             'options': {
                 'submit_for_settlement': True,
-                "store_in_vault_on_success": payment_method.is_recurring
+                "store_in_vault": payment_method.is_recurring
             },
         })
+
+        customer = transaction.customer
+        if 'braintree_id' in customer.meta:
+            data.update({
+                'customer_id': customer.meta['braintree_id']
+            })
+        else:
+            data.update({
+                'customer': {
+                    'first_name': customer.name,
+                    # TODO split silver customer name field into first and last.
+                    # This should've been obvious from the very start
+                }
+            })
 
         # send transaction request
         result = braintree.Transaction.sale(data)
 
         # handle response
         if result.is_success and result.transaction:
-            self._update_payment_method(payment_method,
-                                        result.transaction.payment_method)
+            self._update_customer(customer, result.transaction.customer_details)
 
+            instrument_type = result.transaction.payment_instrument_type
+
+            if instrument_type == payment_method.Types.PayPal:
+                details = result.transaction.paypal_details
+            elif instrument_type == payment_method.Types.CreditCard:
+                details = result.transaction.credit_card_details
+            else:
+                # Only PayPal and CreditCard are currently handled
+                return False
+
+            self._update_payment_method(
+                payment_method, details, instrument_type
+            )
             self._update_transaction_status(transaction, result.transaction)
 
         return result.is_success
@@ -203,5 +224,10 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             self._update_transaction_status(transaction, result_transaction)
 
             return True
+
+        if transaction.state != transaction.States.Initial:
+            # this is an inconsistent state
+            # TODO handle this
+            return False
 
         return self._charge_transaction(transaction)
