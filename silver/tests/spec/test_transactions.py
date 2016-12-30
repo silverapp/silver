@@ -68,7 +68,9 @@ class TestTransactionEndpoint(APITestCase):
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                         'payment_method_id': payment_method.id})),
             ('pay_url', reverse('pay-transaction', kwargs={'transaction_uuid': transaction.uuid})),
-            ('valid_until', None)
+            ('valid_until', None),
+            ('success_url', transaction.success_url),
+            ('failed_url', transaction.failed_url)
         ])
 
         url = reverse('transaction-detail',
@@ -103,7 +105,9 @@ class TestTransactionEndpoint(APITestCase):
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                         'payment_method_id': payment_method.id})),
             ('pay_url', reverse('pay-transaction', kwargs={'transaction_uuid': transaction_1.uuid})),
-            ('valid_until', None)
+            ('valid_until', None),
+            ('success_url', transaction_1.success_url),
+            ('failed_url', transaction_1.failed_url)
         ])
 
         transaction_2 = TransactionFactory.create(payment_method=payment_method)
@@ -127,7 +131,9 @@ class TestTransactionEndpoint(APITestCase):
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                         'payment_method_id': payment_method.id})),
             ('pay_url', reverse('pay-transaction', kwargs={'transaction_uuid': transaction_2.uuid})),
-            ('valid_until', None)
+            ('valid_until', None),
+            ('success_url', transaction_2.success_url),
+            ('failed_url', transaction_2.failed_url)
         ])
 
         url = reverse('transaction-list',
@@ -163,6 +169,8 @@ class TestTransactionEndpoint(APITestCase):
             'proforma': proforma_url,
             'valid_until': valid_until,
             'currency': currency,
+            'success_url': 'http://success.url',
+            'failed_url': 'http://fauiled.url'
         }
 
         response = self.client.post(url, format='json', data=data)
@@ -176,6 +184,8 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
+        self.assertEqual(response.data['success_url'], data['success_url'])
+        self.assertEqual(response.data['failed_url'], data['failed_url'])
 
         self.assertTrue(Transaction.objects.filter(uuid=response.data['id']))
 
@@ -485,5 +495,7 @@ class TestTransactionEndpoint(APITestCase):
             ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                         'payment_method_id': payment_method.id})),
             ('pay_url', reverse('pay-transaction', kwargs={'transaction_uuid': transaction.uuid})),
-            ('valid_until', None)
+            ('valid_until', None),
+            ('success_url', transaction.success_url),
+            ('failed_url', transaction.failed_url)
         ])
