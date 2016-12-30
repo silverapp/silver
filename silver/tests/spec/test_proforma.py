@@ -69,13 +69,21 @@ class TestProformaEndpoints(APITestCase):
             "paid_date": None,
             "cancel_date": None,
             "sales_tax_name": "VAT",
-            "sales_tax_percent": '1.00',
+            "sales_tax_percent": "1.00",
             "currency": "RON",
-            'pdf_url': None,
+            "pdf_url": None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": Decimal('0.00'),
+            "total": Decimal("0.00"),
+            "transactions": {
+                "initial": [],
+                "pending": [],
+                "settled": [],
+                "failed": [],
+                "canceled": [],
+                "refunded": []
+            }
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -140,11 +148,19 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '1.00',
             "currency": "RON",
-            'pdf_url': None,
+            "pdf_url": None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            'total': Decimal('0.00'),
+            "total": Decimal('0.00'),
+            "transactions": {
+                "initial": [],
+                "pending": [],
+                "settled": [],
+                "failed": [],
+                "canceled": [],
+                "refunded": []
+            }
         }
 
     def test_delete_proforma(self):

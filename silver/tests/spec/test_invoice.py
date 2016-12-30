@@ -74,8 +74,16 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            'pdf_url': None,
-            "total": Decimal('0.00')
+            "pdf_url": None,
+            "total": Decimal('0.00'),
+            "transactions": {
+                "initial": [],
+                "pending": [],
+                "settled": [],
+                "failed": [],
+                "canceled": [],
+                "refunded": []
+            }
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -144,6 +152,14 @@ class TestInvoiceEndpoints(APITestCase):
             "invoice_entries": [],
             "pdf_url": None,
             "total": Decimal('0.00'),
+            "transactions": {
+                "initial": [],
+                "pending": [],
+                "settled": [],
+                "failed": [],
+                "canceled": [],
+                "refunded": []
+            }
         }
 
     def test_delete_invoice(self):
