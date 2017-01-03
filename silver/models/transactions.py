@@ -15,7 +15,6 @@ from django_fsm import FSMField, transition, TransitionNotAllowed
 from django_fsm import post_transition
 from jsonfield import JSONField
 
-from silver.mail import send_transaction_email
 from silver.models import BillingDocument, Invoice, PaymentMethod, Proforma
 from silver.utils.international import currencies
 
@@ -173,8 +172,6 @@ def post_transaction_save(sender, instance, **kwargs):
             instance.proforma.id if instance.proforma else None
     })
 
-    send_transaction_email(instance)
-
 
 def _sync_transaction_state_with_document(transaction, target):
     if target == Transaction.States.Settled:
@@ -182,8 +179,6 @@ def _sync_transaction_state_with_document(transaction, target):
                 transaction.document.state != transaction.document.STATES.PAID:
             transaction.document.pay()
             transaction.document.save()
-
-    send_transaction_email(transaction)
 
 
 def create_transaction_for_document(document):
