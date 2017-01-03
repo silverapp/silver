@@ -3,8 +3,9 @@ from django.utils.deconstruct import deconstructible
 
 @deconstructible
 class PaymentProcessorBase(object):
-    view_class = None
+    form_class = None
     payment_method_class = None
+    transaction_view_class = None
 
     def setup(self, data):
         """

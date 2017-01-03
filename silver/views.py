@@ -48,7 +48,7 @@ def pay_transaction_view(request, transaction_uuid):
 
     transaction = get_object_or_404(Transaction, uuid=uuid)
 
-    view_class = transaction.payment_processor.view_class
+    view_class = transaction.payment_processor.transaction_view_class
     if not view_class:
         raise Http404
 
@@ -65,14 +65,13 @@ def pay_transaction_view(request, transaction_uuid):
 
 
 class GenericTransactionView(View):
-    form_class = GenericTransactionForm
-
     def render_form(self, request, transaction):
-        return self.form_class(payment_method=transaction.payment_method,
-                               transaction=transaction, request=request).render()
+        form_class = transaction.payment_processor.form_class
+        return form_class(payment_method=transaction.payment_method,
+                          transaction=transaction, request=request).render()
 
     def get(self, request, transaction):
-        if self.form_class:
+        if transaction.payment_processor.form_class:
             return HttpResponse(self.render_form(request, transaction))
         else:
             raise NotImplementedError

@@ -1,10 +1,13 @@
+from silver.views import GenericTransactionView
+from silver.forms import GenericTransactionForm
+
 from .base import PaymentProcessorBase
 from .mixins import ManualProcessorMixin
-from silver.views import GenericTransactionView
 
 
 class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):
-    view_class = GenericTransactionView
+    transaction_view_class = GenericTransactionView
+    form_class = GenericTransactionForm
 
     @staticmethod
     def setup(data=None):
