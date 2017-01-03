@@ -367,93 +367,6 @@ class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
         return self.queryset.get(id=view_kwargs['payment_method_id'])
 
 
-class TransactionSerializer(serializers.HyperlinkedModelSerializer):
-    payment_method = PaymentMethodUrl(view_name='payment-method-detail',
-                                      lookup_field='payment_method',
-                                      queryset=PaymentMethod.objects.all())
-    url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
-    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
-                                       lookup_field='uuid',
-                                       lookup_url_kwarg='transaction_uuid')
-    customer = CustomerUrl(view_name='customer-detail', read_only=True)
-    provider = ProviderUrl(view_name='provider-detail', read_only=True)
-    id = serializers.CharField(source='uuid', read_only=True)
-    payment_processor = PaymentProcessorUrl(
-        view_name='payment-processor-detail',
-        source='payment_method', lookup_field='payment_processor',
-        read_only=True
-    )
-
-    class Meta:
-        model = Transaction
-        fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
-                  'currency_rate_date', 'state', 'proforma', 'invoice',
-                  'can_be_consumed', 'payment_processor', 'payment_method',
-                  'pay_url', 'valid_until', 'success_url', 'failed_url')
-        read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
-                            'id', 'url', 'state')
-        write_only_fields = ('valid_until',)
-
-    def validate_proforma(self, proforma):
-        if self.instance and proforma != self.instance.proforma:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-
-        return proforma
-
-    def validate_invoice(self, invoice):
-        if self.instance and invoice != self.instance.invoice:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-        if (self.instance and getattr(self.instance, 'transactions', None) and
-           self.instance.transaction_set.exclude(state='canceled').exists()):
-            message = "Cannot update a payment with active transactions."
-            raise serializers.ValidationError(message)
-
-        return invoice
-
-    def validate(self, attrs):
-        attrs = super(TransactionSerializer, self).validate(attrs)
-
-        if not attrs:
-            return attrs
-
-        if self.instance:
-            if self.instance.state != Transaction.States.Initial:
-                message = "The transaction cannot be modified once it is in {}"\
-                          " state.".format(self.instance.state)
-                raise serializers.ValidationError(message)
-
-        # Run model clean and handle ValidationErrors
-        try:
-            # Use the existing instance to avoid unique field errors
-            if self.instance:
-                transaction = self.instance
-                transaction_dict = transaction.__dict__.copy()
-
-                for attribute, value in attrs.items():
-                    setattr(transaction, attribute, value)
-
-                transaction.full_clean()
-
-                # Revert changes to existing instance
-                transaction.__dict__ = transaction_dict
-            else:
-                transaction = Transaction(**attrs)
-                transaction.full_clean()
-        except ValidationError as e:
-            errors = e.error_dict
-            non_field_errors = errors.pop('__all__', None)
-            if non_field_errors:
-                errors['non_field_errors'] = [
-                    error for sublist in non_field_errors for error in sublist
-                ]
-
-            raise serializers.ValidationError(errors)
-
-        return attrs
-
-
 class PaymentProcessorSerializer(serializers.Serializer):
     type = serializers.CharField(max_length=64)
     display_name = serializers.CharField(max_length=64)
@@ -633,7 +546,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
                   'currency_rate_date', 'state', 'proforma', 'invoice',
                   'can_be_consumed', 'payment_processor', 'payment_method',
-                  'pay_url', 'valid_until')
+                  'pay_url', 'valid_until', 'success_url', 'failed_url')
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
                             'id', 'url', 'state')
         write_only_fields = ('valid_until',)
@@ -703,7 +616,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     pdf_url = PDFUrl(view_name='', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
-    transactions = serializers.SerializerMethodField()
+    transactions = TransactionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Invoice
@@ -713,13 +626,6 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
                   'sales_tax_percent', 'currency', 'state', 'proforma',
                   'invoice_entries', 'total', 'pdf_url', 'transactions')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
-
-    def get_transactions(self, obj):
-        return {
-            state: TransactionSerializer(obj.transactions.filter(state=state),
-                                         context=self.context, many=True).data
-            for state in Transaction.States.as_list()
-        }
 
     def create(self, validated_data):
         entries = validated_data.pop('invoice_entries', None)
@@ -773,7 +679,7 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     pdf_url = PDFUrl(view_name='', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
-    transactions = serializers.SerializerMethodField()
+    transactions = TransactionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Proforma
@@ -783,13 +689,6 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                   'sales_tax_percent', 'currency', 'state', 'invoice',
                   'proforma_entries', 'total', 'pdf_url', 'transactions')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
-
-    def get_transactions(self, obj):
-        return {
-            state: TransactionSerializer(obj.transactions.filter(state=state),
-                                         context=self.context, many=True).data
-            for state in Transaction.States.as_list()
-        }
 
     def create(self, validated_data):
         entries = validated_data.pop('proforma_entries', None)

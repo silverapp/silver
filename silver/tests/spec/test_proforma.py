@@ -76,14 +76,7 @@ class TestProformaEndpoints(APITestCase):
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal("0.00"),
-            "transactions": {
-                "initial": [],
-                "pending": [],
-                "settled": [],
-                "failed": [],
-                "canceled": [],
-                "refunded": []
-            }
+            "transactions": []
         }
 
     def test_post_proforma_with_proforma_entries(self):
@@ -153,14 +146,7 @@ class TestProformaEndpoints(APITestCase):
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal('0.00'),
-            "transactions": {
-                "initial": [],
-                "pending": [],
-                "settled": [],
-                "failed": [],
-                "canceled": [],
-                "refunded": []
-            }
+            "transactions": []
         }
 
     def test_delete_proforma(self):
