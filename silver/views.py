@@ -59,12 +59,16 @@ def pay_transaction_view(request, transaction_uuid):
     transaction.save()
 
     try:
-        return view()
+        return view(request)
     except NotImplementedError:
         raise Http404
 
 
 class GenericTransactionView(View):
+    form = None
+    template = None
+    transaction = None
+
     def render_template(self):
         context = {
             'payment_method': self.transaction.payment_method,
@@ -78,11 +82,11 @@ class GenericTransactionView(View):
 
         return self.template.render(context=context)
 
-    def get(self):
-        if self.form:
+    def get(self, request):
+        if self.template:
             return HttpResponse(self.render_template())
         else:
             raise NotImplementedError
 
-    def post(self):
+    def post(self, request):
         raise NotImplementedError

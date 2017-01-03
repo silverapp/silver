@@ -18,15 +18,14 @@ class PaymentProcessorBase(object):
     def get_view(self, transaction, request, **kwargs):
         kwargs.update({
             'form': self.get_form(transaction, request),
-            'template': self.get_template(transaction, request),
-            'request': request,
+            'template': self.get_template(transaction),
             'transaction': transaction
         })
-        return self.transaction_view_class(**kwargs).as_view()
+        return self.transaction_view_class.as_view(**kwargs)
 
     def get_form(self, transaction, request):
         form = None
-        if not self.form_class:
+        if self.form_class:
             form = self.form_class(payment_method=transaction.payment_method,
                                    transaction=transaction, request=request)
 
