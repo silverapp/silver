@@ -151,6 +151,24 @@
         "pk": 1
     },
     {
+        "fields": {
+            "name": "Test plan",
+            "interval": "month",
+            "interval_count": 1,
+            "amount": 1024.24,
+            "currency": "RON",
+            "trial_period_days": 14,
+            "metered_features": [1],
+            "generate_after": 1,
+            "enabled": true,
+            "private": false,
+            "product_code": 1,
+            "provider": 1
+        },
+        "model": "silver.plan",
+        "pk": 1
+    },
+    {
         "fields":{
             "customer":1,
             "ended_at":null,
