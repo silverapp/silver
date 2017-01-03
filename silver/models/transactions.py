@@ -5,7 +5,7 @@ from decimal import Decimal
 from annoying.functions import get_object_or_None
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, URLValidator
 from django.db import models
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
@@ -65,6 +65,11 @@ class Transaction(models.Model):
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
     consumable = models.BooleanField(default=True)
+
+    success_url = models.TextField(null=True, blank=True,
+                                   validators=[URLValidator()])
+    failed_url = models.TextField(null=True, blank=True,
+                                  validators=[URLValidator()])
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
