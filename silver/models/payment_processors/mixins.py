@@ -37,7 +37,7 @@ class BaseActionableProcessor(object):
 
         raise NotImplementedError
 
-    def manage_transaction(self, transaction):
+    def execute_transaction(self, transaction):
         """
             Only gets called for initial or pending transactions that point to
             this specific Processor
@@ -59,5 +59,3 @@ class AutomaticProcessorMixin(BaseActionableProcessor):
 
 class TriggeredProcessorMixin(BaseActionableProcessor):
     type = PaymentProcessorTypes.Triggered
-
-
