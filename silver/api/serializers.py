@@ -321,133 +321,6 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
                   'product_code')
 
 
-class PDFUrl(serializers.HyperlinkedRelatedField):
-    def get_url(self, obj, view_name, request, format):
-        return request.build_absolute_uri(obj.pdf.url) if obj.pdf else None
-
-
-class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    invoice_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
-    customer = CustomerUrl(view_name='customer-detail',
-                           queryset=Customer.objects.all())
-
-    class Meta:
-        model = Invoice
-        fields = ('id', 'series', 'number', 'provider', 'customer',
-                  'archived_provider', 'archived_customer', 'due_date',
-                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                  'sales_tax_percent', 'currency', 'state', 'proforma',
-                  'invoice_entries', 'total', 'pdf_url')
-        read_only_fields = ('archived_provider', 'archived_customer', 'total')
-
-    def create(self, validated_data):
-        entries = validated_data.pop('invoice_entries', None)
-
-        # Create the new invoice object
-        invoice = Invoice.objects.create(**validated_data)
-
-        # Add the invoice entries
-        for entry in entries:
-            entry_dict = dict()
-            entry_dict['invoice'] = invoice
-            for field in entry.items():
-                entry_dict[field[0]] = field[1]
-
-            DocumentEntry.objects.create(**entry_dict)
-
-        return invoice
-
-    def update(self, instance, validated_data):
-        # The provider has changed => force the generation of the correct number
-        # corresponding to the count of the new provider
-        current_provider = instance.provider
-        new_provider = validated_data.get('provider')
-        if new_provider and new_provider != current_provider:
-            instance.number = None
-
-        updateable_fields = instance.updateable_fields
-        for field_name in updateable_fields:
-            field_value = validated_data.get(field_name,
-                                             getattr(instance, field_name))
-            setattr(instance, field_name, field_value)
-        instance.save()
-
-        return instance
-
-    def validate(self, data):
-        data = super(InvoiceSerializer, self).validate(data)
-
-        if self.instance:
-            self.instance.clean()
-
-        if self.instance and data['state'] != self.instance.state:
-            msg = "Direct state modification is not allowed." \
-                  " Use the corresponding endpoint to update the state."
-            raise serializers.ValidationError(msg)
-        return data
-
-
-class ProformaSerializer(serializers.HyperlinkedModelSerializer):
-    proforma_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
-    customer = CustomerUrl(view_name='customer-detail',
-                           queryset=Customer.objects.all())
-
-    class Meta:
-        model = Proforma
-        fields = ('id', 'series', 'number', 'provider', 'customer',
-                  'archived_provider', 'archived_customer', 'due_date',
-                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                  'sales_tax_percent', 'currency', 'state', 'invoice',
-                  'proforma_entries', 'total', 'pdf_url')
-        read_only_fields = ('archived_provider', 'archived_customer', 'total')
-
-    def create(self, validated_data):
-        entries = validated_data.pop('proforma_entries', None)
-
-        proforma = Proforma.objects.create(**validated_data)
-
-        for entry in entries:
-            entry_dict = dict()
-            entry_dict['proforma'] = proforma
-            for field in entry.items():
-                entry_dict[field[0]] = field[1]
-
-            DocumentEntry.objects.create(**entry_dict)
-
-        return proforma
-
-    def update(self, instance, validated_data):
-        # The provider has changed => force the generation of the correct number
-        # corresponding to the count of the new provider
-        current_provider = instance.provider
-        new_provider = validated_data.get('provider')
-        if new_provider and new_provider != current_provider:
-            instance.number = None
-
-        updateable_fields = instance.updateable_fields
-        for field_name in updateable_fields:
-            field_value = validated_data.get(field_name,
-                                             getattr(instance, field_name))
-            setattr(instance, field_name, field_value)
-        instance.save()
-
-        return instance
-
-    def validate(self, data):
-        data = super(ProformaSerializer, self).validate(data)
-
-        if self.instance:
-            self.instance.clean()
-
-        if self.instance and data['state'] != self.instance.state:
-            msg = "Direct state modification is not allowed." \
-                  " Use the corresponding endpoint to update the state."
-            raise serializers.ValidationError(msg)
-        return data
-
-
 class TransactionUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
         lookup_value = getattr(obj, self.lookup_field)
@@ -479,6 +352,11 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
             raise ObjectDoesNotExist
 
 
+class PDFUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        return request.build_absolute_uri(obj.pdf.url) if obj.pdf else None
+
+
 class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
         kwargs = {'payment_method_id': obj.pk,
@@ -487,93 +365,6 @@ class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
 
     def get_object(self, view_name, view_args, view_kwargs):
         return self.queryset.get(id=view_kwargs['payment_method_id'])
-
-
-class TransactionSerializer(serializers.HyperlinkedModelSerializer):
-    payment_method = PaymentMethodUrl(view_name='payment-method-detail',
-                                      lookup_field='payment_method',
-                                      queryset=PaymentMethod.objects.all())
-    url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
-    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
-                                       lookup_field='uuid',
-                                       lookup_url_kwarg='transaction_uuid')
-    customer = CustomerUrl(view_name='customer-detail', read_only=True)
-    provider = ProviderUrl(view_name='provider-detail', read_only=True)
-    id = serializers.CharField(source='uuid', read_only=True)
-    payment_processor = PaymentProcessorUrl(
-        view_name='payment-processor-detail',
-        source='payment_method', lookup_field='payment_processor',
-        read_only=True
-    )
-
-    class Meta:
-        model = Transaction
-        fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
-                  'currency_rate_date', 'state', 'proforma', 'invoice',
-                  'can_be_consumed', 'payment_processor', 'payment_method',
-                  'pay_url', 'valid_until', 'success_url', 'failed_url')
-        read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
-                            'id', 'url', 'state')
-        write_only_fields = ('valid_until',)
-
-    def validate_proforma(self, proforma):
-        if self.instance and proforma != self.instance.proforma:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-
-        return proforma
-
-    def validate_invoice(self, invoice):
-        if self.instance and invoice != self.instance.invoice:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-        if (self.instance and getattr(self.instance, 'transactions', None) and
-           self.instance.transaction_set.exclude(state='canceled').exists()):
-            message = "Cannot update a payment with active transactions."
-            raise serializers.ValidationError(message)
-
-        return invoice
-
-    def validate(self, attrs):
-        attrs = super(TransactionSerializer, self).validate(attrs)
-
-        if not attrs:
-            return attrs
-
-        if self.instance:
-            if self.instance.state != Transaction.States.Initial:
-                message = "The transaction cannot be modified once it is in {}"\
-                          " state.".format(self.instance.state)
-                raise serializers.ValidationError(message)
-
-        # Run model clean and handle ValidationErrors
-        try:
-            # Use the existing instance to avoid unique field errors
-            if self.instance:
-                transaction = self.instance
-                transaction_dict = transaction.__dict__.copy()
-
-                for attribute, value in attrs.items():
-                    setattr(transaction, attribute, value)
-
-                transaction.full_clean()
-
-                # Revert changes to existing instance
-                transaction.__dict__ = transaction_dict
-            else:
-                transaction = Transaction(**attrs)
-                transaction.full_clean()
-        except ValidationError as e:
-            errors = e.error_dict
-            non_field_errors = errors.pop('__all__', None)
-            if non_field_errors:
-                errors['non_field_errors'] = [
-                    error for sublist in non_field_errors for error in sublist
-                ]
-
-            raise serializers.ValidationError(errors)
-
-        return attrs
 
 
 class PaymentProcessorSerializer(serializers.Serializer):
@@ -731,3 +522,214 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
         return super(PaymentMethodSerializer, self).update(instance,
                                                            validated_data)
+
+
+class TransactionSerializer(serializers.HyperlinkedModelSerializer):
+    payment_method = PaymentMethodUrl(view_name='payment-method-detail',
+                                      lookup_field='payment_method',
+                                      queryset=PaymentMethod.objects.all())
+    url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
+    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
+                                       lookup_field='uuid',
+                                       lookup_url_kwarg='transaction_uuid')
+    customer = CustomerUrl(view_name='customer-detail', read_only=True)
+    provider = ProviderUrl(view_name='provider-detail', read_only=True)
+    id = serializers.CharField(source='uuid', read_only=True)
+    payment_processor = PaymentProcessorUrl(
+        view_name='payment-processor-detail',
+        source='payment_method', lookup_field='payment_processor',
+        read_only=True
+    )
+
+    class Meta:
+        model = Transaction
+        fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
+                  'currency_rate_date', 'state', 'proforma', 'invoice',
+                  'can_be_consumed', 'payment_processor', 'payment_method',
+                  'pay_url', 'valid_until', 'success_url', 'failed_url')
+        read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
+                            'id', 'url', 'state')
+        write_only_fields = ('valid_until',)
+
+    def validate_proforma(self, proforma):
+        if self.instance and proforma != self.instance.proforma:
+            message = "This field may not be modified."
+            raise serializers.ValidationError(message)
+
+        return proforma
+
+    def validate_invoice(self, invoice):
+        if self.instance and invoice != self.instance.invoice:
+            message = "This field may not be modified."
+            raise serializers.ValidationError(message)
+        if (self.instance and getattr(self.instance, 'transactions', None) and
+           self.instance.transaction_set.exclude(state='canceled').exists()):
+            message = "Cannot update a payment with active transactions."
+            raise serializers.ValidationError(message)
+
+        return invoice
+
+    def validate(self, attrs):
+        attrs = super(TransactionSerializer, self).validate(attrs)
+
+        if not attrs:
+            return attrs
+
+        if self.instance:
+            if self.instance.state != Transaction.States.Initial:
+                message = "The transaction cannot be modified once it is in {}"\
+                          " state.".format(self.instance.state)
+                raise serializers.ValidationError(message)
+
+        # Run model clean and handle ValidationErrors
+        try:
+            # Use the existing instance to avoid unique field errors
+            if self.instance:
+                transaction = self.instance
+                transaction_dict = transaction.__dict__.copy()
+
+                for attribute, value in attrs.items():
+                    setattr(transaction, attribute, value)
+
+                transaction.full_clean()
+
+                # Revert changes to existing instance
+                transaction.__dict__ = transaction_dict
+            else:
+                transaction = Transaction(**attrs)
+                transaction.full_clean()
+        except ValidationError as e:
+            errors = e.error_dict
+            non_field_errors = errors.pop('__all__', None)
+            if non_field_errors:
+                errors['non_field_errors'] = [
+                    error for sublist in non_field_errors for error in sublist
+                ]
+
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+
+class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
+    invoice_entries = DocumentEntrySerializer(many=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
+    transactions = TransactionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = ('id', 'series', 'number', 'provider', 'customer',
+                  'archived_provider', 'archived_customer', 'due_date',
+                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+                  'sales_tax_percent', 'currency', 'state', 'proforma',
+                  'invoice_entries', 'total', 'pdf_url', 'transactions')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
+
+    def create(self, validated_data):
+        entries = validated_data.pop('invoice_entries', None)
+
+        # Create the new invoice object
+        invoice = Invoice.objects.create(**validated_data)
+
+        # Add the invoice entries
+        for entry in entries:
+            entry_dict = dict()
+            entry_dict['invoice'] = invoice
+            for field in entry.items():
+                entry_dict[field[0]] = field[1]
+
+            DocumentEntry.objects.create(**entry_dict)
+
+        return invoice
+
+    def update(self, instance, validated_data):
+        # The provider has changed => force the generation of the correct number
+        # corresponding to the count of the new provider
+        current_provider = instance.provider
+        new_provider = validated_data.get('provider')
+        if new_provider and new_provider != current_provider:
+            instance.number = None
+
+        updateable_fields = instance.updateable_fields
+        for field_name in updateable_fields:
+            field_value = validated_data.get(field_name,
+                                             getattr(instance, field_name))
+            setattr(instance, field_name, field_value)
+        instance.save()
+
+        return instance
+
+    def validate(self, data):
+        data = super(InvoiceSerializer, self).validate(data)
+
+        if self.instance:
+            self.instance.clean()
+
+        if self.instance and data['state'] != self.instance.state:
+            msg = "Direct state modification is not allowed." \
+                  " Use the corresponding endpoint to update the state."
+            raise serializers.ValidationError(msg)
+        return data
+
+
+class ProformaSerializer(serializers.HyperlinkedModelSerializer):
+    proforma_entries = DocumentEntrySerializer(many=True)
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
+    transactions = TransactionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Proforma
+        fields = ('id', 'series', 'number', 'provider', 'customer',
+                  'archived_provider', 'archived_customer', 'due_date',
+                  'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
+                  'sales_tax_percent', 'currency', 'state', 'invoice',
+                  'proforma_entries', 'total', 'pdf_url', 'transactions')
+        read_only_fields = ('archived_provider', 'archived_customer', 'total')
+
+    def create(self, validated_data):
+        entries = validated_data.pop('proforma_entries', None)
+
+        proforma = Proforma.objects.create(**validated_data)
+
+        for entry in entries:
+            entry_dict = dict()
+            entry_dict['proforma'] = proforma
+            for field in entry.items():
+                entry_dict[field[0]] = field[1]
+
+            DocumentEntry.objects.create(**entry_dict)
+
+        return proforma
+
+    def update(self, instance, validated_data):
+        # The provider has changed => force the generation of the correct number
+        # corresponding to the count of the new provider
+        current_provider = instance.provider
+        new_provider = validated_data.get('provider')
+        if new_provider and new_provider != current_provider:
+            instance.number = None
+
+        updateable_fields = instance.updateable_fields
+        for field_name in updateable_fields:
+            field_value = validated_data.get(field_name,
+                                             getattr(instance, field_name))
+            setattr(instance, field_name, field_value)
+        instance.save()
+
+        return instance
+
+    def validate(self, data):
+        data = super(ProformaSerializer, self).validate(data)
+
+        if self.instance:
+            self.instance.clean()
+
+        if self.instance and data['state'] != self.instance.state:
+            msg = "Direct state modification is not allowed." \
+                  " Use the corresponding endpoint to update the state."
+            raise serializers.ValidationError(msg)
+        return data

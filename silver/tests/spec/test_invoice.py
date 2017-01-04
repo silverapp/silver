@@ -16,6 +16,7 @@
 import json
 from datetime import timedelta
 from decimal import Decimal
+from collections import OrderedDict
 
 from django.utils import timezone
 from django.conf import settings
@@ -24,10 +25,11 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from annoying.functions import get_object_or_None
 
-from silver.models import Invoice
+from silver.models import Invoice, Transaction
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
-                                    SubscriptionFactory)
+                                    SubscriptionFactory, TransactionFactory,
+                                    PaymentMethodFactory)
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -74,8 +76,9 @@ class TestInvoiceEndpoints(APITestCase):
             "state": "draft",
             "proforma": None,
             "invoice_entries": [],
-            'pdf_url': None,
-            "total": Decimal('0.00')
+            "pdf_url": None,
+            "total": Decimal('0.00'),
+            "transactions": []
         }
 
     def test_post_invoice_with_invoice_entries(self):
@@ -118,13 +121,45 @@ class TestInvoiceEndpoints(APITestCase):
 
     def test_get_invoice(self):
         InvoiceFactory.reset_sequence(1)
-        invoice = InvoiceFactory.create()
+        TransactionFactory.reset_sequence(1)
+
+        customer = CustomerFactory.create()
+        invoice = InvoiceFactory.create(customer=customer)
+        transactions = [
+            TransactionFactory.create(state=state, invoice=invoice,
+                                     payment_method=PaymentMethodFactory(customer=customer))
+            for state in Transaction.States.as_list()
+            if state not in [Transaction.States.Canceled,
+                             Transaction.States.Refunded,
+                             Transaction.States.Failed]
+        ]
+        expected_transactions = [{
+            "id": str(transaction.uuid),
+            "url": "http://testserver/customers/%s/transactions/%s/" %
+                   (invoice.customer.pk, transaction.uuid),
+            "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
+            "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
+            "amount": "%s.00" % str(transaction.amount),
+            "currency": "USD",
+            "currency_rate_date": None,
+            "state": transaction.state,
+            "proforma": "http://testserver/proformas/%s/" % transaction.proforma.pk,
+            "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
+            "can_be_consumed": transaction.can_be_consumed,
+            "payment_processor": "http://testserver/payment_processors/%s/" %
+                                 str(transaction.payment_processor).lower(),
+            "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
+                              (invoice.customer.pk, transaction.payment_method.pk),
+            "pay_url": "http://testserver/pay/%s/" % transaction.uuid,
+            "success_url": transaction.success_url,
+            "failed_url": transaction.failed_url
+        } for transaction in transactions]
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
+        expected_response = {
             "id": invoice.pk,
             "series": "InvoiceSeries",
             "number": 1,
@@ -140,11 +175,23 @@ class TestInvoiceEndpoints(APITestCase):
             "sales_tax_percent": '1.00',
             "currency": "RON",
             "state": "draft",
-            "proforma": None,
+            "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
             "invoice_entries": [],
             "pdf_url": None,
-            "total": Decimal('0.00'),
+            "total": Decimal('0.00')
         }
+        for field in expected_response:
+            self.assertEqual(expected_response[field], response.data[field])
+
+        for expected_transaction in expected_transactions:
+            for transaction in response.data["transactions"]:
+                if transaction["id"] == expected_transaction["id"]:
+                    actual_transaction = transaction
+                    break
+
+            for field in expected_transaction:
+                self.assertEqual(expected_transaction[field],
+                                 actual_transaction[field])
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})
