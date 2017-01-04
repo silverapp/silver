@@ -1,15 +1,10 @@
 from django_fsm import TransitionNotAllowed
-
-from .forms import BraintreeTransactionForm
 from django.http import HttpResponse, HttpResponseBadRequest
-
 
 from silver.views import GenericTransactionView
 
 
 class BraintreeTransactionView(GenericTransactionView):
-    form_class = BraintreeTransactionForm
-
     def post(self, request, transaction):
         payment_method_nonce = request.POST.get('payment_method_nonce')
         if not payment_method_nonce:

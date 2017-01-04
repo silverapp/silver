@@ -27,11 +27,11 @@ RUN set -ex \
         ca-certificates wget \
         openssl \
         libffi-dev \
+        zlib-dev \
+        jpeg-dev \
     && apk add --no-cache --virtual .build-deps \
         build-base \
         mariadb-dev \
-        jpeg-dev \
-        zlib-dev \
     && update-ca-certificates \
     && pip install --no-cache-dir -r requirements/common.txt \
     && pip install --no-cache-dir gunicorn==19.4.5 \

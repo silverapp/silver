@@ -48,8 +48,8 @@ def pay_transaction_view(request, transaction_uuid):
 
     transaction = get_object_or_404(Transaction, uuid=uuid)
 
-    view_class = transaction.payment_processor.view_class
-    if not view_class:
+    view = transaction.payment_processor.get_view(transaction, request)
+    if not view:
         raise Http404
 
     if not transaction.can_be_consumed:
@@ -59,23 +59,34 @@ def pay_transaction_view(request, transaction_uuid):
     transaction.save()
 
     try:
-        return view_class.as_view()(request, transaction)
+        return view(request)
     except NotImplementedError:
         raise Http404
 
 
 class GenericTransactionView(View):
-    form_class = GenericTransactionForm
+    form = None
+    template = None
+    transaction = None
 
-    def render_form(self, request, transaction):
-        return self.form_class(payment_method=transaction.payment_method,
-                               transaction=transaction, request=request).render()
+    def render_template(self):
+        context = {
+            'payment_method': self.transaction.payment_method,
+            'transaction': self.transaction,
+            'document': self.transaction.document,
+            'customer': self.transaction.customer,
+            'provider': self.transaction.provider,
+            'entries': list(self.transaction.document._entries),
+            'form': self.form
+        }
 
-    def get(self, request, transaction):
-        if self.form_class:
-            return HttpResponse(self.render_form(request, transaction))
+        return self.template.render(context=context)
+
+    def get(self, request):
+        if self.template:
+            return HttpResponse(self.render_template())
         else:
             raise NotImplementedError
 
-    def post(self, request, transaction):
+    def post(self, request):
         raise NotImplementedError
