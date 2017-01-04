@@ -11,7 +11,7 @@ from silver.tests.factories import TransactionFactory, ProformaFactory, \
 
 
 class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    def manage_transaction(self, transaction):
+    def execute_transaction(self, transaction):
         pass
 
 
@@ -64,8 +64,8 @@ class TestDocumentsTransactions(TestCase):
         )
         mock_recurring.return_value = True
 
-        mock_manage = MagicMock()
-        with patch.multiple(TriggeredProcessor, manage_transaction=mock_manage):
+        mock_execute = MagicMock()
+        with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
@@ -75,9 +75,9 @@ class TestDocumentsTransactions(TestCase):
 
             transaction = transactions[0]
 
-            self.assertIn(call(transaction), mock_manage.call_args_list)
+            self.assertIn(call(transaction), mock_execute.call_args_list)
 
-            self.assertEqual(mock_manage.call_count, 1)
+            self.assertEqual(mock_execute.call_count, 1)
 
     @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     @patch('silver.models.payment_methods.PaymentMethod.is_recurring',
@@ -96,8 +96,8 @@ class TestDocumentsTransactions(TestCase):
         )
         mock_recurring.return_value = False
 
-        mock_manage = MagicMock()
-        with patch.multiple(TriggeredProcessor, manage_transaction=mock_manage):
+        mock_execute = MagicMock()
+        with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
@@ -127,8 +127,8 @@ class TestDocumentsTransactions(TestCase):
         mock_usable.return_value = False
         mock_recurring.return_value = True
 
-        mock_manage = MagicMock()
-        with patch.multiple(TriggeredProcessor, manage_transaction=mock_manage):
+        mock_execute = MagicMock()
+        with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
@@ -160,8 +160,8 @@ class TestDocumentsTransactions(TestCase):
             payment_method=payment_method, invoice=invoice, proforma=proforma
         )
 
-        mock_manage = MagicMock()
-        with patch.multiple(TriggeredProcessor, manage_transaction=mock_manage):
+        mock_execute = MagicMock()
+        with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
@@ -171,4 +171,4 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(len(transactions), 1)
             self.assertEqual(transactions[0], transaction)
 
-            self.assertEqual(mock_manage.call_count, 0)
+            self.assertEqual(mock_execute.call_count, 0)

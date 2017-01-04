@@ -86,8 +86,8 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
     def _update_transaction_status(self, transaction, result_transaction):
         """
-        :param payment_method: A Transaction.
-        :param result_payment_method: A transaction from a braintreeSDK
+        :param transaction: A Transaction.
+        :param result_transaction: A transaction from a braintreeSDK
                                       result(response).
         :description: Updates a given transaction's data with data from a
                       braintreeSDK result payment method.
@@ -200,7 +200,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         return result.is_success
 
-    def manage_transaction(self, transaction):
+    def execute_transaction(self, transaction):
         """
         :param transaction: A Braintree transaction in Initial or Pending state.
         :return: True on success, False on failure.
@@ -218,10 +218,9 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                 result_transaction = braintree.Transaction.find(
                     transaction.data['braintree_id']
                 )
+                self._update_transaction_status(transaction, result_transaction)
             except braintree.exceptions.NotFoundError:
                 return False
-
-            self._update_transaction_status(transaction, result_transaction)
 
             return True
 

@@ -34,7 +34,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--transactions',
-            help='A list of transaction pks to be managed.',
+            help='A list of transaction pks to be executed.',
             action='store', dest='transactions', type=string_to_list
         )
 
@@ -44,19 +44,19 @@ class Command(BaseCommand):
             if pp.type == PaymentProcessorTypes.Triggered
         ]
 
-        manageable_transactions = Transaction.objects.filter(
+        executable_transactions = Transaction.objects.filter(
             state__in=[Transaction.States.Initial, Transaction.States.Pending],
             payment_method__payment_processor__in=payment_processors
         )
 
         if options['transactions']:
-            manageable_transactions = manageable_transactions.filter(
+            executable_transactions = executable_transactions.filter(
                 pk__in=options['transactions']
             )
 
-        for transaction in manageable_transactions:
+        for transaction in executable_transactions:
             try:
-                transaction.payment_processor.manage_transaction(transaction)
+                transaction.payment_processor.execute_transaction(transaction)
             except Exception:
-                logger.error('Encountered exception while managing transaction '
+                logger.error('Encountered exception while executing transaction '
                              'with id=%s.', transaction.id, exc_info=True)

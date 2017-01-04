@@ -226,4 +226,4 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
             transaction = create_transaction_for_document(instance)
 
             if transaction:
-                transaction.payment_processor.manage_transaction(transaction)
+                transaction.payment_processor.execute_transaction(transaction)

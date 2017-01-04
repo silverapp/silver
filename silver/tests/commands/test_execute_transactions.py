@@ -24,7 +24,7 @@ from silver.tests.factories import TransactionFactory, PaymentMethodFactory
 
 
 class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    def manage_transaction(self, transaction):
+    def execute_transaction(self, transaction):
         pass
 
 
@@ -34,7 +34,7 @@ PAYMENT_PROCESSORS = {
         'display_name': 'Manual'
     },
     'triggeredprocessor': {
-        'path': 'silver.tests.commands.test_manage_transactions.TriggeredProcessor',
+        'path': 'silver.tests.commands.test_execute_transactions.TriggeredProcessor',
         'display_name': 'TriggeredProcessor'
     }
 }
@@ -42,7 +42,7 @@ PAYMENT_PROCESSORS = {
 
 class TestInvoiceGenerationCommand(TestCase):
     @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
-    def test_transaction_managing(self):
+    def test_transaction_executing(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor'
         )
@@ -50,15 +50,15 @@ class TestInvoiceGenerationCommand(TestCase):
             5, payment_method=payment_method
         )
 
-        mock_manage = MagicMock()
+        mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor,
-                            manage_transaction=mock_manage):
-            call_command('manage_transactions')
+                            execute_transaction=mock_execute):
+            call_command('execute_transactions')
 
             for transaction in transactions:
-                self.assertIn(call(transaction), mock_manage.call_args_list)
+                self.assertIn(call(transaction), mock_execute.call_args_list)
 
-            self.assertEqual(mock_manage.call_count, len(transactions))
+            self.assertEqual(mock_execute.call_count, len(transactions))
 
     @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_transaction_filtering(self):
@@ -73,21 +73,21 @@ class TestInvoiceGenerationCommand(TestCase):
             transactions[0], transactions[2], transactions[4]
         ]
 
-        mock_manage = MagicMock()
+        mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor,
-                            manage_transaction=mock_manage):
+                            execute_transaction=mock_execute):
             transactions_arg = [
                 str(transaction.pk) for transaction in filtered_transactions
             ]
-            call_command('manage_transactions',
+            call_command('execute_transactions',
                          '--transactions=%s' % ','.join(transactions_arg))
 
             for transaction in filtered_transactions:
-                self.assertIn(call(transaction), mock_manage.call_args_list)
+                self.assertIn(call(transaction), mock_execute.call_args_list)
 
-            self.assertEqual(mock_manage.call_count, len(filtered_transactions))
+            self.assertEqual(mock_execute.call_count, len(filtered_transactions))
 
-    @patch('silver.management.commands.manage_transactions.logger.error')
+    @patch('silver.management.commands.execute_transactions.logger.error')
     @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_exception_logging(self, mock_logger):
         payment_method = PaymentMethodFactory.create(
@@ -95,14 +95,15 @@ class TestInvoiceGenerationCommand(TestCase):
         )
         TransactionFactory.create(payment_method=payment_method)
 
-        mock_manage = MagicMock()
-        mock_manage.side_effect = Exception('This happened.')
+        mock_execute = MagicMock()
+        mock_execute.side_effect = Exception('This happened.')
 
         with patch.multiple(TriggeredProcessor,
-                            manage_transaction=mock_manage):
-            call_command('manage_transactions')
+                            execute_transaction=mock_execute):
+            call_command('execute_transactions')
             expected_call = call(
-                'Encountered exception while managing transaction with id=%s.',
+                'Encountered exception while executing transaction with id=%s.',
                 1, exc_info=True
             )
+
             self.assertEqual(expected_call, mock_logger.call_args)
