@@ -373,7 +373,6 @@ class TestTransactionEndpoint(APITestCase):
     def test_create_one_without_required_fields(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        transaction = TransactionFactory.create(payment_method=payment_method)
         valid_until = datetime.now()
 
         data = {
