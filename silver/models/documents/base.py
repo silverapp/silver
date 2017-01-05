@@ -17,9 +17,7 @@ import logging
 from datetime import datetime, timedelta
 
 import pytz
-from django.dispatch import receiver
 from django_fsm import FSMField, transition
-from django_fsm import post_transition
 from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
