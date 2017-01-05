@@ -211,12 +211,43 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_add_transaction_with_draft_document(self):
+        customer = CustomerFactory.create()
+        payment_method = PaymentMethodFactory.create(customer=customer)
+        proforma = ProformaFactory.create(customer=customer)
+        proforma_url = reverse('proforma-detail', args=[proforma.pk])
+        valid_until = datetime.now()
+        url = reverse('payment-method-transaction-list',
+                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+        data = {
+            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
+                                                                       'payment_method_id': payment_method.id}),
+            'valid_until': valid_until,
+            'amount': 200.0,
+            'proforma': proforma_url
+        }
+
+        response = self.client.post(url, format='json', data=data)
+
+        expected_data = {
+            'non_field_errors': [u'The transaction must have a non-draft document '
+                                 u'(invoice or proforma).']
+        }
+        self.assertEqual(response.data, expected_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_add_transaction_with_unrelated_documents(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
 
         invoice = InvoiceFactory.create(customer=customer)
+        invoice.issue()
+        invoice.save()
+
         proforma = ProformaFactory.create(customer=customer)
+        proforma.issue()
+        proforma.save()
+
         valid_until = datetime.now()
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
@@ -276,7 +307,10 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
         )
+
         transaction = TransactionFactory.create(payment_method=payment_method)
+        transaction.document.issue()
+        transaction.document.save()
 
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
