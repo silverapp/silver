@@ -71,30 +71,30 @@ def documents_pdf_path(document, filename):
 class BillingDocumentQuerySet(models.QuerySet):
     def due_this_month(self):
         return self.filter(
-            state=BillingDocument.STATES.ISSUED,
+            state=BillingDocumentBase.STATES.ISSUED,
             due_date__gte=datetime.now(pytz.utc).date().replace(day=1)
         )
 
     def due_today(self):
         return self.filter(
-            state=BillingDocument.STATES.ISSUED,
+            state=BillingDocumentBase.STATES.ISSUED,
             due_date__exact=datetime.now(pytz.utc).date()
         )
 
     def overdue(self):
         return self.filter(
-            state=BillingDocument.STATES.ISSUED,
+            state=BillingDocumentBase.STATES.ISSUED,
             due_date__lt=datetime.now(pytz.utc).date()
         )
 
     def overdue_since_last_month(self):
         return self.filter(
-            state=BillingDocument.STATES.ISSUED,
+            state=BillingDocumentBase.STATES.ISSUED,
             due_date__lt=datetime.now(pytz.utc).date().replace(day=1)
         )
 
 
-class BillingDocument(models.Model):
+class BillingDocumentBase(models.Model):
     objects = Manager.from_queryset(BillingDocumentQuerySet)()
 
     class STATES(object):
@@ -143,7 +143,7 @@ class BillingDocument(models.Model):
         ordering = ('-issue_date', 'series', '-number')
 
     def __init__(self, *args, **kwargs):
-        super(BillingDocument, self).__init__(*args, **kwargs)
+        super(BillingDocumentBase, self).__init__(*args, **kwargs)
         self._last_state = self.state
 
     def _issue(self, issue_date=None, due_date=None):
@@ -222,7 +222,7 @@ class BillingDocument(models.Model):
         return clone
 
     def clean(self):
-        super(BillingDocument, self).clean()
+        super(BillingDocumentBase, self).clean()
 
         # The only change that is allowed if the document is in issued state
         # is the state chage from issued to paid
@@ -251,7 +251,7 @@ class BillingDocument(models.Model):
             self.series = self.default_series
 
         # Generate the number
-        if not self.number and self.state != BillingDocument.STATES.DRAFT:
+        if not self.number and self.state != BillingDocumentBase.STATES.DRAFT:
             self.number = self._generate_number()
 
         # Add tax info
@@ -261,7 +261,7 @@ class BillingDocument(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self._last_state = self.state
-        super(BillingDocument, self).save(*args, **kwargs)
+        super(BillingDocumentBase, self).save(*args, **kwargs)
 
     def _generate_number(self, default_starting_number=1):
         """Generates the number for a proforma/invoice."""

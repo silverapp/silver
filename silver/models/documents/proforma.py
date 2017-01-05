@@ -22,13 +22,13 @@ from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .base import BillingDocument
+from .base import BillingDocumentBase
 from .entries import DocumentEntry
 from .invoice import Invoice
 from silver.models.billing_entities import Provider
 
 
-class Proforma(BillingDocument):
+class Proforma(BillingDocumentBase):
     invoice = models.ForeignKey('Invoice', blank=True, null=True,
                                 related_name='related_proforma')
 
@@ -56,15 +56,15 @@ class Proforma(BillingDocument):
                                      'provider.'}
                 raise ValidationError(err_msg)
 
-    @transition(field='state', source=BillingDocument.STATES.DRAFT,
-                target=BillingDocument.STATES.ISSUED)
+    @transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
+                target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_proforma_archivable_field_values()
 
         super(Proforma, self)._issue(issue_date, due_date)
 
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.PAID)
+    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
+                target=BillingDocumentBase.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Proforma, self)._pay(paid_date)
 
@@ -90,8 +90,8 @@ class Proforma(BillingDocument):
                 # other inconsistencies should've been fixed before
                 pass
 
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.CANCELED)
+    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
+                target=BillingDocumentBase.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Proforma, self)._cancel(cancel_date)
 
@@ -101,7 +101,7 @@ class Proforma(BillingDocument):
             self.invoice.save()
 
     def create_invoice(self):
-        if self.state != BillingDocument.STATES.ISSUED:
+        if self.state != BillingDocumentBase.STATES.ISSUED:
             raise ValueError("You can't create an invoice from a %s proforma, "
                              "only from an issued one" % self.state)
 
