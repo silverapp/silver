@@ -74,7 +74,6 @@ class Transaction(models.Model):
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
-        print('hehehe')
 
         super(Transaction, self).__init__(*args, **kwargs)
 
