@@ -2,9 +2,9 @@ import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
+from django_fsm import TransitionNotAllowed
 
 from django.utils import timezone
-from django_fsm import TransitionNotAllowed
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
