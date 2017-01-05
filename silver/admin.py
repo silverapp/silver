@@ -40,7 +40,7 @@ from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog, BillingDocument,
+                    ProductCode, Proforma, BillingLog, BillingDocumentBase,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
 
@@ -338,7 +338,7 @@ class ProviderAdmin(LiveModelAdmin):
         all_documents = documents.filter(provider=provider)
         paid_documents = documents.filter(
             provider=provider,
-            state=BillingDocument.STATES.PAID
+            state=BillingDocumentBase.STATES.PAID
         )
         documents_months = documents.order_by().filter(
             provider=provider
@@ -350,7 +350,7 @@ class ProviderAdmin(LiveModelAdmin):
             doc.total for doc in (
                 documents.filter(
                     provider=provider,
-                    state=BillingDocument.STATES.DRAFT
+                    state=BillingDocumentBase.STATES.DRAFT
                 )
             )
         )
@@ -393,9 +393,9 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.DRAFT,
-                       BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.DRAFT,
+                       BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         proformas = Proforma.objects.extra(
@@ -406,9 +406,9 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.DRAFT,
-                       BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.DRAFT,
+                       BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         for provider in queryset:
@@ -676,9 +676,9 @@ class BillingDocumentAdmin(ModelAdmin):
         now = timezone.now()
 
         queryset = queryset.filter(
-            state__in=[BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.CANCELED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.CANCELED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         base_path = '/tmp'
