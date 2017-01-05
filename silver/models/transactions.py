@@ -7,6 +7,7 @@ from annoying.functions import get_object_or_None
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, URLValidator
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -58,8 +59,8 @@ class Transaction(models.Model):
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 
-    proforma = models.ForeignKey("Proforma", null=True, blank=True)
-    invoice = models.ForeignKey("Invoice", null=True, blank=True)
+    proforma = models.ForeignKey("Proforma", null=True, blank=True, limit_choices_to=~Q(state='draft'))
+    invoice = models.ForeignKey("Invoice", null=True, blank=True, limit_choices_to=~Q(state='draft'))
     payment_method = models.ForeignKey('PaymentMethod')
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
@@ -73,6 +74,7 @@ class Transaction(models.Model):
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
+        print('hehehe')
 
         super(Transaction, self).__init__(*args, **kwargs)
 
@@ -102,6 +104,12 @@ class Transaction(models.Model):
         if not document:
             raise ValidationError(
                 'The transaction must have at least one document '
+                '(invoice or proforma).'
+            )
+
+        if document.state == 'draft':
+            raise ValidationError(
+                'The transaction must have a non-draft document '
                 '(invoice or proforma).'
             )
 
@@ -200,10 +208,8 @@ def create_transaction_for_document(document):
                     payment_method.is_usable):
                 # create transaction
                 kwargs = {
-                    'invoice': document if isinstance(document, Invoice) else
-                               document.related_document,
-                    'proforma': document if isinstance(document, Proforma) else
-                                document.related_document,
+                    'invoice': isinstance(document, Invoice) and document or document.related_document,
+                    'proforma': isinstance(document, Proforma) and document or document.related_document,
                     'payment_method': payment_method,
                     'amount': document.total
                 }
