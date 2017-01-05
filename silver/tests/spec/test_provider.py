@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2015 Presslabs SRL
+# Copyright (c) 2017 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,13 @@
 # limitations under the License.
 
 
-from django.core import serializers
 import simplejson as json
+
 import pytest
+
+from django.core import serializers
 from django.core.urlresolvers import reverse
+
 from rest_framework.test import APITestCase
 from rest_framework import status
 
