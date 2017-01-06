@@ -462,6 +462,17 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         attrs = super(PaymentMethodSerializer, self).validate(attrs)
 
         additional_data = attrs.get('additional_data')
+
+        if self.instance and additional_data and not self.instance.enabled:
+            message = "'additional_data' must not be given after the " \
+                      "payment method has been enabled once."
+            raise serializers.ValidationError(message)
+
+        if additional_data and not attrs.get('verified', True):
+            message = "If 'additional_data' is specified, then the " \
+                      "payment method need to be unverified."
+            raise serializers.ValidationError(message)
+
         return attrs
 
     def validate_payment_processor(self, value):
@@ -470,21 +481,6 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(message)
 
         return value
-
-    def create(self, validated_data):
-        additional_data = validated_data.pop('additional_data', None)
-
-        payment_method = PaymentMethod.objects.create(**validated_data)
-
-        return payment_method
-
-    def update(self, instance, validated_data):
-        additional_data = validated_data.pop('additional_data', None)
-        payload = {
-            'additional_data': additional_data} if additional_data else {}
-
-        return super(PaymentMethodSerializer, self).update(instance,
-                                                           validated_data)
 
 
 class TransactionSerializer(serializers.HyperlinkedModelSerializer):

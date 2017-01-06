@@ -193,8 +193,8 @@ def create_transaction_for_document(document):
             customer=document.customer
         )
         for payment_method in payment_methods:
-            if (payment_method.is_recurring and
-                    payment_method.is_usable):
+            if (payment_method.verified and
+                    payment_method.enabled):
                 # create transaction
                 kwargs = {
                     'invoice': document if isinstance(document, Invoice) else

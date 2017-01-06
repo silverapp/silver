@@ -911,7 +911,7 @@ class TransactionAdmin(ModelAdmin):
 
     def settle(self, request, queryset):
         self.perform_action(request, queryset, 'settle', 'settled')
-    settle.short_description = 'settle the selected transactions'
+    settle.short_description = 'Settle the selected transactions'
 
     def fail(self, request, queryset):
         self.perform_action(request, queryset, 'fail', 'failed')
