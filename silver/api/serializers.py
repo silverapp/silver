@@ -453,7 +453,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor',
-                  'added_at', 'verified', 'disabled', 'additional_data')
+                  'added_at', 'verified', 'enabled', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }

@@ -189,7 +189,7 @@ def create_transaction_for_document(document):
         # get a usable, recurring payment_method for the customer
         payment_methods = PaymentMethod.objects.filter(
             enabled=True,
-            verfied=True,
+            verified=True,
             customer=document.customer
         )
         for payment_method in payment_methods:

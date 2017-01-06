@@ -25,7 +25,7 @@ class PaymentMethod(models.Model):
     data = JSONField(blank=True, null=True, default={})
 
     verified = models.BooleanField(default=False)
-    disabled = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
 
     objects = InheritanceManager()
 
