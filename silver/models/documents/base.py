@@ -17,13 +17,12 @@ import logging
 from datetime import datetime, timedelta
 
 import pytz
-from django.dispatch import receiver
-from django_fsm import FSMField, transition
-from django_fsm import post_transition
-from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
+from django_fsm import FSMField, transition, post_transition
 
+from django.dispatch import receiver
+from django_xhtml2pdf.utils import generate_pdf_template_object
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.files.base import ContentFile
@@ -39,11 +38,10 @@ from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
+from silver.models.billing_entities import Customer, Provider
+from silver.utils.international import currencies
 
 from .entries import DocumentEntry
-from silver.models.billing_entities import Customer, Provider
-
-from silver.utils.international import currencies
 
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)

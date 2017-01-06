@@ -19,6 +19,8 @@ import logging
 import requests
 from collections import OrderedDict
 
+from PyPDF2 import PdfFileReader, PdfFileMerger
+
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
@@ -36,7 +38,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.shortcuts import render
 from django.http import HttpResponse
-from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,

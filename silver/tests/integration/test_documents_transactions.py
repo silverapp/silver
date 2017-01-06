@@ -51,7 +51,8 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=True,
         )
         mock_recurring.return_value = True
 
@@ -83,7 +84,8 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=False
         )
         mock_recurring.return_value = False
 
@@ -112,7 +114,7 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=False
         )
 
         mock_usable.return_value = False
@@ -143,7 +145,8 @@ class TestDocumentsTransactions(TestCase):
 
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=True,
         )
         mock_recurring.return_value = True
 
