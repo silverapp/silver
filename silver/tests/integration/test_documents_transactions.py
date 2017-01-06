@@ -41,8 +41,6 @@ class TestDocumentsTransactions(TestCase):
     # also refunding needs to be tested when implemented
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring')
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_transaction_creation_for_issued_documents(self):
         """
             The happy case.
@@ -72,8 +70,6 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(mock_execute.call_count, 1)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring',
-           new_callable=PropertyMock)
     def test_no_transaction_creation_for_issued_documents_case_1(self):
         """
             The payment method is not recurring
@@ -97,7 +93,6 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(len(transactions), 0)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_no_transaction_creation_for_issued_documents_case2(self):
         """
             The payment method is not usable

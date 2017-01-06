@@ -251,7 +251,27 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_no_output, [])
 
     def test_filter_enabled(self):
-        pass
+        payment_method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        url_manual_processor = url + '?enabled=True'
+        url_no_output = url + '?enabled=False'
+
+        self.assert_get_data(url_manual_processor, [payment_method])
+        self.assert_get_data(url_no_output, [])
 
     def test_filter_verified(self):
-        pass
+        payment_method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        url_manual_processor = url + '?verified=False'
+        url_no_output = url + '?verified=True'
+
+        self.assert_get_data(url_manual_processor, [payment_method])
+        self.assert_get_data(url_no_output, [])

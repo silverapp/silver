@@ -188,8 +188,8 @@
         "fields":{
             "customer":1,
             "added_at":"2016-11-16T10:28:22Z",
-            "verified_at":null,
-            "state":"uninitialized",
+            "enabled": true,
+            "verified": true,
             "payment_processor":"manual",
             "data":{
                 "token":"asdfqwerty1234"

@@ -180,8 +180,9 @@ class TransactionFilter(FilterSet):
 
 class PaymentMethodFilter(FilterSet):
     processor = CharFilter(name='payment_processor', lookup_type='iexact')
-    state = CharFilter(name='state')
+    enabled = BooleanFilter(name='enabled')
+    verified = BooleanFilter(name='verified')
 
     class Meta:
         model = PaymentMethod
-        fields = ['processor', 'state']
+        fields = ['processor', 'enabled', 'verified']

@@ -8,7 +8,7 @@ import silver.models.payment_processors.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0017_auto_20161230_1420'),
+        ('silver', '0020_auto_20170106_0956'),
     ]
 
     operations = [
