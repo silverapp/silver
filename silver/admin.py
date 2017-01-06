@@ -950,14 +950,14 @@ class PaymentMethodForm(forms.ModelForm):
     class Meta:
         model = PaymentMethod
 
-        fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
-                  'data', 'state')
+        fields = ('customer', 'payment_processor', 'added_at', 'data',
+                  'verified', 'enabled')
 
 
 class PaymentMethodAdmin(ModelAdmin):
     form = PaymentMethodForm
-    list_display = ('customer', 'payment_processor', 'added_at', 'verified_at',
-                    'state')
+    list_display = ('customer', 'payment_processor', 'added_at', 'verified',
+                    'enabled')
 
 
 site.register(Transaction, TransactionAdmin)

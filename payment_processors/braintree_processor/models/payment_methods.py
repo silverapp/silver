@@ -17,32 +17,6 @@ class BraintreePaymentMethod(PaymentMethod):
         PayPal = 'paypal_account'
         CreditCard = 'credit_card'
 
-    @transition(field='state',
-                **PaymentMethod.state_transitions['initialize_unverified'])
-    def initialize_unverified(self, initial_data=None):
-        if not initial_data:
-            return
-
-        self.nonce = initial_data.get('nonce')
-        self.is_recurring = initial_data.get('is_recurring', False)
-        self.billing_details = initial_data.get('billing_details')
-
-    @transition(field='state',
-                **PaymentMethod.state_transitions['initialize_enabled'])
-    def initialize_enabled(self, initial_data=None):
-        if not initial_data:
-            return
-
-        self.token = initial_data.get('token')
-
-    @transition(field='state',
-                **PaymentMethod.state_transitions['verify'])
-    def verify(self, additional_data=None):
-        if not additional_data:
-            return
-
-        self.token = additional_data.get('token')
-
     @property
     def braintree_transaction(self):
         try:
