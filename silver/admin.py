@@ -19,6 +19,8 @@ import logging
 import requests
 from collections import OrderedDict
 
+from PyPDF2 import PdfFileReader, PdfFileMerger
+
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
@@ -36,7 +38,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.shortcuts import render
 from django.http import HttpResponse
-from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
@@ -910,7 +911,7 @@ class TransactionAdmin(ModelAdmin):
 
     def settle(self, request, queryset):
         self.perform_action(request, queryset, 'settle', 'settled')
-    settle.short_description = 'settle the selected transactions'
+    settle.short_description = 'Settle the selected transactions'
 
     def fail(self, request, queryset):
         self.perform_action(request, queryset, 'fail', 'failed')
@@ -950,14 +951,14 @@ class PaymentMethodForm(forms.ModelForm):
     class Meta:
         model = PaymentMethod
 
-        fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
-                  'data', 'state')
+        fields = ('customer', 'payment_processor', 'added_at', 'data',
+                  'verified', 'enabled')
 
 
 class PaymentMethodAdmin(ModelAdmin):
     form = PaymentMethodForm
-    list_display = ('customer', 'payment_processor', 'added_at', 'verified_at',
-                    'state')
+    list_display = ('customer', 'payment_processor', 'added_at', 'verified',
+                    'enabled')
 
 
 site.register(Transaction, TransactionAdmin)

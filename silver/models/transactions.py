@@ -188,12 +188,13 @@ def create_transaction_for_document(document):
     ):
         # get a usable, recurring payment_method for the customer
         payment_methods = PaymentMethod.objects.filter(
-            state=PaymentMethod.States.Enabled,
+            enabled=True,
+            verified=True,
             customer=document.customer
         )
         for payment_method in payment_methods:
-            if (payment_method.is_recurring and
-                    payment_method.is_usable):
+            if (payment_method.verified and
+                    payment_method.enabled):
                 # create transaction
                 kwargs = {
                     'invoice': document if isinstance(document, Invoice) else

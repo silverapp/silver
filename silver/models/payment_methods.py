@@ -20,68 +20,20 @@ class PaymentMethod(models.Model):
     payment_processor = PaymentProcessorField(
         blank=False, null=False, max_length=256
     )
-
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
-    verified_at = models.DateTimeField(null=True, blank=True)
     data = JSONField(blank=True, null=True, default={})
+
+    verified = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
 
     objects = InheritanceManager()
 
-    class States(object):
-        Uninitialized = 'uninitialized'
-        Unverified = 'unverified'
-        Enabled = 'enabled'
-        Disabled = 'disabled'
-        Removed = 'removed'
+    customer = models.ForeignKey(Customer)
+    added_at = models.DateTimeField(default=timezone.now)
+    data = JSONField(blank=True, null=True, default={})
 
-        Choices = (
-            (Uninitialized, 'Uninitialized'),
-            (Unverified, 'Unverified'),
-            (Enabled, 'Enabled'),
-            (Disabled, 'Disabled'),
-            (Removed, 'Removed')
-        )
-
-        @classmethod
-        def as_list(cls):
-            return [choice[0] for choice in cls.Choices]
-
-        @classmethod
-        def allowed_initial_states(cls):
-            return [cls.Uninitialized, cls.Unverified, cls.Enabled]
-
-        @classmethod
-        def invalid_initial_states(cls):
-            return list(set(cls.as_list()) - set(cls.allowed_initial_states()))
-
-    state = FSMField(choices=States.Choices, default=States.Uninitialized)
-    state_transitions = {
-        'initialize_unverified': {
-            'source': States.Uninitialized,
-            'target': States.Unverified
-        },
-        'initialize_enabled': {
-            'source': States.Uninitialized,
-            'target': States.Enabled
-        },
-        'verify': {
-            'source': States.Unverified,
-            'target': States.Enabled
-        },
-        'remove': {
-            'source': [States.Enabled, States.Disabled, States.Unverified],
-            'target': States.Removed
-        },
-        'disable': {
-            'source': States.Enabled,
-            'target': States.Disabled
-        },
-        'reenable': {
-            'source': States.Disabled,
-            'target': States.Enabled
-        }
-    }
+    objects = InheritanceManager()
 
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
@@ -94,40 +46,6 @@ class PaymentMethod(models.Model):
                     self.__class__ = payment_method_class
             except AttributeError:
                 pass
-
-    @transition(field='state',
-                **state_transitions['initialize_unverified'])
-    def initialize_unverified(self, initial_data=None):
-        pass
-
-    @transition(field='state',
-                **state_transitions['initialize_enabled'])
-    def initialize_enabled(self, initial_data=None):
-        pass
-
-    @transition(field='state',
-                **state_transitions['verify'])
-    def verify(self):
-        pass
-
-    @transition(field='state',
-                **state_transitions['remove'])
-    def remove(self):
-        """
-        Methods that implement this, need to remove the payment method from
-        the real Payment Processor or raise TransitionNotAllowed
-        """
-        pass
-
-    @transition(field='state',
-                **state_transitions['disable'])
-    def disable(self):
-        pass
-
-    @transition(field='state',
-                **state_transitions['reenable'])
-    def reenable(self):
-        pass
 
     def delete(self, using=None):
         if not self.state == self.States.Uninitialized:
@@ -150,14 +68,6 @@ class PaymentMethod(models.Model):
     @property
     def public_data(self):
         return {}
-
-    @property
-    def is_usable(self):
-        return self.state in [self.States.Unverified, self.States.Enabled]
-
-    @property
-    def is_recurring(self):
-        return False
 
     def __unicode__(self):
         return u'{} - {}'.format(self.customer, self.payment_processor)

@@ -7,7 +7,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0018_auto_20170109_1159'),
+        ('silver', '0018_auto_20170106_0921'),
     ]
 
     create_document_view = migrations.RunSQL("""

@@ -1,15 +1,19 @@
 import sys
 from copy import deepcopy
+
 from six import iteritems
+
+from django.test import override_settings
 
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
-from silver.api.serializers import PaymentMethodSerializer
 from silver.models import PaymentMethod
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
+from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
+
 from silver.tests.spec.util.api_get_assert import APIGetAssert
 from silver.tests.factories import CustomerFactory, PaymentMethodFactory
 from silver.tests.utils import register_processor
@@ -65,109 +69,14 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.post(url, data={
             'payment_processor': processor_url,
-            'state': PaymentMethod.States.Uninitialized
         }, format='json')
 
         payment_method = PaymentMethod.objects.get(customer=self.customer)
         self.assert_get_data(response.data['url'], payment_method)
 
-    def test_post_listing_additional_data_wrong_state(self):
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
-        url = reverse('payment-method-list', kwargs={
-            'customer_pk': self.customer.pk
-        })
-
-        response = self.client.post(url, data={
-            'payment_processor': processor_url,
-            'state': PaymentMethod.States.Uninitialized,
-            'additional_data': '{"random": "value"}'
-        }, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {
-            'non_field_errors':
-                ["If 'additional_data' is specified,"
-                 " then 'state' must be one of (unverified, enabled)."]})
-
-    def test_post_listing_invalid_initial_state(self):
-        invalid_initial_states = PaymentMethod.States.invalid_initial_states()
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
-        url = reverse('payment-method-list', kwargs={
-            'customer_pk': self.customer.pk
-        })
-
-        for state in invalid_initial_states:
-            response = self.client.post(url, data={
-                'payment_processor': processor_url,
-                'state': state
-            }, format='json')
-
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(response.data, {
-                'state': [u'Must initially be one of (uninitialized, '
-                          u'unverified, enabled).']
-            })
-
-    def test_put_detail_state_transitions(self):
-        states = PaymentMethod.States.as_list()
-        permutations = [(old, new) for old in states for new in states]
-
-        valid_transitions = set()
-        for _, transition in iteritems(PaymentMethod.state_transitions):
-            if isinstance(transition['source'], (tuple, list)):
-                unmerged_transitions = set([(old, transition['target']) for
-                                            old in transition['source']])
-            else:
-                unmerged_transitions = {(transition['source'],
-                                         transition['target'])}
-
-            valid_transitions = valid_transitions.union(unmerged_transitions)
-
-        # add x -> x transitions as they are allowed
-        valid_transitions = valid_transitions.union(
-            set([(x, x) for x in states]))
-
-        valid_transition_list = list(valid_transitions)
-
-        for old, new in permutations:
-            payment_method = self.create_payment_method(customer=self.customer,
-                                                        state=old)
-
-            url = reverse('payment-method-detail', kwargs={
-                'customer_pk': self.customer.pk,
-                'payment_method_id': payment_method.pk
-            })
-            response = self.client.get(url, format='json')
-
-            data = response.data
-            data['state'] = new
-
-            response = self.client.put(url, data=data, format='json')
-
-            message = '{} -> {}: code got {{}} expected {{}}'.format(old, new)
-            if (old, new) in valid_transition_list:
-                self.assertEqual(response.status_code,
-                                 status.HTTP_200_OK,
-                                 message.format(response.status_code,
-                                                status.HTTP_200_OK))
-                self.assertEqual(data, response.data,
-                                 message.format(response.status_code,
-                                                status.HTTP_200_OK))
-            else:
-                self.assertEqual(response.status_code,
-                                 status.HTTP_409_CONFLICT,
-                                 message.format(response.status_code,
-                                                status.HTTP_409_CONFLICT))
-
     def test_put_detail_additional_data_disabled_state(self):
         payment_method = self.create_payment_method(customer=self.customer,
-                                                    state=PaymentMethod.States.Disabled)
+                                                    enabled=False)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
@@ -229,7 +138,8 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_put_detail(self):
         payment_method = self.create_payment_method(customer=self.customer,
-                                                    state=PaymentMethod.States.Unverified)
+                                                    enabled=False,
+                                                    verified=False)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
@@ -238,11 +148,33 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.get(url, format='json')
         data = response.data
-        data['state'] = PaymentMethod.States.Enabled
+        data['enabled'] = True
+        data['verified'] = True
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, data)
+
+    def test_post_listing_additional_data_unverified(self):
+        processor_url = reverse('payment-processor-detail', kwargs={
+            'processor_name': 'manual'
+        })
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        response = self.client.post(url, data={
+            'payment_processor': processor_url,
+            'verified': False,
+            'additional_data': '{"random": "value"}'
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'non_field_errors':
+                ["If 'additional_data' is specified, then the payment "
+                 "method need to be unverified."]})
 
     def test_get_listing_no_customer(self):
         url = reverse('payment-method-list', kwargs={
@@ -284,7 +216,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.post(url, data={
             'payment_processor': processor_url,
-            'state': PaymentMethod.States.Uninitialized
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -299,26 +230,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
             'payment_processor': ['This field is required.']})
-
-    def test_post_listing_missing_initial_state(self):
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
-        url = reverse('payment-method-list', kwargs={
-            'customer_pk': self.customer.pk
-        })
-
-        response = self.client.post(url, data={
-            'payment_processor': processor_url
-        }, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['state'],
-                         PaymentMethod.States.Uninitialized)
-
-        payment_method = PaymentMethod.objects.get(customer=self.customer)
-        self.assert_get_data(response.data['url'], payment_method)
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,
@@ -339,16 +250,28 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
 
-    def test_filter_state(self):
-        payment_method = self.create_payment_method(customer=self.customer,
-                                                    state=PaymentMethod.States.Enabled)
+    def test_filter_enabled(self):
+        payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
         })
 
-        url_state_enabled = url + '?state=' + PaymentMethod.States.Enabled
-        url_no_output = url + '?state=' + PaymentMethod.States.Disabled
+        url_manual_processor = url + '?enabled=True'
+        url_no_output = url + '?enabled=False'
 
-        self.assert_get_data(url_state_enabled, [payment_method])
+        self.assert_get_data(url_manual_processor, [payment_method])
+        self.assert_get_data(url_no_output, [])
+
+    def test_filter_verified(self):
+        payment_method = self.create_payment_method(customer=self.customer)
+
+        url = reverse('payment-method-list', kwargs={
+            'customer_pk': self.customer.pk
+        })
+
+        url_manual_processor = url + '?verified=False'
+        url_no_output = url + '?verified=True'
+
+        self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])

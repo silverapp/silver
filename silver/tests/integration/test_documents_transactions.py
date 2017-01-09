@@ -41,8 +41,7 @@ class TestDocumentsTransactions(TestCase):
     # also refunding needs to be tested when implemented
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring')
-    def test_transaction_creation_for_issued_documents(self, mock_recurring):
+    def test_transaction_creation_for_issued_documents(self):
         """
             The happy case.
         """
@@ -51,9 +50,9 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=True,
         )
-        mock_recurring.return_value = True
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
@@ -71,10 +70,7 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(mock_execute.call_count, 1)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring',
-           new_callable=PropertyMock)
-    def test_no_transaction_creation_for_issued_documents_case_1(self,
-                                                                 mock_recurring):
+    def test_no_transaction_creation_for_issued_documents_case_1(self):
         """
             The payment method is not recurring
         """
@@ -83,9 +79,9 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=False
         )
-        mock_recurring.return_value = False
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
@@ -97,13 +93,7 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(len(transactions), 0)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring',
-           new_callable=PropertyMock)
-    @patch('silver.models.payment_methods.PaymentMethod.is_usable',
-           new_callable=PropertyMock)
-    def test_no_transaction_creation_for_issued_documents_case2(
-        self, mock_usable, mock_recurring
-    ):
+    def test_no_transaction_creation_for_issued_documents_case2(self):
         """
             The payment method is not usable
         """
@@ -112,11 +102,8 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=False
         )
-
-        mock_usable.return_value = False
-        mock_recurring.return_value = True
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
@@ -128,10 +115,7 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(len(transactions), 0)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
-    @patch('silver.models.payment_methods.PaymentMethod.is_recurring',
-           new_callable=PropertyMock)
-    def test_no_transaction_creation_for_issued_documents_case3(self,
-                                                                mock_recurring):
+    def test_no_transaction_creation_for_issued_documents_case3(self):
         """
             There already is an active (initial/pending) transaction for the
             document. This can happen when the second document is triggering
@@ -143,9 +127,9 @@ class TestDocumentsTransactions(TestCase):
 
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor', customer=customer,
-            state=PaymentMethod.States.Enabled
+            enabled=True,
+            verified=True,
         )
-        mock_recurring.return_value = True
 
         transaction = TransactionFactory.create(
             payment_method=payment_method, invoice=invoice, proforma=proforma

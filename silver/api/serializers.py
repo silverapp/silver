@@ -453,56 +453,27 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor',
-                  'added_at', 'verified_at', 'state', 'additional_data')
+                  'added_at', 'verified', 'enabled', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
-            'verified_at': {'read_only': True},
-            'state': {'default': PaymentMethod.States.Uninitialized}
         }
 
     def validate(self, attrs):
         attrs = super(PaymentMethodSerializer, self).validate(attrs)
 
-        state = attrs.get('state')
         additional_data = attrs.get('additional_data')
 
-        # Update
-        if self.instance:
-            if (additional_data and
-                    self.instance.state == PaymentMethod.States.Disabled):
-                message = "'additional_data' must not be given after the " \
-                          "payment method has been enabled once."
-                raise serializers.ValidationError(message)
-        # Common
-        if additional_data:
-            allowed_initialized_states = [
-                PaymentMethod.States.Unverified,
-                PaymentMethod.States.Enabled
-            ]
-            if state not in allowed_initialized_states:
-                message = "If 'additional_data' is specified, " \
-                          "then 'state' must be one of ({}).".format(
-                              ', '.join(allowed_initialized_states)
-                          )
-                raise serializers.ValidationError(message)
+        if self.instance and additional_data and not self.instance.enabled:
+            message = "'additional_data' must not be given after the " \
+                      "payment method has been enabled once."
+            raise serializers.ValidationError(message)
+
+        if additional_data and not attrs.get('verified', True):
+            message = "If 'additional_data' is specified, then the " \
+                      "payment method need to be unverified."
+            raise serializers.ValidationError(message)
 
         return attrs
-
-    def validate_state(self, state):
-        if state not in PaymentMethod.States.as_list():
-            raise serializers.ValidationError('Unknown state {}'.format(state))
-
-        # Create
-        if not self.instance:
-            allowed_states = PaymentMethod.States.allowed_initial_states()
-
-            if state not in allowed_states:
-                message = "Must initially be one of ({}).".format(
-                    ', '.join(allowed_states)
-                )
-                raise serializers.ValidationError(message)
-
-        return state
 
     def validate_payment_processor(self, value):
         if self.instance and value != self.instance.payment_processor:
@@ -510,71 +481,6 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(message)
 
         return value
-
-    def create(self, validated_data):
-        state = validated_data.pop('state', None)
-        additional_data = validated_data.pop('additional_data', None)
-
-        payment_method = PaymentMethod.objects.create(**validated_data)
-
-        if state is PaymentMethod.States.Unverified:
-            try:
-                payment_method.initialize_unverified(additional_data)
-                payment_method.save()
-            except TransitionNotAllowed:
-                payment_method.delete()
-                raise APIConflictException("The given 'state' could not be "
-                                           "applied.")
-
-        elif state is PaymentMethod.States.Enabled:
-            try:
-                payment_method.initialize_enabled(additional_data)
-                payment_method.save()
-            except TransitionNotAllowed:
-                payment_method.delete()
-                raise APIConflictException("The given 'state' could not be "
-                                           "applied.")
-
-        return payment_method
-
-    def update(self, instance, validated_data):
-        old_state = instance.state
-        new_state = validated_data.pop('state', None)
-        additional_data = validated_data.pop('additional_data', None)
-        payload = {
-            'additional_data': additional_data} if additional_data else {}
-
-        if new_state == old_state:
-            return super(PaymentMethodSerializer, self).update(instance,
-                                                               validated_data)
-
-        state_transitions = PaymentMethod.state_transitions
-        found_callback_name = None
-        for callback_name, transition in iteritems(state_transitions):
-            if new_state != transition['target']:
-                continue
-
-            if isinstance(transition['source'], (list, tuple)) \
-                    and old_state in transition['source']:
-                found_callback_name = callback_name
-                break
-            elif old_state == transition['source']:
-                found_callback_name = callback_name
-                break
-
-        if not found_callback_name:
-            raise APIConflictException("A transition to the given 'state={}' "
-                                       "does not exist.".format(new_state))
-
-        try:
-            getattr(instance, found_callback_name)(**payload)
-        except TransitionNotAllowed:
-            raise APIConflictException("The payment method could not be"
-                                       "transitioned to the given"
-                                       "'state={}'.".format(new_state))
-
-        return super(PaymentMethodSerializer, self).update(instance,
-                                                           validated_data)
 
 
 class TransactionSerializer(serializers.HyperlinkedModelSerializer):

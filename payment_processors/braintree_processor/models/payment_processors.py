@@ -75,10 +75,10 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         try:
             if payment_method.is_recurring:
-                if payment_method.state == payment_method.States.Unverified:
-                    payment_method.verify({
-                        'token': result_details.token
-                    })
+                if not payment_method.vefified:
+                    payment_method.token = result_details.token
+                    payment_method.verified = True
+                    payment_method.save()
             else:
                 payment_method.remove()
         except TransitionNotAllowed as e:
