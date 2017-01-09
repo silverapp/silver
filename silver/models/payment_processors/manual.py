@@ -6,9 +6,6 @@ from .mixins import ManualProcessorMixin
 
 
 class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):
+    reference = 'manual'
     transaction_view_class = GenericTransactionView
     form_class = GenericTransactionForm
-
-    @staticmethod
-    def setup(data=None):
-        pass

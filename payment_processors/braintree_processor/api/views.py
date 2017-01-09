@@ -6,7 +6,7 @@ from rest_framework.response import Response
 @api_view('GET')
 def client_token(request, payment_method=None, payment_processor=None):
     if payment_method:
-        payment_processor = payment_method.processor
+        payment_processor = payment_method.payment_processor
     elif not payment_processor:
         return Response(
             {'detail': 'A payment method or a payment processor is required.'},

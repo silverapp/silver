@@ -4,16 +4,10 @@ from django.utils.deconstruct import deconstructible
 
 @deconstructible
 class PaymentProcessorBase(object):
+    reference = None
     form_class = None
     payment_method_class = None
     transaction_view_class = None
-
-    def setup(self, data):
-        """
-            Sets up the Payment Processor
-        """
-
-        raise NotImplementedError
 
     def get_view(self, transaction, request, **kwargs):
         kwargs.update({
@@ -35,10 +29,10 @@ class PaymentProcessorBase(object):
         template = select_template([
             'forms/{}/{}/transaction_form.html'.format(
                 transaction.document.provider,
-                transaction.payment_method.processor.reference
+                transaction.payment_method.payment_processor.reference
             ),
             'forms/{}/transaction_form.html'.format(
-                transaction.payment_method.processor.reference
+                transaction.payment_method.payment_processor.reference
             ),
             'forms/transaction_form.html'
         ])

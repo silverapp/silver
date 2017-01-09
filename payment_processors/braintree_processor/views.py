@@ -34,7 +34,7 @@ class BraintreeTransactionView(GenericTransactionView):
             return HttpResponse('Something went wrong!')
 
         # manage the transaction
-        payment_processor = payment_method.processor
+        payment_processor = payment_method.payment_processor
 
         if not payment_processor.execute_transaction(transaction):
             return HttpResponse('Something went wrong!')

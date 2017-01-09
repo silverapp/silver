@@ -1,80 +1,97 @@
-import importlib
 import traceback
+from functools import wraps
 
 from django.conf import settings
 
 
+def ready(func):
+    @wraps(func)
+    def func_wrapper(cls, *args, **kwargs):
+        if not cls._processors_registered:
+            cls.register_processors()
+        return func(cls, *args, **kwargs)
+    return func_wrapper
+
+
 class PaymentProcessorManager(object):
+    _processors = {}
+
+    _processors_registered = False
+
     class DoesNotExist(Exception):
         pass
 
     @classmethod
-    def get_class(cls, reference):
-        try:
-            data = settings.PAYMENT_PROCESSORS[reference]
-        except KeyError:
-            raise cls.DoesNotExist
-
-        full_path = data['path']
-        path, processor = full_path.rsplit('.', 1)
-
-        try:
-            module = importlib.import_module(path)
-            klass = getattr(module, processor, None)
-        except Exception as e:
-            traceback.print_exc()
-            raise ImportError(
-                "Couldn't import '{}' from '{}'\nReason: {}".format(processor, path, e)
-            )
-        if not klass:
-            raise ImportError(
-                "Couldn't import '{}' from '{}'".format(processor, path)
-            )
-        return klass
+    def register(cls, processor_class, setup_data=None, display_name=None):
+        setup_data = setup_data or {}
+        if processor_class.reference not in cls._processors:
+            cls._processors[processor_class.reference] = {
+                'class': processor_class,
+                'setup_data': setup_data,
+                'display_name': display_name
+            }
 
     @classmethod
+    def unregister(cls, processor_class):
+        reference = processor_class.reference
+        if reference in cls._processors:
+            del cls._processors[reference]
+
+    @classmethod
+    @ready
     def get_instance(cls, reference):
         try:
-            data = settings.PAYMENT_PROCESSORS[reference]
+            processor = cls._processors[reference]
+            processor_instance = processor['class'](**processor['setup_data'])
+
+            if processor['display_name']:
+                processor_instance.display_name = processor['display_name']
+
+            return processor_instance
         except KeyError:
             raise cls.DoesNotExist
-        klass = cls.get_class(reference)
-
-        instance = klass(**data.get('settings', {}))
-        instance.reference = reference
-        instance.display_name = data.get('display_name')
-
-        return instance
 
     @classmethod
-    def all(cls):
-        return settings.PAYMENT_PROCESSORS.keys()
+    @ready
+    def get_class(cls, reference):
+        try:
+            return cls._processors[reference]['class']
+        except KeyError:
+            raise cls.DoesNotExist
 
     @classmethod
+    @ready
     def all_instances(cls):
-        return [cls.get_instance(processor_name) for processor_name in cls.all()]
+        return [cls.get_instance(reference) for reference in cls._processors]
 
+    @classmethod
     def register_processors(cls):
-        for processor_path, setup_data in settings.PAYMENT_PROCESSORS:
+        for processor_path, data in settings.PAYMENT_PROCESSORS.items():
             path, processor = processor_path.rsplit('.', 1)
+
             try:
-                processor = getattr(
+                processor_class = getattr(
                     __import__(path, globals(), locals(), [processor], 0),
                     processor
                 )
             except Exception as e:
                 traceback.print_exc()
                 raise ImportError(
-                    "Couldn't import '{}' from '{}'\nReason: {}".format(processor, path, e)
+                    "Couldn't import '{}' from '{}'\nReason: {}".format(
+                        processor,
+                        path, e)
                 )
-
-            cls.register(processor, setup_data)
+            cls.register(processor_class,
+                         data.get('setup_data'),
+                         data.get('display_name'))
 
         cls._processors_registered = True
 
     @classmethod
+    @ready
     def get_choices(cls):
         return [
-            (name, data.get('display_name', name))
-            for name, data in settings.PAYMENT_PROCESSORS.items()
+            (processor['class'].reference,
+             processor['display_name'] or processor['class'].display_name)
+            for processor in cls._processors.values()
         ]

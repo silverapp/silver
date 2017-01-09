@@ -240,7 +240,7 @@ class PaymentMethodFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = PaymentMethod
 
-    payment_processor = 'manual'
+    payment_processor = PaymentProcessorManager.get_instance('manual')
     customer = factory.SubFactory(CustomerFactory)
 
 
