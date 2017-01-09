@@ -6,7 +6,7 @@ from silver.models import DocumentEntry
 
 
 class Document(models.Model):
-    kind = models.CharField()
+    kind = models.CharField(max_length=40)
 
     @property
     def total(self):
