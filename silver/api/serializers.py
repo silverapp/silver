@@ -21,6 +21,7 @@ from rest_framework.reverse import reverse
 from rest_framework.exceptions import ValidationError as APIValidationError
 
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from silver.models.documents.document import Document
 from six import iteritems
 
 from silver.api.exceptions import APIConflictException
@@ -319,6 +320,57 @@ class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
         fields = ('description', 'unit', 'unit_price', 'quantity', 'total',
                   'total_before_tax', 'start_date', 'end_date', 'prorated',
                   'product_code')
+
+
+class PDFUrl(serializers.HyperlinkedRelatedField):
+    def get_url(self, obj, view_name, request, format):
+        return request.build_absolute_uri(obj.pdf.url) if obj.pdf else None
+
+
+class DocumentUrl(serializers.HyperlinkedIdentityField):
+    def __init__(self, proforma_view_name, invoice_view_name, *args, **kwargs):
+        # the view_name is required on HIF init, but we only know what it will
+        # be in get_url
+        kwargs['view_name'] = ''
+        super(DocumentUrl, self).__init__(*args, **kwargs)
+
+        self.invoice_view_name = invoice_view_name
+        self.proforma_view_name = proforma_view_name
+
+    def get_url(self, obj, view_name, request, format):
+        view_name = (self.invoice_view_name if obj.kind =='invoice' else
+                     self.proforma_view_name)
+
+        lookup_value = getattr(obj, self.lookup_field)
+
+        if not lookup_value:
+            return
+
+        kwargs = {
+            self.lookup_url_kwarg: str(lookup_value)
+        }
+
+        return self.reverse(view_name, kwargs=kwargs,
+                            request=request, format=format)
+
+
+class DocumentSerializer(serializers.HyperlinkedModelSerializer):
+    """
+        A read-only serializers for Proformas and Invoices
+    """
+    customer = CustomerUrl(view_name='customer-detail',
+                           queryset=Customer.objects.all())
+    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    url = DocumentUrl(proforma_view_name='proforma-detail',
+                      invoice_view_name='invoice-detail',)
+
+    class Meta:
+        model = Document
+        fields = ('id', 'url', 'kind', 'series', 'number', 'provider',
+                  'customer', 'due_date', 'issue_date', 'paid_date',
+                  'cancel_date', 'sales_tax_name', 'sales_tax_percent',
+                  'currency', 'state', 'total', 'pdf_url')
+        read_only_fields = fields
 
 
 class TransactionUrl(serializers.HyperlinkedIdentityField):

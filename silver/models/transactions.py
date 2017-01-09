@@ -15,7 +15,8 @@ from django_fsm import FSMField, transition, TransitionNotAllowed
 from django_fsm import post_transition
 from jsonfield import JSONField
 
-from silver.models import BillingDocument, Invoice, PaymentMethod, Proforma
+
+from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
 from silver.utils.international import currencies
 
 
@@ -216,8 +217,8 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     if issubclass(sender, Transaction):
         _sync_transaction_state_with_document(instance, target)
 
-    elif issubclass(sender, BillingDocument):
-        if target == BillingDocument.STATES.ISSUED:
+    elif issubclass(sender, BillingDocumentBase):
+        if target == BillingDocumentBase.STATES.ISSUED:
             transaction = create_transaction_for_document(instance)
 
             if transaction:

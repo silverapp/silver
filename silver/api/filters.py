@@ -17,8 +17,9 @@ from django_filters import (FilterSet, CharFilter, BooleanFilter, DateFilter,
 from django_filters.fields import Lookup
 
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
-                           Plan, Invoice, Proforma, Transaction, PaymentMethod)
-
+                           Plan, Invoice, Proforma, Transaction, PaymentMethod,
+                           BillingDocumentBase)
+from silver.models.documents.document import Document
 
 
 class MultipleCharFilter(CharFilter):
@@ -116,8 +117,32 @@ class BillingDocumentFilter(FilterSet):
 
     class Meta:
         fields = ['state', 'number', 'customer_name', 'customer_company',
-                  'issue_date', 'due_date', 'paid_date', 'cancel_date',
-                  'currency', 'sales_tax_name', 'is_overdue']
+                  'provider_name', 'provider_company', 'issue_date', 'due_date',
+                  'paid_date', 'cancel_date', 'currency', 'sales_tax_name',
+                  'is_overdue']
+
+
+class DocumentFilter(FilterSet):
+    state = CharFilter(name='state', lookup_type='iexact')
+    number = NumberFilter(name='number', lookup_type='iexact')
+    customer_name = CharFilter(name='customer__name', lookup_type='icontains')
+    customer_company = CharFilter(name='customer__company',
+                                  lookup_type='icontains')
+    provider_name = CharFilter(name='provider__name', lookup_type='icontains')
+    provider_company = CharFilter(name='provider__company',
+                                  lookup_type='icontains')
+    issue_date = DateFilter(name='issue_date', lookup_type='iexact')
+    due_date = DateFilter(name='due_date', lookup_type='iexact')
+    paid_date = DateFilter(name='due_date', lookup_type='iexact')
+    cancel_date = DateFilter(name='cancel_date', lookup_type='iexact')
+    currency = CharFilter(name='currency', lookup_type='icontains')
+    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+
+    class Meta:
+        model = Document
+        fields = ['state', 'number', 'customer_name', 'customer_company',
+                  'provider_name', 'provider_company', 'issue_date', 'due_date',
+                  'paid_date', 'cancel_date', 'currency', 'sales_tax_name']
 
 
 class InvoiceFilter(BillingDocumentFilter):

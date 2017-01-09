@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from .base import BillingDocument
+from .base import BillingDocumentBase
 from .entries import DocumentEntry
 from .invoice import Invoice
 from .proforma import Proforma

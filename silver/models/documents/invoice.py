@@ -21,11 +21,11 @@ from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .base import BillingDocument
+from .base import BillingDocumentBase
 from silver.models.billing_entities import Provider
 
 
-class Invoice(BillingDocument):
+class Invoice(BillingDocumentBase):
     proforma = models.ForeignKey('Proforma', blank=True, null=True,
                                  related_name='related_invoice')
 
@@ -40,15 +40,15 @@ class Invoice(BillingDocument):
         customer_field = self._meta.get_field("customer")
         customer_field.related_name = "invoices"
 
-    @transition(field='state', source=BillingDocument.STATES.DRAFT,
-                target=BillingDocument.STATES.ISSUED)
+    @transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
+                target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         self.archived_provider = self.provider.get_invoice_archivable_field_values()
 
         super(Invoice, self)._issue(issue_date, due_date)
 
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.PAID)
+    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
+                target=BillingDocumentBase.STATES.PAID)
     def pay(self, paid_date=None, affect_related_document=True):
         super(Invoice, self)._pay(paid_date)
 
@@ -62,8 +62,8 @@ class Invoice(BillingDocument):
                 # other inconsistencies should've been fixed before
                 pass
 
-    @transition(field='state', source=BillingDocument.STATES.ISSUED,
-                target=BillingDocument.STATES.CANCELED)
+    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
+                target=BillingDocumentBase.STATES.CANCELED)
     def cancel(self, cancel_date=None, affect_related_document=True):
         super(Invoice, self)._cancel(cancel_date)
 
