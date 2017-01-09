@@ -49,7 +49,7 @@ urlpatterns = [
     url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/$',
         views.TransactionDetail.as_view(), name='transaction-detail'),
 
-    url(r'^payment_processors/(?P<processor_name>[a-zA-Z]+)/$',
+    url(r'^payment_processors/(?P<processor_name>[a-zA-Z\-\_]+)/$',
         views.PaymentProcessorDetail.as_view(), name='payment-processor-detail'),
 
     url(r'^plans/$',
@@ -68,8 +68,8 @@ urlpatterns = [
         views.ProviderRetrieveUpdateDestroy.as_view(), name='provider-detail'),
     url(r'^providers/(?P<pk>[0-9]+)/payment_processors/$',
         views.ProviderPaymentProcessorList.as_view(), name='provider-payment-processor-list'),
-    url(r'^providers/(?P<pk>[0-9]+)/payment_processors/(?P<processor_name>[a-zA-Z]+)/$',
-        views.PaymentProcessorDetail.as_view(), name='payment-processor-detail'),
+    url(r'^providers/(?P<pk>[0-9]+)/payment_processors/(?P<processor_name>[a-zA-Z\-\_]+)/$',
+        views.PaymentProcessorDetail.as_view(), name='provider-payment-processor-detail'),
 
     url(r'^product-codes/$',
         views.ProductCodeListCreate.as_view(), name='productcode-list'),

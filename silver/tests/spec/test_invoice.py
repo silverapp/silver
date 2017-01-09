@@ -147,7 +147,7 @@ class TestInvoiceEndpoints(APITestCase):
             "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
             "can_be_consumed": transaction.can_be_consumed,
             "payment_processor": "http://testserver/payment_processors/%s/" %
-                                 str(transaction.payment_processor).lower(),
+                                 transaction.payment_processor.reference,
             "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
                               (invoice.customer.pk, transaction.payment_method.pk),
             "pay_url": "http://testserver/pay/%s/" % transaction.uuid,

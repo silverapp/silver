@@ -17,9 +17,7 @@ import os
 import errno
 import logging
 import requests
-import pytz
 from collections import OrderedDict
-from datetime import datetime, timedelta
 
 from django import forms
 from django.contrib import messages
@@ -29,6 +27,8 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
+from django.forms import ChoiceField
+from django.utils.functional import lazy
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
@@ -43,6 +43,7 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     ProductCode, Proforma, BillingLog, BillingDocumentBase,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
+from silver.models import PaymentProcessorManager
 
 logger = logging.getLogger(__name__)
 
@@ -940,12 +941,23 @@ class TransactionAdmin(ModelAdmin):
     related_proforma.short_description = 'Proforma'
 
 
+class PaymentMethodForm(forms.ModelForm):
+    # thanks Django
+    payment_processor = ChoiceField(
+        PaymentProcessorManager.get_choices()
+    )
+
+    class Meta:
+        model = PaymentMethod
+
+        fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
+                  'data', 'state')
+
+
 class PaymentMethodAdmin(ModelAdmin):
+    form = PaymentMethodForm
     list_display = ('customer', 'payment_processor', 'added_at', 'verified_at',
                     'state')
-
-    fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
-              'data', 'state')
 
 
 site.register(Transaction, TransactionAdmin)

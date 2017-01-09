@@ -16,32 +16,22 @@ from mock import MagicMock, patch, call
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.test import override_settings
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.tests.factories import TransactionFactory, PaymentMethodFactory
+from silver.tests.utils import register_processor
 
 
 class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
+    reference = 'triggeredprocessor'
+
     def execute_transaction(self, transaction):
         pass
 
 
-PAYMENT_PROCESSORS = {
-    'manual': {
-        'path': 'silver.models.payment_processors.manual.ManualProcessor',
-        'display_name': 'Manual'
-    },
-    'triggeredprocessor': {
-        'path': 'silver.tests.commands.test_execute_transactions.TriggeredProcessor',
-        'display_name': 'TriggeredProcessor'
-    }
-}
-
-
 class TestInvoiceGenerationCommand(TestCase):
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
+    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_executing(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor'
@@ -60,7 +50,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
             self.assertEqual(mock_execute.call_count, len(transactions))
 
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
+    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_filtering(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor'
@@ -88,7 +78,7 @@ class TestInvoiceGenerationCommand(TestCase):
             self.assertEqual(mock_execute.call_count, len(filtered_transactions))
 
     @patch('silver.management.commands.execute_transactions.logger.error')
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
+    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_exception_logging(self, mock_logger):
         payment_method = PaymentMethodFactory.create(
             payment_processor='triggeredprocessor'

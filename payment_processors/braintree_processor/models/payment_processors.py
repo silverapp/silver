@@ -2,19 +2,19 @@ import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
+from django_fsm import TransitionNotAllowed
 
 from django.utils import timezone
-from django_fsm import TransitionNotAllowed
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-
 from .payment_methods import BraintreePaymentMethod
 from ..views import BraintreeTransactionView
 from ..forms import BraintreeTransactionForm
 
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
+    reference = 'braintree_triggered'
     form_class = BraintreeTransactionForm
     payment_method_class = BraintreePaymentMethod
     transaction_view_class = BraintreeTransactionView

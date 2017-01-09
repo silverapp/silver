@@ -393,6 +393,7 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'processor_name': lookup_value}
+
         return self.reverse(
             view_name, kwargs=kwargs, request=request, format=format
         )
@@ -442,7 +443,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     url = PaymentMethodUrl(view_name='payment-method-detail', source="*",
                            read_only=True)
     payment_processor = PaymentProcessorUrl(
-        view_name='payment-processor-detail', source="processor", lookup_field='reference',
+        view_name='payment-processor-detail', lookup_field='reference',
         queryset=PaymentProcessorManager.all_instances())
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
@@ -504,7 +505,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return state
 
     def validate_payment_processor(self, value):
-        if self.instance and value != self.instance.processor:
+        if self.instance and value != self.instance.payment_processor:
             message = "This field may not be modified."
             raise serializers.ValidationError(message)
 
@@ -588,8 +589,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
     id = serializers.CharField(source='uuid', read_only=True)
     payment_processor = PaymentProcessorUrl(
-        view_name='payment-processor-detail',
-        source='payment_method', lookup_field='payment_processor',
+        view_name='payment-processor-detail', lookup_field='reference',
         read_only=True
     )
 

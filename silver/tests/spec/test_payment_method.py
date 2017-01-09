@@ -1,8 +1,5 @@
 import sys
-
 from copy import deepcopy
-
-from django.test import override_settings
 from six import iteritems
 
 from rest_framework import permissions, status
@@ -15,22 +12,11 @@ from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 from silver.tests.spec.util.api_get_assert import APIGetAssert
 from silver.tests.factories import CustomerFactory, PaymentMethodFactory
+from silver.tests.utils import register_processor
 
 
 class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    pass
-
-
-PAYMENT_PROCESSORS = {
-    'manual': {
-        'path': 'silver.models.payment_processors.manual.ManualProcessor',
-        'display_name': 'Manual'
-    },
-    'someprocessor': {
-        'path': 'silver.tests.spec.test_payment_processors.SomeProcessor',
-        'display_name': 'SomeProcessor'
-    }
-}
+    reference = 'someprocessor'
 
 
 class TestPaymentMethodEndpoints(APIGetAssert):
@@ -219,7 +205,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
+    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_put_detail_cannot_change_processor(self):
         payment_method = self.create_payment_method(customer=self.customer)
 

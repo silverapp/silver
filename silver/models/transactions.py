@@ -146,7 +146,7 @@ class Transaction(models.Model):
 
     @property
     def payment_processor(self):
-        return self.payment_method.processor
+        return self.payment_method.payment_processor
 
     def __unicode__(self):
         return unicode(self.uuid)
