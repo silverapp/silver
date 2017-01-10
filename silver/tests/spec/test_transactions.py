@@ -221,7 +221,7 @@ class TestTransactionEndpoint(APITestCase):
                       kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
         data = {
             'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
+                                                                       'payment_method_id': payment_method.pk}),
             'valid_until': valid_until,
             'amount': 200.0,
             'proforma': proforma_url

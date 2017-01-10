@@ -7,7 +7,6 @@ from annoying.functions import get_object_or_None
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, URLValidator
 from django.db import models
-from django.db.models import Q
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -59,8 +58,8 @@ class Transaction(models.Model):
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 
-    proforma = models.ForeignKey("Proforma", null=True, blank=True, limit_choices_to=~Q(state='draft'))
-    invoice = models.ForeignKey("Invoice", null=True, blank=True, limit_choices_to=~Q(state='draft'))
+    proforma = models.ForeignKey("Proforma", null=True, blank=True)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True)
     payment_method = models.ForeignKey('PaymentMethod')
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
