@@ -119,6 +119,12 @@ class Transaction(models.Model):
                 '(invoice or proforma).'
             )
 
+        if document.state == 'draft':
+            raise ValidationError(
+                'The transaction must have a non-draft document '
+                '(invoice or proforma).'
+            )
+
         if document.provider != self.provider:
             raise ValidationError(
                 'Provider doesn\'t match with the one in documents.'
@@ -211,10 +217,8 @@ def create_transaction_for_document(document):
                     payment_method.enabled):
                 # create transaction
                 kwargs = {
-                    'invoice': document if isinstance(document, Invoice) else
-                               document.related_document,
-                    'proforma': document if isinstance(document, Proforma) else
-                                document.related_document,
+                    'invoice': isinstance(document, Invoice) and document or document.related_document,
+                    'proforma': isinstance(document, Proforma) and document or document.related_document,
                     'payment_method': payment_method,
                     'amount': document.total
                 }
