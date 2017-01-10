@@ -59,7 +59,7 @@ class BaseActionableProcessor(object):
 
         raise NotImplementedError
 
-    def update_transaction(self, transaction):
+    def update_transaction_status(self, transaction):
         """
             Only gets called for pending transactions that point to this
             specifc Processor
