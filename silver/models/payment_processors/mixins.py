@@ -40,6 +40,8 @@ class BaseActionableProcessor(object):
         """
             Refunds / returns the money to the given payment_method or to the
             transaction's payment method
+
+            :return: True on success, False on failure.
         """
 
         raise NotImplementedError
@@ -47,6 +49,8 @@ class BaseActionableProcessor(object):
     def void_transaction(self, transaction, payment_method=None):
         """
             Voids / interrupts an ongoing transaction
+
+            :return: True on success, False on failure.
         """
 
         raise NotImplementedError
@@ -55,6 +59,8 @@ class BaseActionableProcessor(object):
         """
             Only gets called for initial transactions that point to this
             specific Processor
+
+            :return: True on success, False on failure.
         """
 
         raise NotImplementedError
@@ -63,6 +69,8 @@ class BaseActionableProcessor(object):
         """
             Only gets called for pending transactions that point to this
             specifc Processor
+
+            :return: True on success, False on failure.
         """
 
         raise NotImplementedError
