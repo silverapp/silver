@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Presslabs SRL
+# Copyright (c) 2017 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ def string_to_list(list_as_string):
 
 
 class Command(BaseCommand):
-    help = 'Runs execute_transaction on eligible transactions.'
+    help = 'Runs update_status on eligible transactions.'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--transactions',
-            help='A list of transaction pks to be executed.',
+            help='A list of transaction pks to be updated.',
             action='store', dest='transactions', type=string_to_list
         )
 
@@ -44,19 +44,23 @@ class Command(BaseCommand):
             if pp.type == PaymentProcessorTypes.Triggered
         ]
 
-        executable_transactions = Transaction.objects.filter(
-            state=Transaction.States.Initial,
+        eligible_transactions = Transaction.objects.filter(
+            state=Transaction.States.Pending,
             payment_method__payment_processor__in=payment_processors
         )
 
         if options['transactions']:
-            executable_transactions = executable_transactions.filter(
+            eligible_transactions = eligible_transactions.filter(
                 pk__in=options['transactions']
             )
 
-        for transaction in executable_transactions:
+        for transaction in eligible_transactions:
             try:
-                transaction.payment_processor.execute_transaction(transaction)
+                transaction.payment_processor.update_transaction_status(
+                    transaction
+                )
+            except NotImplementedError:
+                continue
             except Exception:
-                logger.error('Encountered exception while executing transaction '
+                logger.error('Encountered exception while updating transaction '
                              'with id=%s.', transaction.id, exc_info=True)
