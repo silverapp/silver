@@ -53,8 +53,16 @@ class BaseActionableProcessor(object):
 
     def execute_transaction(self, transaction):
         """
-            Only gets called for initial or pending transactions that point to
-            this specific Processor
+            Only gets called for initial transactions that point to this
+            specific Processor
+        """
+
+        raise NotImplementedError
+
+    def update_transaction(self, transaction):
+        """
+            Only gets called for pending transactions that point to this
+            specifc Processor
         """
 
         raise NotImplementedError
