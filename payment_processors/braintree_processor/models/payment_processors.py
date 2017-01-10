@@ -1,20 +1,34 @@
+# Copyright (c) 2017 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
                                   UpgradeRequiredError)
+from django_fsm import TransitionNotAllowed
 
 from django.utils import timezone
-from django_fsm import TransitionNotAllowed
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-
 from .payment_methods import BraintreePaymentMethod
 from ..views import BraintreeTransactionView
 from ..forms import BraintreeTransactionForm
 
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
+    reference = 'braintree_triggered'
     form_class = BraintreeTransactionForm
     payment_method_class = BraintreePaymentMethod
     transaction_view_class = BraintreeTransactionView
@@ -75,10 +89,10 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         try:
             if payment_method.is_recurring:
-                if payment_method.state == payment_method.States.Unverified:
-                    payment_method.verify({
-                        'token': result_details.token
-                    })
+                if not payment_method.vefified:
+                    payment_method.token = result_details.token
+                    payment_method.verified = True
+                    payment_method.save()
             else:
                 payment_method.remove()
         except TransitionNotAllowed as e:

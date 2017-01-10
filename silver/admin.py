@@ -17,9 +17,9 @@ import os
 import errno
 import logging
 import requests
-import pytz
 from collections import OrderedDict
-from datetime import datetime, timedelta
+
+from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from django import forms
 from django.contrib import messages
@@ -29,6 +29,8 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
+from django.forms import ChoiceField
+from django.utils.functional import lazy
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
@@ -36,13 +38,13 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.shortcuts import render
 from django.http import HttpResponse
-from PyPDF2 import PdfFileReader, PdfFileMerger
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog, BillingDocument,
+                    ProductCode, Proforma, BillingLog, BillingDocumentBase,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
+from silver.models import PaymentProcessorManager
 
 logger = logging.getLogger(__name__)
 
@@ -338,7 +340,7 @@ class ProviderAdmin(LiveModelAdmin):
         all_documents = documents.filter(provider=provider)
         paid_documents = documents.filter(
             provider=provider,
-            state=BillingDocument.STATES.PAID
+            state=BillingDocumentBase.STATES.PAID
         )
         documents_months = documents.order_by().filter(
             provider=provider
@@ -350,7 +352,7 @@ class ProviderAdmin(LiveModelAdmin):
             doc.total for doc in (
                 documents.filter(
                     provider=provider,
-                    state=BillingDocument.STATES.DRAFT
+                    state=BillingDocumentBase.STATES.DRAFT
                 )
             )
         )
@@ -393,9 +395,9 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.DRAFT,
-                       BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.DRAFT,
+                       BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         proformas = Proforma.objects.extra(
@@ -406,9 +408,9 @@ class ProviderAdmin(LiveModelAdmin):
             }
         ).filter(
             provider__in=queryset,
-            state__in=[BillingDocument.STATES.DRAFT,
-                       BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.DRAFT,
+                       BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         for provider in queryset:
@@ -676,9 +678,9 @@ class BillingDocumentAdmin(ModelAdmin):
         now = timezone.now()
 
         queryset = queryset.filter(
-            state__in=[BillingDocument.STATES.ISSUED,
-                       BillingDocument.STATES.CANCELED,
-                       BillingDocument.STATES.PAID]
+            state__in=[BillingDocumentBase.STATES.ISSUED,
+                       BillingDocumentBase.STATES.CANCELED,
+                       BillingDocumentBase.STATES.PAID]
         )
 
         base_path = '/tmp'
@@ -909,7 +911,7 @@ class TransactionAdmin(ModelAdmin):
 
     def settle(self, request, queryset):
         self.perform_action(request, queryset, 'settle', 'settled')
-    settle.short_description = 'settle the selected transactions'
+    settle.short_description = 'Settle the selected transactions'
 
     def fail(self, request, queryset):
         self.perform_action(request, queryset, 'fail', 'failed')
@@ -940,12 +942,23 @@ class TransactionAdmin(ModelAdmin):
     related_proforma.short_description = 'Proforma'
 
 
-class PaymentMethodAdmin(ModelAdmin):
-    list_display = ('customer', 'payment_processor', 'added_at', 'verified_at',
-                    'state')
+class PaymentMethodForm(forms.ModelForm):
+    # thanks Django
+    payment_processor = ChoiceField(
+        PaymentProcessorManager.get_choices()
+    )
 
-    fields = ('customer', 'payment_processor', 'added_at', 'verified_at',
-              'data', 'state')
+    class Meta:
+        model = PaymentMethod
+
+        fields = ('customer', 'payment_processor', 'added_at', 'data',
+                  'verified', 'enabled')
+
+
+class PaymentMethodAdmin(ModelAdmin):
+    form = PaymentMethodForm
+    list_display = ('customer', 'payment_processor', 'added_at', 'verified',
+                    'enabled')
 
 
 site.register(Transaction, TransactionAdmin)

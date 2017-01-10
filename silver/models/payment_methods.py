@@ -1,17 +1,29 @@
+# Copyright (c) 2017 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from jsonfield import JSONField
 from django_fsm import FSMField, transition
 from cryptography.fernet import InvalidToken, Fernet
 from model_utils.managers import InheritanceManager
 
 from django.db import models
-from django.db.models import CharField
 from django.conf import settings
 from django.utils import timezone
 
-from silver.models.payment_processors.base import PaymentProcessorBase
+from silver.models.payment_processors.fields import PaymentProcessorField
 
 from .billing_entities import Customer
-from .payment_processors import PaymentProcessorManager
 
 
 class PaymentMethodInvalid(Exception):
@@ -19,133 +31,35 @@ class PaymentMethodInvalid(Exception):
 
 
 class PaymentMethod(models.Model):
-    payment_processor = CharField(
-        choices=PaymentProcessorManager.get_choices(),
+    payment_processor = PaymentProcessorField(
         blank=False, null=False, max_length=256
     )
-
-    @property
-    def processor(self):
-        return PaymentProcessorManager.get_instance(self.payment_processor)
-
-    @processor.setter
-    def processor(self, value):
-        if not isinstance(value, PaymentProcessorBase):
-            raise ValueError('Value must be an instance of PaymentProcessorBase')
-        if not hasattr(value, 'reference'):
-            raise AttributeError(
-                'The payment processor must have a reference. Try obtaining it '
-                'from PaymentProcessorManager.'
-            )
-        self.payment_processor = value.reference
-
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
-    verified_at = models.DateTimeField(null=True, blank=True)
     data = JSONField(blank=True, null=True, default={})
+
+    verified = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
 
     objects = InheritanceManager()
 
-    class States(object):
-        Uninitialized = 'uninitialized'
-        Unverified = 'unverified'
-        Enabled = 'enabled'
-        Disabled = 'disabled'
-        Removed = 'removed'
+    customer = models.ForeignKey(Customer)
+    added_at = models.DateTimeField(default=timezone.now)
+    data = JSONField(blank=True, null=True, default={})
 
-        Choices = (
-            (Uninitialized, 'Uninitialized'),
-            (Unverified, 'Unverified'),
-            (Enabled, 'Enabled'),
-            (Disabled, 'Disabled'),
-            (Removed, 'Removed')
-        )
-
-        @classmethod
-        def as_list(cls):
-            return [choice[0] for choice in cls.Choices]
-
-        @classmethod
-        def allowed_initial_states(cls):
-            return [cls.Uninitialized, cls.Unverified, cls.Enabled]
-
-        @classmethod
-        def invalid_initial_states(cls):
-            return list(set(cls.as_list()) - set(cls.allowed_initial_states()))
-
-    state = FSMField(choices=States.Choices, default=States.Uninitialized)
-    state_transitions = {
-        'initialize_unverified': {
-            'source': States.Uninitialized,
-            'target': States.Unverified
-        },
-        'initialize_enabled': {
-            'source': States.Uninitialized,
-            'target': States.Enabled
-        },
-        'verify': {
-            'source': States.Unverified,
-            'target': States.Enabled
-        },
-        'remove': {
-            'source': [States.Enabled, States.Disabled, States.Unverified],
-            'target': States.Removed
-        },
-        'disable': {
-            'source': States.Enabled,
-            'target': States.Disabled
-        },
-        'reenable': {
-            'source': States.Disabled,
-            'target': States.Enabled
-        }
-    }
+    objects = InheritanceManager()
 
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
 
         if self.id:
             try:
-                payment_method_class = self.processor.payment_method_class
+                payment_method_class = self.payment_processor.payment_method_class
 
                 if payment_method_class:
                     self.__class__ = payment_method_class
             except AttributeError:
                 pass
-
-    @transition(field='state',
-                **state_transitions['initialize_unverified'])
-    def initialize_unverified(self, initial_data=None):
-        pass
-
-    @transition(field='state',
-                **state_transitions['initialize_enabled'])
-    def initialize_enabled(self, initial_data=None):
-        pass
-
-    @transition(field='state',
-                **state_transitions['verify'])
-    def verify(self):
-        pass
-
-    @transition(field='state',
-                **state_transitions['remove'])
-    def remove(self):
-        """
-        Methods that implement this, need to remove the payment method from
-        the real Payment Processor or raise TransitionNotAllowed
-        """
-        pass
-
-    @transition(field='state',
-                **state_transitions['disable'])
-    def disable(self):
-        pass
-
-    @transition(field='state',
-                **state_transitions['reenable'])
-    def reenable(self):
-        pass
 
     def delete(self, using=None):
         if not self.state == self.States.Uninitialized:
@@ -169,13 +83,5 @@ class PaymentMethod(models.Model):
     def public_data(self):
         return {}
 
-    @property
-    def is_usable(self):
-        return self.state in [self.States.Unverified, self.States.Enabled]
-
-    @property
-    def is_recurring(self):
-        return False
-
     def __unicode__(self):
-        return u'{} - {}'.format(self.customer, self.processor)
+        return u'{} - {}'.format(self.customer, self.payment_processor)

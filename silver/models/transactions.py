@@ -1,3 +1,17 @@
+# Copyright (c) 2017 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import uuid
 from decimal import Decimal
@@ -15,8 +29,8 @@ from django_fsm import FSMField, transition, TransitionNotAllowed
 from django_fsm import post_transition
 from jsonfield import JSONField
 
-from silver.mail import send_transaction_email
-from silver.models import BillingDocument, Invoice, PaymentMethod, Proforma
+
+from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
 from silver.utils.international import currencies
 
 
@@ -152,7 +166,7 @@ class Transaction(models.Model):
 
     @property
     def payment_processor(self):
-        return self.payment_method.processor
+        return self.payment_method.payment_processor
 
     def __unicode__(self):
         return unicode(self.uuid)
@@ -179,8 +193,6 @@ def post_transaction_save(sender, instance, **kwargs):
             instance.proforma.id if instance.proforma else None
     })
 
-    send_transaction_email(instance)
-
 
 def _sync_transaction_state_with_document(transaction, target):
     if target == Transaction.States.Settled:
@@ -189,8 +201,6 @@ def _sync_transaction_state_with_document(transaction, target):
             transaction.document.pay()
             transaction.document.save()
 
-    send_transaction_email(transaction)
-
 
 def create_transaction_for_document(document):
     if not document.transactions.filter(
@@ -198,12 +208,13 @@ def create_transaction_for_document(document):
     ):
         # get a usable, recurring payment_method for the customer
         payment_methods = PaymentMethod.objects.filter(
-            state=PaymentMethod.States.Enabled,
+            enabled=True,
+            verified=True,
             customer=document.customer
         )
         for payment_method in payment_methods:
-            if (payment_method.is_recurring and
-                    payment_method.is_usable):
+            if (payment_method.verified and
+                    payment_method.enabled):
                 # create transaction
                 kwargs = {
                     'invoice': isinstance(document, Invoice) and document or document.related_document,
@@ -225,8 +236,8 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     if issubclass(sender, Transaction):
         _sync_transaction_state_with_document(instance, target)
 
-    elif issubclass(sender, BillingDocument):
-        if target == BillingDocument.STATES.ISSUED:
+    elif issubclass(sender, BillingDocumentBase):
+        if target == BillingDocumentBase.STATES.ISSUED:
             transaction = create_transaction_for_document(instance)
 
             if transaction:

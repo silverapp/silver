@@ -16,24 +16,19 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import django.core.validators
+import silver.models.payment_processors.fields
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0016_auto_20161227_1628'),
+        ('silver', '0020_auto_20170106_0956'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='transaction',
-            name='failed_url',
-            field=models.TextField(blank=True, null=True, validators=[django.core.validators.URLValidator()]),
-        ),
-        migrations.AddField(
-            model_name='transaction',
-            name='success_url',
-            field=models.TextField(blank=True, null=True, validators=[django.core.validators.URLValidator()]),
+        migrations.AlterField(
+            model_name='paymentmethod',
+            name='payment_processor',
+            field=silver.models.payment_processors.fields.PaymentProcessorField(max_length=256),
         ),
     ]

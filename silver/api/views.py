@@ -32,8 +32,9 @@ from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
-                           DocumentEntry, Proforma, BillingDocument,
+                           DocumentEntry, Proforma, BillingDocumentBase,
                            PaymentMethod, Transaction)
+from silver.models.documents.document import Document
 from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
@@ -44,11 +45,12 @@ from silver.api.serializers import (MFUnitsLogSerializer,
                                     DocumentEntrySerializer,
                                     PaymentProcessorSerializer,
                                     PaymentMethodSerializer,
-                                    TransactionSerializer)
+                                    TransactionSerializer, DocumentSerializer)
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter,
-                                PaymentMethodFilter, TransactionFilter)
+                                PaymentMethodFilter, TransactionFilter,
+                                DocumentFilter)
 
 
 logger = logging.getLogger(__name__)
@@ -484,7 +486,7 @@ class DocEntryCreate(generics.CreateAPIView):
             msg = "{model} not found".format(model=model_name)
             return Response({"detail": msg}, status=status.HTTP_404_NOT_FOUND)
 
-        if document.state != BillingDocument.STATES.DRAFT:
+        if document.state != BillingDocumentBase.STATES.DRAFT:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -528,7 +530,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != BillingDocument.STATES.DRAFT:
+        if document.state != BillingDocumentBase.STATES.DRAFT:
             msg = "{model} entries can be added only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -552,7 +554,7 @@ class DocEntryUpdateDestroy(APIView):
         model_name = self.get_model_name()
 
         document = get_object_or_404(Model, pk=doc_pk)
-        if document.state != BillingDocument.STATES.DRAFT:
+        if document.state != BillingDocumentBase.STATES.DRAFT:
             msg = "{model} entries can be deleted only when the {model_lower} is"\
                   " in draft state.".format(model=model_name,
                                             model_lower=model_name.lower())
@@ -778,6 +780,16 @@ class ProformaStateHandler(APIView):
 
         serializer = ProformaSerializer(proforma, context={'request': request})
         return Response(serializer.data)
+
+
+class DocumentList(ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DocumentSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = DocumentFilter
+
+    def get_queryset(self):
+        return Document.objects.all()
 
 
 class PaymentProcessorList(ListAPIView):
