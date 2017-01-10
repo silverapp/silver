@@ -8,7 +8,7 @@ TEMPLATE_DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('SILVER_DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.getenv('SILVER_DB_NAME', 'db.sqlite3'),
+        'NAME': os.getenv('SILVER_DB_NAME', 'db.sqlite'),
         'USER': os.getenv('SILVER_DB_USER', 'silver'),
         'PASSWORD': os.getenv('SILVER_DB_PASSWORD', 'password'),
         'HOST': os.getenv('SILVER_DB_HOST', ''),
