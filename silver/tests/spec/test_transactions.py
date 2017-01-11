@@ -451,8 +451,8 @@ class TestTransactionEndpoint(APITestCase):
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
         for url in urls:
-            url_method_someprocessor = url + '?payment_method=someprocessor'
-            url_no_output = url + '?payment_method=Random'
+            url_method_someprocessor = url + '?payment_processor=someprocessor'
+            url_no_output = url + '?payment_processor=Random'
 
             response = self.client.get(url_method_someprocessor, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)

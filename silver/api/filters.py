@@ -164,8 +164,10 @@ class ProformaFilter(BillingDocumentFilter):
 
 
 class TransactionFilter(FilterSet):
-    payment_method = CharFilter(name='payment_method__payment_processor',
-                                lookup_type='iexact')
+    payment_processor = CharFilter(
+        name='payment_method__payment_processor',
+        lookup_type='iexact'
+    )
     state = CharFilter(name='state')
     min_amount = NumberFilter(name='amount', lookup_expr='gte')
     max_amount = NumberFilter(name='amount', lookup_expr='lte')
