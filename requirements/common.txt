@@ -4,7 +4,7 @@
 
 django<1.9
 djangorestframework>=3.3.0
-pycountry==16.11.08
+pycountry>=16.11.08
 django-fsm>=2.3.0
 django-filter==0.15.3
 djangorestframework-bulk

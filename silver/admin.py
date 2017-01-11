@@ -834,7 +834,7 @@ class ProformaAdmin(BillingDocumentAdmin):
 class TransactionAdmin(ModelAdmin):
     fields = ('amount', 'currency', 'proforma', 'invoice', 'currency_rate_date',
               'state', 'payment_method', 'uuid', 'valid_until', 'last_access',
-              'consumable')
+              'consumable', 'success_url', 'failed_url')
 
     readonly_fields = ('state', 'uuid', 'last_access')
     create_only_fields = ('amount', 'currency', 'proforma', 'invoice',
