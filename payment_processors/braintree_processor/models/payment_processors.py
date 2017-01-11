@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import braintree
 from braintree.exceptions import (AuthenticationError, AuthorizationError,
                                   DownForMaintenanceError, ServerError,
@@ -25,6 +27,9 @@ from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from .payment_methods import BraintreePaymentMethod
 from ..views import BraintreeTransactionView
 from ..forms import BraintreeTransactionForm
+
+
+logger = logging.getLogger(__name__)
 
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
@@ -105,7 +110,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         """
         :param transaction: A Transaction.
         :param result_transaction: A transaction from a braintreeSDK
-                                      result(response).
+                                   result(response).
         :description: Updates a given transaction's data with data from a
                       braintreeSDK result payment method.
         """
@@ -138,11 +143,12 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
                 if transaction.state != transaction.States.Settled:
                     transaction.settle()
 
+            return True
         except TransitionNotAllowed as e:
             # TODO handle this (probably throw something else)
-            pass
-
-        transaction.save()
+            return False
+        finally:
+            transaction.save()
 
     def _update_customer(self, customer, result_details):
         if not 'braintree_id' in customer.meta:
@@ -197,27 +203,61 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         result = braintree.Transaction.sale(data)
 
         # handle response
-        if result.is_success and result.transaction:
-            self._update_customer(customer, result.transaction.customer_details)
+        if not result.is_success or not result.transaction:
+            errors = [
+                error.code for error in result.errors.deep_errors
+            ] if result.errors else None
 
-            instrument_type = result.transaction.payment_instrument_type
+            logger.warning('Couldn\'t charge Braintree transaction.: %s', {
+                'message': result.message,
+                'errors': errors,
+                'customer_id': customer.id,
+                'card_verification': (result.credit_card_verification if errors
+                                      else None)
+            })
 
-            if instrument_type == payment_method.Types.PayPal:
-                details = result.transaction.paypal_details
-            elif instrument_type == payment_method.Types.CreditCard:
-                details = result.transaction.credit_card_details
-            else:
-                # Only PayPal and CreditCard are currently handled
-                return False
+            return False
 
-            self._update_payment_method(
-                payment_method, details, instrument_type
-            )
-            self._update_transaction_status(transaction, result.transaction)
+        self._update_customer(customer, result.transaction.customer_details)
 
-        return result.is_success
+        instrument_type = result.transaction.payment_instrument_type
+
+        if instrument_type == payment_method.Types.PayPal:
+            details = result.transaction.paypal_details
+        elif instrument_type == payment_method.Types.CreditCard:
+            details = result.transaction.credit_card_details
+        else:
+            # Only PayPal and CreditCard are currently handled
+            return False
+
+        self._update_payment_method(
+            payment_method, details, instrument_type
+        )
+        if not self._update_transaction_status(transaction, result.transaction):
+            logger.warning('Braintree Transaction succeeded on Braintree but '
+                           'not reflected locally: %s' % {
+                               'transaction_id': transaction.id,
+                               'transaction_uuid': transaction.uuid
+                           })
+            return False
+
+        return True
 
     def execute_transaction(self, transaction):
+        """
+        :param transaction: A Braintree transaction in Initial state.
+        :return: True on success, False on failure.
+        """
+
+        if not transaction.payment_processor == self:
+            return False
+
+        if transaction.state != transaction.States.Initial:
+            return False
+
+        return self._charge_transaction(transaction)
+
+    def update_transaction_status(self, transaction):
         """
         :param transaction: A Braintree transaction in Initial or Pending state.
         :return: True on success, False on failure.
@@ -226,24 +266,29 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         if not transaction.payment_processor == self:
             return False
 
-        if transaction.state not in [transaction.States.Initial,
-                                     transaction.States.Pending]:
+        if transaction.state != transaction.States.Pending:
             return False
 
-        if transaction.data.get('braintree_id'):
-            try:
-                result_transaction = braintree.Transaction.find(
-                    transaction.data['braintree_id']
-                )
-                self._update_transaction_status(transaction, result_transaction)
-            except braintree.exceptions.NotFoundError:
-                return False
+        if not transaction.data.get('braintree_id'):
+            logger.warning('Found pending Braintree transaction with no '
+                           'braintree_id: %s', {
+                                'transaction_id': transaction.id,
+                                'transaction_uuid': transaction.uuid
+                           })
 
-            return True
-
-        if transaction.state != transaction.States.Initial:
-            # this is an inconsistent state
-            # TODO handle this
             return False
 
-        return self._charge_transaction(transaction)
+        try:
+            result_transaction = braintree.Transaction.find(
+                transaction.data['braintree_id']
+            )
+            return self._update_transaction_status(transaction,
+                                                   result_transaction)
+        except braintree.exceptions.NotFoundError:
+            logger.warning('Couldn\'t find Braintree transaction from '
+                           'Braintree %s', {
+                                'braintree_id': transaction.data['braintree_id'],
+                                'transaction_id': transaction.id,
+                                'transaction_uuid': transaction.uuid
+                           })
+            return False
