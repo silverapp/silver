@@ -312,8 +312,6 @@ class TestTransactionEndpoint(APITestCase):
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
-        transaction.document.issue()
-        transaction.document.save()
 
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])

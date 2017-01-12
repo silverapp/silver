@@ -31,9 +31,8 @@ class PaymentMethodInvalid(Exception):
 
 
 class PaymentMethod(models.Model):
-    payment_processor = PaymentProcessorField(
-        blank=False, null=False, max_length=256
-    )
+    payment_processor = PaymentProcessorField()
+
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
     data = JSONField(blank=True, null=True, default={})
@@ -43,23 +42,15 @@ class PaymentMethod(models.Model):
 
     objects = InheritanceManager()
 
-    customer = models.ForeignKey(Customer)
-    added_at = models.DateTimeField(default=timezone.now)
-    data = JSONField(blank=True, null=True, default={})
-
-    objects = InheritanceManager()
-
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
 
-        if self.id:
-            try:
-                payment_method_class = self.payment_processor.payment_method_class
-
-                if payment_method_class:
-                    self.__class__ = payment_method_class
-            except AttributeError:
-                pass
+        try:
+            payment_method_class = self.payment_processor.payment_method_class
+            if payment_method_class:
+                self.__class__ = payment_method_class
+        except AttributeError:
+            pass
 
     def delete(self, using=None):
         if not self.state == self.States.Uninitialized:

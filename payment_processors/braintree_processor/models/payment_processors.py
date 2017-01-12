@@ -82,7 +82,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         payment_method_details = {
             'type': instrument_type,
             'image_url': result_details.image_url,
-            'updated_at': timezone.now().isoformat()
         }
 
         if instrument_type == payment_method.Types.PayPal:
@@ -97,7 +96,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         try:
             if payment_method.is_recurring:
-                if not payment_method.vefified:
+                if not payment_method.verified:
                     payment_method.token = result_details.token
                     payment_method.verified = True
                     payment_method.save()
@@ -126,8 +125,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         transaction.data['status'] = status
 
         try:
-            transaction.process()
-
             if status in [braintree.Transaction.Status.AuthorizationExpired,
                           braintree.Transaction.Status.SettlementDeclined,
                           braintree.Transaction.Status.Failed,
@@ -172,8 +169,15 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         # prepare payload
         if payment_method.token:
             data = {'payment_method_token': payment_method.token}
-        else:
+        elif payment_method.nonce:
             data = {'payment_method_nonce': payment_method.nonce}
+        else:
+            logger.warning('Token or nonce not found when charging '
+                           'BraintreePaymentMethod: %s', {
+                               'payment_method_id': payment_method.id
+                           })
+
+            return False
 
         data.update({
             'amount': transaction.amount,

@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import braintree as sdk
-from braintree.exceptions import (
-    AuthenticationError, AuthorizationError, DownForMaintenanceError,
-    ServerError, UpgradeRequiredError, NotFoundError
-)
+from braintree.exceptions import NotFoundError
 
 from silver.models import PaymentMethod
 
@@ -68,6 +65,8 @@ class BraintreePaymentMethod(PaymentMethod):
     def is_usable(self):
         if not (self.token or self.nonce):
             return False
+
+        return True
 
     @property
     def public_data(self):
