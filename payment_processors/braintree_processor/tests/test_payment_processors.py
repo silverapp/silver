@@ -1,4 +1,6 @@
 from braintree import Transaction as BraintreeTransaction
+from cryptography.fernet import Fernet
+from django.conf import settings
 from mock import patch
 
 from django.test import TestCase
@@ -9,6 +11,8 @@ from .factories import BraintreeTransactionFactory
 
 class TestBraintreeTransactions(TestCase):
     def setUp(self):
+        settings.PAYMENT_METHOD_SECRET = bytes(Fernet.generate_key())
+
         class Object(object):
             pass
 
