@@ -18,8 +18,6 @@ from braintree.exceptions import (
     ServerError, UpgradeRequiredError, NotFoundError
 )
 
-from django_fsm import transition
-
 from silver.models import PaymentMethod
 
 
@@ -41,16 +39,6 @@ class BraintreePaymentMethod(PaymentMethod):
     @property
     def braintree_id(self):
         return self.data.get('braintree_id')
-
-    @property
-    def client_token(self):
-        try:
-            return sdk.ClientToken.generate({
-                'customer_id': self.braintree_id
-            })
-        except (AuthenticationError, AuthorizationError, DownForMaintenanceError,
-                ServerError, UpgradeRequiredError):
-            return None
 
     @property
     def token(self):
@@ -80,8 +68,6 @@ class BraintreePaymentMethod(PaymentMethod):
     def is_usable(self):
         if not (self.token or self.nonce):
             return False
-
-        return super(BraintreePaymentMethod, self).is_usable
 
     @property
     def public_data(self):

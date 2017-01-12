@@ -19,13 +19,31 @@ from silver.views import GenericTransactionView
 
 
 class BraintreeTransactionView(GenericTransactionView):
-    def post(self, request, transaction):
+    def render_template(self):
+        client_token = self.transaction.payment_processor.client_token(
+            self.transaction.customer
+        )
+
+        context = {
+            'payment_method': self.transaction.payment_method,
+            'transaction': self.transaction,
+            'document': self.transaction.document,
+            'customer': self.transaction.customer,
+            'provider': self.transaction.provider,
+            'entries': list(self.transaction.document._entries),
+            'form': self.form,
+            'client_token': client_token
+        }
+
+        return self.template.render(context=context)
+
+    def post(self, request):
         payment_method_nonce = request.POST.get('payment_method_nonce')
         if not payment_method_nonce:
             message = 'The payment method nonce was not provided.'
             return HttpResponseBadRequest(message)
 
-        payment_method = transaction.payment_method
+        payment_method = self.transaction.payment_method
         if payment_method.nonce:
             message = 'The payment method already has a payment method nonce.'
             return HttpResponseBadRequest(message)
@@ -50,7 +68,7 @@ class BraintreeTransactionView(GenericTransactionView):
         # manage the transaction
         payment_processor = payment_method.payment_processor
 
-        if not payment_processor.execute_transaction(transaction):
+        if not payment_processor.execute_transaction(self.transaction):
             return HttpResponse('Something went wrong!')
 
         return HttpResponse('All is well!')
