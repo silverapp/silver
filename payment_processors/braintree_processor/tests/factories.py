@@ -3,6 +3,7 @@ from silver.models import PaymentProcessorManager
 from silver.tests.factories import TransactionFactory, PaymentMethodFactory
 
 
+BraintreeTriggered._has_been_setup = True
 PaymentProcessorManager.register(BraintreeTriggered, display_name='Braintree')
 
 
