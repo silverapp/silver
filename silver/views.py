@@ -22,6 +22,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
+from rest_framework.exceptions import MethodNotAllowed
+
 from silver.models.documents import Proforma, Invoice
 from silver.models.transactions import Transaction
 from silver.forms import GenericTransactionForm
@@ -69,8 +71,8 @@ class GenericTransactionView(View):
     template = None
     transaction = None
 
-    def render_template(self):
-        context = {
+    def get_context_data(self):
+        return {
             'payment_method': self.transaction.payment_method,
             'transaction': self.transaction,
             'document': self.transaction.document,
@@ -80,13 +82,11 @@ class GenericTransactionView(View):
             'form': self.form
         }
 
-        return self.template.render(context=context)
+    def render_template(self):
+        return self.template.render(context=self.get_context_data())
 
     def get(self, request):
-        if self.template:
-            return HttpResponse(self.render_template())
-        else:
-            raise NotImplementedError
+        return HttpResponse(self.render_template())
 
     def post(self, request):
-        raise NotImplementedError
+        raise MethodNotAllowed
