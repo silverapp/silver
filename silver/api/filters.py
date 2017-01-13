@@ -52,7 +52,8 @@ class CustomerFilter(FilterSet):
     active = BooleanFilter(name='is_active', lookup_type='iexact')
     email = CharFilter(name='emails', lookup_type='icontains')
     company = CharFilter(name='company', lookup_type='icontains')
-    name = CharFilter(name='name', lookup_type='icontains')
+    first_name = CharFilter(name='first_name', lookup_type='icontains')
+    last_name = CharFilter(name='last_name', lookup_type='icontains')
     country = CharFilter(name='country', lookup_type='icontains')
     sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
     sales_tax_number = CharFilter(name='sales_tax_number',
@@ -64,8 +65,9 @@ class CustomerFilter(FilterSet):
 
     class Meta:
         model = Customer
-        fields = ['email', 'name', 'company', 'active', 'country', 'reference',
-                  'sales_tax_name', 'consolidated_billing', 'sales_tax_number']
+        fields = ['email', 'first_name', 'last_name', 'company', 'active',
+                  'country', 'reference', 'sales_tax_name',
+                  'consolidated_billing', 'sales_tax_number']
 
 
 class ProviderFilter(FilterSet):
