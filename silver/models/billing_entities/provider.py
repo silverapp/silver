@@ -48,6 +48,14 @@ class Provider(BaseBillingEntity):
         (DEFAULT_DOC_STATE.ISSUED, _('Issued'))
     )
 
+    class Meta:
+        index_together = (('name', 'company'),)
+        ordering = ['name', 'company']
+
+    name = models.CharField(
+        max_length=128,
+        help_text='The name to be used for billing purposes.'
+    )
     display_email = models.EmailField(
         blank=True, null=True, help_text='The email that the customers see.'
     )

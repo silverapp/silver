@@ -193,9 +193,8 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         else:
             data.update({
                 'customer': {
-                    'first_name': customer.name,
-                    # TODO split silver customer name field into first and last.
-                    # This should've been obvious from the very start
+                    'first_name': customer.first_name,
+                    'last_name': customer.last_name
                 }
             })
 

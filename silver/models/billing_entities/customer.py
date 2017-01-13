@@ -29,6 +29,19 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
 class Customer(BaseBillingEntity):
+    class Meta:
+        index_together = (('first_name', 'last_name', 'company'),)
+        ordering = ['last_name', 'first_name', 'company']
+
+    first_name = models.CharField(
+        max_length=128,
+        help_text='The customer\'s first name.'
+    )
+    last_name = models.CharField(
+        max_length=128,
+        help_text='The customer\'s last name.'
+    )
+
     emails = MultiEmailField(blank=True, null=True)
     payment_due_days = models.PositiveIntegerField(
         default=PAYMENT_DUE_DAYS,
@@ -76,3 +89,7 @@ class Customer(BaseBillingEntity):
                        customer_fields}
         base_fields.update(fields_dict)
         return base_fields
+
+    @property
+    def name(self):
+        return "%s %s" % (self.first_name, self.last_name)

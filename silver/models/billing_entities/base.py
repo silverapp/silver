@@ -27,10 +27,6 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
 class BaseBillingEntity(LiveModel):
-    name = models.CharField(
-        max_length=128,
-        help_text='The name to be used for billing purposes.'
-    )
     company = models.CharField(max_length=128, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
     address_2 = models.CharField(max_length=128, blank=True, null=True)
@@ -47,8 +43,6 @@ class BaseBillingEntity(LiveModel):
 
     class Meta:
         abstract = True
-        index_together = (('name', 'company'),)
-        ordering = ['name', 'company']
 
     @property
     def billing_name(self):
