@@ -94,7 +94,7 @@ class Transaction(models.Model):
     def process(self):
         pass
 
-    @transition(field=state, source=States.Pending, target=States.Settled)
+    @transition(field=state, source=[States.Initial, States.Pending], target=States.Settled)
     def settle(self):
         pass
 
