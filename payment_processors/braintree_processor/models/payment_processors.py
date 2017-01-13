@@ -167,9 +167,14 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             return False
 
         # prepare payload
+        options = {
+            'submit_for_settlement': True,
+        }
+
         if payment_method.token:
             data = {'payment_method_token': payment_method.token}
         elif payment_method.nonce:
+            options.update({"store_in_vault": payment_method.is_recurring})
             data = {'payment_method_nonce': payment_method.nonce}
         else:
             logger.warning('Token or nonce not found when charging '
@@ -186,10 +191,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             },
             # TODO check how firstname and lastname can be obtained (for both
             # credit card and paypal)
-            'options': {
-                'submit_for_settlement': True,
-                "store_in_vault": payment_method.is_recurring
-            },
+            'options': options
         })
 
         customer = transaction.customer

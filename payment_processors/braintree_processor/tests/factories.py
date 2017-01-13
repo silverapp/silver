@@ -3,14 +3,16 @@ from silver.models import PaymentProcessorManager
 from silver.tests.factories import TransactionFactory, PaymentMethodFactory
 
 
-BraintreeTriggered._has_been_setup = True
-PaymentProcessorManager.register(BraintreeTriggered, display_name='Braintree')
-
-
 class BraintreePaymentMethodFactory(PaymentMethodFactory):
-    payment_processor = PaymentProcessorManager.get_instance(
-        BraintreeTriggered.reference
-    )
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        kwargs['payment_processor'] = PaymentProcessorManager.get_instance(
+            BraintreeTriggered.reference
+        )
+
+        return super(BraintreePaymentMethodFactory, cls)._create(
+            model_class, *args, **kwargs
+        )
 
 
 class BraintreeTransactionFactory(TransactionFactory):

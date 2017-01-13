@@ -1,16 +1,22 @@
 from braintree import Transaction as BraintreeTransaction
 from cryptography.fernet import Fernet
-from django.conf import settings
 from mock import patch
 
+from django.conf import settings
 from django.test import TestCase
-from silver.models import Transaction
 
+from payment_processors.braintree_processor import BraintreeTriggered
+from silver.models import PaymentProcessorManager
+from silver.models import Transaction
 from .factories import BraintreeTransactionFactory
 
 
 class TestBraintreeTransactions(TestCase):
     def setUp(self):
+        BraintreeTriggered._has_been_setup = True
+        PaymentProcessorManager.register(BraintreeTriggered,
+                                         display_name='Braintree')
+
         settings.PAYMENT_METHOD_SECRET = bytes(Fernet.generate_key())
 
         class Object(object):
@@ -38,6 +44,10 @@ class TestBraintreeTransactions(TestCase):
         result.transaction = transaction
         self.result = result
 
+    def tearDown(self):
+        BraintreeTriggered._has_been_setup = False
+        PaymentProcessorManager.unregister(BraintreeTriggered)
+
     def test_update_status_transaction_settle(self):
         transaction = BraintreeTransactionFactory.create(
             state=Transaction.States.Pending, data={
@@ -48,6 +58,8 @@ class TestBraintreeTransactions(TestCase):
         with patch('braintree.Transaction.find') as find_mock:
             find_mock.return_value = self.transaction
             transaction.payment_processor.update_transaction_status(transaction)
+
+            find_mock.assert_called_once_with('beertrain')
 
             self.assertEqual(transaction.state, transaction.States.Settled)
 
@@ -62,9 +74,11 @@ class TestBraintreeTransactions(TestCase):
             find_mock.return_value = self.transaction
             transaction.payment_processor.update_transaction_status(transaction)
 
+            find_mock.assert_called_once_with('beertrain')
+
             self.assertEqual(transaction.state, transaction.States.Failed)
 
-    def test_execute_transaction(self):
+    def test_execute_transaction_with_nonce(self):
         transaction = BraintreeTransactionFactory.create()
         payment_method = transaction.payment_method
         payment_method.nonce = 'some-nonce'
@@ -74,6 +88,50 @@ class TestBraintreeTransactions(TestCase):
         with patch('braintree.Transaction.sale') as sale_mock:
             sale_mock.return_value = self.result
             transaction.payment_processor.execute_transaction(transaction)
+
+            sale_mock.assert_called_once_with({
+                'customer': {'first_name': payment_method.customer.name},
+                'amount': transaction.amount,
+                'billing': {'postal_code': None},
+                'options': {'store_in_vault': True,
+                            'submit_for_settlement': True},
+                'payment_method_nonce': payment_method.nonce
+            })
+
+            self.assertEqual(transaction.state, transaction.States.Settled)
+
+            payment_method = transaction.payment_method
+            self.assertEqual(payment_method.token,
+                             self.transaction.paypal_details.token)
+            self.assertEqual(payment_method.data.get('details'), {
+                'image_url': self.transaction.paypal_details.image_url,
+                'email': self.transaction.paypal_details.payer_email,
+                'type': self.transaction.payment_instrument_type,
+            })
+            self.assertEqual(payment_method.verified, True)
+
+            customer = transaction.customer
+            self.assertEqual(customer.meta.get('braintree_id'),
+                             self.transaction.customer_details.id)
+
+    def test_execute_transaction_with_token(self):
+        transaction = BraintreeTransactionFactory.create()
+        payment_method = transaction.payment_method
+        payment_method.token = self.transaction.paypal_details.token
+        payment_method.is_recurring = True
+        payment_method.save()
+
+        with patch('braintree.Transaction.sale') as sale_mock:
+            sale_mock.return_value = self.result
+            transaction.payment_processor.execute_transaction(transaction)
+
+            sale_mock.assert_called_once_with({
+                'customer': {'first_name': payment_method.customer.name},
+                'amount': transaction.amount,
+                'billing': {'postal_code': None},
+                'options': {'submit_for_settlement': True},
+                'payment_method_token': payment_method.token
+            })
 
             self.assertEqual(transaction.state, transaction.States.Settled)
 
