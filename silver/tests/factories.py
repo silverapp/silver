@@ -41,7 +41,8 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
+    first_name = factory.Sequence(lambda n: u'FirstNáme{cnt}'.format(cnt=n))
+    last_name = factory.Sequence(lambda n: u'LastNáme{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
     emails = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
     address_1 = factory.Sequence(lambda n: u'Addrâss1{cnt}'.format(cnt=n))

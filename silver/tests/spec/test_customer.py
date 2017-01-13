@@ -30,7 +30,8 @@ class TestCustomerEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
         self.complete_data = {
             "customer_reference": "123456",
-            "name": "Batman",
+            "first_name": "Bruce",
+            "last_name": "Wayne",
             "company": "Wayne Enterprises",
             "emails": "bruce@wayneenterprises.com",
             "address_1": "Batcave St.",
@@ -60,7 +61,8 @@ class TestCustomerEndpoints(APITestCase):
     def test_create_post_customer_without_required_field(self):
         url = reverse('customer-list')
 
-        required_fields = ['name', 'address_1', 'city', 'country']
+        required_fields = ['first_name', 'last_name', 'address_1', 'city',
+                           'country']
 
         for field in required_fields:
             temp_data = self.complete_data.copy()
