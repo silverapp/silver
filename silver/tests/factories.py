@@ -22,6 +22,7 @@ import factory.fuzzy
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from silver.models import BillingDocumentBase
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
@@ -254,10 +255,15 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     currency = 'USD'
     proforma = factory.SubFactory(
         ProformaFactory,
-        customer=factory.SelfAttribute('..payment_method.customer'))
+        customer=factory.SelfAttribute('..payment_method.customer'),
+        state=BillingDocumentBase.STATES.ISSUED,
+        issue_date=timezone.now().date()
+    )
     invoice = factory.SubFactory(
         InvoiceFactory,
-        customer=factory.SelfAttribute('..payment_method.customer')
+        customer=factory.SelfAttribute('..payment_method.customer'),
+        state=BillingDocumentBase.STATES.ISSUED,
+        issue_date=timezone.now().date()
     )
     state = Transaction.States.Initial
 

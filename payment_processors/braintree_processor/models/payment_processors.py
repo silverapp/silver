@@ -21,12 +21,12 @@ from braintree.exceptions import (AuthenticationError, AuthorizationError,
 from django_fsm import TransitionNotAllowed
 
 from django.utils import timezone
+from silver.forms import GenericTransactionForm
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from .payment_methods import BraintreePaymentMethod
 from ..views import BraintreeTransactionView
-from ..forms import BraintreeTransactionForm
 
 
 logger = logging.getLogger(__name__)
@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
 
 class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
     reference = 'braintree_triggered'
-    form_class = BraintreeTransactionForm
     payment_method_class = BraintreePaymentMethod
     transaction_view_class = BraintreeTransactionView
+    form_class = GenericTransactionForm
 
     _has_been_setup = False
 
@@ -51,10 +51,13 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         super(BraintreeTriggered, self).__init__(*args, **kwargs)
 
-    @property
-    def client_token(self):
+    def client_token(self, customer):
+        customer_braintree_id = customer.meta.get('braintree_id')
+
         try:
-            return braintree.ClientToken.generate()
+            return braintree.ClientToken.generate(
+                {'customer_id': customer_braintree_id}
+            )
         except (AuthenticationError, AuthorizationError, DownForMaintenanceError,
                 ServerError, UpgradeRequiredError):
             return None
@@ -79,7 +82,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         payment_method_details = {
             'type': instrument_type,
             'image_url': result_details.image_url,
-            'updated_at': timezone.now().isoformat()
         }
 
         if instrument_type == payment_method.Types.PayPal:
@@ -94,7 +96,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
 
         try:
             if payment_method.is_recurring:
-                if not payment_method.vefified:
+                if not payment_method.verified:
                     payment_method.token = result_details.token
                     payment_method.verified = True
                     payment_method.save()
@@ -123,8 +125,6 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
         transaction.data['status'] = status
 
         try:
-            transaction.process()
-
             if status in [braintree.Transaction.Status.AuthorizationExpired,
                           braintree.Transaction.Status.SettlementDeclined,
                           braintree.Transaction.Status.Failed,
@@ -151,7 +151,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             transaction.save()
 
     def _update_customer(self, customer, result_details):
-        if not 'braintree_id' in customer.meta:
+        if 'braintree_id' not in customer.meta:
             customer.meta['braintree_id'] = result_details.id
             customer.save()
 
@@ -167,10 +167,22 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             return False
 
         # prepare payload
+        options = {
+            'submit_for_settlement': True,
+        }
+
         if payment_method.token:
             data = {'payment_method_token': payment_method.token}
-        else:
+        elif payment_method.nonce:
+            options.update({"store_in_vault": payment_method.is_recurring})
             data = {'payment_method_nonce': payment_method.nonce}
+        else:
+            logger.warning('Token or nonce not found when charging '
+                           'BraintreePaymentMethod: %s', {
+                               'payment_method_id': payment_method.id
+                           })
+
+            return False
 
         data.update({
             'amount': transaction.amount,
@@ -179,10 +191,7 @@ class BraintreeTriggered(PaymentProcessorBase, TriggeredProcessorMixin):
             },
             # TODO check how firstname and lastname can be obtained (for both
             # credit card and paypal)
-            'options': {
-                'submit_for_settlement': True,
-                "store_in_vault": payment_method.is_recurring
-            },
+            'options': options
         })
 
         customer = transaction.customer

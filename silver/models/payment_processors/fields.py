@@ -21,6 +21,7 @@ from .base import PaymentProcessorBase
 
 class PaymentProcessorField(CharField):
     def __init__(self, choices=(), *args, **kwargs):
+        kwargs['max_length'] = 256
         super(PaymentProcessorField, self).__init__(choices=choices, *args, **kwargs)
         self.validators = [self._not_empty_string_validator]
 

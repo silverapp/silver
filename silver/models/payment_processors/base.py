@@ -32,15 +32,12 @@ class PaymentProcessorBase(object):
         return self.transaction_view_class.as_view(**kwargs)
 
     def get_form(self, transaction, request):
-        form = None
         if self.form_class:
-            form = self.form_class(payment_method=transaction.payment_method,
+            return self.form_class(payment_method=transaction.payment_method,
                                    transaction=transaction, request=request)
 
-        return form
-
     def get_template(self, transaction):
-        template = select_template([
+        return select_template([
             'forms/{}/{}/transaction_form.html'.format(
                 transaction.document.provider,
                 transaction.payment_method.payment_processor.reference
@@ -50,8 +47,6 @@ class PaymentProcessorBase(object):
             ),
             'forms/transaction_form.html'
         ])
-
-        return template
 
     def __repr__(self):
         return self.reference

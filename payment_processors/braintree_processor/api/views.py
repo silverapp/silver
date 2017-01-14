@@ -12,22 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from annoying.functions import get_object_or_None
+from payment_processors.braintree_processor import BraintreeTriggered
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from silver.models import Customer
+from silver.models import Transaction
 
 
 @api_view('GET')
-def client_token(request, payment_method=None, payment_processor=None):
-    if payment_method:
-        payment_processor = payment_method.payment_processor
-    elif not payment_processor:
+def client_token(request, transaction_uuid=None):
+    transaction = get_object_or_None(Transaction, id=transaction_uuid)
+
+    if not isinstance(transaction.payment_processor, BraintreeTriggered):
         return Response(
-            {'detail': 'A payment method or a payment processor is required.'},
+            {'detail': 'Transaction is not a Braintree transaction.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    token = payment_method.client_token or payment_processor.client_token
+    token = transaction.payment_processor.client_token(transaction.customer)
 
     if not token:
         return Response({'detail': 'Braintree miscommunication.'},
