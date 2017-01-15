@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='paymentmethod',
             name='payment_processor',
-            field=models.CharField(max_length=256, choices=[(b'manual', b'Manual'), (b'braintree', b'Braintree')]),
+            field=models.CharField(max_length=256, choices=[(b'manual', b'Manual')]),
         ),
         migrations.AlterField(
             model_name='provider',
