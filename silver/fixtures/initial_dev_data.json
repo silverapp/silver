@@ -3,7 +3,8 @@
         "fields": {
             "city": "Timisoara",
             "consolidated_billing": false,
-            "name": "Gigel",
+            "first_name": "Gigel",
+            "last_name": "Popescu",
             "extra": "",
             "sales_tax_name": "",
             "country": "RO",
@@ -27,7 +28,8 @@
         "fields": {
             "city": "London",
             "consolidated_billing": false,
-            "name": "Ionica",
+            "first_name": "Ionica",
+            "last_name": "Ionescu",
             "extra": "",
             "sales_tax_name": "",
             "country": "GB",
