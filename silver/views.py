@@ -14,6 +14,7 @@
 from uuid import UUID
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpResponse
 from django.http import HttpResponseGone
 from django.http import HttpResponseRedirect, Http404
@@ -22,11 +23,11 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 
+from dal import autocomplete
 from rest_framework.exceptions import MethodNotAllowed
 
 from silver.models.documents import Proforma, Invoice
 from silver.models.transactions import Transaction
-from silver.forms import GenericTransactionForm
 
 
 @login_required
@@ -90,3 +91,36 @@ class GenericTransactionView(View):
 
     def post(self, request):
         raise MethodNotAllowed
+
+
+class DocumentAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+            raise Http404
+
+        queryset = self.model.objects.all()
+
+        if self.q:
+            q = self.q.rsplit('-')
+            if len(q) == 2:
+                query = (Q(series=q[0]), Q(number=q[1]))
+            else:
+                query = (Q(series__istartswith=self.q) |
+                         Q(number__istartswith=self.q))
+            queryset = queryset.filter(query)
+
+        return queryset
+
+
+class InvoiceAutocomplete(DocumentAutocomplete):
+    def __init__(self, **kwargs):
+        self.model = Invoice
+
+        super(InvoiceAutocomplete, self).__init__(**kwargs)
+
+
+class ProformaAutocomplete(DocumentAutocomplete):
+    def __init__(self, **kwargs):
+        self.model = Invoice
+
+        super(ProformaAutocomplete, self).__init__(**kwargs)

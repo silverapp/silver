@@ -23,3 +23,4 @@ html5lib==0.999
 django-multi-email-field==0.4
 cryptography==1.7.1
 sqlparse==0.2.2
+django-autocomplete-light==3.2.1
