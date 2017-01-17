@@ -38,6 +38,10 @@ DATABASES = {
 }
 
 EXTERNAL_APPS = [
+    # Django autocomplete
+    'dal',
+    'dal_select2',
+
     # Django core apps
     # 'django_admin_bootstrapped',
     'django.contrib.admin',

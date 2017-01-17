@@ -18,7 +18,8 @@
 from django.conf.urls import include, url
 from django.contrib import admin
 
-from silver.views import pay_transaction_view
+from silver.views import (pay_transaction_view, InvoiceAutocomplete,
+                          ProformaAutocomplete)
 
 admin.autodiscover()
 
@@ -28,5 +29,11 @@ urlpatterns = [
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
     url(r'pay/(?P<transaction_uuid>[0-9a-z-]+)/$',
-        pay_transaction_view, name='pay-transaction')
+        pay_transaction_view, name='pay-transaction'),
+    url(r'^autocomplete/invoices/$',
+        InvoiceAutocomplete.as_view(), name='autocomplete-invoice',
+    ),
+    url(r'^autocomplete/proformas/$',
+        ProformaAutocomplete.as_view(), name='autocomplete-proforma',
+        ),
 ]
