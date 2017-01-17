@@ -53,6 +53,9 @@ class PaymentProcessorBase(object):
 
         return template
 
+    def was_transaction_initialized(self, transaction, request):
+        raise NotImplemented
+
     def __repr__(self):
         return self.reference
 

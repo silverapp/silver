@@ -49,6 +49,9 @@ urlpatterns = [
     url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/$',
         views.TransactionDetail.as_view(), name='transaction-detail'),
 
+    url(r'^transactions/(?P<transaction_uuid>[0-9a-z-]+)/initialize$',
+        silver_views.initialize_transaction, name='initialize-transaction'),
+
     url(r'^payment_processors/(?P<processor_name>[a-zA-Z\-\_]+)/$',
         views.PaymentProcessorDetail.as_view(), name='payment-processor-detail'),
 
