@@ -43,6 +43,26 @@ def invoice_pdf(request, invoice_id):
 
 
 @csrf_exempt
+def initialize_transaction(request, transaction_uuid):
+    try:
+        uuid = UUID(transaction_uuid, version=4)
+    except ValueError:
+        raise Http404
+
+    transaction = get_object_or_404(Transaction, uuid=uuid)
+
+    transaction.last_access = timezone.now()
+    transaction.save()
+
+    if transaction.payment_processor.was_transaction_initialized(transaction,
+                                                                 request):
+        return HttpResponseRedirect(transaction.success_url)
+
+    return HttpResponseRedirect(transaction.failed_url)
+
+
+
+@csrf_exempt
 def pay_transaction_view(request, transaction_uuid):
     try:
         uuid = UUID(transaction_uuid, version=4)
