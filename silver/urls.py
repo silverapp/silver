@@ -28,7 +28,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
-    url(r'pay/(?P<transaction_uuid>[0-9a-z-]+)/$',
+    url(r'pay/(?P<token>[0-9a-zA-Z-_\.]+)/$',
         pay_transaction_view, name='pay-transaction'),
     url(r'^autocomplete/invoices/$',
         InvoiceAutocomplete.as_view(), name='autocomplete-invoice',

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from uuid import UUID
+from dal import autocomplete
 
 from django.db.models import Q
 from django.utils import timezone
@@ -22,11 +22,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import (HttpResponseGone, HttpResponse, Http404,
                          HttpResponseRedirect)
 
-from dal import autocomplete
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.exceptions import MethodNotAllowed, NotFound
 
-from silver.models.documents import Proforma, Invoice
 from silver.models.transactions import Transaction
+from silver.models.documents import Proforma, Invoice
+from silver.utils.decorators import get_transaction_from_token
 
 
 @login_required
@@ -42,16 +42,12 @@ def invoice_pdf(request, invoice_id):
 
 
 @csrf_exempt
-def complete_payment_view(request, transaction_uuid):
-    try:
-        uuid = UUID(transaction_uuid, version=4)
-    except ValueError:
-        raise Http404
-
-    transaction = get_object_or_404(Transaction, uuid=uuid)
-    transaction.payment_processor.handle_transaction_response(transaction,
-                                                              request)
-    transaction.save()
+@get_transaction_from_token
+def complete_payment_view(request, transaction, expired=None):
+    if transaction.state == transaction.state.Initial:
+        transaction.payment_processor.handle_transaction_response(transaction,
+                                                                  request)
+        transaction.save()
 
     if 'return_url' in request.GET:
         redirect_url = "{}?transaction_uuid{}".format(request.GET['return_url'],
@@ -66,17 +62,18 @@ def complete_payment_view(request, transaction_uuid):
 
 
 @csrf_exempt
-def pay_transaction_view(request, transaction_uuid):
-    try:
-        uuid = UUID(transaction_uuid, version=4)
-    except ValueError:
-        raise Http404
-
-    transaction = get_object_or_404(Transaction, uuid=uuid)
+@get_transaction_from_token
+def pay_transaction_view(request, transaction, expired=None):
+    if expired:
+        raise NotFound
 
     if transaction.state != Transaction.States.Initial:
-        return render('transactions/complete_payment.html',
-                      {'transaction': transaction})
+        return render(request, 'transactions/complete_payment.html',
+                      {
+                          'expired': expired,
+                          'transaction': transaction,
+                          'document': transaction.document,
+                      })
 
     view = transaction.payment_processor.get_view(transaction, request)
     if not view:

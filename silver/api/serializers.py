@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 
-
+import jwt
+from six import iteritems
 from django_fsm import TransitionNotAllowed
+
+from django.conf import settings
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+
 from rest_framework import serializers
-from rest_framework.relations import HyperlinkedIdentityField, \
-    HyperlinkedRelatedField
+from rest_framework.relations import (HyperlinkedIdentityField,
+                                      HyperlinkedRelatedField)
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import ValidationError as APIValidationError
 
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from silver.models.documents.document import Document
-from six import iteritems
 
 from silver.api.exceptions import APIConflictException
 
@@ -483,14 +487,30 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return value
 
 
+class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
+    def get_url(self, obj, view_name, request, format):
+        lookup_value = jwt.encode({
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=30),
+            'transaction': str(getattr(obj, self.lookup_field))
+        }, settings.PAYMENT_METHOD_SECRET)
+        kwargs = {'token': str(lookup_value)}
+        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        transaction_uuid = jwt.decode(view_kwargs['token'],
+                                      settings.PAYMENT_METHOD_SECRET,
+                                      verfify=False)['transaction']
+        return self.queryset.get(uuid=transaction_uuid)
+
+
 class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     payment_method = PaymentMethodUrl(view_name='payment-method-detail',
                                       lookup_field='payment_method',
                                       queryset=PaymentMethod.objects.all())
     url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
-    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
-                                       lookup_field='uuid',
-                                       lookup_url_kwarg='transaction_uuid')
+    pay_url = TransactionPaymentUrl(view_name='pay-transaction',
+                                    lookup_field='uuid',
+                                    lookup_url_kwarg='token')
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
     id = serializers.CharField(source='uuid', read_only=True)

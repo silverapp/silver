@@ -22,8 +22,8 @@
         <h2>
           {% if transaction.state == transaction.States.Failed %}
             Payment failed for
-          {% else if transaction.state == transaction.States.Pending %}
-            Payment pending for
+          {% elif transaction.state == transaction.States.Pending %}
+              Payment pending for
           {% else %}
             Payment succeded for
           {% endif %}
