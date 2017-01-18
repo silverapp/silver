@@ -13,15 +13,14 @@
 # limitations under the License.
 from uuid import UUID
 
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponse
-from django.http import HttpResponseGone
-from django.http import HttpResponseRedirect, Http404
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.http import (HttpResponseGone, HttpResponse, Http404,
+                         HttpResponseRedirect)
 
 from dal import autocomplete
 from rest_framework.exceptions import MethodNotAllowed
@@ -43,6 +42,27 @@ def invoice_pdf(request, invoice_id):
 
 
 @csrf_exempt
+def complete_payment_view(request, transaction_uuid):
+    try:
+        uuid = UUID(transaction_uuid, version=4)
+    except ValueError:
+        raise Http404
+
+    transaction = get_object_or_404(Transaction, uuid=uuid)
+    transaction.payment_processor.handle_transaction_response(transaction,
+                                                              request)
+    transaction.save()
+
+    if 'return_url' in request.GET:
+        redirect_url = "{}?transaction_uuid{}".format(request.GET['return_url'],
+                                                      transaction.uuid)
+        return HttpResponseRedirect(redirect_url)
+    else:
+        return render('transactions/complete_payment.html',
+                      {'transaction': transaction})
+
+
+@csrf_exempt
 def pay_transaction_view(request, transaction_uuid):
     try:
         uuid = UUID(transaction_uuid, version=4)
@@ -50,6 +70,10 @@ def pay_transaction_view(request, transaction_uuid):
         raise Http404
 
     transaction = get_object_or_404(Transaction, uuid=uuid)
+
+    if transaction.state != Transaction.States.Initial:
+        return render('transactions/complete_payment.html',
+                      {'transaction': transaction})
 
     view = transaction.payment_processor.get_view(transaction, request)
     if not view:
