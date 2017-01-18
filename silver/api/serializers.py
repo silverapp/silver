@@ -35,6 +35,7 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma, PaymentMethod,
                            PaymentProcessorManager, Transaction)
 from silver.validators import validate_payment_processor
+from silver.utils.payments import get_payment_url
 
 
 class ProductCodeRelatedField(serializers.SlugRelatedField):
@@ -489,12 +490,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
 class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
-        lookup_value = jwt.encode({
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=30),
-            'transaction': str(getattr(obj, self.lookup_field))
-        }, settings.PAYMENT_METHOD_SECRET)
-        kwargs = {'token': str(lookup_value)}
-        return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
+        return get_payment_url(obj, request)
 
     def get_object(self, view_name, view_args, view_kwargs):
         transaction_uuid = jwt.decode(view_kwargs['token'],

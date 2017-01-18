@@ -44,14 +44,15 @@ def invoice_pdf(request, invoice_id):
 @csrf_exempt
 @get_transaction_from_token
 def complete_payment_view(request, transaction, expired=None):
-    if transaction.state == transaction.state.Initial:
+    if transaction.state == transaction.States.Initial:
         transaction.payment_processor.handle_transaction_response(transaction,
                                                                   request)
         transaction.save()
 
     if 'return_url' in request.GET:
-        redirect_url = "{}?transaction_uuid{}".format(request.GET['return_url'],
-                                                      transaction.uuid)
+        # TODO: use urlparse, as utils
+        redirect_url = "{}?transaction_uuid={}".format(request.GET['return_url'],
+                                                       transaction.uuid)
         return HttpResponseRedirect(redirect_url)
     else:
         return render('transactions/complete_payment.html',
