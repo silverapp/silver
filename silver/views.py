@@ -59,7 +59,10 @@ def complete_payment_view(request, transaction_uuid):
         return HttpResponseRedirect(redirect_url)
     else:
         return render('transactions/complete_payment.html',
-                      {'transaction': transaction})
+                      {
+                          'transaction': transaction,
+                          'document': transaction.document,
+                      })
 
 
 @csrf_exempt
