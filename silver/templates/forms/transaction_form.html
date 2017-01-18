@@ -7,6 +7,38 @@
             size: a4;
             margin: 2cm;
         }
+        form p {
+          width: 32%;
+          float: left;
+          margin-right: 1%;
+        }
+        form p input,
+        form p select,
+        form p textarea {
+          width: 100%;
+          margin-bottom: 2%;
+        }
+        form span {
+          display: block;
+        }
+        form em {
+          color: red;
+          font-size: 80%;
+        }
+        form fieldset:after {
+          content: "";
+          display: table;
+          clear: both;
+        }
+        form fieldset[role="actions"] {
+          text-align: center;
+        }
+        table {
+          width: 100%;
+        }
+        table small {
+          color: gray;
+        }
     </style>
     <link rel="stylesheet" type="text/css" href="{% static 'css/skeleton.css' %}">
 
@@ -20,113 +52,106 @@
         {% endblock %}
 
         {% block document %}
-            <table class="u-full-width">
+            <table cellspacing="0" cellpadding="0">
                 <thead>
                     <tr>
-                        <th>
-                            <h4>Issuer: {{ provider.billing_name }}</h4>
-                        </th>
-                        <th>
-                            <h4>Customer: {{ customer.billing_name }}</h4>
-                        </th>
-                        <th>
-                            <h4>Amount</h4>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
                         <td>
-                            <div class="row">{{ provider.address_1 }}</div>
+                            <h5>Issuer: {{ provider.billing_name }}</h5>
+                            <p>{{ provider.address_1 }}<br />
 
                             {% if provider.address_2 %}
-                                <div class="row">{{ provider.address_2 }}</div>
+                                {{ provider.address_2 }}<br />
                             {% endif %}
 
-                            <div class="row">{{ provider.city }}</div>
+                            {{ provider.city }}<br />
 
                             {% if provider.state %}
-                                <div class="row">{{ provider.state }}</div>
+                                {{ provider.state }}<br />
                             {% endif %}
 
                             {% if provider.zip_code %}
-                                <div class="row">{{ provider.zip_code }}</div>
+                                {{ provider.zip_code }}<br />
                             {% endif %}
 
                             {% if provider.display_email %}
-                                <div class="row">
-                                    <strong>Email:</strong> {{ provider.display_email }}
-                                </div>
+                                <strong>Email:</strong> {{ provider.display_email }}<br />
                             {% endif %}
 
                             {% if provider.extra %}
-                                <div class="row">{{ provider.extra|linebreaksbr }}</div>
+                                {{ provider.extra|linebreaksbr }}
                             {% endif %}
+                            </p>
                         </td>
                         <td>
+                            <h5>Customer: {{ customer.billing_name }}</h5>
+                            <p>
                             {% if customer.sales_tax_number %}
-                                <div class="row">{{ customer.sales_tax_number }}</div>
+                                {{ customer.sales_tax_number }}<br />
                             {% endif %}
 
-                            <div class="row">{{ customer.address_1 }}</div>
+                            {{ customer.address_1 }}<br />
 
                             {% if customer.address_2 %}
-                                <div class="row">{{ customer.address_2 }}</div>
+                                {{ customer.address_2 }}<br />
                             {% endif %}
 
-                            <div class="row">{{ customer.city }}</div>
+                            {{ customer.city }}<br />
 
                             {% if customer.state %}
-                                <div class="row">{{ customer.state }}</div>
+                                {{ customer.state }}<br />
                             {% endif %}
 
                             {% if customer.zip_code %}
-                                <div class="row">{{ customer.zip_code }}</div>
+                                {{ customer.zip_code }}<br />
                             {% endif %}
 
                             {% if customer.emails %}
-                                <div class="row">{{ customer.emails|first }}</div>
+                                {{ customer.emails|first }}<br />
                             {% endif %}
 
                             {% if customer.company %}
-                                <div class="row">{{ customer.company }}</div>
+                                {{ customer.company }}<br />
                             {% endif %}
 
                             {% if customer.extra %}
-                                <div class="row">{{ customer.extra|linebreaksbr }}</div>
+                                {{ customer.extra|linebreaksbr }}<br />
                             {% endif %}
+                            </p>
                         </td>
-                        <td>
-                            <div class="row">
-                                {% if transaction.state == transaction.States.Initial %}
-                                    {% block form %}
-                                        <div id="form">
-                                            <strong>{{ transaction.amount }} {{ transaction.currency }}</strong>
-                                            {{ form }}
-                                        </div>
-                                    {% endblock %}
-                                {% else %}
-                                    {% block transaction %}
-                                        <strong> The payment is {{ transaction.state }}.</strong>
-                                    {% endblock %}
-                                {% endif %}
-                            </div>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colspan="2">
+                            {% if transaction.state == transaction.States.Initial %}
+                                {% block form %}
+                                    <div>
+                                        <strong>{{ transaction.amount }} {{ transaction.currency }}</strong>
+                                        {{ form }}
+                                    </div>
+                                {% endblock %}
+                            {% else %}
+                                {% block transaction %}
+                                    <strong> The payment is {{ transaction.state }}.</strong>
+                                {% endblock %}
+                            {% endif %}
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <table class="u-full-width">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Service</th>
-                        <th>Unit</th>
-                        <th>Qty.</th>
-                        <th>Unit Price</th>
-                        <th>Total Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
+            {% block document_details%}
+                <table cellspacing="0" cellpadding="0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Service</th>
+                            <th>Unit</th>
+                            <th>Qty.</th>
+                            <th>Unit Price</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     {% for entry in entries %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
@@ -137,17 +162,28 @@
                             <td>{{ entry.total|floatformat:2 }} {{ document.currency }}</td>
                         </tr>
                     {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="5">Total</td>
-                        <td>
-                            <div align="center" class="row">{{ document.total|floatformat:2 }} {{ document.currency }}</div>
-                            <div align="center" class="row"><em>({{ transaction.amount }} {{ transaction.currency }})</em></div>
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5">
+                              <strong>Amount paid</strong>
+                              <br/><small>* this may not represent document's total amount</small>
+                            </td>
+                            <td>
+                                <strong>{{ transaction.amount }} {{ transaction.currency }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">
+                              <h3>Total amount</h3>
+                            </td>
+                            <td>
+                                <h3>{{ document.total|floatformat:2 }} {{ document.currency }}</h3>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            {% endblock %}
         {% endblock %}
     </div>
 </body>
