@@ -80,11 +80,6 @@ class Transaction(models.Model):
     last_access = models.DateTimeField(null=True, blank=True)
     consumable = models.BooleanField(default=True)
 
-    success_url = models.TextField(null=True, blank=True,
-                                   validators=[URLValidator()])
-    failed_url = models.TextField(null=True, blank=True,
-                                  validators=[URLValidator()])
-
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
 

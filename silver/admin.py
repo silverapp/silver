@@ -838,7 +838,7 @@ class TransactionForm(forms.ModelForm):
         model = Transaction
         fields = ['amount', 'currency', 'proforma', 'invoice', 'currency_rate_date',
                   'state', 'payment_method', 'uuid', 'valid_until', 'last_access',
-                  'consumable', 'success_url', 'failed_url', 'data']
+                  'consumable', 'data']
 
         readonly_fields = ['state', 'uuid', 'last_access']
         create_only_fields = ['amount', 'currency', 'proforma', 'invoice',

@@ -261,9 +261,6 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     )
     state = Transaction.States.Initial
 
-    success_url = 'https://my-success-callback.com/'
-    failed_url = 'https://my-failed-callback.com/'
-
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         kwargs['invoice'].proforma = kwargs['proforma']

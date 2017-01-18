@@ -151,8 +151,6 @@ class TestInvoiceEndpoints(APITestCase):
             "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
                               (invoice.customer.pk, transaction.payment_method.pk),
             "pay_url": "http://testserver/pay/%s/" % transaction.uuid,
-            "success_url": transaction.success_url,
-            "failed_url": transaction.failed_url
         } for transaction in transactions]
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
