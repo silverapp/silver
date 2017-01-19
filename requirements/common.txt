@@ -14,6 +14,7 @@ python-dateutil
 django-model-utils
 django-annoying
 pytz
+PyJWT
 # python-dev is required for xhtml2pdf to work
 xhtml2pdf
 django-xhtml2pdf
