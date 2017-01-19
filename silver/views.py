@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from furl import furl
 from dal import autocomplete
 
 from django.db.models import Q
@@ -50,9 +51,9 @@ def complete_payment_view(request, transaction, expired=None):
         transaction.save()
 
     if 'return_url' in request.GET:
-        # TODO: use urlparse, as utils
-        redirect_url = "{}?transaction_uuid={}".format(request.GET['return_url'],
-                                                       transaction.uuid)
+        redirect_url = furl(request.GET['return_url']).add({
+                                'transaction_uuid': transaction.uuid
+                            }).url
         return HttpResponseRedirect(redirect_url)
     else:
         return render('transactions/complete_payment.html',
