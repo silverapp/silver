@@ -504,9 +504,8 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                                       lookup_field='payment_method',
                                       queryset=PaymentMethod.objects.all())
     url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
-    pay_url = TransactionPaymentUrl(view_name='pay-transaction',
-                                    lookup_field='uuid',
-                                    lookup_url_kwarg='token')
+    pay_url = TransactionPaymentUrl(lookup_url_kwarg='token',
+                                    view_name='payment')
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
     id = serializers.CharField(source='uuid', read_only=True)

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
+from datetime import datetime
 
 import jwt
 
@@ -20,8 +20,9 @@ from rest_framework.reverse import reverse
 
 
 def _get_jwt_token(transaction):
-     return jwt.encode({
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=30),
+    valid_until = datetime.utcnow() + settings.SILVER_PAYMENT_TOKEN_EXPIRATION
+    return jwt.encode({
+        'exp': valid_until,
         'transaction': str(transaction.uuid)
     }, settings.PAYMENT_METHOD_SECRET)
 

@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import datetime
 
 from silver import HOOK_EVENTS as _HOOK_EVENTS
 from django.utils.log import DEFAULT_LOGGING as LOGGING
@@ -20,8 +21,6 @@ from django.utils.log import DEFAULT_LOGGING as LOGGING
 These settings are used by the ``manage.py`` command.
 
 """
-
-import os
 
 DEBUG = False
 
@@ -126,7 +125,7 @@ HOOK_EVENTS = _HOOK_EVENTS
 SILVER_DEFAULT_DUE_DAYS = 5
 SILVER_DOCUMENT_PREFIX = 'documents/'
 SILVER_DOCUMENT_STORAGE = None
-
+SILVER_PAYMENT_TOKEN_EXPIRATION = datetime.timedelta(minutes=5)
 
 LOGGING['loggers']['xhtml2pdf'] = {
     'level': 'DEBUG',
