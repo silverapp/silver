@@ -41,12 +41,14 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.http import HttpResponse
 
+from silver.models import PaymentProcessorManager
+from silver.utils.payments import get_payment_url
+
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
                     ProductCode, Proforma, BillingLog, BillingDocumentBase,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
-from silver.models import PaymentProcessorManager
 
 logger = logging.getLogger(__name__)
 
@@ -859,7 +861,7 @@ class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
-                    'amount', 'state', 'get_customer')
+                    'amount', 'state', 'get_customer', 'get_pay_url')
     list_filter = ('payment_method__customer', 'state')
     actions = ['process', 'cancel', 'settle', 'fail']
 
@@ -867,6 +869,12 @@ class TransactionAdmin(ModelAdmin):
         if instance:
             return self.form.Meta.readonly_fields + self.form.Meta.create_only_fields
         return self.form.Meta.readonly_fields
+
+    def get_pay_url(self, obj):
+        return u'<a href="%s">%s</a>' % (get_payment_url(obj, None), obj.payment_processor)
+
+    get_pay_url.allow_tags = True
+    get_pay_url.short_description = 'Pay URL'
 
     def get_customer(self, obj):
         link = urlresolvers.reverse("admin:silver_customer_change",
