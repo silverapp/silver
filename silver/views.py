@@ -78,11 +78,8 @@ def pay_transaction_view(request, transaction, expired=None):
                       })
 
     view = transaction.payment_processor.get_view(transaction, request)
-    if not view:
-        raise Http404
-
-    if not transaction.can_be_consumed:
-        return HttpResponseGone("The transaction is no longer available.")
+    if not view or not transaction.can_be_consumed:
+        raise NotFound
 
     transaction.last_access = timezone.now()
     transaction.save()
@@ -90,7 +87,7 @@ def pay_transaction_view(request, transaction, expired=None):
     try:
         return view(request)
     except NotImplementedError:
-        raise Http404
+        raise NotFound
 
 
 class GenericTransactionView(View):

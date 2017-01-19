@@ -77,7 +77,6 @@ class Transaction(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
-    consumable = models.BooleanField(default=True)
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -135,9 +134,6 @@ class Transaction(models.Model):
 
     @property
     def can_be_consumed(self):
-        if not self.consumable:
-            return False
-
         if self.valid_until and self.valid_until < timezone.now():
             return False
 
