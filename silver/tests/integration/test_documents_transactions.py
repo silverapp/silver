@@ -68,20 +68,13 @@ class TestDocumentsTransactions(TestCase):
             verified=True,
         )
 
-        mock_execute = MagicMock()
-        with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
-            invoice.issue()
+        invoice.issue()
 
-            transactions = Transaction.objects.filter(
-                invoice=invoice, proforma=invoice.proforma
-            )
-            self.assertEqual(len(transactions), 1)
+        transactions = Transaction.objects.filter(
+            invoice=invoice, proforma=invoice.proforma
+        )
+        self.assertEqual(len(transactions), 1)
 
-            transaction = transactions[0]
-
-            self.assertIn(call(transaction), mock_execute.call_args_list)
-
-            self.assertEqual(mock_execute.call_count, 1)
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_no_transaction_creation_for_issued_documents_case_1(self):
