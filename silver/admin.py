@@ -23,6 +23,7 @@ from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
 
 from django import forms
+from django.core import urlresolvers
 from django.contrib import messages
 from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
                                   SimpleListFilter)
@@ -858,7 +859,7 @@ class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
-                    'amount', 'state',)
+                    'amount', 'state', 'get_customer')
     list_filter = ('payment_method__customer', 'state')
     actions = ['process', 'cancel', 'settle', 'fail']
 
@@ -866,6 +867,13 @@ class TransactionAdmin(ModelAdmin):
         if instance:
             return self.form.Meta.readonly_fields + self.form.Meta.create_only_fields
         return self.form.Meta.readonly_fields
+
+    def get_customer(self, obj):
+        link = urlresolvers.reverse("admin:silver_customer_change",
+                                    args=[obj.payment_method.customer.pk])
+        return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
+    get_customer.allow_tags = True
+    get_customer.short_description = 'Customer'
 
     def perform_action(self, request, queryset, action, display_verb=None):
         failed_count = 0
