@@ -47,7 +47,6 @@ class Transaction(models.Model):
         choices=currencies, max_length=4, default='USD',
         help_text='The currency used for billing.'
     )
-    currency_rate_date = models.DateField(blank=True, null=True)
 
     class States:
         Initial = 'initial'
@@ -82,6 +81,11 @@ class Transaction(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField(default=timezone.now)
+
+    @property
+    def final_fields(self):
+        return ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
+                'currency', ]
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -137,6 +141,24 @@ class Transaction(models.Model):
             if self.invoice.proforma != self.proforma:
                 raise ValidationError('Invoice and proforma are not related.')
 
+    def full_clean(self, *args, **kwargs):
+        super(Transaction, self).full_clean(*args, **kwargs)
+
+        # this assumes that nobody calls clean and then modifies this object
+        # without calling clean again
+        self.cleaned = True
+
+    def clean_currency(self):
+        currency = self.cleaned_data['currency']
+
+        if currency not in self.payment_method.allowed_currencies:
+            raise ValidationError(
+                'Currency {} is not allowed. Allowed currencies are {}.'.format(
+                    currency, self.payment_method.allowed_currencies
+                ))
+
+        return currency
+
     @property
     def can_be_consumed(self):
         if self.valid_until and self.valid_until < timezone.now():
@@ -171,6 +193,14 @@ class Transaction(models.Model):
 def pre_transaction_save(sender, instance=None, **kwargs):
     old = get_object_or_None(Transaction, pk=instance.pk)
     setattr(instance, 'old_value', old)
+
+    if old:
+        for field in instance.final_fields:
+            if getattr(old, field) and getattr(instance, field) != getattr(old, field):
+                raise ValidationError("Field '%s' may not be changed." % field)
+
+    if not getattr(instance, 'cleaned', False):
+        instance.full_clean()
 
 
 @receiver(post_save, sender=Transaction)

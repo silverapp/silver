@@ -22,6 +22,7 @@ class PaymentProcessorBase(object):
     form_class = None
     payment_method_class = None
     transaction_view_class = None
+    allowed_currencies = ()
 
     def get_view(self, transaction, request, **kwargs):
         kwargs.update({

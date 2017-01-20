@@ -44,6 +44,7 @@ class TestPaymentMethodSerializer(TestCase):
                                                                                 payment_method.pk)),
             ('customer', 'http://testserver/customers/{}/'.format(payment_method.customer.pk)),
             ('payment_processor', 'http://testserver/payment_processors/manual/'),
+            ('allowed_currencies', payment_method.allowed_currencies),
             ('added_at', payment_method.added_at),
             ('verified', False),
             ('enabled', True)

@@ -68,7 +68,6 @@ class TestTransactionEndpoint(APITestCase):
                 ('provider', reverse('provider-detail', args=[provider.pk])),
                 ('amount', unicode(Decimal('0.00') + transaction.amount)),
                 ('currency', unicode(transaction.currency)),
-                ('currency_rate_date', None),
                 ('state', unicode(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
@@ -97,7 +96,6 @@ class TestTransactionEndpoint(APITestCase):
         proforma_1 = transaction_1.proforma
         provider_1 = invoice_1.provider
 
-
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
@@ -109,7 +107,6 @@ class TestTransactionEndpoint(APITestCase):
                 ('provider', reverse('provider-detail', args=[provider_1.pk])),
                 ('amount', unicode(Decimal('0.00') + transaction_1.amount)),
                 ('currency', unicode(transaction_1.currency)),
-                ('currency_rate_date', None),
                 ('state', unicode(transaction_1.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma_1.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice_1.pk])),
@@ -133,7 +130,6 @@ class TestTransactionEndpoint(APITestCase):
                 ('provider', reverse('provider-detail', args=[provider_2.pk])),
                 ('amount', unicode(Decimal('0.00') + transaction_2.amount)),
                 ('currency', unicode(transaction_2.currency)),
-                ('currency_rate_date', None),
                 ('state', unicode(transaction_2.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma_2.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice_2.pk])),
@@ -321,40 +317,34 @@ class TestTransactionEndpoint(APITestCase):
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
-        transaction.document.issue()
-        transaction.document.save()
 
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
         valid_until = timezone.now()
-        currency_rate_date = timezone.now().date()
 
         data = {
             'valid_until': valid_until,
-            'currency': 'RON',
-            'currency_rate_date': currency_rate_date,
-            'amount': 200
         }
 
         response = self.client.patch(url, format='json', data=data)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK,
+                         "status %s, data %s" % (response.status_code,
+                                                 response.data))
 
         transaction.refresh_from_db()
         self.assertEqual(transaction.valid_until, valid_until)
-        self.assertEqual(transaction.currency, 'RON')
-        self.assertEqual(transaction.currency_rate_date, currency_rate_date)
-        self.assertEqual(transaction.amount, 200)
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
-    def test_patch_transaction_documents(self):
+    def test_patch_transaction_not_allowed_fields(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor='someprocessor'
         )
         transaction = TransactionFactory.create(payment_method=payment_method)
-        proforma = ProformaFactory.create()
-        invoice = InvoiceFactory.create(proforma=proforma)
+
+        proforma = ProformaFactory.create(state='issued')
+        invoice = InvoiceFactory.create(proforma=proforma, state='issued')
         proforma.invoice = invoice
         proforma.save()
 
@@ -363,9 +353,21 @@ class TestTransactionEndpoint(APITestCase):
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
+        new_payment_method = PaymentMethodFactory.create(
+            payment_processor='someprocessor', customer=payment_method.customer
+        )
+
+        new_payment_method_url = reverse('payment-method-detail', kwargs={
+            'customer_pk': new_payment_method.customer.pk,
+            'payment_method_id': new_payment_method.pk
+        })
+
         data = {
             'proforma': proforma_url,
-            'invoice': invoice_url
+            'invoice': invoice_url,
+            'currency': 'RON',
+            'amount': 1234,
+            'payment_method': new_payment_method_url
         }
 
         response = self.client.patch(url, format='json', data=data)
@@ -374,7 +376,10 @@ class TestTransactionEndpoint(APITestCase):
 
         self.assertEqual(response.data, {
             'proforma': [u'This field may not be modified.'],
-            'invoice': [u'This field may not be modified.']
+            'invoice': [u'This field may not be modified.'],
+            'currency': [u'This field may not be modified.'],
+            'amount': [u'This field may not be modified.'],
+            'payment_method': [u'This field may not be modified.']
         })
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
@@ -544,7 +549,6 @@ class TestTransactionEndpoint(APITestCase):
         proforma = transaction.proforma
         invoice = transaction.invoice
 
-
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
@@ -556,7 +560,6 @@ class TestTransactionEndpoint(APITestCase):
                 ('provider', reverse('provider-detail', args=[provider.pk])),
                 ('amount', unicode(Decimal('0.00') + transaction.amount)),
                 ('currency', unicode(transaction.currency)),
-                ('currency_rate_date', None),
                 ('state', unicode(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),

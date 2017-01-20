@@ -126,6 +126,20 @@ class BillingDocumentBase(models.Model):
         choices=currencies, max_length=4, default='USD',
         help_text='The currency used for billing.'
     )
+    transaction_currency = models.CharField(
+        choices=currencies, max_length=4, default='USD',
+        help_text='The currency used when making a transaction.'
+    )
+    transaction_xe_rate = models.DecimalField(
+        max_digits=16, decimal_places=4, default=1,
+        help_text='Currency exchange rate from document currency to '
+                  'transaction_currency.'
+    )
+    transaction_xe_date = models.DateField(
+        null=True, blank=True,
+        help_text='Date of the transaction exchange rate.'
+    )
+
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.DRAFT,

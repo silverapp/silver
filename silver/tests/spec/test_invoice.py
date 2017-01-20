@@ -40,7 +40,6 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
 class TestInvoiceEndpoints(APITestCase):
-
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
@@ -61,11 +60,15 @@ class TestInvoiceEndpoints(APITestCase):
         }
 
         response = self.client.post(url, data=data)
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data == {
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        invoice = get_object_or_None(Invoice, id=response.data["id"])
+        self.assertTrue(invoice)
+
+        self.assertEqual(response.data, {
             "id": response.data["id"],
-            "series": "InvoiceSeries",
-            "number": None,
+            "series": invoice.series,
+            "number": invoice.number,
             "provider": "http://testserver/providers/%s/" % provider.pk,
             "customer": "http://testserver/customers/%s/" % customer.pk,
             "archived_provider": {},
@@ -74,16 +77,19 @@ class TestInvoiceEndpoints(APITestCase):
             "issue_date": None,
             "paid_date": None,
             "cancel_date": None,
-            "sales_tax_name": "VAT",
-            "sales_tax_percent": '1.00',
+            "sales_tax_name": invoice.sales_tax_name,
+            "sales_tax_percent": str(invoice.sales_tax_percent),
             "currency": "RON",
-            "state": "draft",
+            "transaction_currency": invoice.transaction_currency,
+            "transaction_xe_rate": "%.4f" % invoice.transaction_xe_rate,
+            "transaction_xe_date": invoice.transaction_xe_date,
+            "state": invoice.state,
             "proforma": None,
             "invoice_entries": [],
             "pdf_url": None,
-            "total": Decimal('0.00'),
+            "total": invoice.total,
             "transactions": []
-        }
+        })
 
     def test_post_invoice_with_invoice_entries(self):
         customer = CustomerFactory.create()
@@ -106,7 +112,7 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(data),
                                     content_type='application/json')
 
-        assert response.status_code == status.HTTP_201_CREATED
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # TODO: Check the body of the response. There were some problems
         # related to the invoice_entries list.
 
@@ -117,21 +123,21 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-list')
         response = self.client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         response = self.client.get(url + '?page=2')
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_invoice(self):
         InvoiceFactory.reset_sequence(1)
         TransactionFactory.reset_sequence(1)
 
         customer = CustomerFactory.create()
-        invoice = InvoiceFactory.create(customer=customer)
+        invoice = InvoiceFactory.create(customer=customer, state=Invoice.STATES.ISSUED)
         transactions = [
             TransactionFactory.create(state=state, invoice=invoice,
-                                     payment_method=PaymentMethodFactory(customer=customer))
+                                      payment_method=PaymentMethodFactory(customer=customer))
             for state in Transaction.States.as_list()
             if state not in [Transaction.States.Canceled,
                              Transaction.States.Refunded,
@@ -145,7 +151,6 @@ class TestInvoiceEndpoints(APITestCase):
             "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
             "amount": "%s.00" % str(transaction.amount),
             "currency": "USD",
-            "currency_rate_date": None,
             "state": transaction.state,
             "proforma": "http://testserver/proformas/%s/" % transaction.proforma.pk,
             "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
@@ -158,14 +163,13 @@ class TestInvoiceEndpoints(APITestCase):
                        if transaction.state == Transaction.States.Initial else None,
         } for transaction in transactions]
 
-
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
             url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
             response = self.client.get(url)
 
-            assert response.status_code == status.HTTP_200_OK
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
             expected_response = {
                 "id": invoice.pk,
                 "series": "InvoiceSeries",
@@ -181,31 +185,45 @@ class TestInvoiceEndpoints(APITestCase):
                 "sales_tax_name": "VAT",
                 "sales_tax_percent": '1.00',
                 "currency": "RON",
-                "state": "draft",
+                "transaction_currency": invoice.transaction_currency,
+                "transaction_xe_rate": "%.4f" % invoice.transaction_xe_rate,
+                "transaction_xe_date": invoice.transaction_xe_date,
+                "state": "issued",
                 "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
                 "invoice_entries": [],
                 "pdf_url": None,
                 "total": Decimal('0.00')
             }
             for field in expected_response:
-                self.assertEqual(expected_response[field], response.data[field])
+                self.assertEqual(expected_response[field], response.data[field],
+                                 msg=("Expected %s, actual %s for field %s" % (
+                                      expected_response[field], response.data[field],
+                                      field)))
 
-            for expected_transaction in expected_transactions:
-                for transaction in response.data["transactions"]:
-                    if transaction["id"] == expected_transaction["id"]:
-                        actual_transaction = transaction
-                        break
+            self.assertEqual(len(response.data["transactions"]),
+                             len(expected_transactions))
 
-                for field in expected_transaction:
-                    self.assertEqual(expected_transaction[field],
-                                     actual_transaction[field])
+            for actual_transaction in response.data["transactions"]:
+                expected_transaction = [
+                    transaction for transaction in expected_transactions if
+                    transaction["id"] == actual_transaction["id"]
+                ]
+                self.assertTrue(expected_transaction)
+                expected_transaction = expected_transaction[0]
+
+                self.assertEqual(
+                    expected_transaction[field], actual_transaction[field],
+                    msg=("Expected %s, actual %s for field %s" % (
+                        expected_response[field], response.data[field], field)
+                         )
+                )
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})
 
         response = self.client.delete(url)
-        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": 'Method "DELETE" not allowed.'}
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.data, {"detail": 'Method "DELETE" not allowed.'})
 
     def test_add_single_invoice_entry(self):
         invoice = InvoiceFactory.create()
@@ -222,8 +240,8 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = Invoice.objects.all()[0]
         total = Decimal(200.0) * Decimal(1 + invoice.sales_tax_percent / 100)
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data == {
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data, {
             'description': 'Page views',
             'unit': None,
             'quantity': '20.0000',
@@ -234,14 +252,14 @@ class TestInvoiceEndpoints(APITestCase):
             'product_code': None,
             'total': total,
             'total_before_tax': Decimal(200.0)
-        }
+        })
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
 
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == 1
-        assert invoice_entries[0] == {
+        self.assertEqual(len(invoice_entries), 1)
+        self.assertEqual(invoice_entries[0], {
             'description': 'Page views',
             'unit': None,
             'quantity': '20.0000',
@@ -252,14 +270,14 @@ class TestInvoiceEndpoints(APITestCase):
             'product_code': None,
             'total': total,
             'total_before_tax': Decimal(200.0)
-        }
+        })
 
     def test_try_to_get_invoice_entries(self):
         url = reverse('invoice-entry-create', kwargs={'document_pk': 1})
 
         response = self.client.get(url)
-        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
-        assert response.data == {"detail": 'Method "GET" not allowed.'}
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.data, {"detail": 'Method "GET" not allowed.'})
 
     def test_add_multiple_invoice_entries(self):
         invoice = InvoiceFactory.create()
@@ -279,8 +297,8 @@ class TestInvoiceEndpoints(APITestCase):
             response = self.client.post(url, data=json.dumps(entry_data),
                                         content_type='application/json')
 
-            assert response.status_code == status.HTTP_201_CREATED
-            assert response.data == {
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.data, {
                 'description': 'Page views',
                 'unit': None,
                 'quantity': '20.0000',
@@ -291,12 +309,12 @@ class TestInvoiceEndpoints(APITestCase):
                 'product_code': None,
                 'total': total,
                 'total_before_tax': Decimal(200.0)
-            }
+            })
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == entries_count
+        self.assertEqual(len(invoice_entries), entries_count)
 
     def test_delete_invoice_entry(self):
         invoice = InvoiceFactory.create()
@@ -315,12 +333,12 @@ class TestInvoiceEndpoints(APITestCase):
         url = reverse('invoice-entry-update', kwargs={'document_pk': invoice.pk,
                                                       'entry_pk': list(invoice._entries)[0].pk})
         response = self.client.delete(url)
-        assert response.status_code == status.HTTP_204_NO_CONTENT
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == entries_count - 1
+        self.assertEqual(len(invoice_entries), entries_count - 1)
 
     def test_add_invoice_entry_in_issued_state(self):
         invoice = InvoiceFactory.create()
@@ -336,14 +354,14 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
-        assert response.data == {'detail': msg}
+        self.assertEqual(response.data, {'detail': msg})
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == 0
+        self.assertEqual(len(invoice_entries), 0)
 
     def test_add_invoice_entry_in_canceled_state(self):
         invoice = InvoiceFactory.create()
@@ -360,14 +378,14 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
-        assert response.data == {'detail': msg}
+        self.assertEqual(response.data, {'detail': msg})
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == 0
+        self.assertEqual(len(invoice_entries), 0)
 
     def test_add_invoice_entry_in_paid_state(self):
         invoice = InvoiceFactory.create()
@@ -384,14 +402,14 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(entry_data),
                                     content_type='application/json')
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         msg = 'Invoice entries can be added only when the invoice is in draft state.'
-        assert response.data == {'detail': msg}
+        self.assertEqual(response.data, {'detail': msg})
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         response = self.client.get(url)
         invoice_entries = response.data.get('invoice_entries', None)
-        assert len(invoice_entries) == 0
+        self.assertEqual(len(invoice_entries), 0)
 
     def test_edit_invoice_in_issued_state(self):
         invoice = InvoiceFactory.create()
@@ -403,9 +421,9 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': [
-            'You cannot edit the document once it is in issued state.']}
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'non_field_errors': [
+            'You cannot edit the document once it is in issued state.']})
 
     def test_edit_invoice_in_canceled_state(self):
         invoice = InvoiceFactory.create()
@@ -418,9 +436,9 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': [
-            'You cannot edit the document once it is in canceled state.']}
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'non_field_errors': [
+            'You cannot edit the document once it is in canceled state.']})
 
     def test_edit_invoice_in_paid_state(self):
         invoice = InvoiceFactory.create()
@@ -433,9 +451,9 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': [
-            'You cannot edit the document once it is in paid state.']}
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'non_field_errors': [
+            'You cannot edit the document once it is in paid state.']})
 
     def test_issue_invoice_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -447,20 +465,18 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
-        assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
-        assert response.data.get('archived_provider', {}) != {}
-        assert response.data.get('archived_customer', {}) != {}
-
-        invoice = get_object_or_None(Invoice, pk=1)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(item in response.data.items()
+                        for item in mandatory_content.iteritems()))
+        self.assertNotEqual(response.data.get('archived_provider', {}), {})
+        self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
     def test_issue_invoice_with_custom_issue_date(self):
         provider = ProviderFactory.create()
@@ -472,20 +488,18 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.put(url, data=json.dumps(data),
                                    content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
         mandatory_content = {
             'issue_date': '2014-01-01',
             'due_date': due_date.strftime('%Y-%m-%d'),
             'state': 'issued'
         }
-        assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
-        assert response.data.get('archived_provider', {}) != {}
-        assert response.data.get('archived_customer', {}) != {}
-
-        invoice = get_object_or_None(Invoice, pk=1)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(item in response.data.items()
+                        for item in mandatory_content.iteritems()))
+        self.assertNotEqual(response.data.get('archived_provider', {}), {})
+        self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
     def test_issue_invoice_with_custom_issue_date_and_due_date(self):
         provider = ProviderFactory.create()
@@ -513,8 +527,6 @@ class TestInvoiceEndpoints(APITestCase):
                    for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
-
-        invoice = get_object_or_None(Invoice, pk=1)
 
     def test_issue_invoice_when_in_issued_state(self):
         provider = ProviderFactory.create()
