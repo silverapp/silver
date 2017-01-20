@@ -43,9 +43,7 @@ class TestPaymentUrls(APITestCase):
         self.client.force_authenticate(user=self.user)
 
     def test_pay_transaction_view_expired(self):
-        customer = CustomerFactory.create()
-        payment_method = PaymentMethodFactory.create(customer=customer)
-        transaction = TransactionFactory.create(payment_method=payment_method)
+        transaction = TransactionFactory.create()
 
         with patch('silver.utils.payments.datetime') as mocked_datetime:
             mocked_datetime.utcnow.return_value = datetime.utcnow() - timedelta(days=365)
@@ -55,10 +53,7 @@ class TestPaymentUrls(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_pay_transaction_view_invalid_state(self):
-        customer = CustomerFactory.create()
-        payment_method = PaymentMethodFactory.create(customer=customer)
-        transaction = TransactionFactory.create(payment_method=payment_method,
-                                                state=Transaction.States.Settled)
+        transaction = TransactionFactory.create(state=Transaction.States.Settled)
 
         response = self.client.get(get_payment_url(transaction, None))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -68,3 +63,30 @@ class TestPaymentUrls(APITestCase):
                              'transaction': transaction,
                              'document': transaction.document,
                          }))
+
+    def test_pay_transaction_view_not_consumable_transaction(self):
+        last_year = timezone.now() - timedelta(days=365)
+        transaction = TransactionFactory.create(state=Transaction.States.Initial,
+                                                valid_until=last_year)
+
+        response = self.client.get(get_payment_url(transaction, None))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_pay_transaction_view_missing_view(self):
+        last_year = timezone.now() - timedelta(days=365)
+        transaction = TransactionFactory.create(state=Transaction.States.Initial,
+                                                valid_until=last_year)
+        transaction.payment_processor.get_view = lambda transaction, request: None
+        response = self.client.get(get_payment_url(transaction, None))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_pay_transaction_not_implemented_get_call(self):
+        last_year = timezone.now() - timedelta(days=365)
+        transaction = TransactionFactory.create(state=Transaction.States.Initial,
+                                                valid_until=last_year)
+        def view(*args):
+            raise NotImplementedError
+
+        transaction.payment_processor.get_view = lambda transaction, request: view
+        response = self.client.get(get_payment_url(transaction, None))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
