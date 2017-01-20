@@ -37,7 +37,7 @@ def get_payment_complete_url(transaction, request):
     kwargs = {'token': str(_get_jwt_token(transaction))}
     url = furl(reverse('payment-complete', kwargs=kwargs, request=request))
 
-    if 'return_url' in request.GET:
+    if request and 'return_url' in request.GET:
         url = url.add({'return_url': request.GET['return_url']})
 
     return url.url

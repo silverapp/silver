@@ -54,7 +54,7 @@ class PaymentProcessorBase(object):
         return template
 
     def handle_transaction_response(self, transaction, request):
-        raise NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return self.reference

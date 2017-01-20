@@ -11,12 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from mock import patch, MagicMock
+from datetime import datetime, timedelta
+
+from mock import patch, MagicMock, call
 
 from django.test import TestCase
 
 from silver.tests.factories import TransactionFactory
-from silver.utils.payments import get_payment_url, get_payment_complete_url
+
+from silver.utils.decorators import get_transaction_from_token
+from silver.utils.payments import (get_payment_url, get_payment_complete_url,
+                                   _get_jwt_token)
 
 
 class TestPaymentsUtilMethods(TestCase):
@@ -46,3 +51,26 @@ class TestPaymentsUtilMethods(TestCase):
                              expected_url)
 
             mocked_token.assert_called_once_with(transaction)
+
+    def test_get_transaction_from_token(self):
+        transaction = TransactionFactory()
+
+        mocked_view = MagicMock()
+        token = _get_jwt_token(transaction)
+
+        self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
+                          mocked_view())
+        mocked_view.has_calls([call(None, transaction, False), call()])
+
+
+    def test_get_transaction_from_expired_token(self):
+        transaction = TransactionFactory()
+
+        mocked_view = MagicMock()
+        with patch('silver.utils.payments.datetime') as mocked_datetime:
+            mocked_datetime.utcnow.return_value = datetime.utcnow() - timedelta(days=2 * 365)
+            token = _get_jwt_token(transaction)
+
+        self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
+                          mocked_view())
+        mocked_view.has_calls([call(None, transaction, True), call()])

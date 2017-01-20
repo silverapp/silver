@@ -56,7 +56,7 @@ def complete_payment_view(request, transaction, expired=None):
                             }).url
         return HttpResponseRedirect(redirect_url)
     else:
-        return render('transactions/complete_payment.html',
+        return render(request, 'transactions/complete_payment.html',
                       {
                           'transaction': transaction,
                           'document': transaction.document,

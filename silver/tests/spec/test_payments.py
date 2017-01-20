@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 from decimal import Decimal
 
-from mock import patch
+from mock import patch, MagicMock
 
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
@@ -34,7 +34,7 @@ from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory)
 from silver.tests.utils import register_processor
-from silver.utils.payments import get_payment_url
+from silver.utils.payments import get_payment_url, get_payment_complete_url
 
 
 class TestPaymentUrls(APITestCase):
@@ -90,3 +90,30 @@ class TestPaymentUrls(APITestCase):
         transaction.payment_processor.get_view = lambda transaction, request: view
         response = self.client.get(get_payment_url(transaction, None))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_complete_payment_view_with_return_url(self):
+        transaction = TransactionFactory.create(state=Transaction.States.Settled)
+
+        return_url = 'http://home.com'
+        complete_url = "{}?return_url={}".format(get_payment_complete_url(transaction, None),
+                                                 return_url)
+        expected_url = "{}?transaction_uuid={}".format(return_url,
+                                                       transaction.uuid)
+
+        response = self.client.get(complete_url, follow=False)
+        self.assertRedirects(response, expected_url,
+                             fetch_redirect_response=False)
+
+    def test_complete_payment_view_without_return_url(self):
+        transaction = TransactionFactory.create(state=Transaction.States.Settled)
+
+        response = self.client.get(get_payment_complete_url(transaction, None))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content,
+                         render_to_string('transactions/complete_payment.html', {
+                             'expired': False,
+                             'transaction': transaction,
+                             'document': transaction.document,
+                         }))
