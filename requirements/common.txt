@@ -14,11 +14,13 @@ python-dateutil
 django-model-utils
 django-annoying
 pytz
+PyJWT
 # python-dev is required for xhtml2pdf to work
 xhtml2pdf
 django-xhtml2pdf
 pyvat
 PyPDF2
+furl
 html5lib==0.999
 django-multi-email-field==0.4
 cryptography==1.7.1

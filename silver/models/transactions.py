@@ -12,26 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import uuid
+import logging
 from decimal import Decimal
 
+from jsonfield import JSONField
+from django_fsm import post_transition
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from annoying.functions import get_object_or_None
 
-from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, URLValidator
 from django.db import models
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
 from django.utils import timezone
+from django.dispatch import receiver
+from django.core.exceptions import ValidationError
+from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
-from django_fsm import FSMField, transition, TransitionNotAllowed
-from django_fsm import post_transition
-from jsonfield import JSONField
+from django.core.validators import MinValueValidator, URLValidator
 
-
-from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
 from silver.utils.international import currencies
+from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
 
 
 logger = logging.getLogger(__name__)
@@ -78,12 +77,6 @@ class Transaction(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
-    consumable = models.BooleanField(default=True)
-
-    success_url = models.TextField(null=True, blank=True,
-                                   validators=[URLValidator()])
-    failed_url = models.TextField(null=True, blank=True,
-                                  validators=[URLValidator()])
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -141,9 +134,6 @@ class Transaction(models.Model):
 
     @property
     def can_be_consumed(self):
-        if not self.consumable:
-            return False
-
         if self.valid_until and self.valid_until < timezone.now():
             return False
 
@@ -238,7 +228,4 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
 
     elif issubclass(sender, BillingDocumentBase):
         if target == BillingDocumentBase.STATES.ISSUED:
-            transaction = create_transaction_for_document(instance)
-
-            if transaction:
-                transaction.payment_processor.execute_transaction(transaction)
+            create_transaction_for_document(instance)

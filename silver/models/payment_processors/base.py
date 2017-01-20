@@ -53,6 +53,20 @@ class PaymentProcessorBase(object):
 
         return template
 
+    def handle_transaction_response(self, transaction, request):
+        """
+            This method should update the transaction status after the first
+            HTTP response from the payment gateway.
+
+            Update transaction's state to Pending or Failed.
+
+            It's called by complete_payment_view.
+
+            If not needed, one can pass it.
+        """
+
+        raise NotImplementedError
+
     def __repr__(self):
         return self.reference
 

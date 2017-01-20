@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 
-
+import jwt
+from six import iteritems
 from django_fsm import TransitionNotAllowed
+
+from django.conf import settings
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+
 from rest_framework import serializers
-from rest_framework.relations import HyperlinkedIdentityField, \
-    HyperlinkedRelatedField
+from rest_framework.relations import (HyperlinkedIdentityField,
+                                      HyperlinkedRelatedField)
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import ValidationError as APIValidationError
 
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from silver.models.documents.document import Document
-from six import iteritems
 
 from silver.api.exceptions import APIConflictException
 
@@ -31,6 +35,7 @@ from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            DocumentEntry, ProductCode, Proforma, PaymentMethod,
                            PaymentProcessorManager, Transaction)
 from silver.validators import validate_payment_processor
+from silver.utils.payments import get_payment_url
 
 
 class ProductCodeRelatedField(serializers.SlugRelatedField):
@@ -483,14 +488,26 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return value
 
 
+class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
+    def get_url(self, obj, view_name, request, format):
+        return get_payment_url(obj, request)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        try:
+            transaction_uuid = jwt.decode(view_kwargs['token'],
+                                          settings.PAYMENT_METHOD_SECRET)['transaction']
+            return self.queryset.get(uuid=transaction_uuid)
+        except (jwt.ExpiredSignatureError, jwt.DecodeError, jwt.InvalidTokenError):
+            return None
+
+
 class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     payment_method = PaymentMethodUrl(view_name='payment-method-detail',
                                       lookup_field='payment_method',
                                       queryset=PaymentMethod.objects.all())
     url = TransactionUrl(view_name='transaction-detail', lookup_field='uuid',)
-    pay_url = HyperlinkedIdentityField(view_name='pay-transaction',
-                                       lookup_field='uuid',
-                                       lookup_url_kwarg='transaction_uuid')
+    pay_url = TransactionPaymentUrl(lookup_url_kwarg='token',
+                                    view_name='payment')
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
     id = serializers.CharField(source='uuid', read_only=True)
@@ -504,7 +521,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
                   'currency_rate_date', 'state', 'proforma', 'invoice',
                   'can_be_consumed', 'payment_processor', 'payment_method',
-                  'pay_url', 'valid_until', 'success_url', 'failed_url')
+                  'pay_url', 'valid_until')
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
                             'id', 'url', 'state')
         write_only_fields = ('valid_until',)
