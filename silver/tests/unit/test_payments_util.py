@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from uuid import UUID
 from datetime import datetime, timedelta
 
 from mock import patch, MagicMock, call
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from silver.tests.factories import TransactionFactory
 
@@ -74,3 +75,18 @@ class TestPaymentsUtilMethods(TestCase):
         self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
                           mocked_view())
         mocked_view.has_calls([call(None, transaction, True), call()])
+
+    @override_settings(PAYMENT_METHOD_SECRET='a')
+    @override_settings(SILVER_PAYMENT_TOKEN_EXPIRATION=timedelta(minutes=1))
+    def test_get_jwt_token(self):
+        uuid = UUID('6fa459ea-ee8a-3ca4-894e-db77e160355e', version=4)
+        transaction = TransactionFactory(uuid=uuid)
+
+        expected_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdG' \
+                         'lvbiI6IjZmYTQ1OWVhLWVlOGEtNGNhNC04OTRlLWRiNzdlMTYwM' \
+                         'zU1ZSIsImV4cCI6MTQ5Nzk2NTY0MH0.-bpx5A3DfSe3-HO6aH_g' \
+                         'lS8adcCxUn8lSK1-RPxohhI'
+        with patch('silver.utils.payments.datetime') as mocked_datetime:
+            mocked_datetime.utcnow.return_value = datetime.strptime('Jun 20 2017 1:33PM',
+                                                                    '%b %d %Y %I:%M%p')
+            self.assertEquals(_get_jwt_token(transaction), expected_token)
