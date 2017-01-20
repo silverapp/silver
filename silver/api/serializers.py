@@ -493,10 +493,12 @@ class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
         return get_payment_url(obj, request)
 
     def get_object(self, view_name, view_args, view_kwargs):
-        transaction_uuid = jwt.decode(view_kwargs['token'],
-                                      settings.PAYMENT_METHOD_SECRET,
-                                      verfify=False)['transaction']
-        return self.queryset.get(uuid=transaction_uuid)
+        try:
+            transaction_uuid = jwt.decode(view_kwargs['token'],
+                                          settings.PAYMENT_METHOD_SECRET)['transaction']
+            return self.queryset.get(uuid=transaction_uuid)
+        except (jwt.ExpiredSignatureError, jwt.DecodeError, jwt.InvalidTokenError):
+            return None
 
 
 class TransactionSerializer(serializers.HyperlinkedModelSerializer):
