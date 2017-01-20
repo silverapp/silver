@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import (HttpResponseGone, HttpResponse, Http404,
                          HttpResponseRedirect)
 
+from rest_framework.decorators import api_view
 from rest_framework.exceptions import MethodNotAllowed, NotFound
 
 from silver.models.transactions import Transaction
@@ -42,6 +43,7 @@ def invoice_pdf(request, invoice_id):
     return HttpResponseRedirect(invoice.pdf.url)
 
 
+@api_view()
 @csrf_exempt
 @get_transaction_from_token
 def complete_payment_view(request, transaction, expired=None):
@@ -63,11 +65,12 @@ def complete_payment_view(request, transaction, expired=None):
                       })
 
 
+@api_view()
 @csrf_exempt
 @get_transaction_from_token
 def pay_transaction_view(request, transaction, expired=None):
     if expired:
-        raise Http404
+        raise NotFound
 
     if transaction.state != Transaction.States.Initial:
         return render(request, 'transactions/complete_payment.html',
@@ -79,7 +82,7 @@ def pay_transaction_view(request, transaction, expired=None):
 
     view = transaction.payment_processor.get_view(transaction, request)
     if not view or not transaction.can_be_consumed:
-        raise Http404
+        raise NotFound
 
     transaction.last_access = timezone.now()
     transaction.save()
@@ -87,7 +90,7 @@ def pay_transaction_view(request, transaction, expired=None):
     try:
         return view(request)
     except NotImplementedError:
-        raise Http404
+        raise NotFound
 
 
 class GenericTransactionView(View):
