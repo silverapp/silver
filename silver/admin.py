@@ -257,7 +257,7 @@ class SubscriptionAdmin(ModelAdmin):
 
 class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'first_name', 'last_name', 'customer_reference',
-              'emails', 'address_1', 'address_2', 'city', 'state', 'zip_code',
+              'email', 'address_1', 'address_2', 'city', 'state', 'zip_code',
               'country', 'consolidated_billing', 'payment_due_days',
               'sales_tax_name', 'sales_tax_percent', 'sales_tax_number',
               'extra', 'meta']
@@ -265,7 +265,7 @@ class CustomerAdmin(LiveModelAdmin):
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'first_name', 'last_name', 'company',
                      'address_1', 'address_2', 'city', 'zip_code', 'country',
-                     'state', 'emails', 'meta']
+                     'state', 'email', 'meta']
     actions = ['generate_all_documents']
     exclude = ['live']
 
@@ -323,7 +323,7 @@ class ProviderAdmin(LiveModelAdmin):
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
-                     'emails', 'meta']
+                     'email', 'meta']
     actions = ['generate_monthly_totals']
     exclude = ['live']
 
@@ -556,7 +556,7 @@ class BillingDocumentAdmin(ModelAdmin):
     common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'name', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields] + ['emails']
+                              for field in common_fields] + ['email']
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields] + ['display_email',
                                                              'notification_email']

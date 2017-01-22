@@ -50,7 +50,7 @@ class SubscriptionFilter(FilterSet):
 
 class CustomerFilter(FilterSet):
     active = BooleanFilter(name='is_active', lookup_type='iexact')
-    email = CharFilter(name='emails', lookup_type='icontains')
+    email = CharFilter(name='email', lookup_type='icontains')
     company = CharFilter(name='company', lookup_type='icontains')
     first_name = CharFilter(name='first_name', lookup_type='icontains')
     last_name = CharFilter(name='last_name', lookup_type='icontains')

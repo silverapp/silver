@@ -33,7 +33,7 @@ class TestCustomerEndpoints(APITestCase):
             "first_name": "Bruce",
             "last_name": "Wayne",
             "company": "Wayne Enterprises",
-            "emails": "bruce@wayneenterprises.com",
+            "email": "bruce@wayneenterprises.com",
             "address_1": "Batcave St.",
             "address_2": "Some other address info",
             "city": "Gotham",
@@ -151,7 +151,7 @@ class TestCustomerEndpoints(APITestCase):
 
         changed_data = self.complete_data.copy()
 
-        unchanged_fields = ['emails', 'address_2']
+        unchanged_fields = ['email', 'address_2']
         ignore_fields = ['url', 'id', 'subscriptions', 'payment_methods',
                          'transactions']
         for field in unchanged_fields:
@@ -175,7 +175,7 @@ class TestCustomerEndpoints(APITestCase):
         customer = CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['emails', 'zip_code', 'company', 'phone',
+        unchanged_fields = ['email', 'zip_code', 'company', 'phone',
                             'payment_due_days']
         ignore_fields = ['url', 'id', 'subscriptions', 'payment_methods',
                          'transactions']
