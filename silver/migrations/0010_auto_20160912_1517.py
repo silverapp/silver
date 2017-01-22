@@ -18,7 +18,6 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import django_fsm
 import django.core.validators
-import multi_email_field.fields
 
 
 class Migration(migrations.Migration):
@@ -37,11 +36,6 @@ class Migration(migrations.Migration):
             model_name='customer',
             name='customer_reference',
             field=models.CharField(blank=True, max_length=256, null=True, help_text=b"It's a reference to be passed between silver and clients. It usually points to an account ID.", validators=[django.core.validators.RegexValidator(regex=b'^[^,]*$', message='Reference must not contain commas.')]),
-        ),
-        migrations.AlterField(
-            model_name='customer',
-            name='email',
-            field=multi_email_field.fields.MultiEmailField(null=True, blank=True),
         ),
         migrations.AlterField(
             model_name='invoice',

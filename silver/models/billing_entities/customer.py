@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from multi_email_field.fields import MultiEmailField
 from pyvat import is_vat_number_format_valid
 
 from django.conf import settings
@@ -42,7 +40,7 @@ class Customer(BaseBillingEntity):
         help_text='The customer\'s last name.'
     )
 
-    email = models.CharField(blank=True, null=True)
+    email = models.CharField(blank=True, null=True, max_length=254)
     payment_due_days = models.PositiveIntegerField(
         default=PAYMENT_DUE_DAYS,
         help_text='Due days for generated proforma/invoice.'

@@ -53,7 +53,6 @@ EXTERNAL_APPS = [
 
     # Required apps
     'django_fsm',
-    'multi_email_field',
     'rest_framework',
     'django_filters',
     'django_xhtml2pdf',
