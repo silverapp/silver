@@ -1,18 +1,15 @@
-develop: setup-git
-	pip install "file://`pwd`#egg=silver[dev]"
-	pip install -e .
-	pip install -r requirements/test.txt
-
-setup-git:
-	git config branch.autosetuprebase always
-	cd .git/hooks && ln -sf ../../hooks/* ./
-
-lint-python:
-	@echo "Linting Python files"
-	PYFLAKES_NODOCTEST=1 flake8 silver
-	@echo ""
+full-test: test
 
 test:
-	@DJANGO_SETTINGS_MODULE=settings PYTHONPATH=`pwd` py.test -s
+	python manage.py test -v2
 
-.PHONY: develop setup-git lint-python test
+run:
+	echo "TBA"
+
+build:
+	echo "No need to build someting"
+
+lint:
+	echo "TBA"
+
+.PHONY: test full-test build lint run
