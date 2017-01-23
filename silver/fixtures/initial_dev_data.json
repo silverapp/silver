@@ -18,7 +18,7 @@
             "payment_due_days": 5,
             "sales_tax_number": "",
             "customer_reference": "",
-            "emails": "[u'[]']",
+            "email": "[u'[]']",
             "zip_code": ""
         },
         "model": "silver.customer",
@@ -43,7 +43,7 @@
             "payment_due_days": 5,
             "sales_tax_number": "",
             "customer_reference": "",
-            "emails": "[u'[]']",
+            "email": "[u'[]']",
             "zip_code": ""
         },
         "model": "silver.customer",
@@ -135,7 +135,7 @@
                 "sales_tax_number": "",
                 "zip_code": "",
                 "customer_reference": "",
-                "emails": [
+                "email": [
                     "[]"
                 ],
                 "name": "Gigel"
