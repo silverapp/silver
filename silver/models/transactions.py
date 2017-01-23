@@ -30,6 +30,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MinValueValidator, URLValidator
 
 from silver.utils.international import currencies
+from silver.utils.models import AutoDateTimeField
 from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
 
 
@@ -77,6 +78,9 @@ class Transaction(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateField(default=timezone.now)
+    updated_at = AutoDateTimeField(default=timezone.now)
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
