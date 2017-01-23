@@ -542,4 +542,6 @@ class TestTransactionEndpoint(APITestCase):
                                                                             'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
+                ('updated_at', str(transaction.updated_at)),
+                ('created_at', str(transaction.created_at))
             ])

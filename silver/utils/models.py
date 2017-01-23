@@ -22,4 +22,4 @@ class UnsavedForeignKey(models.ForeignKey):
 
 class AutoDateTimeField(models.DateTimeField):
     def pre_save(self, model_instance, add):
-        return datetime.datetime.now()
+        return datetime.datetime.utcnow()
