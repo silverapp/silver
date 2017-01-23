@@ -491,6 +491,8 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
 class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
+        if not obj.can_be_consumed:
+            return None
         return get_payment_url(obj, request)
 
     def get_object(self, view_name, view_args, view_kwargs):

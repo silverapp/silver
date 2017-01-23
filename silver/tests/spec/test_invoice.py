@@ -154,7 +154,8 @@ class TestInvoiceEndpoints(APITestCase):
                                  transaction.payment_processor.reference,
             "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
                               (invoice.customer.pk, transaction.payment_method.pk),
-            "pay_url": "http://testserver/pay/token/",
+            "pay_url": "http://testserver/pay/token/"
+                       if transaction.state == Transaction.States.Initial else None,
         } for transaction in transactions]
 
 
