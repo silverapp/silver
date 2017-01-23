@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0028_auto_20170123_1311'),
+        ('silver', '0030_auto_20170124_1117'),
     ]
 
     operations = [
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='invoice',
             name='transaction_xe_rate',
-            field=models.DecimalField(default=1, help_text=b'Currency exchange rate from document currency to transaction_currency.', max_digits=16, decimal_places=4),
+            field=models.DecimalField(decimal_places=4, default=1, max_digits=16, blank=True, help_text=b'Currency exchange rate from document currency to transaction_currency.', null=True),
         ),
         migrations.AddField(
             model_name='proforma',
@@ -48,6 +48,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='proforma',
             name='transaction_xe_rate',
-            field=models.DecimalField(default=1, help_text=b'Currency exchange rate from document currency to transaction_currency.', max_digits=16, decimal_places=4),
+            field=models.DecimalField(decimal_places=4, default=1, max_digits=16, blank=True, help_text=b'Currency exchange rate from document currency to transaction_currency.', null=True),
         ),
     ]

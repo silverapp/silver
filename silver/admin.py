@@ -463,7 +463,6 @@ class BillingDocumentForm(forms.ModelForm):
     transaction_currency = ChoiceField(
         choices=(BLANK_CHOICE_DASH + list(currencies)), required=False,
     )
-    transaction_xe_rate = DecimalField(required=False)
 
     def __init__(self, *args, **kwargs):
         # If it's an edit action, save the provider and the number. Check the
@@ -484,6 +483,7 @@ class BillingDocumentForm(forms.ModelForm):
         cleaned_data['transaction_currency'] = (
             cleaned_data['transaction_currency'] or customer.currency or currency
         )
+
         if self.instance:
             self.instance.transaction_currency = cleaned_data['transaction_currency']
 
@@ -633,7 +633,7 @@ class BillingDocumentAdmin(ModelAdmin):
                 )
             except TransitionNotAllowed:
                 exist_failed_changes = True
-                failed_changes.append(entry.number)
+                failed_changes.append(entry.id)
             except ValueError as error:
                 exist_failed_actions = True
                 failed_actions.append(error.message)
@@ -645,8 +645,8 @@ class BillingDocumentAdmin(ModelAdmin):
         if exist_failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
             msg = "The state change failed for {model_name}(s) with "\
-                  "numbers: {ids}".format(model_name=self._model_name.lower(),
-                                          ids=failed_ids)
+                  "ids: {ids}".format(model_name=self._model_name.lower(),
+                                      ids=failed_ids)
             self.message_user(request, msg, level=messages.ERROR)
 
         if not exist_failed_actions and not exist_failed_changes:

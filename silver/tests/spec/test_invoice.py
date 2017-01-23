@@ -16,18 +16,17 @@
 import json
 from datetime import timedelta
 from decimal import Decimal
-from collections import OrderedDict
 
-from mock import patch
-
-from django.utils import timezone
-from django.conf import settings
 from annoying.functions import get_object_or_None
-
+from factory.django import mute_signals
+from mock import patch
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from django.db.models.signals import pre_save
+from django.utils import timezone
+from django.conf import settings
 
 from silver.models import Invoice, Transaction
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
@@ -135,14 +134,17 @@ class TestInvoiceEndpoints(APITestCase):
 
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(customer=customer, state=Invoice.STATES.ISSUED)
-        transactions = [
-            TransactionFactory.create(state=state, invoice=invoice,
-                                      payment_method=PaymentMethodFactory(customer=customer))
-            for state in Transaction.States.as_list()
-            if state not in [Transaction.States.Canceled,
-                             Transaction.States.Refunded,
-                             Transaction.States.Failed]
-        ]
+        with mute_signals(pre_save):
+            transactions = [
+                TransactionFactory.create(
+                    state=state, invoice=invoice,
+                    payment_method=PaymentMethodFactory(customer=customer)
+                )
+                for state in Transaction.States.as_list()
+                if state not in [Transaction.States.Canceled,
+                                 Transaction.States.Refunded,
+                                 Transaction.States.Failed]
+            ]
         expected_transactions = [{
             "id": str(transaction.uuid),
             "url": "http://testserver/customers/%s/transactions/%s/" %

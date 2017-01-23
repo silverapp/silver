@@ -140,10 +140,24 @@ class Transaction(models.Model):
         if self.invoice and self.proforma:
             if self.invoice.proforma != self.proforma:
                 raise ValidationError('Invoice and proforma are not related.')
+        else:
+            if self.invoice:
+                self.proforma = self.invoice.proforma
+            else:
+                self.invoice = self.proforma.invoice
+
+        if not self.pk:
+            if self.document.transactions.filter(
+                state__in=[Transaction.States.Initial,
+                           Transaction.States.Pending]
+            ).exists():
+                raise ValidationError(
+                    'There already are active transactions for the same '
+                    'billing documents.'
+                )
 
     def full_clean(self, *args, **kwargs):
         super(Transaction, self).full_clean(*args, **kwargs)
-
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
         self.cleaned = True
@@ -205,7 +219,7 @@ def pre_transaction_save(sender, instance=None, **kwargs):
 
 @receiver(post_save, sender=Transaction)
 def post_transaction_save(sender, instance, **kwargs):
-    if instance.old_value:
+    if getattr(instance, 'old_value', None):
         return
 
     # we know this instance is freshly made as it doesn't have an old_value
@@ -228,27 +242,28 @@ def _sync_transaction_state_with_document(transaction, target):
 
 
 def create_transaction_for_document(document):
-    if not document.transactions.filter(
-        state__in=[Transaction.States.Initial, Transaction.States.Pending]
-    ):
-        # get a usable, recurring payment_method for the customer
-        payment_methods = PaymentMethod.objects.filter(
-            enabled=True,
-            verified=True,
-            customer=document.customer
-        )
-        for payment_method in payment_methods:
-            if (payment_method.verified and
-                    payment_method.enabled):
-                # create transaction
-                kwargs = {
-                    'invoice': isinstance(document, Invoice) and document or document.related_document,
-                    'proforma': isinstance(document, Proforma) and document or document.related_document,
-                    'payment_method': payment_method,
-                    'amount': document.total
-                }
+    # get a usable, recurring payment_method for the customer
+    payment_methods = PaymentMethod.objects.filter(
+        enabled=True,
+        verified=True,
+        customer=document.customer
+    )
+    for payment_method in payment_methods:
+        if (payment_method.verified and
+                payment_method.enabled):
+            # create transaction
+            kwargs = {
+                'invoice': isinstance(document, Invoice) and document or document.related_document,
+                'proforma': isinstance(document, Proforma) and document or document.related_document,
+                'payment_method': payment_method,
+                'currency': document.transaction_currency,
+                'amount': document.transaction_total,
+            }
 
+            try:
                 return Transaction.objects.create(**kwargs)
+            except ValidationError:
+                return None
 
 
 @receiver(post_transition)

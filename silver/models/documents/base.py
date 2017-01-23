@@ -17,10 +17,10 @@ import logging
 from datetime import datetime, timedelta
 
 import pytz
+from django_fsm import FSMField, transition, TransitionNotAllowed
 from django_xhtml2pdf.utils import generate_pdf_template_object
 from jsonfield import JSONField
 from model_utils import Choices
-from django_fsm import FSMField, transition
 
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
@@ -38,6 +38,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
 from silver.models.billing_entities import Customer, Provider
+from silver.models.currency import CurrencyConverter
+from silver.models.currency.exceptions import RateNotFound
 from silver.utils.international import currencies
 
 from .entries import DocumentEntry
@@ -131,7 +133,7 @@ class BillingDocumentBase(models.Model):
         help_text='The currency used when making a transaction.'
     )
     transaction_xe_rate = models.DecimalField(
-        max_digits=16, decimal_places=4, default=1,
+        max_digits=16, decimal_places=4, default=1, null=True, blank=True,
         help_text='Currency exchange rate from document currency to '
                   'transaction_currency.'
     )
@@ -162,6 +164,19 @@ class BillingDocumentBase(models.Model):
             self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
         elif not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
+
+        if not self.transaction_xe_rate:
+            if not self.transaction_xe_date:
+                self.transaction_xe_date = self.issue_date - timedelta(days=1)
+
+            try:
+                xe_rate = CurrencyConverter.convert(1, self.currency,
+                                                    self.transaction_currency,
+                                                    self.transaction_xe_date)
+            except RateNotFound:
+                raise TransitionNotAllowed
+
+            self.transaction_xe_rate = xe_rate
 
         if due_date:
             self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
@@ -258,6 +273,9 @@ class BillingDocumentBase(models.Model):
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
     def save(self, *args, **kwargs):
+        if not self.transaction_currency:
+            self.transaction_currency = self.customer.currency or self.currency
+
         if not self.series:
             self.series = self.default_series
 
@@ -356,6 +374,11 @@ class BillingDocumentBase(models.Model):
     @property
     def transactions(self):
         return self.transaction_set.all()
+
+    @property
+    def transaction_total(self):
+        return (self.total * self.transaction_xe_rate if self.transaction_xe_rate
+                else None)
 
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)

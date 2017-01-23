@@ -135,9 +135,15 @@ class TestDocumentsTransactions(TestCase):
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
-            self.assertRaises(ValidationError, TransactionFactory.create,
-                              **{'invoice': invoice,
-                                 'payment_method': payment_method})
+            expected_exception = ValidationError
+            expected_message = "{'__all__': [u'There already are active " \
+                               "transactions for the same billing documents.']}"
+            try:
+                TransactionFactory.create(invoice=invoice,
+                                          payment_method=payment_method)
+                self.fail('{} not raised.'.format(str(expected_exception)))
+            except expected_exception as e:
+                self.assertEqual(str(e), expected_message)
 
             transactions = Transaction.objects.filter(
                 payment_method=payment_method, invoice=invoice,
