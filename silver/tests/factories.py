@@ -51,6 +51,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     city = factory.Sequence(lambda n: u'Citŷ{cnt}'.format(cnt=n))
     state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
     zip_code = factory.Sequence(lambda n: str(n))
+    phone = factory.Sequence(str)
     extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
     consolidated_billing = True

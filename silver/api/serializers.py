@@ -303,9 +303,10 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'first_name', 'last_name',
                   'company', 'emails', 'address_1', 'address_2', 'city',
-                  'state', 'zip_code', 'country', 'extra', 'sales_tax_number',
-                  'sales_tax_name', 'sales_tax_percent', 'consolidated_billing',
-                  'subscriptions', 'payment_methods', 'transactions', 'meta')
+                  'state', 'zip_code', 'country', 'phone', 'extra',
+                  'sales_tax_number', 'sales_tax_name', 'sales_tax_percent',
+                  'consolidated_billing', 'subscriptions', 'payment_methods',
+                  'transactions', 'meta')
 
 
 class ProductCodeSerializer(serializers.HyperlinkedModelSerializer):

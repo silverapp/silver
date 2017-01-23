@@ -5,4 +5,4 @@ cache: pip
 install:
   - pip install -U -r requirements/test.txt
 script:
-  - python manage.py test -v2
+  - make test

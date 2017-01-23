@@ -40,6 +40,7 @@ class TestCustomerEndpoints(APITestCase):
             "state": "SomeState",
             "zip_code": "1111",
             "country": "US",
+            "phone": "+40000000000",
             "extra": "What is there more to say?",
             "sales_tax_number": "RO5555555",
             "sales_tax_name": "VAT",
@@ -119,6 +120,7 @@ class TestCustomerEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotEqual(response.data, [])
+        self.assertEqual(response.data['phone'], customer.phone)
 
     def test_get_customer_detail_unexisting(self):
         url = reverse('customer-detail',
@@ -173,7 +175,7 @@ class TestCustomerEndpoints(APITestCase):
         customer = CustomerFactory.create()
 
         changed_data = self.complete_data.copy()
-        unchanged_fields = ['emails', 'zip_code', 'company',
+        unchanged_fields = ['emails', 'zip_code', 'company', 'phone',
                             'payment_due_days']
         ignore_fields = ['url', 'id', 'subscriptions', 'payment_methods',
                          'transactions']
