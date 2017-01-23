@@ -785,8 +785,10 @@ class ProformaStateHandler(APIView):
 class DocumentList(ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
     filter_class = DocumentFilter
+    filter_backends = (filters.OrderingFilter, filters.DjangoFilterBackend)
+    ordering_fields = ('due_date', )
+    ordering = ('-due_date', '-number')
 
     def get_queryset(self):
         return Document.objects.all()
