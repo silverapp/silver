@@ -526,7 +526,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                   'can_be_consumed', 'payment_processor', 'payment_method',
                   'pay_url', 'valid_until', 'updated_at', 'created_at')
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
-                            'id', 'url', 'state')
+                            'id', 'url', 'state', 'updated_at', 'created_at')
         write_only_fields = ('valid_until',)
 
     def validate_proforma(self, proforma):

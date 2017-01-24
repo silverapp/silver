@@ -22,6 +22,7 @@ import factory.fuzzy
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
@@ -261,6 +262,9 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         customer=factory.SelfAttribute('..payment_method.customer')
     )
     state = Transaction.States.Initial
+
+    created_at = '2017-01-24T12:46:07.590839Z'
+    updated_at = '2017-01-24T12:46:07.590839Z'
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):

@@ -80,8 +80,8 @@ class Transaction(models.Model):
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(default=datetime.datetime.utcnow)
-    updated_at = AutoDateTimeField(default=datetime.datetime.utcnow)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = AutoDateTimeField(default=timezone.now)
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
