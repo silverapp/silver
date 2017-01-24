@@ -57,11 +57,36 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
+<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
+=======
+            expected = OrderedDict([
+                ('id', unicode(transaction.uuid)),
+                ('url', reverse('transaction-detail',
+                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction.uuid})),
+                ('customer', reverse('customer-detail', args=[customer.pk])),
+                ('provider', reverse('provider-detail', args=[provider.pk])),
+                ('amount', unicode(Decimal('0.00') + transaction.amount)),
+                ('currency', unicode(transaction.currency)),
+                ('currency_rate_date', None),
+                ('state', unicode(transaction.state)),
+                ('proforma', reverse('proforma-detail', args=[proforma.pk])),
+                ('invoice', reverse('invoice-detail', args=[invoice.pk])),
+                ('can_be_consumed', transaction.can_be_consumed),
+                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
+                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
+                                                                            'payment_method_id': payment_method.id})),
+                ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
+                ('valid_until', None),
+                ('created_at', transaction.created_at),
+            ])
+
+>>>>>>> Make created_at and updated_at read only fields.
             url = reverse('transaction-detail',
                           kwargs={'customer_pk': customer.pk,
                                   'transaction_uuid': transaction.uuid})
             response = self.client.get(url, format='json')
 
+            expected['updated_at'] = response.data['updated_at']
             self.assertEqual(response.data, dict(expected))
 
     def test_list_transactions(self):
@@ -76,11 +101,67 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
+<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
+=======
+            expected_t1 = OrderedDict([
+                ('id', unicode(transaction_1.uuid)),
+                ('url', reverse('transaction-detail',
+                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_1.uuid})),
+                ('customer', reverse('customer-detail', args=[customer.pk])),
+                ('provider', reverse('provider-detail', args=[provider_1.pk])),
+                ('amount', unicode(Decimal('0.00') + transaction_1.amount)),
+                ('currency', unicode(transaction_1.currency)),
+                ('currency_rate_date', None),
+                ('state', unicode(transaction_1.state)),
+                ('proforma', reverse('proforma-detail', args=[proforma_1.pk])),
+                ('invoice', reverse('invoice-detail', args=[invoice_1.pk])),
+                ('can_be_consumed', transaction_1.can_be_consumed),
+                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
+                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
+                                                                            'payment_method_id': payment_method.id})),
+                ('pay_url', 'http://testserver' + get_payment_url(transaction_1, None)),
+                ('valid_until', None)
+            ])
+
+            transaction_2 = TransactionFactory.create(payment_method=payment_method)
+            invoice_2 = transaction_2.invoice
+            proforma_2 = transaction_2.proforma
+            provider_2 = invoice_2.provider
+            expected_t2 = OrderedDict([
+                ('id', unicode(transaction_2.uuid)),
+                ('url', reverse('transaction-detail',
+                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_2.uuid})),
+                ('customer', reverse('customer-detail', args=[customer.pk])),
+                ('provider', reverse('provider-detail', args=[provider_2.pk])),
+                ('amount', unicode(Decimal('0.00') + transaction_2.amount)),
+                ('currency', unicode(transaction_2.currency)),
+                ('currency_rate_date', None),
+                ('state', unicode(transaction_2.state)),
+                ('proforma', reverse('proforma-detail', args=[proforma_2.pk])),
+                ('invoice', reverse('invoice-detail', args=[invoice_2.pk])),
+                ('can_be_consumed', transaction_2.can_be_consumed),
+                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
+                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
+                                                                            'payment_method_id': payment_method.id})),
+                ('pay_url', 'http://testserver' + get_payment_url(transaction_2, None)),
+                ('valid_until', None)
+            ])
+
+>>>>>>> Make created_at and updated_at read only fields.
             url = reverse('transaction-list',
                           kwargs={'customer_pk': customer.pk})
 
             response = self.client.get(url, format='json')
 
+<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
+=======
+            expected_t1['updated_at'] = response.data[0]['updated_at']
+            expected_t1['created_at'] = transaction_1.created_at
+
+            expected_t2['updated_at'] = response.data[1]['updated_at']
+            expected_t2['created_at'] = transaction_2.created_at
+
+>>>>>>> Make created_at and updated_at read only fields.
             self.assertEqual(response.data[0], expected_t1)
             self.assertEqual(response.data[1], expected_t2)
 
@@ -545,6 +626,12 @@ class TestTransactionEndpoint(APITestCase):
                 response = self.client.get(url_method_someprocessor, format='json')
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+                transaction1.refresh_from_db()
+                transaction_data_1['updated_at'] = response.data[0]['updated_at']
+
+                transaction1.refresh_from_db()
+                transaction_data_2['updated_at'] = response.data[1]['updated_at']
+
                 self.assertEqual(response.data[0], transaction_data_1)
                 self.assertEqual(response.data[1], transaction_data_2)
 
@@ -587,6 +674,9 @@ class TestTransactionEndpoint(APITestCase):
 
                 response = self.client.get(url_with_filterable_data, format='json')
 
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
 
@@ -598,6 +688,9 @@ class TestTransactionEndpoint(APITestCase):
                 url_no_output = url + '?max_amount=10'
 
                 response = self.client.get(url_with_filterable_data, format='json')
+
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
@@ -637,6 +730,11 @@ class TestTransactionEndpoint(APITestCase):
                                                    'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
+<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
                 ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),
                 ('created_at', transaction.created_at.isoformat()[:-6] + 'Z')
+=======
+                ('updated_at', transaction.updated_at),
+                ('created_at', transaction.created_at)
+>>>>>>> Make created_at and updated_at read only fields.
             ])
