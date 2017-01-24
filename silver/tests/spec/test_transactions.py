@@ -78,6 +78,7 @@ class TestTransactionEndpoint(APITestCase):
                                                                             'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
+                ('created_at', transaction.created_at),
             ])
 
             url = reverse('transaction-detail',
@@ -85,6 +86,7 @@ class TestTransactionEndpoint(APITestCase):
                                   'transaction_uuid': transaction.uuid})
             response = self.client.get(url, format='json')
 
+            expected['updated_at'] = response.data['updated_at']
             self.assertEqual(response.data, dict(expected))
 
     def test_list_transactions(self):
@@ -116,7 +118,7 @@ class TestTransactionEndpoint(APITestCase):
                 ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                             'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction_1, None)),
-                ('valid_until', None),
+                ('valid_until', None)
             ])
 
             transaction_2 = TransactionFactory.create(payment_method=payment_method)
@@ -140,13 +142,20 @@ class TestTransactionEndpoint(APITestCase):
                 ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
                                                                             'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction_2, None)),
-                ('valid_until', None),
+                ('valid_until', None)
             ])
 
             url = reverse('transaction-list',
                           kwargs={'customer_pk': customer.pk})
 
             response = self.client.get(url, format='json')
+
+            expected_t1['updated_at'] = response.data[0]['updated_at']
+            expected_t1['created_at'] = transaction_1.created_at
+
+            expected_t2['updated_at'] = response.data[1]['updated_at']
+            expected_t2['created_at'] = transaction_2.created_at
+
             self.assertEqual(response.data[0], expected_t1)
             self.assertEqual(response.data[1], expected_t2)
 
@@ -459,6 +468,13 @@ class TestTransactionEndpoint(APITestCase):
 
                 response = self.client.get(url_method_someprocessor, format='json')
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+                transaction1.refresh_from_db()
+                transaction_data_1['updated_at'] = response.data[0]['updated_at']
+
+                transaction1.refresh_from_db()
+                transaction_data_2['updated_at'] = response.data[1]['updated_at']
+
                 self.assertEqual(response.data[0], transaction_data_1)
                 self.assertEqual(response.data[1], transaction_data_2)
 
@@ -495,6 +511,10 @@ class TestTransactionEndpoint(APITestCase):
                 mocked_token.return_value = 'token'
 
                 response = self.client.get(url_with_filterable_data, format='json')
+
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
 
@@ -506,6 +526,10 @@ class TestTransactionEndpoint(APITestCase):
                 url_no_output = url + '?max_amount=10'
 
                 response = self.client.get(url_with_filterable_data, format='json')
+
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
 
@@ -542,4 +566,6 @@ class TestTransactionEndpoint(APITestCase):
                                                                             'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
+                ('updated_at', transaction.updated_at),
+                ('created_at', transaction.created_at)
             ])

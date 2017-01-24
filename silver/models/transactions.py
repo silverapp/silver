@@ -14,6 +14,7 @@
 
 import uuid
 import logging
+import datetime
 from decimal import Decimal
 
 from jsonfield import JSONField
@@ -79,7 +80,7 @@ class Transaction(models.Model):
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField(default=timezone.now)
 
     def __init__(self, *args, **kwargs):

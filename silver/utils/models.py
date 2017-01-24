@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
 
 from django.db import models
+from django.utils import timezone
 
 
 class UnsavedForeignKey(models.ForeignKey):
@@ -22,4 +22,4 @@ class UnsavedForeignKey(models.ForeignKey):
 
 class AutoDateTimeField(models.DateTimeField):
     def pre_save(self, model_instance, add):
-        return datetime.datetime.now()
+        return timezone.now()
