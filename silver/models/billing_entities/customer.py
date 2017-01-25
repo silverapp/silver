@@ -18,6 +18,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from silver.utils.international import currencies
 
 from .base import BaseBillingEntity
 from silver.validators import validate_reference
@@ -63,6 +64,12 @@ class Customer(BaseBillingEntity):
     sales_tax_name = models.CharField(
         max_length=64, null=True, blank=True,
         help_text="Sales tax name (eg. 'sales tax' or 'VAT')."
+    )
+
+    currency = models.CharField(
+        choices=currencies, max_length=4, null=True, blank=True,
+        help_text="Used to enforce a certain currency when making transactions"
+                  "for the customer."
     )
 
     def __init__(self, *args, **kwargs):

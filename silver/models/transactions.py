@@ -14,12 +14,11 @@
 
 import uuid
 import logging
-import datetime
 from decimal import Decimal
 
 from jsonfield import JSONField
 from django_fsm import post_transition
-from django_fsm import FSMField, transition, TransitionNotAllowed
+from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None
 
 from django.db import models
@@ -28,7 +27,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
-from django.core.validators import MinValueValidator, URLValidator
+from django.core.validators import MinValueValidator
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
@@ -40,14 +39,13 @@ logger = logging.getLogger(__name__)
 
 class Transaction(models.Model):
     amount = models.DecimalField(
-        decimal_places=2, max_digits=8,
+        decimal_places=2, max_digits=12,
         validators=[MinValueValidator(Decimal('0.00'))]
     )
     currency = models.CharField(
-        choices=currencies, max_length=4, default='USD',
+        choices=currencies, max_length=4,
         help_text='The currency used for billing.'
     )
-    currency_rate_date = models.DateField(blank=True, null=True)
 
     class States:
         Initial = 'initial'
@@ -82,6 +80,11 @@ class Transaction(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField(default=timezone.now)
+
+    @property
+    def final_fields(self):
+        return ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
+                'currency', 'created_at']
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -136,6 +139,57 @@ class Transaction(models.Model):
         if self.invoice and self.proforma:
             if self.invoice.proforma != self.proforma:
                 raise ValidationError('Invoice and proforma are not related.')
+        else:
+            if self.invoice:
+                self.proforma = self.invoice.proforma
+            else:
+                self.invoice = self.proforma.invoice
+
+        if not self.pk:
+            if self.currency:
+                if self.currency != self.document.transaction_currency:
+                    raise ValidationError(
+                        "Transaction currency is different from it's document's"
+                        " transaction_currency."
+                    )
+            else:
+                self.currency = self.document.transaction_currency
+
+            if (self.payment_method.allowed_currencies and
+                    self.currency not in self.payment_method.allowed_currencies):
+                raise ValidationError(
+                    'Currency {} is not allowed by the payment method. '
+                    'Allowed currencies are {}.'.format(
+                        self.currency, self.payment_method.allowed_currencies
+                    )
+                )
+
+            if self.amount:
+                if self.amount != self.document.transaction_total:
+                    raise ValidationError(
+                        "Transaction amount is different from it's document's "
+                        "transaction_total."
+                    )
+            else:
+                self.amount = self.document.transaction_total
+
+            if self.document.transactions.filter(
+                state__in=[Transaction.States.Initial,
+                           Transaction.States.Pending]
+            ).exists():
+                raise ValidationError(
+                    'There already are active transactions for the same '
+                    'billing documents.'
+                )
+
+    def full_clean(self, *args, **kwargs):
+        # 'amount' and 'currency' are handled in our clean method
+        kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
+        super(Transaction, self).full_clean(*args, **kwargs)
+
+        # this assumes that nobody calls clean and then modifies this object
+        # without calling clean again
+        self.cleaned = True
 
     @property
     def can_be_consumed(self):
@@ -172,10 +226,18 @@ def pre_transaction_save(sender, instance=None, **kwargs):
     old = get_object_or_None(Transaction, pk=instance.pk)
     setattr(instance, 'old_value', old)
 
+    if old:
+        for field in instance.final_fields:
+            if getattr(old, field) and getattr(instance, field) != getattr(old, field):
+                raise ValidationError("Field '%s' may not be changed." % field)
+
+    if not getattr(instance, 'cleaned', False):
+        instance.full_clean()
+
 
 @receiver(post_save, sender=Transaction)
 def post_transaction_save(sender, instance, **kwargs):
-    if instance.old_value:
+    if getattr(instance, 'old_value', None):
         return
 
     # we know this instance is freshly made as it doesn't have an old_value
@@ -198,27 +260,27 @@ def _sync_transaction_state_with_document(transaction, target):
 
 
 def create_transaction_for_document(document):
-    if not document.transactions.filter(
-        state__in=[Transaction.States.Initial, Transaction.States.Pending]
-    ):
-        # get a usable, recurring payment_method for the customer
-        payment_methods = PaymentMethod.objects.filter(
-            enabled=True,
-            verified=True,
-            customer=document.customer
-        )
-        for payment_method in payment_methods:
-            if (payment_method.verified and
-                    payment_method.enabled):
-                # create transaction
-                kwargs = {
-                    'invoice': isinstance(document, Invoice) and document or document.related_document,
-                    'proforma': isinstance(document, Proforma) and document or document.related_document,
-                    'payment_method': payment_method,
-                    'amount': document.total
-                }
+    # get a usable, recurring payment_method for the customer
+    payment_methods = PaymentMethod.objects.filter(
+        enabled=True,
+        verified=True,
+        customer=document.customer
+    )
+    for payment_method in payment_methods:
+        if (payment_method.verified and
+                payment_method.enabled):
+            # create transaction
+            kwargs = {
+                'invoice': isinstance(document, Invoice) and document or document.related_document,
+                'proforma': isinstance(document, Proforma) and document or document.related_document,
+                'payment_method': payment_method,
+                'amount': document.transaction_total,
+            }
 
+            try:
                 return Transaction.objects.create(**kwargs)
+            except ValidationError:
+                return None
 
 
 @receiver(post_transition)

@@ -143,7 +143,9 @@ class Proforma(BillingDocumentBase):
     def fields_for_automatic_invoice_generation(self):
         fields = ['customer', 'provider', 'archived_customer',
                   'archived_provider', 'paid_date', 'cancel_date',
-                  'sales_tax_percent', 'sales_tax_name', 'currency']
+                  'sales_tax_percent', 'sales_tax_name', 'currency',
+                  'transaction_currency', 'transaction_xe_rate',
+                  'transaction_xe_date']
         return {field: getattr(self, field, None) for field in fields}
 
     @property

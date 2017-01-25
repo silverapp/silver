@@ -16,6 +16,7 @@ from mock import MagicMock, patch, call
 
 from django.core.management import call_command
 from django.test import TestCase
+from silver.models import PaymentProcessorManager
 
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
@@ -33,9 +34,14 @@ class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 class TestExecuteTransactionsCommand(TestCase):
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_executing(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transactions = TransactionFactory.create_batch(
             5, payment_method=payment_method
         )
@@ -52,9 +58,14 @@ class TestExecuteTransactionsCommand(TestCase):
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_filtering(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transactions = TransactionFactory.create_batch(
             5, payment_method=payment_method
         )
@@ -80,9 +91,14 @@ class TestExecuteTransactionsCommand(TestCase):
     @patch('silver.management.commands.execute_transactions.logger.error')
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_exception_logging(self, mock_logger):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         TransactionFactory.create(payment_method=payment_method)
 
         mock_execute = MagicMock()

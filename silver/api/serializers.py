@@ -11,25 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
 
 import jwt
-from six import iteritems
-from django_fsm import TransitionNotAllowed
 
 from django.conf import settings
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError, ObjectDoesNotExist, \
+    NON_FIELD_ERRORS
 
 from rest_framework import serializers
-from rest_framework.relations import (HyperlinkedIdentityField,
-                                      HyperlinkedRelatedField)
+from rest_framework.relations import HyperlinkedRelatedField
 from rest_framework.reverse import reverse
-from rest_framework.exceptions import ValidationError as APIValidationError
 
 from silver.models.documents.document import Document
-
-from silver.api.exceptions import APIConflictException
-
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
                            DocumentEntry, ProductCode, Proforma, PaymentMethod,
@@ -303,7 +296,7 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         model = Customer
         fields = ('id', 'url', 'customer_reference', 'first_name', 'last_name',
                   'company', 'email', 'address_1', 'address_2', 'city',
-                  'state', 'zip_code', 'country', 'phone', 'extra',
+                  'state', 'zip_code', 'country', 'currency', 'phone', 'extra',
                   'sales_tax_number', 'sales_tax_name', 'sales_tax_percent',
                   'consolidated_billing', 'subscriptions', 'payment_methods',
                   'transactions', 'meta')
@@ -430,6 +423,7 @@ class PaymentProcessorSerializer(serializers.Serializer):
     type = serializers.CharField(max_length=64)
     display_name = serializers.CharField(max_length=64)
     reference = serializers.CharField(max_length=256)
+    allowed_currencies = serializers.ListField()
     url = PaymentProcessorUrl(
         view_name='payment-processor-detail', source='*', lookup_field='reference',
         read_only=True
@@ -459,7 +453,8 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor',
-                  'added_at', 'verified', 'enabled', 'additional_data')
+                  'allowed_currencies', 'added_at', 'verified', 'enabled',
+                  'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }
@@ -518,34 +513,20 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         view_name='payment-processor-detail', lookup_field='reference',
         read_only=True
     )
+    amount = serializers.DecimalField(required=False, decimal_places=2,
+                                      max_digits=8, min_value=0)
 
     class Meta:
         model = Transaction
         fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
-                  'currency_rate_date', 'state', 'proforma', 'invoice',
-                  'can_be_consumed', 'payment_processor', 'payment_method',
-                  'pay_url', 'valid_until', 'updated_at', 'created_at')
+                  'state', 'proforma', 'invoice', 'can_be_consumed',
+                  'payment_processor', 'payment_method', 'pay_url',
+                  'valid_until', 'updated_at', 'created_at')
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
                             'id', 'url', 'state', 'updated_at', 'created_at')
-        write_only_fields = ('valid_until',)
-
-    def validate_proforma(self, proforma):
-        if self.instance and proforma != self.instance.proforma:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-
-        return proforma
-
-    def validate_invoice(self, invoice):
-        if self.instance and invoice != self.instance.invoice:
-            message = "This field may not be modified."
-            raise serializers.ValidationError(message)
-        if (self.instance and getattr(self.instance, 'transactions', None) and
-           self.instance.transaction_set.exclude(state='canceled').exists()):
-            message = "Cannot update a payment with active transactions."
-            raise serializers.ValidationError(message)
-
-        return invoice
+        updateable_fields = ('valid_until', 'success_url', 'failed_url')
+        extra_kwargs = {'amount': {'required': False},
+                        'currency': {'required': False}}
 
     def validate(self, attrs):
         attrs = super(TransactionSerializer, self).validate(attrs)
@@ -566,8 +547,17 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                 transaction = self.instance
                 transaction_dict = transaction.__dict__.copy()
 
+                errors = {}
                 for attribute, value in attrs.items():
+                    if attribute in self.Meta.updateable_fields:
+                        continue
+
+                    if getattr(transaction, attribute) != value:
+                        errors[attribute] = "This field may not be modified."
                     setattr(transaction, attribute, value)
+
+                if errors:
+                    raise serializers.ValidationError(errors)
 
                 transaction.full_clean()
 
@@ -578,12 +568,11 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                 transaction.full_clean()
         except ValidationError as e:
             errors = e.error_dict
-            non_field_errors = errors.pop('__all__', None)
+            non_field_errors = errors.pop(NON_FIELD_ERRORS, None)
             if non_field_errors:
                 errors['non_field_errors'] = [
                     error for sublist in non_field_errors for error in sublist
                 ]
-
             raise serializers.ValidationError(errors)
 
         return attrs
@@ -601,7 +590,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'series', 'number', 'provider', 'customer',
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                  'sales_tax_percent', 'currency', 'state', 'proforma',
+                  'sales_tax_percent', 'currency', 'transaction_currency',
+                  'transaction_xe_rate', 'transaction_xe_date', 'state', 'proforma',
                   'invoice_entries', 'total', 'pdf_url', 'transactions')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 
@@ -664,7 +654,8 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'series', 'number', 'provider', 'customer',
                   'archived_provider', 'archived_customer', 'due_date',
                   'issue_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-                  'sales_tax_percent', 'currency', 'state', 'invoice',
+                  'sales_tax_percent', 'currency', 'transaction_currency',
+                  'transaction_xe_rate', 'transaction_xe_date', 'state', 'invoice',
                   'proforma_entries', 'total', 'pdf_url', 'transactions')
         read_only_fields = ('archived_provider', 'archived_customer', 'total')
 

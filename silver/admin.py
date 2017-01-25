@@ -31,8 +31,8 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
-from django.forms import ChoiceField
-from django.utils.functional import lazy
+from django.db.models import BLANK_CHOICE_DASH
+from django.forms import ChoiceField, DecimalField
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
@@ -42,6 +42,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 
 from silver.models import PaymentProcessorManager
+from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
@@ -49,6 +50,7 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     ProductCode, Proforma, BillingLog, BillingDocumentBase,
                     Transaction, PaymentMethod)
 from documents_generator import DocumentsGenerator
+
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +260,7 @@ class SubscriptionAdmin(ModelAdmin):
 class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'first_name', 'last_name', 'customer_reference',
               'email', 'address_1', 'address_2', 'city', 'state', 'zip_code',
-              'country', 'consolidated_billing', 'payment_due_days',
+              'country', 'currency', 'consolidated_billing', 'payment_due_days',
               'sales_tax_name', 'sales_tax_percent', 'sales_tax_number',
               'extra', 'meta']
     list_display = ['__unicode__', 'customer_reference',
@@ -458,6 +460,10 @@ class DocumentEntryInline(TabularInline):
 
 
 class BillingDocumentForm(forms.ModelForm):
+    transaction_currency = ChoiceField(
+        choices=(BLANK_CHOICE_DASH + list(currencies)), required=False,
+    )
+
     def __init__(self, *args, **kwargs):
         # If it's an edit action, save the provider and the number. Check the
         # save() method to see their usefulness.
@@ -467,6 +473,21 @@ class BillingDocumentForm(forms.ModelForm):
         self.provider = instance.provider if instance else None
 
         super(BillingDocumentForm, self).__init__(*args, **kwargs)
+
+    def clean(self, *args, **kwargs):
+        cleaned_data = super(BillingDocumentForm, self).clean(*args, **kwargs)
+
+        customer = cleaned_data['customer']
+        currency = cleaned_data['currency']
+
+        cleaned_data['transaction_currency'] = (
+            cleaned_data['transaction_currency'] or customer.currency or currency
+        )
+
+        if self.instance:
+            self.instance.transaction_currency = cleaned_data['transaction_currency']
+
+        return cleaned_data
 
     def save(self, commit=True, *args, **kwargs):
         obj = super(BillingDocumentForm, self).save(commit=False)
@@ -545,11 +566,10 @@ class DueDateFilter(SimpleListFilter):
 
         return queryset
 
-
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
-                    'cancel_date', tax, 'total']
+                    'cancel_date', tax, 'total', 'currency']
 
     list_filter = ('provider__company', 'state', DueDateFilter)
 
@@ -566,8 +586,10 @@ class BillingDocumentAdmin(ModelAdmin):
     date_hierarchy = 'issue_date'
 
     fields = (('series', 'number'), 'provider', 'customer', 'issue_date',
-              'due_date', 'paid_date', 'cancel_date', 'sales_tax_name',
-              'sales_tax_percent', 'currency', 'state', 'total')
+              'due_date', 'paid_date', 'cancel_date',
+              ('sales_tax_name', 'sales_tax_percent'), 'currency',
+              ('transaction_currency', 'transaction_xe_rate'),
+              'transaction_xe_date', 'state', 'total', )
     readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents']
@@ -611,7 +633,7 @@ class BillingDocumentAdmin(ModelAdmin):
                 )
             except TransitionNotAllowed:
                 exist_failed_changes = True
-                failed_changes.append(entry.number)
+                failed_changes.append(entry.id)
             except ValueError as error:
                 exist_failed_actions = True
                 failed_actions.append(error.message)
@@ -623,8 +645,8 @@ class BillingDocumentAdmin(ModelAdmin):
         if exist_failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
             msg = "The state change failed for {model_name}(s) with "\
-                  "numbers: {ids}".format(model_name=self._model_name.lower(),
-                                          ids=failed_ids)
+                  "ids: {ids}".format(model_name=self._model_name.lower(),
+                                      ids=failed_ids)
             self.message_user(request, msg, level=messages.ERROR)
 
         if not exist_failed_actions and not exist_failed_changes:
@@ -839,8 +861,8 @@ class ProformaAdmin(BillingDocumentAdmin):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ['amount', 'currency', 'proforma', 'invoice', 'currency_rate_date',
-                  'state', 'payment_method', 'uuid', 'valid_until', 'last_access',
+        fields = ['amount', 'currency', 'proforma', 'invoice', 'state',
+                  'payment_method', 'uuid', 'valid_until', 'last_access',
                   'data']
 
         readonly_fields = ['state', 'uuid', 'last_access']

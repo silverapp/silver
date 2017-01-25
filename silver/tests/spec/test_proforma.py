@@ -55,8 +55,12 @@ class TestProformaEndpoints(APITestCase):
 
         response = self.client.post(url, data=data)
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data == {
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        proforma = get_object_or_None(Proforma, id=response.data["id"])
+        self.assertTrue(proforma)
+
+        self.assertEqual(response.data, {
             "id": response.data["id"],
             "series": "ProformaSeries",
             "number": None,
@@ -71,13 +75,16 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": "1.00",
             "currency": "RON",
+            "transaction_currency": proforma.transaction_currency,
+            "transaction_xe_rate": str(proforma.transaction_xe_rate),
+            "transaction_xe_date": proforma.transaction_xe_date,
             "pdf_url": None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal("0.00"),
             "transactions": []
-        }
+        })
 
     def test_post_proforma_with_proforma_entries(self):
         customer = CustomerFactory.create()
@@ -125,8 +132,8 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {
             "id": proforma.pk,
             "series": "ProformaSeries",
             "number": 1,
@@ -141,13 +148,16 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_name": "VAT",
             "sales_tax_percent": '1.00',
             "currency": "RON",
+            "transaction_currency": proforma.transaction_currency,
+            "transaction_xe_rate": "%.4f" % proforma.transaction_xe_rate,
+            "transaction_xe_date": proforma.transaction_xe_date,
             "pdf_url": None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal('0.00'),
             "transactions": []
-        }
+        })
 
     def test_delete_proforma(self):
         url = reverse('proforma-detail', kwargs={'pk': 1})

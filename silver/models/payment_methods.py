@@ -43,12 +43,6 @@ class PaymentMethod(models.Model):
 
     objects = InheritanceManager()
 
-    customer = models.ForeignKey(Customer)
-    added_at = models.DateTimeField(default=timezone.now)
-    data = JSONField(blank=True, null=True, default={})
-
-    objects = InheritanceManager()
-
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
 
@@ -78,6 +72,10 @@ class PaymentMethod(models.Model):
             return str(Fernet(key).decrypt(bytes(crypted_data)))
         except InvalidToken:
             return None
+
+    @property
+    def allowed_currencies(self):
+        return self.payment_processor.allowed_currencies
 
     @property
     def public_data(self):

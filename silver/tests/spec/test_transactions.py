@@ -23,6 +23,8 @@ from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
 from django.utils import timezone
+from silver.models import PaymentProcessorManager
+from silver.models import Proforma
 
 from silver.models import Transaction
 from silver.models.payment_processors.base import PaymentProcessorBase
@@ -31,7 +33,8 @@ from silver.utils.payments import get_payment_url
 
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
-                                    ProformaFactory, CustomerFactory)
+                                    ProformaFactory, CustomerFactory,
+                                    DocumentEntryFactory)
 from silver.tests.utils import register_processor
 
 
@@ -53,108 +56,34 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(customer=customer)
 
         transaction = TransactionFactory.create(payment_method=payment_method)
-        invoice = transaction.invoice
-        proforma = transaction.proforma
-        provider = invoice.provider
+        expected = self._transaction_data(transaction)
 
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
-
-            expected = OrderedDict([
-                ('id', unicode(transaction.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction.amount)),
-                ('currency', unicode(transaction.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice.pk])),
-                ('can_be_consumed', transaction.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
-                ('valid_until', None),
-                ('created_at', transaction.created_at),
-            ])
 
             url = reverse('transaction-detail',
                           kwargs={'customer_pk': customer.pk,
                                   'transaction_uuid': transaction.uuid})
             response = self.client.get(url, format='json')
 
-            expected['updated_at'] = response.data['updated_at']
             self.assertEqual(response.data, dict(expected))
 
     def test_list_transactions(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        transaction_1 = TransactionFactory.create(payment_method=payment_method)
-        invoice_1 = transaction_1.invoice
-        proforma_1 = transaction_1.proforma
-        provider_1 = invoice_1.provider
 
+        transaction_1 = TransactionFactory.create(payment_method=payment_method)
+        expected_t1 = self._transaction_data(transaction_1)
+        transaction_2 = TransactionFactory.create(payment_method=payment_method)
+        expected_t2 = self._transaction_data(transaction_2)
 
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
-
-            expected_t1 = OrderedDict([
-                ('id', unicode(transaction_1.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_1.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider_1.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction_1.amount)),
-                ('currency', unicode(transaction_1.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction_1.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma_1.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice_1.pk])),
-                ('can_be_consumed', transaction_1.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction_1, None)),
-                ('valid_until', None)
-            ])
-
-            transaction_2 = TransactionFactory.create(payment_method=payment_method)
-            invoice_2 = transaction_2.invoice
-            proforma_2 = transaction_2.proforma
-            provider_2 = invoice_2.provider
-            expected_t2 = OrderedDict([
-                ('id', unicode(transaction_2.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_2.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider_2.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction_2.amount)),
-                ('currency', unicode(transaction_2.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction_2.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma_2.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice_2.pk])),
-                ('can_be_consumed', transaction_2.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction_2, None)),
-                ('valid_until', None)
-            ])
 
             url = reverse('transaction-list',
                           kwargs={'customer_pk': customer.pk})
 
             response = self.client.get(url, format='json')
-
-            expected_t1['updated_at'] = response.data[0]['updated_at']
-            expected_t1['created_at'] = transaction_1.created_at
-
-            expected_t2['updated_at'] = response.data[1]['updated_at']
-            expected_t2['created_at'] = transaction_2.created_at
 
             self.assertEqual(response.data[0], expected_t1)
             self.assertEqual(response.data[1], expected_t2)
@@ -162,25 +91,34 @@ class TestTransactionEndpoint(APITestCase):
     def test_add_transaction(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        proforma = ProformaFactory.create(customer=customer)
+
+        entry = DocumentEntryFactory(quantity=1, unit_price=200)
+        proforma = ProformaFactory.create(customer=customer,
+                                          proforma_entries=[entry])
         proforma.state = proforma.STATES.ISSUED
         proforma.create_invoice()
         proforma.refresh_from_db()
         invoice = proforma.invoice
 
-        payment_method_url = reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                      'payment_method_id': payment_method.id})
+        payment_method_url = reverse('payment-method-detail',
+                                     kwargs={'customer_pk': customer.pk,
+                                             'payment_method_id': payment_method.id})
+
         invoice_url = reverse('invoice-detail', args=[invoice.pk])
         proforma_url = reverse('proforma-detail', args=[proforma.pk])
 
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
         valid_until = datetime.now() + timedelta(minutes=30)
-        currency = 'USD'
+
+        currency = invoice.transaction_currency
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
-            'amount': '200.0',
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
+            'amount': invoice.transaction_total,
             'invoice': invoice_url,
             'proforma': proforma_url,
             'valid_until': valid_until,
@@ -194,7 +132,8 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['payment_method'], payment_method_url)
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
-        self.assertEqual(response.data['amount'], '200.00')
+        self.assertEqual(response.data['amount'],
+                         unicode(Decimal('0.00') + invoice.transaction_total))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
@@ -206,10 +145,12 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(customer=customer)
         valid_until = datetime.now()
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
             'amount': 200.0,
         }
@@ -230,10 +171,12 @@ class TestTransactionEndpoint(APITestCase):
         proforma_url = reverse('proforma-detail', args=[proforma.pk])
         valid_until = datetime.now()
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.pk}),
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.pk}),
             'valid_until': valid_until,
             'amount': 200.0,
             'proforma': proforma_url
@@ -262,12 +205,15 @@ class TestTransactionEndpoint(APITestCase):
 
         valid_until = datetime.now()
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
         invoice_url = reverse('invoice-detail', args=[invoice.pk])
         proforma_url = reverse('proforma-detail', args=[proforma.pk])
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
             'amount': 200.0,
             'invoice': invoice_url,
@@ -294,12 +240,15 @@ class TestTransactionEndpoint(APITestCase):
 
         valid_until = datetime.now()
         url = reverse('payment-method-transaction-list',
-                      kwargs={'customer_pk': customer.pk, 'payment_method_id': payment_method.pk})
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
         invoice_url = reverse('invoice-detail', args=[invoice.pk])
         proforma_url = reverse('proforma-detail', args=[proforma.pk])
         data = {
-            'payment_method': reverse('payment-method-detail', kwargs={'customer_pk': customer.pk,
-                                                                       'payment_method_id': payment_method.id}),
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
             'amount': 200.0,
             'invoice': invoice_url,
@@ -314,47 +263,169 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_add_transaction_without_currency_and_amount(self):
+        customer = CustomerFactory.create()
+        payment_method = PaymentMethodFactory.create(customer=customer)
+
+        entries = DocumentEntryFactory.create_batch(2)
+        proforma = ProformaFactory.create(customer=customer,
+                                          state=Proforma.STATES.ISSUED,
+                                          issue_date=timezone.now().date(),
+                                          currency='USD', transaction_currency='RON',
+                                          transaction_xe_rate=Decimal('0.25'),
+                                          proforma_entries=entries)
+        proforma.create_invoice()
+        invoice = proforma.invoice
+
+        valid_until = datetime.now() + timedelta(minutes=30)
+        url = reverse('payment-method-transaction-list',
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
+        payment_method_url = reverse('payment-method-detail',
+                                     kwargs={'customer_pk': customer.pk,
+                                             'payment_method_id': payment_method.id})
+        invoice_url = reverse('invoice-detail', args=[invoice.pk])
+        proforma_url = reverse('proforma-detail', args=[proforma.pk])
+        data = {
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
+            'valid_until': valid_until,
+            'invoice': invoice_url,
+            'proforma': proforma_url
+        }
+
+        response = self.client.post(url, format='json', data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(response.data['payment_method'], payment_method_url)
+        self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
+        self.assertEqual(response.data['can_be_consumed'], True)
+        self.assertEqual(response.data['amount'],
+                         unicode(Decimal('0.00') + invoice.transaction_total))
+        self.assertEqual(response.data['invoice'], invoice_url)
+        self.assertEqual(response.data['proforma'], proforma_url)
+        self.assertEqual(response.data['currency'], invoice.transaction_currency)
+
+    def test_add_transaction_with_currency_different_from_document(self):
+        customer = CustomerFactory.create()
+        payment_method = PaymentMethodFactory.create(customer=customer)
+
+        proforma = ProformaFactory.create(customer=customer,
+                                          state=Proforma.STATES.ISSUED,
+                                          issue_date=timezone.now().date())
+        proforma.create_invoice()
+        invoice = proforma.invoice
+
+        valid_until = datetime.now()
+        url = reverse('payment-method-transaction-list',
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
+        invoice_url = reverse('invoice-detail', args=[invoice.pk])
+        proforma_url = reverse('proforma-detail', args=[proforma.pk])
+        data = {
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
+            'valid_until': valid_until,
+            'currency': 'RON',
+            'amount': invoice.transaction_total,
+            'invoice': invoice_url,
+            'proforma': proforma_url
+        }
+
+        response = self.client.post(url, format='json', data=data)
+
+        expected_data = {
+            'non_field_errors': [u"Transaction currency is different from it's "
+                                 u"document's transaction_currency."]
+        }
+        self.assertEqual(response.data, expected_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_add_transaction_with_amount_different_from_document(self):
+        customer = CustomerFactory.create()
+        payment_method = PaymentMethodFactory.create(customer=customer)
+
+        proforma = ProformaFactory.create(customer=customer,
+                                          state=Proforma.STATES.ISSUED,
+                                          issue_date=timezone.now().date())
+        proforma.create_invoice()
+        invoice = proforma.invoice
+
+        valid_until = datetime.now()
+        url = reverse('payment-method-transaction-list',
+                      kwargs={'customer_pk': customer.pk,
+                              'payment_method_id': payment_method.pk})
+
+        invoice_url = reverse('invoice-detail', args=[invoice.pk])
+        proforma_url = reverse('proforma-detail', args=[proforma.pk])
+        data = {
+            'payment_method': reverse('payment-method-detail',
+                                      kwargs={'customer_pk': customer.pk,
+                                              'payment_method_id': payment_method.id}),
+            'valid_until': valid_until,
+            'amount': invoice.transaction_total + 1,
+            'invoice': invoice_url,
+            'proforma': proforma_url
+        }
+
+        response = self.client.post(url, format='json', data=data)
+
+        expected_data = {
+            'non_field_errors': [u"Transaction amount is different from it's "
+                                 u"document's transaction_total."]
+        }
+        self.assertEqual(response.data, expected_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_transaction_with_initial_status(self):
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
+        )
+
         payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor'
+            payment_processor=payment_processor
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
-        transaction.document.issue()
-        transaction.document.save()
 
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
         valid_until = timezone.now()
-        currency_rate_date = timezone.now().date()
 
         data = {
             'valid_until': valid_until,
-            'currency': 'RON',
-            'currency_rate_date': currency_rate_date,
-            'amount': 200
         }
 
         response = self.client.patch(url, format='json', data=data)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK,
+                         "status %s, data %s" % (response.status_code,
+                                                 response.data))
 
         transaction.refresh_from_db()
         self.assertEqual(transaction.valid_until, valid_until)
-        self.assertEqual(transaction.currency, 'RON')
-        self.assertEqual(transaction.currency_rate_date, currency_rate_date)
-        self.assertEqual(transaction.amount, 200)
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
-    def test_patch_transaction_documents(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor'
+    def test_patch_transaction_not_allowed_fields(self):
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transaction = TransactionFactory.create(payment_method=payment_method)
-        proforma = ProformaFactory.create()
-        invoice = InvoiceFactory.create(proforma=proforma)
+
+        proforma = ProformaFactory.create(state='issued')
+        invoice = InvoiceFactory.create(proforma=proforma, state='issued')
         proforma.invoice = invoice
         proforma.save()
 
@@ -363,9 +434,22 @@ class TestTransactionEndpoint(APITestCase):
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
+        new_payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor,
+            customer=payment_method.customer
+        )
+
+        new_payment_method_url = reverse('payment-method-detail', kwargs={
+            'customer_pk': new_payment_method.customer.pk,
+            'payment_method_id': new_payment_method.pk
+        })
+
         data = {
             'proforma': proforma_url,
-            'invoice': invoice_url
+            'invoice': invoice_url,
+            'currency': 'RON',
+            'amount': 1234,
+            'payment_method': new_payment_method_url
         }
 
         response = self.client.patch(url, format='json', data=data)
@@ -374,7 +458,10 @@ class TestTransactionEndpoint(APITestCase):
 
         self.assertEqual(response.data, {
             'proforma': [u'This field may not be modified.'],
-            'invoice': [u'This field may not be modified.']
+            'invoice': [u'This field may not be modified.'],
+            'currency': [u'This field may not be modified.'],
+            'amount': [u'This field may not be modified.'],
+            'payment_method': [u'This field may not be modified.']
         })
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
@@ -437,9 +524,14 @@ class TestTransactionEndpoint(APITestCase):
     @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_filter_payment_method(self):
         customer = CustomerFactory.create()
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
+        )
+
         payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor',
-            customer=customer)
+            payment_processor=payment_processor,
+            customer=customer
+        )
 
         transaction1 = TransactionFactory.create(
             payment_method=payment_method
@@ -460,7 +552,10 @@ class TestTransactionEndpoint(APITestCase):
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
         for url in urls:
-            url_method_someprocessor = url + '?payment_processor=someprocessor'
+            url_method_someprocessor = (
+                url + '?payment_processor=' + SomeProcessor.reference
+            )
+
             url_no_output = url + '?payment_processor=Random'
 
             with patch('silver.utils.payments._get_jwt_token') as mocked_token:
@@ -468,12 +563,6 @@ class TestTransactionEndpoint(APITestCase):
 
                 response = self.client.get(url_method_someprocessor, format='json')
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-                transaction1.refresh_from_db()
-                transaction_data_1['updated_at'] = response.data[0]['updated_at']
-
-                transaction1.refresh_from_db()
-                transaction_data_2['updated_at'] = response.data[1]['updated_at']
 
                 self.assertEqual(response.data[0], transaction_data_1)
                 self.assertEqual(response.data[1], transaction_data_2)
@@ -484,22 +573,32 @@ class TestTransactionEndpoint(APITestCase):
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_filter_min_max_amount(self):
-        customer = CustomerFactory.create()
-        payment_method_ok = PaymentMethodFactory.create(
-            payment_processor='someprocessor',
-            customer=customer)
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
+        )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor,
+        )
+        customer = payment_method.customer
+
+        entry = DocumentEntryFactory(quantity=1, unit_price=100)
+        invoice = InvoiceFactory.create(invoice_entries=[entry],
+                                        customer=customer)
+        invoice.issue()
 
         transaction = TransactionFactory.create(
-            payment_method=payment_method_ok,
-            amount=100
+            payment_method=payment_method,
+            invoice=invoice
         )
+
         transaction_data = self._transaction_data(transaction)
 
         urls = [
             reverse(
                 'payment-method-transaction-list', kwargs={
                     'customer_pk': customer.pk,
-                    'payment_method_id': payment_method_ok.pk}),
+                    'payment_method_id': payment_method.pk}),
             reverse(
                 'transaction-list', kwargs={'customer_pk': customer.pk})]
 
@@ -511,9 +610,6 @@ class TestTransactionEndpoint(APITestCase):
                 mocked_token.return_value = 'token'
 
                 response = self.client.get(url_with_filterable_data, format='json')
-
-                transaction.refresh_from_db()
-                transaction_data['updated_at'] = response.data[0]['updated_at']
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
@@ -527,9 +623,6 @@ class TestTransactionEndpoint(APITestCase):
 
                 response = self.client.get(url_with_filterable_data, format='json')
 
-                transaction.refresh_from_db()
-                transaction_data['updated_at'] = response.data[0]['updated_at']
-
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
 
@@ -538,12 +631,13 @@ class TestTransactionEndpoint(APITestCase):
                 self.assertEqual(response.data, [])
 
     def _transaction_data(self, transaction):
+        transaction.refresh_from_db()
+
         payment_method = transaction.payment_method
         customer = transaction.customer
         provider = transaction.provider
         proforma = transaction.proforma
         invoice = transaction.invoice
-
 
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
@@ -551,21 +645,23 @@ class TestTransactionEndpoint(APITestCase):
             return OrderedDict([
                 ('id', unicode(transaction.uuid)),
                 ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction.uuid})),
+                                kwargs={'customer_pk': customer.id,
+                                        'transaction_uuid': transaction.uuid})),
                 ('customer', reverse('customer-detail', args=[customer.pk])),
                 ('provider', reverse('provider-detail', args=[provider.pk])),
                 ('amount', unicode(Decimal('0.00') + transaction.amount)),
                 ('currency', unicode(transaction.currency)),
-                ('currency_rate_date', None),
                 ('state', unicode(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
                 ('can_be_consumed', transaction.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
+                ('payment_processor', reverse('payment-processor-detail',
+                                              args=[payment_method.payment_processor.reference])),
+                ('payment_method', reverse('payment-method-detail',
+                                           kwargs={'customer_pk': customer.id,
+                                                   'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
-                ('updated_at', transaction.updated_at),
-                ('created_at', transaction.created_at)
+                ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),
+                ('created_at', transaction.created_at.isoformat()[:-6] + 'Z')
             ])

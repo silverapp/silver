@@ -16,6 +16,7 @@ from mock import MagicMock, patch, call
 
 from django.core.management import call_command
 from django.test import TestCase
+from silver.models import PaymentProcessorManager
 from silver.models import Transaction
 
 from silver.models.payment_processors.base import PaymentProcessorBase
@@ -34,9 +35,14 @@ class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 class TestUpdateTransactionsStatusCommand(TestCase):
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_update_transaction_status_call(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transactions = TransactionFactory.create_batch(
             5, payment_method=payment_method, state=Transaction.States.Pending
         )
@@ -55,9 +61,14 @@ class TestUpdateTransactionsStatusCommand(TestCase):
 
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_update_transaction_status_transactions_filtering(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transactions = TransactionFactory.create_batch(
             5, payment_method=payment_method, state=Transaction.States.Pending
         )
@@ -85,9 +96,14 @@ class TestUpdateTransactionsStatusCommand(TestCase):
     @patch('silver.management.commands.update_transactions_status.logger.error')
     @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_update_status_exception_logging(self, mock_logger):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         TransactionFactory.create(payment_method=payment_method,
                                   state=Transaction.States.Pending)
 

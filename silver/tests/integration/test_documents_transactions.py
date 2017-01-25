@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from django.core.exceptions import ValidationError
 from mock import MagicMock, patch, call, PropertyMock
 
 from django.test import TestCase
 
 from silver.models import PaymentMethod
+from silver.models import PaymentProcessorManager
 from silver.models import Transaction
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
@@ -34,20 +35,14 @@ class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 
 class TestDocumentsTransactions(TestCase):
     def test_pay_documents_on_transaction_settle(self):
-        proforma = ProformaFactory.create()
-        proforma.issue()
-        proforma.save()
-        invoice = proforma.create_invoice()
         transaction = TransactionFactory.create(
             state=Transaction.States.Pending,
-            invoice=invoice,
-            proforma=proforma
         )
         transaction.settle()
         transaction.save()
 
-        proforma.refresh_from_db()
-        invoice.refresh_from_db()
+        proforma = transaction.proforma
+        invoice = transaction.invoice
 
         self.assertEqual(proforma.state, proforma.STATES.PAID)
         self.assertEqual(invoice.state, invoice.STATES.PAID)
@@ -61,9 +56,12 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
 
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=True,
         )
@@ -83,9 +81,11 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=False
         )
@@ -106,9 +106,11 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=False
         )
 
@@ -125,30 +127,36 @@ class TestDocumentsTransactions(TestCase):
     def test_no_transaction_creation_for_issued_documents_case3(self):
         """
             There already is an active (initial/pending) transaction for the
-            document. This can happen when the second document is triggering
-            the issue transition
+            document.
         """
-        invoice = InvoiceFactory.create()
+        invoice = InvoiceFactory.create(state='issued')
         customer = invoice.customer
-        proforma = ProformaFactory.create(customer=customer)
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=True,
         )
 
-        transaction = TransactionFactory.create(
-            payment_method=payment_method, invoice=invoice, proforma=proforma
-        )
+        transaction = TransactionFactory.create(invoice=invoice,
+                                                payment_method=payment_method)
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
-            invoice.issue()
+            expected_exception = ValidationError
+            expected_message = "{'__all__': [u'There already are active " \
+                               "transactions for the same billing documents.']}"
+            try:
+                TransactionFactory.create(invoice=invoice,
+                                          payment_method=payment_method)
+                self.fail('{} not raised.'.format(str(expected_exception)))
+            except expected_exception as e:
+                self.assertEqual(str(e), expected_message)
 
             transactions = Transaction.objects.filter(
                 payment_method=payment_method, invoice=invoice,
-                proforma=proforma
             )
             self.assertEqual(len(transactions), 1)
             self.assertEqual(transactions[0], transaction)

@@ -41,6 +41,7 @@ class TestCustomerEndpoints(APITestCase):
             "zip_code": "1111",
             "country": "US",
             "phone": "+40000000000",
+            "currency": "USD",
             "extra": "What is there more to say?",
             "sales_tax_number": "RO5555555",
             "sales_tax_name": "VAT",

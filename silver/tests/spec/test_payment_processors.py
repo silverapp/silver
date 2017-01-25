@@ -41,6 +41,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(
             {
+                "allowed_currencies": [],
                 "type": "triggered",
                 "display_name": "SomeProcessor",
                 "reference": "someprocessor",
@@ -50,6 +51,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
         )
         self.assertIn(
             {
+                "allowed_currencies": [],
                 "type": "manual",
                 "display_name": "Manual",
                 "reference": "manual",
@@ -66,6 +68,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {
+            "allowed_currencies": [],
             'url': 'http://testserver/payment_processors/manual/',
             'type': u'manual',
             'reference': u'manual',
