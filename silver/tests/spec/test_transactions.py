@@ -57,8 +57,6 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
-<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
-=======
             expected = OrderedDict([
                 ('id', unicode(transaction.uuid)),
                 ('url', reverse('transaction-detail',
@@ -80,7 +78,6 @@ class TestTransactionEndpoint(APITestCase):
                 ('created_at', transaction.created_at),
             ])
 
->>>>>>> Make created_at and updated_at read only fields.
             url = reverse('transaction-detail',
                           kwargs={'customer_pk': customer.pk,
                                   'transaction_uuid': transaction.uuid})
@@ -101,8 +98,6 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
-<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
-=======
             expected_t1 = OrderedDict([
                 ('id', unicode(transaction_1.uuid)),
                 ('url', reverse('transaction-detail',
@@ -147,21 +142,17 @@ class TestTransactionEndpoint(APITestCase):
                 ('valid_until', None)
             ])
 
->>>>>>> Make created_at and updated_at read only fields.
             url = reverse('transaction-list',
                           kwargs={'customer_pk': customer.pk})
 
             response = self.client.get(url, format='json')
 
-<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
-=======
             expected_t1['updated_at'] = response.data[0]['updated_at']
             expected_t1['created_at'] = transaction_1.created_at
 
             expected_t2['updated_at'] = response.data[1]['updated_at']
             expected_t2['created_at'] = transaction_2.created_at
 
->>>>>>> Make created_at and updated_at read only fields.
             self.assertEqual(response.data[0], expected_t1)
             self.assertEqual(response.data[1], expected_t2)
 
@@ -730,11 +721,7 @@ class TestTransactionEndpoint(APITestCase):
                                                    'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
-<<<<<<< bbe12aac2234ea88d76c557424517a92312df6f8
+
                 ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),
                 ('created_at', transaction.created_at.isoformat()[:-6] + 'Z')
-=======
-                ('updated_at', transaction.updated_at),
-                ('created_at', transaction.created_at)
->>>>>>> Make created_at and updated_at read only fields.
             ])
