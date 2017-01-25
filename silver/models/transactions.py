@@ -155,6 +155,14 @@ class Transaction(models.Model):
             else:
                 self.currency = self.document.transaction_currency
 
+            if self.currency not in self.payment_method.allowed_currencies:
+                raise ValidationError(
+                    'Currency {} is not allowed by the payment method. '
+                    'Allowed currencies are {}.'.format(
+                        self.currency, self.payment_method.allowed_currencies
+                    )
+                )
+
             if self.amount:
                 if self.amount != self.document.transaction_total:
                     raise ValidationError(
@@ -181,17 +189,6 @@ class Transaction(models.Model):
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
         self.cleaned = True
-
-    def clean_currency(self):
-        currency = self.cleaned_data['currency']
-
-        if currency not in self.payment_method.allowed_currencies:
-            raise ValidationError(
-                'Currency {} is not allowed. Allowed currencies are {}.'.format(
-                    currency, self.payment_method.allowed_currencies
-                ))
-
-        return currency
 
     @property
     def can_be_consumed(self):
