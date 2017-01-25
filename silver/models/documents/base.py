@@ -15,6 +15,7 @@
 
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import pytz
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -377,8 +378,10 @@ class BillingDocumentBase(models.Model):
 
     @property
     def transaction_total(self):
-        return (self.total * self.transaction_xe_rate if self.transaction_xe_rate
-                else None)
+        if self.transaction_xe_rate:
+            return Decimal(self.total * self.transaction_xe_rate).quantize(
+                Decimal('0.00')
+            )
 
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)

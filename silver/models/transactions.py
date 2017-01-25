@@ -14,12 +14,11 @@
 
 import uuid
 import logging
-import datetime
 from decimal import Decimal
 
 from jsonfield import JSONField
 from django_fsm import post_transition
-from django_fsm import FSMField, transition, TransitionNotAllowed
+from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None
 
 from django.db import models
@@ -28,7 +27,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
-from django.core.validators import MinValueValidator, URLValidator
+from django.core.validators import MinValueValidator
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
@@ -44,7 +43,7 @@ class Transaction(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))]
     )
     currency = models.CharField(
-        choices=currencies, max_length=4, default='USD',
+        choices=currencies, max_length=4,
         help_text='The currency used for billing.'
     )
 
@@ -85,7 +84,7 @@ class Transaction(models.Model):
     @property
     def final_fields(self):
         return ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
-                'currency', ]
+                'currency', 'created_at']
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -147,6 +146,24 @@ class Transaction(models.Model):
                 self.invoice = self.proforma.invoice
 
         if not self.pk:
+            if self.currency:
+                if self.currency != self.document.transaction_currency:
+                    raise ValidationError(
+                        "Transaction currency is different from it's document's"
+                        " transaction_currency."
+                    )
+            else:
+                self.currency = self.document.transaction_currency
+
+            if self.amount:
+                if self.amount != self.document.transaction_total:
+                    raise ValidationError(
+                        "Transaction amount is different from it's document's "
+                        "transaction_total."
+                    )
+            else:
+                self.amount = self.document.transaction_total
+
             if self.document.transactions.filter(
                 state__in=[Transaction.States.Initial,
                            Transaction.States.Pending]
@@ -157,7 +174,10 @@ class Transaction(models.Model):
                 )
 
     def full_clean(self, *args, **kwargs):
+        # 'amount' and 'currency' are handled in our clean method
+        kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
         super(Transaction, self).full_clean(*args, **kwargs)
+
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
         self.cleaned = True
@@ -256,7 +276,6 @@ def create_transaction_for_document(document):
                 'invoice': isinstance(document, Invoice) and document or document.related_document,
                 'proforma': isinstance(document, Proforma) and document or document.related_document,
                 'payment_method': payment_method,
-                'currency': document.transaction_currency,
                 'amount': document.transaction_total,
             }
 

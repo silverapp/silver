@@ -11,25 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
 
 import jwt
-from six import iteritems
-from django_fsm import TransitionNotAllowed
 
 from django.conf import settings
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError, ObjectDoesNotExist, \
+    NON_FIELD_ERRORS
 
 from rest_framework import serializers
-from rest_framework.relations import (HyperlinkedIdentityField,
-                                      HyperlinkedRelatedField)
+from rest_framework.relations import HyperlinkedRelatedField
 from rest_framework.reverse import reverse
-from rest_framework.exceptions import ValidationError as APIValidationError
 
 from silver.models.documents.document import Document
-
-from silver.api.exceptions import APIConflictException
-
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
                            DocumentEntry, ProductCode, Proforma, PaymentMethod,
@@ -520,6 +513,8 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         view_name='payment-processor-detail', lookup_field='reference',
         read_only=True
     )
+    amount = serializers.DecimalField(required=False, decimal_places=2,
+                                      max_digits=8, min_value=0)
 
     class Meta:
         model = Transaction
@@ -530,6 +525,8 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
                             'id', 'url', 'state', 'updated_at', 'created_at')
         updateable_fields = ('valid_until', 'success_url', 'failed_url')
+        extra_kwargs = {'amount': {'required': False},
+                        'currency': {'required': False}}
 
     def validate(self, attrs):
         attrs = super(TransactionSerializer, self).validate(attrs)
@@ -571,12 +568,11 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                 transaction.full_clean()
         except ValidationError as e:
             errors = e.error_dict
-            non_field_errors = errors.pop('__all__', None)
+            non_field_errors = errors.pop(NON_FIELD_ERRORS, None)
             if non_field_errors:
                 errors['non_field_errors'] = [
                     error for sublist in non_field_errors for error in sublist
                 ]
-
             raise serializers.ValidationError(errors)
 
         return attrs
