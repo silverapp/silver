@@ -384,8 +384,12 @@ class TestTransactionEndpoint(APITestCase):
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_transaction_with_initial_status(self):
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
+        )
+
         payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor'
+            payment_processor=payment_processor
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
@@ -410,9 +414,14 @@ class TestTransactionEndpoint(APITestCase):
 
     @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_transaction_not_allowed_fields(self):
-        payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor'
+        payment_processor = PaymentProcessorManager.get_instance(
+            SomeProcessor.reference
         )
+
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=payment_processor
+        )
+
         transaction = TransactionFactory.create(payment_method=payment_method)
 
         proforma = ProformaFactory.create(state='issued')
@@ -426,7 +435,8 @@ class TestTransactionEndpoint(APITestCase):
                                                   transaction.uuid])
 
         new_payment_method = PaymentMethodFactory.create(
-            payment_processor='someprocessor', customer=payment_method.customer
+            payment_processor=payment_processor,
+            customer=payment_method.customer
         )
 
         new_payment_method_url = reverse('payment-method-detail', kwargs={

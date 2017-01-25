@@ -17,6 +17,7 @@ from mock import MagicMock, patch, call, PropertyMock
 from django.test import TestCase
 
 from silver.models import PaymentMethod
+from silver.models import PaymentProcessorManager
 from silver.models import Transaction
 from silver.models.payment_processors.base import PaymentProcessorBase
 from silver.models.payment_processors.mixins import TriggeredProcessorMixin
@@ -55,9 +56,12 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
 
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=True,
         )
@@ -77,9 +81,11 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=False
         )
@@ -100,9 +106,11 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=False
         )
 
@@ -123,9 +131,11 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create(state='issued')
         customer = invoice.customer
-
+        payment_processor = PaymentProcessorManager.get_instance(
+            TriggeredProcessor.reference
+        )
         payment_method = PaymentMethodFactory.create(
-            payment_processor='triggeredprocessor', customer=customer,
+            payment_processor=payment_processor, customer=customer,
             enabled=True,
             verified=True,
         )

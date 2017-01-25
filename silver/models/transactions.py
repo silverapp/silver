@@ -155,7 +155,8 @@ class Transaction(models.Model):
             else:
                 self.currency = self.document.transaction_currency
 
-            if self.currency not in self.payment_method.allowed_currencies:
+            if (self.payment_method.allowed_currencies and
+                    self.currency not in self.payment_method.allowed_currencies):
                 raise ValidationError(
                     'Currency {} is not allowed by the payment method. '
                     'Allowed currencies are {}.'.format(
