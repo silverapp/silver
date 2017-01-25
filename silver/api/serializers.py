@@ -514,7 +514,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         read_only=True
     )
     amount = serializers.DecimalField(required=False, decimal_places=2,
-                                      max_digits=8, min_value=0)
+                                      max_digits=12, min_value=0)
 
     class Meta:
         model = Transaction
