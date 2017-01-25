@@ -14,7 +14,7 @@
 from collections import OrderedDict
 
 from django.test import TestCase
-
+from django.utils import timezone
 from rest_framework.renderers import JSONRenderer
 from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
@@ -25,7 +25,8 @@ from silver.tests.factories import PaymentMethodFactory
 
 class TestPaymentMethodSerializer(TestCase):
     def test_encoding(self):
-        payment_method = PaymentMethodFactory.create()
+        now = timezone.now().replace(microsecond=0)
+        payment_method = PaymentMethodFactory.create(added_at=now)
 
         factory = APIRequestFactory()
         url = reverse('payment-method-detail',

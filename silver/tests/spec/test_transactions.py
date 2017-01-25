@@ -111,9 +111,10 @@ class TestTransactionEndpoint(APITestCase):
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
 
-        valid_until = datetime.now() + timedelta(minutes=30)
+        valid_until = datetime.now().replace(microsecond=0) + timedelta(minutes=30)
 
         currency = invoice.transaction_currency
+
         data = {
             'payment_method': reverse('payment-method-detail',
                                       kwargs={'customer_pk': customer.pk,
@@ -143,7 +144,7 @@ class TestTransactionEndpoint(APITestCase):
     def test_add_transaction_without_documents(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -169,7 +170,7 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(customer=customer)
         proforma = ProformaFactory.create(customer=customer)
         proforma_url = reverse('proforma-detail', args=[proforma.pk])
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -203,7 +204,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.issue()
         proforma.save()
 
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -238,7 +239,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.refresh_from_db()
         invoice = proforma.invoice
 
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -277,7 +278,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.create_invoice()
         invoice = proforma.invoice
 
-        valid_until = datetime.now() + timedelta(minutes=30)
+        valid_until = datetime.now().replace(microsecond=0) + timedelta(minutes=30)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -319,7 +320,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.create_invoice()
         invoice = proforma.invoice
 
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -356,7 +357,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.create_invoice()
         invoice = proforma.invoice
 
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
                       kwargs={'customer_pk': customer.pk,
                               'payment_method_id': payment_method.pk})
@@ -397,7 +398,8 @@ class TestTransactionEndpoint(APITestCase):
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
-        valid_until = timezone.now()
+        valid_until = timezone.now().replace(microsecond=0)
+        currency_rate_date = timezone.now().date()
 
         data = {
             'valid_until': valid_until,
@@ -489,7 +491,7 @@ class TestTransactionEndpoint(APITestCase):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
         transaction_1 = TransactionFactory.create(payment_method=payment_method)
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
         url = reverse('transaction-detail',
                       kwargs={'customer_pk': customer.id,
                               'transaction_uuid': transaction_1.uuid})
@@ -506,7 +508,7 @@ class TestTransactionEndpoint(APITestCase):
     def test_create_one_without_required_fields(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
-        valid_until = datetime.now()
+        valid_until = datetime.now().replace(microsecond=0)
 
         data = {
             'valid_until': valid_until
