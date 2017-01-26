@@ -92,7 +92,7 @@ class PaymentProcessorBase(object):
         raise NotImplementedError
 
     def __repr__(self):
-        return self.reference
+        return self.name
 
     def __unicode__(self):
         return unicode(self.name)
