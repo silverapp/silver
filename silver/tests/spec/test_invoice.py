@@ -157,8 +157,7 @@ class TestInvoiceEndpoints(APITestCase):
             "proforma": "http://testserver/proformas/%s/" % transaction.proforma.pk,
             "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
             "can_be_consumed": transaction.can_be_consumed,
-            "payment_processor": "http://testserver/payment_processors/%s/" %
-                                 transaction.payment_processor.reference,
+            "payment_processor": transaction.payment_processor,
             "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
                               (invoice.customer.pk, transaction.payment_method.pk),
             "pay_url": "http://testserver/pay/token/"

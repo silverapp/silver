@@ -12,49 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-from silver.tests.factories import AdminUserFactory, ProviderFactory
-from silver.tests.utils import register_processor
+from silver.tests.factories import AdminUserFactory
+from silver.tests.fixtures import PAYMENT_PROCESSORS
 
 
-class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'someprocessor'
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestPaymentProcessorsEndpoints(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_payment_processors_list(self):
-        provider = ProviderFactory.create()
-        url = reverse('provider-payment-processor-list',
-                      kwargs={'pk': provider.pk})
+        url = reverse('payment-processor-list')
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(
             {
-                "allowed_currencies": [],
+                "name": "triggered",
                 "type": "triggered",
-                "display_name": "SomeProcessor",
-                "reference": "someprocessor",
-                "url": "http://testserver/payment_processors/someprocessor/"
+                "allowed_currencies": ['RON', 'USD'],
+                "url": "http://testserver/payment_processors/triggered/"
             },
             response.data
         )
         self.assertIn(
             {
-                "allowed_currencies": [],
+                "name": "manual",
                 "type": "manual",
-                "display_name": "Manual",
-                "reference": "manual",
+                "allowed_currencies": [],
                 "url": "http://testserver/payment_processors/manual/"
             },
             response.data
@@ -68,11 +59,10 @@ class TestPaymentProcessorsEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {
-            "allowed_currencies": [],
-            'url': 'http://testserver/payment_processors/manual/',
+            'name': u'manual',
             'type': u'manual',
-            'reference': u'manual',
-            'display_name': u'Manual'
+            'allowed_currencies': [],
+            'url': 'http://testserver/payment_processors/manual/',
         })
 
     def test_payment_processors_detail_not_found(self):

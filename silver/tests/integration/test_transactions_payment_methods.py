@@ -14,37 +14,22 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from silver.models import Invoice
-from silver.models import PaymentProcessorManager
 
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.tests.factories import (PaymentMethodFactory, InvoiceFactory,
                                     TransactionFactory)
-from silver.tests.utils import register_processor
+from silver.tests.fixtures import (PAYMENT_PROCESSORS, triggered_processor)
 
 
-class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'triggeredprocessor'
-
-    @property
-    def allowed_currencies(self):
-        return ['RON', 'USD']
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestDocumentsTransactions(TestCase):
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_create_transaction_with_not_allowed_currency(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
-
         invoice = InvoiceFactory.create(transaction_currency='EUR',
                                         transaction_xe_rate=1,
                                         state=Invoice.STATES.ISSUED)
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor,
+            payment_processor=triggered_processor,
             customer=invoice.customer,
             enabled=True,
             verified=True,

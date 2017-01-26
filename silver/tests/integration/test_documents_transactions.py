@@ -12,27 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from django.core.exceptions import ValidationError
-from mock import MagicMock, patch, call, PropertyMock
+from mock import MagicMock, patch
 
-from django.test import TestCase
-
-from silver.models import PaymentMethod
-from silver.models import PaymentProcessorManager
+from django.test import TestCase, override_settings
 from silver.models import Transaction
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-from silver.tests.factories import TransactionFactory, ProformaFactory, \
-    PaymentMethodFactory, InvoiceFactory
-from silver.tests.utils import register_processor
+from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
+                                    TransactionFactory)
+from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
+                                   triggered_processor)
 
 
-class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'triggeredprocessor'
-
-    def execute_transaction(self, transaction):
-        pass
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestDocumentsTransactions(TestCase):
     def test_pay_documents_on_transaction_settle(self):
         transaction = TransactionFactory.create(
@@ -49,19 +39,15 @@ class TestDocumentsTransactions(TestCase):
 
     # also refunding needs to be tested when implemented
 
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_creation_for_issued_documents(self):
         """
             The happy case.
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
 
         PaymentMethodFactory.create(
-            payment_processor=payment_processor, customer=customer,
+            payment_processor=triggered_processor, customer=customer,
             enabled=True,
             verified=True,
         )
@@ -73,19 +59,14 @@ class TestDocumentsTransactions(TestCase):
         )
         self.assertEqual(len(transactions), 1)
 
-
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_no_transaction_creation_for_issued_documents_case_1(self):
         """
             The payment method is not recurring
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
         PaymentMethodFactory.create(
-            payment_processor=payment_processor, customer=customer,
+            payment_processor=triggered_processor, customer=customer,
             enabled=True,
             verified=False
         )
@@ -99,18 +80,14 @@ class TestDocumentsTransactions(TestCase):
             )
             self.assertEqual(len(transactions), 0)
 
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_no_transaction_creation_for_issued_documents_case2(self):
         """
             The payment method is not usable
         """
         invoice = InvoiceFactory.create()
         customer = invoice.customer
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
         PaymentMethodFactory.create(
-            payment_processor=payment_processor, customer=customer,
+            payment_processor=triggered_processor, customer=customer,
             enabled=False
         )
 
@@ -123,7 +100,6 @@ class TestDocumentsTransactions(TestCase):
             )
             self.assertEqual(len(transactions), 0)
 
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_no_transaction_creation_for_issued_documents_case3(self):
         """
             There already is an active (initial/pending) transaction for the
@@ -131,11 +107,8 @@ class TestDocumentsTransactions(TestCase):
         """
         invoice = InvoiceFactory.create(state='issued')
         customer = invoice.customer
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor, customer=customer,
+            payment_processor=triggered_processor, customer=customer,
             enabled=True,
             verified=True,
         )

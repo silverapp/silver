@@ -13,7 +13,7 @@
 # limitations under the License.
 from collections import OrderedDict
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.renderers import JSONRenderer
 from rest_framework.test import APIRequestFactory
@@ -21,8 +21,11 @@ from rest_framework.reverse import reverse
 
 from silver.api.serializers import PaymentMethodSerializer
 from silver.tests.factories import PaymentMethodFactory
+from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
+                                   ManualProcessor)
 
 
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestPaymentMethodSerializer(TestCase):
     def test_encoding(self):
         now = timezone.now().replace(microsecond=0)
@@ -44,8 +47,13 @@ class TestPaymentMethodSerializer(TestCase):
             ('transactions', "http://testserver/customers/{}/payment_methods/{}/transactions/".format(payment_method.customer.pk,
                                                                                 payment_method.pk)),
             ('customer', 'http://testserver/customers/{}/'.format(payment_method.customer.pk)),
-            ('payment_processor', 'http://testserver/payment_processors/manual/'),
-            ('allowed_currencies', payment_method.allowed_currencies),
+            ('payment_processor', manual_processor),
+            ('payment_processor_details', OrderedDict([
+                ("type", ManualProcessor.type),
+                ("name", manual_processor),
+                ("allowed_currencies", []),
+                ("url", "http://testserver/payment_processors/manual/")
+            ])),
             ('added_at', payment_method.added_at),
             ('verified', False),
             ('enabled', True)

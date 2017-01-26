@@ -22,13 +22,13 @@ import factory.fuzzy
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
-                           Transaction, PaymentMethod, PaymentProcessorManager)
+                           Transaction, PaymentMethod)
 from silver.utils.international import countries
+from silver.tests.fixtures import manual_processor
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -243,7 +243,7 @@ class PaymentMethodFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = PaymentMethod
 
-    payment_processor = PaymentProcessorManager.get_instance('manual')
+    payment_processor = manual_processor
     customer = factory.SubFactory(CustomerFactory)
 
 

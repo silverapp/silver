@@ -19,12 +19,14 @@ from mock import patch, MagicMock, call
 from django.test import TestCase, override_settings
 
 from silver.tests.factories import TransactionFactory
+from silver.tests.fixtures import PAYMENT_PROCESSORS
 
 from silver.utils.decorators import get_transaction_from_token
 from silver.utils.payments import (get_payment_url, get_payment_complete_url,
                                    _get_jwt_token)
 
 
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestPaymentsUtilMethods(TestCase):
     def test_get_payment_url(self):
         transaction = TransactionFactory()

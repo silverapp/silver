@@ -15,31 +15,18 @@
 from mock import MagicMock, patch, call
 
 from django.core.management import call_command
-from django.test import TestCase
-from silver.models import PaymentProcessorManager
+from django.test import TestCase, override_settings
 
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.tests.factories import TransactionFactory, PaymentMethodFactory
-from silver.tests.utils import register_processor
+from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
+                                   triggered_processor)
 
 
-class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'triggeredprocessor'
-
-    def execute_transaction(self, transaction):
-        pass
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestExecuteTransactionsCommand(TestCase):
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_executing(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor
+            payment_processor=triggered_processor
         )
 
         transactions = TransactionFactory.create_batch(
@@ -56,14 +43,9 @@ class TestExecuteTransactionsCommand(TestCase):
 
             self.assertEqual(mock_execute.call_count, len(transactions))
 
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_transaction_filtering(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor
+            payment_processor=triggered_processor
         )
 
         transactions = TransactionFactory.create_batch(
@@ -89,14 +71,10 @@ class TestExecuteTransactionsCommand(TestCase):
             self.assertEqual(mock_execute.call_count, len(filtered_transactions))
 
     @patch('silver.management.commands.execute_transactions.logger.error')
-    @register_processor(TriggeredProcessor, display_name='TriggeredProcessor')
     def test_exception_logging(self, mock_logger):
-        payment_processor = PaymentProcessorManager.get_instance(
-            TriggeredProcessor.reference
-        )
 
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor
+            payment_processor=triggered_processor
         )
 
         TransactionFactory.create(payment_method=payment_method)

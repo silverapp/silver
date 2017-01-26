@@ -13,30 +13,21 @@
 # limitations under the License.
 
 from datetime import datetime, timedelta
-from collections import OrderedDict
-from decimal import Decimal
-
-from mock import patch, MagicMock
-
-from rest_framework import status
-from rest_framework.reverse import reverse as _reverse
-from rest_framework.test import APITestCase
 
 from django.utils import timezone
 from django.template.loader import render_to_string
-
+from django.test import override_settings
+from mock import patch
+from rest_framework import status
+from rest_framework.test import APITestCase
 from silver.models import Transaction
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
-from silver.utils.payments import get_payment_url
-
-from silver.tests.factories import (AdminUserFactory, TransactionFactory,
-                                    PaymentMethodFactory, InvoiceFactory,
-                                    ProformaFactory, CustomerFactory)
-from silver.tests.utils import register_processor
 from silver.utils.payments import get_payment_url, get_payment_complete_url
 
+from silver.tests.factories import (AdminUserFactory, TransactionFactory)
+from silver.tests.fixtures import PAYMENT_PROCESSORS, not_implemented_view
 
+
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestPaymentUrls(APITestCase):
     def setUp(self):
         self.user = AdminUserFactory.create()
@@ -76,21 +67,28 @@ class TestPaymentUrls(APITestCase):
         last_year = timezone.now() - timedelta(days=365)
         transaction = TransactionFactory.create(state=Transaction.States.Initial,
                                                 valid_until=last_year)
-        transaction.payment_processor.get_view = lambda transaction, request: None
-        response = self.client.get(get_payment_url(transaction, None))
+
+        def get_view(processor, transaction, request):
+            return None
+
+        with patch('silver.tests.fixtures.ManualProcessor.get_view',
+                   new=get_view):
+            response = self.client.get(get_payment_url(transaction, None))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_pay_transaction_not_implemented_get_call(self):
         last_year = timezone.now() - timedelta(days=365)
         transaction = TransactionFactory.create(state=Transaction.States.Initial,
                                                 valid_until=last_year)
-        def view(*args):
-            raise NotImplementedError
 
-        transaction.payment_processor.get_view = lambda transaction, request: view
-        response = self.client.get(get_payment_url(transaction, None))
+        def get_view(processor, transaction, request):
+            return not_implemented_view
+
+        with patch('silver.tests.fixtures.ManualProcessor.get_view',
+                   new=get_view):
+            response = self.client.get(get_payment_url(transaction, None))
+
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
 
     def test_complete_payment_view_with_return_url(self):
         transaction = TransactionFactory.create(state=Transaction.States.Settled)

@@ -18,34 +18,30 @@ from decimal import Decimal
 
 from mock import patch
 
+from django.utils import timezone
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
-from django.utils import timezone
-from silver.models import PaymentProcessorManager
 from silver.models import Proforma
 
 from silver.models import Transaction
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.utils.payments import get_payment_url
 
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory,
                                     DocumentEntryFactory)
-from silver.tests.utils import register_processor
+from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
+                                   triggered_processor)
 
 
 def reverse(*args, **kwargs):
     return u'http://testserver' + _reverse(*args, **kwargs)
 
 
-class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'someprocessor'
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestTransactionEndpoint(APITestCase):
     def setUp(self):
         self.user = AdminUserFactory.create()
@@ -383,14 +379,9 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_transaction_with_initial_status(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            SomeProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor
+            payment_processor=triggered_processor
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
@@ -399,7 +390,6 @@ class TestTransactionEndpoint(APITestCase):
                                                   transaction.uuid])
 
         valid_until = timezone.now().replace(microsecond=0)
-        currency_rate_date = timezone.now().date()
 
         data = {
             'valid_until': valid_until,
@@ -414,14 +404,9 @@ class TestTransactionEndpoint(APITestCase):
         transaction.refresh_from_db()
         self.assertEqual(transaction.valid_until, valid_until)
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_transaction_not_allowed_fields(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            SomeProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor
+            payment_processor=triggered_processor
         )
 
         transaction = TransactionFactory.create(payment_method=payment_method)
@@ -437,7 +422,7 @@ class TestTransactionEndpoint(APITestCase):
                                                   transaction.uuid])
 
         new_payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor,
+            payment_processor=triggered_processor,
             customer=payment_method.customer
         )
 
@@ -466,7 +451,6 @@ class TestTransactionEndpoint(APITestCase):
             'payment_method': [u'This field may not be modified.']
         })
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_patch_after_initial_state(self):
         transaction = TransactionFactory.create(state=Transaction.States.Pending)
 
@@ -523,15 +507,10 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['payment_method'],
                          ['This field is required.'])
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_filter_payment_method(self):
         customer = CustomerFactory.create()
-        payment_processor = PaymentProcessorManager.get_instance(
-            SomeProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor,
+            payment_processor=triggered_processor,
             customer=customer
         )
 
@@ -555,7 +534,7 @@ class TestTransactionEndpoint(APITestCase):
 
         for url in urls:
             url_method_someprocessor = (
-                url + '?payment_processor=' + SomeProcessor.reference
+                url + '?payment_processor=' + triggered_processor
             )
 
             url_no_output = url + '?payment_processor=Random'
@@ -573,14 +552,9 @@ class TestTransactionEndpoint(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data, [])
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_filter_min_max_amount(self):
-        payment_processor = PaymentProcessorManager.get_instance(
-            SomeProcessor.reference
-        )
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=payment_processor,
+            payment_processor=triggered_processor,
         )
         customer = payment_method.customer
 
@@ -657,8 +631,7 @@ class TestTransactionEndpoint(APITestCase):
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
                 ('can_be_consumed', transaction.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail',
-                                              args=[payment_method.payment_processor.reference])),
+                ('payment_processor', payment_method.payment_processor),
                 ('payment_method', reverse('payment-method-detail',
                                            kwargs={'customer_pk': customer.id,
                                                    'payment_method_id': payment_method.id})),

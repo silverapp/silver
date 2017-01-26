@@ -15,34 +15,27 @@
 import sys
 from copy import deepcopy
 
-from six import iteritems
-
 from django.test import override_settings
 
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
 from silver.models import PaymentMethod
-from silver.models.payment_processors.base import PaymentProcessorBase
-from silver.models.payment_processors.mixins import TriggeredProcessorMixin
 from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 
 from silver.tests.spec.util.api_get_assert import APIGetAssert
 from silver.tests.factories import CustomerFactory, PaymentMethodFactory
-from silver.tests.utils import register_processor
+from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
+                                   triggered_processor)
 
 
-class SomeProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
-    reference = 'someprocessor'
-
-
+@override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestPaymentMethodEndpoints(APIGetAssert):
     serializer_class = PaymentMethodSerializer
 
     def setUp(self):
         self.customer = CustomerFactory.create()
-
         super(TestPaymentMethodEndpoints, self).setUp()
 
     def create_payment_method(self, *args, **kwargs):
@@ -73,16 +66,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url, payment_method)
 
     def test_post_listing(self):
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
         })
 
         response = self.client.post(url, data={
-            'payment_processor': processor_url,
+            'payment_processor': manual_processor
         }, format='json')
 
         payment_method = PaymentMethod.objects.get(customer=self.customer)
@@ -128,7 +117,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_data)
 
-    @register_processor(SomeProcessor, display_name='SomeProcessor')
     def test_put_detail_cannot_change_processor(self):
         payment_method = self.create_payment_method(customer=self.customer)
 
@@ -139,10 +127,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.get(url, format='json')
 
         data = response.data
-        payment_processor = reverse('payment-processor-detail',
-                                    kwargs={'processor_name': 'someprocessor'},
-                                    request=response.wsgi_request)
-        data['payment_processor'] = payment_processor
+        data['payment_processor'] = triggered_processor
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -170,16 +155,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.data, data)
 
     def test_post_listing_additional_data_unverified(self):
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
         })
 
         response = self.client.post(url, data={
-            'payment_processor': processor_url,
+            'payment_processor': manual_processor,
             'verified': False,
             'additional_data': '{"random": "value"}'
         }, format='json')
@@ -220,16 +201,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.data, {'detail': 'Not found.'})
 
     def test_post_listing_no_customer(self):
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-
         url = reverse('payment-method-list', kwargs={
             'customer_pk': sys.maxint
         })
 
         response = self.client.post(url, data={
-            'payment_processor': processor_url,
+            'payment_processor': manual_processor,
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -258,7 +235,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'customer_pk': self.customer.pk
         })
 
-        url_manual_processor = url + '?processor=manual'
+        url_manual_processor = url + '?processor=' + manual_processor
         url_no_output = url + '?processor=random'
 
         self.assert_get_data(url_manual_processor, [payment_method])

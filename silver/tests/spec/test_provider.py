@@ -199,7 +199,6 @@ class TestProviderEndpoints(APITestCase):
             'country': provider.country,
             'extra': provider.extra,
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
         assert response.data == expected
 
@@ -257,7 +256,6 @@ class TestProviderEndpoints(APITestCase):
             'proforma_series': 'ProformaSeries',
             'proforma_starting_number': 1,
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
 
     def test_put_provider_without_required_field(self):
@@ -334,7 +332,6 @@ class TestProviderEndpoints(APITestCase):
             'country': u'AL',
             'extra': 'Extra1',
             'meta': {u'something': [1, 2]},
-            'payment_processors': 'http://testserver/providers/%s/payment_processors/' % provider.pk
         }
 
     def test_delete_provider(self):
