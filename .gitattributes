@@ -1,1 +1,2 @@
 *.key filter=git-crypt diff=git-crypt
+silver/_version.py export-subst

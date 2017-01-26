@@ -45,14 +45,15 @@ http://docs.python.org/2/distutils/sourcedist.html
 
 import os
 from setuptools import setup, find_packages
-import silver as app
+
+import versioneer
+
+from silver import __version__ as version
 
 
 install_requires = [line.strip()
                     for line in open("requirements/common.txt").readlines()
                     if not line.strip().startswith('#')]
-install_requires = [l for l in install_requires if l != '']
-
 
 def read(fname):
     try:
@@ -62,7 +63,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version=app.__version__,
+    version=version,
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',
