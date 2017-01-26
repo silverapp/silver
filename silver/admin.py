@@ -258,10 +258,10 @@ class SubscriptionAdmin(ModelAdmin):
 
 class CustomerAdmin(LiveModelAdmin):
     fields = ['company', 'first_name', 'last_name', 'customer_reference',
-              'email', 'address_1', 'address_2', 'city', 'state', 'zip_code',
-              'country', 'currency', 'consolidated_billing', 'payment_due_days',
-              'sales_tax_name', 'sales_tax_percent', 'sales_tax_number',
-              'extra', 'meta']
+              'email', 'phone', 'address_1', 'address_2', 'city', 'state',
+              'zip_code', 'country', 'currency', 'consolidated_billing',
+              'payment_due_days', 'sales_tax_name', 'sales_tax_percent',
+              'sales_tax_number', 'extra', 'meta']
     list_display = ['__unicode__', 'customer_reference',
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'first_name', 'last_name', 'company',

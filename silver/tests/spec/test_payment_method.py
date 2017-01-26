@@ -73,18 +73,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.post(url, data={
             'payment_processor_name': manual_processor
         }, format='json')
-        processor_url = reverse('payment-processor-detail', kwargs={
-            'processor_name': 'manual'
-        })
-        payment_processor = self.client.get(processor_url, format='json')
-
-        url = reverse('payment-method-list', kwargs={
-            'customer_pk': self.customer.pk
-        })
-
-        response = self.client.post(url, data={
-            'payment_processor': payment_processor.data,
-        }, format='json')
 
         payment_method = PaymentMethod.objects.get(customer=self.customer)
         self.assert_get_data(response.data['url'], payment_method)
