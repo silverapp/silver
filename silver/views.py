@@ -16,7 +16,6 @@ from dal import autocomplete
 
 from django.db.models import Q
 from django.utils import timezone
-from django.views.generic import View
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -80,7 +79,9 @@ def pay_transaction_view(request, transaction, expired=None):
                           'document': transaction.document,
                       })
 
-    view = transaction.payment_processor.get_view(transaction, request)
+    payment_processor = transaction.payment_method.get_payment_processor()
+
+    view = payment_processor.get_view(transaction, request)
     if not view or not transaction.can_be_consumed:
         raise NotFound
 
@@ -91,32 +92,6 @@ def pay_transaction_view(request, transaction, expired=None):
         return view(request)
     except NotImplementedError:
         raise NotFound
-
-
-class GenericTransactionView(View):
-    form = None
-    template = None
-    transaction = None
-
-    def get_context_data(self):
-        return {
-            'payment_method': self.transaction.payment_method,
-            'transaction': self.transaction,
-            'document': self.transaction.document,
-            'customer': self.transaction.customer,
-            'provider': self.transaction.provider,
-            'entries': list(self.transaction.document._entries),
-            'form': self.form
-        }
-
-    def render_template(self):
-        return self.template.render(context=self.get_context_data())
-
-    def get(self, request):
-        return HttpResponse(self.render_template())
-
-    def post(self, request):
-        raise MethodNotAllowed
 
 
 class DocumentAutocomplete(autocomplete.Select2QuerySetView):

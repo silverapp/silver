@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from jsonfield import JSONField
-from django_fsm import FSMField, transition
 from cryptography.fernet import InvalidToken, Fernet
 from model_utils.managers import InheritanceManager
 
@@ -21,9 +20,14 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
-from silver.models.payment_processors.fields import PaymentProcessorField
-
 from .billing_entities import Customer
+
+from silver import payment_processors
+
+
+def _payment_processors():
+    for name in settings.PAYMENT_PROCESSORS.keys():
+        yield (name, name)
 
 
 class PaymentMethodInvalid(Exception):
@@ -31,7 +35,7 @@ class PaymentMethodInvalid(Exception):
 
 
 class PaymentMethod(models.Model):
-    payment_processor = PaymentProcessorField(
+    payment_processor = models.CharField(choices=_payment_processors(),
         blank=False, null=False, max_length=256
     )
     customer = models.ForeignKey(Customer)
@@ -55,6 +59,9 @@ class PaymentMethod(models.Model):
             except AttributeError:
                 pass
 
+    def get_payment_processor(self):
+        return payment_processors.get_instance(self.payment_processor)
+
     def delete(self, using=None):
         if not self.state == self.States.Uninitialized:
             self.remove()
@@ -75,11 +82,12 @@ class PaymentMethod(models.Model):
 
     @property
     def allowed_currencies(self):
-        return self.payment_processor.allowed_currencies
+        return self.get_payment_processor().allowed_currencies
 
     @property
     def public_data(self):
         return {}
 
     def __unicode__(self):
-        return u'{} - {}'.format(self.customer, self.payment_processor)
+        return u'{} - {}'.format(self.customer,
+                                 self.get_payment_processor_display())

@@ -17,8 +17,6 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 import django.utils.timezone
-import silver.models.payment_processors.fields
-import silver.models.payment_processors.manual
 import django_fsm
 import jsonfield.fields
 
@@ -34,7 +32,8 @@ class Migration(migrations.Migration):
             name='PaymentMethod',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('payment_processor', silver.models.payment_processors.fields.PaymentProcessorField(max_length=64, choices=[(silver.models.payment_processors.manual.ManualProcessor(), b'Manual')])),
+                ('payment_processor', models.CharField(max_length=64,
+                                                       choices=[(b'manual', b'manual')])),
                 ('added_at', models.DateTimeField(default=django.utils.timezone.now)),
                 ('verified_at', models.DateTimeField(null=True, blank=True)),
                 ('data', jsonfield.fields.JSONField(null=True, blank=True)),

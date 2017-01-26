@@ -12,4 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .managers import PaymentProcessorManager
+from .base import PaymentProcessorBase, get_instance, get_all_instances
+from .manual import ManualProcessor

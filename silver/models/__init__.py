@@ -17,6 +17,5 @@ from documents import Proforma, Invoice, BillingDocumentBase, DocumentEntry
 from plans import Plan, MeteredFeature
 from product_codes import ProductCode
 from subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog
-from payment_processors import PaymentProcessorManager
 from payment_methods import PaymentMethod
 from transactions import Transaction

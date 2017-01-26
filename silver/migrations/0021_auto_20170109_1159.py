@@ -16,7 +16,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import silver.models.payment_processors.fields
 
 
 class Migration(migrations.Migration):
@@ -29,6 +28,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='paymentmethod',
             name='payment_processor',
-            field=silver.models.payment_processors.fields.PaymentProcessorField(max_length=256),
+            field=models.CharField(max_length=256),
         ),
     ]

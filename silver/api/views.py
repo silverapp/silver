@@ -35,7 +35,6 @@ from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            DocumentEntry, Proforma, BillingDocumentBase,
                            PaymentMethod, Transaction)
 from silver.models.documents.document import Document
-from silver.models.payment_processors.managers import PaymentProcessorManager
 from silver.api.serializers import (MFUnitsLogSerializer,
                                     CustomerSerializer, SubscriptionSerializer,
                                     SubscriptionDetailSerializer,
@@ -51,7 +50,7 @@ from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 InvoiceFilter, ProformaFilter,
                                 PaymentMethodFilter, TransactionFilter,
                                 DocumentFilter)
-
+from silver import payment_processors
 
 logger = logging.getLogger(__name__)
 
@@ -800,16 +799,7 @@ class PaymentProcessorList(ListAPIView):
     ordering = ('-name', )
 
     def get_queryset(self):
-        return PaymentProcessorManager.all_instances()
-
-
-class ProviderPaymentProcessorList(ListAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = PaymentProcessorSerializer
-    ordering = ('-name', )
-
-    def get_queryset(self):
-        return PaymentProcessorManager.all_instances()
+        return payment_processors.get_all_instances()
 
 
 class PaymentProcessorDetail(RetrieveAPIView):
@@ -820,8 +810,8 @@ class PaymentProcessorDetail(RetrieveAPIView):
     def get_object(self):
         processor_name = self.kwargs.get('processor_name', '')
         try:
-            return PaymentProcessorManager.get_instance(processor_name)
-        except PaymentProcessorManager.DoesNotExist:
+            return payment_processors.get_instance(processor_name)
+        except (ImportError, KeyError):
             raise Http404
 
 

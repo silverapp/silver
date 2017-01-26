@@ -12,17 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from django.template.loader import select_template
+from django.conf import settings
 from django.utils.deconstruct import deconstructible
+from django.utils.module_loading import import_string
+from django.utils.text import slugify
+from django.template.loader import select_template
+
+
+def get_instance(name):
+    data = settings.PAYMENT_PROCESSORS[name]
+    klass = import_string(data['class'])
+    kwargs = data.get('setup_data', {})
+    return klass(name, **kwargs)
+
+
+def get_all_instances():
+    choices = []
+    for processor_import_path in settings.PAYMENT_PROCESSORS.keys():
+        choices.append(get_instance(processor_import_path))
+    return choices
 
 
 @deconstructible
 class PaymentProcessorBase(object):
-    reference = None
     form_class = None
+    template_slug = None
     payment_method_class = None
     transaction_view_class = None
     allowed_currencies = ()
+
+    def __init__(self, name):
+        self.name = name
 
     def get_view(self, transaction, request, **kwargs):
         kwargs.update({
@@ -41,13 +61,16 @@ class PaymentProcessorBase(object):
         return form
 
     def get_template(self, transaction):
+        provider = transaction.document.provider
+        provider_slug = slugify(provider.company or provider.name)
+
         template = select_template([
-            'forms/{}/{}/transaction_form.html'.format(
-                transaction.document.provider,
-                transaction.payment_method.payment_processor.reference
+            'forms/{}/{}_transaction_form.html'.format(
+                self.template_slug,
+                provider_slug
             ),
             'forms/{}/transaction_form.html'.format(
-                transaction.payment_method.payment_processor.reference
+                self.template_slug
             ),
             'forms/transaction_form.html'
         ])
@@ -72,10 +95,10 @@ class PaymentProcessorBase(object):
         return self.reference
 
     def __unicode__(self):
-        return unicode(self.display_name)
+        return unicode(self.name)
 
     def __str__(self):
-        return str(self.display_name)
+        return str(self.name)
 
     def __eq__(self, other):
         return self.__class__ is other.__class__

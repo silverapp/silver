@@ -17,9 +17,9 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from silver.models import PaymentProcessorManager
+from silver import payment_processors
 from silver.models import Transaction
-from silver.models.payment_processors.mixins import PaymentProcessorTypes
+from silver.payment_processors.mixins import PaymentProcessorTypes
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        payment_processors = [
-            pp.reference for pp in PaymentProcessorManager.all_instances()
-            if pp.type == PaymentProcessorTypes.Triggered
-        ]
-
         executable_transactions = Transaction.objects.filter(
             state=Transaction.States.Initial,
-            payment_method__payment_processor__in=payment_processors
         )
 
         if options['transactions']:
@@ -56,7 +50,10 @@ class Command(BaseCommand):
 
         for transaction in executable_transactions:
             try:
-                transaction.payment_processor.execute_transaction(transaction)
+                payment_processor = transaction.payment_method.get_payment_processor()
+                if payment_processor.type != PaymentProcessorTypes.Triggered:
+                    continue
+                payment_processor.execute_transaction(transaction)
             except Exception:
                 logger.error('Encountered exception while executing transaction '
                              'with id=%s.', transaction.id, exc_info=True)

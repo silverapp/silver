@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from silver.views import GenericTransactionView
-from silver.forms import GenericTransactionForm
-
-from .base import PaymentProcessorBase
-from .mixins import ManualProcessorMixin
+from django.forms import Form
 
 
-class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):
-    reference = 'manual'
-    transaction_view_class = GenericTransactionView
-    form_class = GenericTransactionForm
+class GenericTransactionForm(Form):
+    def __init__(self, payment_method, transaction, request=None, *args, **kwargs):
+        self.payment_method = payment_method
+        self.transaction = transaction
+        self.request = request
+
+        super(GenericTransactionForm, self).__init__(*args, **kwargs)
+

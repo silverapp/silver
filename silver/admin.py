@@ -32,7 +32,7 @@ from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
 from django.db.models import BLANK_CHOICE_DASH
-from django.forms import ChoiceField, DecimalField
+from django.forms import ChoiceField
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
 from django.core.urlresolvers import reverse
@@ -41,7 +41,6 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.http import HttpResponse
 
-from silver.models import PaymentProcessorManager
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
 
@@ -998,21 +997,7 @@ class TransactionAdmin(ModelAdmin):
     related_proforma.short_description = 'Proforma'
 
 
-class PaymentMethodForm(forms.ModelForm):
-    # thanks Django
-    payment_processor = ChoiceField(
-        PaymentProcessorManager.get_choices()
-    )
-
-    class Meta:
-        model = PaymentMethod
-
-        fields = ('customer', 'payment_processor', 'added_at', 'data',
-                  'verified', 'enabled')
-
-
 class PaymentMethodAdmin(ModelAdmin):
-    form = PaymentMethodForm
     list_display = ('customer', 'payment_processor', 'added_at', 'verified',
                     'enabled')
 
