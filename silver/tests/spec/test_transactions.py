@@ -57,33 +57,11 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
-            expected = OrderedDict([
-                ('id', unicode(transaction.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction.amount)),
-                ('currency', unicode(transaction.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice.pk])),
-                ('can_be_consumed', transaction.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
-                ('valid_until', None),
-                ('created_at', transaction.created_at),
-            ])
-
             url = reverse('transaction-detail',
                           kwargs={'customer_pk': customer.pk,
                                   'transaction_uuid': transaction.uuid})
             response = self.client.get(url, format='json')
 
-            expected['updated_at'] = response.data['updated_at']
             self.assertEqual(response.data, dict(expected))
 
     def test_list_transactions(self):
@@ -98,60 +76,10 @@ class TestTransactionEndpoint(APITestCase):
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
 
-            expected_t1 = OrderedDict([
-                ('id', unicode(transaction_1.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_1.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider_1.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction_1.amount)),
-                ('currency', unicode(transaction_1.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction_1.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma_1.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice_1.pk])),
-                ('can_be_consumed', transaction_1.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction_1, None)),
-                ('valid_until', None)
-            ])
-
-            transaction_2 = TransactionFactory.create(payment_method=payment_method)
-            invoice_2 = transaction_2.invoice
-            proforma_2 = transaction_2.proforma
-            provider_2 = invoice_2.provider
-            expected_t2 = OrderedDict([
-                ('id', unicode(transaction_2.uuid)),
-                ('url', reverse('transaction-detail',
-                                kwargs={'customer_pk': customer.id, 'transaction_uuid': transaction_2.uuid})),
-                ('customer', reverse('customer-detail', args=[customer.pk])),
-                ('provider', reverse('provider-detail', args=[provider_2.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction_2.amount)),
-                ('currency', unicode(transaction_2.currency)),
-                ('currency_rate_date', None),
-                ('state', unicode(transaction_2.state)),
-                ('proforma', reverse('proforma-detail', args=[proforma_2.pk])),
-                ('invoice', reverse('invoice-detail', args=[invoice_2.pk])),
-                ('can_be_consumed', transaction_2.can_be_consumed),
-                ('payment_processor', reverse('payment-processor-detail', args=[payment_method.payment_processor.reference])),
-                ('payment_method', reverse('payment-method-detail', kwargs={'customer_pk': customer.id,
-                                                                            'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction_2, None)),
-                ('valid_until', None)
-            ])
-
             url = reverse('transaction-list',
                           kwargs={'customer_pk': customer.pk})
 
             response = self.client.get(url, format='json')
-
-            expected_t1['updated_at'] = response.data[0]['updated_at']
-            expected_t1['created_at'] = transaction_1.created_at
-
-            expected_t2['updated_at'] = response.data[1]['updated_at']
-            expected_t2['created_at'] = transaction_2.created_at
 
             self.assertEqual(response.data[0], expected_t1)
             self.assertEqual(response.data[1], expected_t2)
