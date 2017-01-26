@@ -438,16 +438,21 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         view_name='payment-method-transaction-list', source='*')
     additional_data = serializers.JSONField(required=False, write_only=True)
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
-    payment_processor_details = serializers.SerializerMethodField()
+    payment_processor_name = serializers.ModelField(
+        model_field=PaymentMethod()._meta.get_field('payment_processor'),
+        source="payment_processor",
+        label="Payment Processor"
+    )
+    payment_processor = serializers.SerializerMethodField()
 
-    def get_payment_processor_details(self, obj):
+    def get_payment_processor(self, obj):
         return PaymentProcessorSerializer(obj.get_payment_processor(),
                                           context=self.context).data
 
     class Meta:
         model = PaymentMethod
-        fields = ('url', 'transactions', 'customer', 'payment_processor',
-                  'payment_processor_details', 'added_at', 'verified',
+        fields = ('url', 'transactions', 'customer', 'payment_processor_name',
+                  'payment_processor', 'added_at', 'verified',
                   'enabled', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
@@ -470,7 +475,10 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
         return attrs
 
-    def validate_payment_processor(self, value):
+    def validate_payment_processor_name(self, value):
+        if value not in PaymentMethod.PaymentProcessors.as_list():
+            raise serializers.ValidationError('"{}" is not a valid '
+                                              'choice'.format(value))
         if self.instance and value != self.instance.payment_processor:
             message = "This field may not be modified."
             raise serializers.ValidationError(message)

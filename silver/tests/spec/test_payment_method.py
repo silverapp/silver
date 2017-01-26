@@ -71,7 +71,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         })
 
         response = self.client.post(url, data={
-            'payment_processor': manual_processor
+            'payment_processor_name': manual_processor
         }, format='json')
 
         payment_method = PaymentMethod.objects.get(customer=self.customer)
@@ -127,12 +127,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.get(url, format='json')
 
         data = response.data
-        data['payment_processor'] = triggered_processor
+        data['payment_processor_name'] = triggered_processor
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            'payment_processor': [u'This field may not be modified.']
+            'payment_processor_name': [u'This field may not be modified.']
         })
 
     def test_put_detail(self):
@@ -160,7 +160,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         })
 
         response = self.client.post(url, data={
-            'payment_processor': manual_processor,
+            'payment_processor_name': manual_processor,
             'verified': False,
             'additional_data': '{"random": "value"}'
         }, format='json')
@@ -206,7 +206,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         })
 
         response = self.client.post(url, data={
-            'payment_processor': manual_processor,
+            'payment_processor_name': manual_processor,
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -220,7 +220,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.post(url, data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            'payment_processor': ['This field is required.']})
+            'payment_processor_name': ['This field is required.']})
 
     def test_permissions(self):
         self.assertEqual(PaymentMethodList.permission_classes,

@@ -25,17 +25,22 @@ from .billing_entities import Customer
 from silver import payment_processors
 
 
-def _payment_processors():
-    for name in settings.PAYMENT_PROCESSORS.keys():
-        yield (name, name)
-
-
 class PaymentMethodInvalid(Exception):
     pass
 
 
 class PaymentMethod(models.Model):
-    payment_processor = models.CharField(choices=_payment_processors(),
+    class PaymentProcessors:
+        @classmethod
+        def as_choices(cls):
+            for name in settings.PAYMENT_PROCESSORS.keys():
+                yield (name, name)
+
+        @classmethod
+        def as_list(cls):
+            return [name for name in settings.PAYMENT_PROCESSORS.keys()]
+
+    payment_processor = models.CharField(choices=PaymentProcessors.as_choices(),
         blank=False, null=False, max_length=256
     )
     customer = models.ForeignKey(Customer)

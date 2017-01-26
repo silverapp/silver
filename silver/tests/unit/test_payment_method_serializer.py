@@ -47,8 +47,8 @@ class TestPaymentMethodSerializer(TestCase):
             ('transactions', "http://testserver/customers/{}/payment_methods/{}/transactions/".format(payment_method.customer.pk,
                                                                                 payment_method.pk)),
             ('customer', 'http://testserver/customers/{}/'.format(payment_method.customer.pk)),
-            ('payment_processor', manual_processor),
-            ('payment_processor_details', OrderedDict([
+            ('payment_processor_name', manual_processor),
+            ('payment_processor', OrderedDict([
                 ("type", ManualProcessor.type),
                 ("name", manual_processor),
                 ("allowed_currencies", []),
