@@ -42,7 +42,6 @@ def invoice_pdf(request, invoice_id):
     return HttpResponseRedirect(invoice.pdf.url)
 
 
-@api_view()
 @csrf_exempt
 @get_transaction_from_token
 def complete_payment_view(request, transaction, expired=None):
@@ -64,7 +63,6 @@ def complete_payment_view(request, transaction, expired=None):
                       })
 
 
-@api_view()
 @csrf_exempt
 @get_transaction_from_token
 def pay_transaction_view(request, transaction, expired=None):
