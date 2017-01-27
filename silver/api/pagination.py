@@ -13,13 +13,14 @@
 # limitations under the License.
 
 
+from rest_framework.settings import api_settings
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.utils.urls import replace_query_param, remove_query_param
 
 
 class LinkHeaderPagination(PageNumberPagination):
-    page_size = 30
+    page_size = api_settings.PAGE_SIZE or 30
     page_size_query_param = 'page_size'
     max_page_size = 100
 
