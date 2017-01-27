@@ -573,12 +573,15 @@ class BillingDocumentAdmin(ModelAdmin):
     list_filter = ('provider__company', 'state', DueDateFilter)
 
     common_fields = ['company', 'address_1', 'address_2', 'city',
-                     'country', 'zip_code', 'name', 'state']
+                     'country', 'zip_code', 'state']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields] + ['email']
+                              for field in common_fields + ['email',
+                                                            'first_name',
+                                                            'last_name']]
     provider_search_fields = ['provider__{field}'.format(field=field)
-                              for field in common_fields] + ['display_email',
-                                                             'notification_email']
+                              for field in common_fields + ['name',
+                                                            'display_email',
+                                                            'notification_email']]
     search_fields = (customer_search_fields + provider_search_fields +
                      ['series', 'number'])
 
