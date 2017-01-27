@@ -30,7 +30,8 @@ class Document(models.Model):
             'proforma_id': self.id
         }
 
-        entries = DocumentEntry.objects.filter(**data)
+        entries = DocumentEntry.objects.filter(**data)\
+            .select_related('invoice', 'proforma')
         entries_total = [Decimal(entry.total) for entry in entries.all()]
 
         return sum(entries_total)
