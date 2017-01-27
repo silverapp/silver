@@ -121,6 +121,6 @@ class InvoiceAutocomplete(DocumentAutocomplete):
 
 class ProformaAutocomplete(DocumentAutocomplete):
     def __init__(self, **kwargs):
-        self.model = Invoice
+        self.model = Proforma
 
         super(ProformaAutocomplete, self).__init__(**kwargs)
