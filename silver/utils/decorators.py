@@ -14,8 +14,7 @@
 from uuid import UUID
 
 import jwt
-
-from rest_framework.exceptions import NotFound
+from django.http import Http404
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -37,7 +36,7 @@ def get_transaction_from_token(view):
         try:
             uuid = UUID(transaction_uuid, version=4)
         except ValueError:
-            raise NotFound
+            raise Http404
 
         return view(request, get_object_or_404(Transaction, uuid=uuid), expired)
     return decorator
