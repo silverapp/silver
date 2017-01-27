@@ -268,9 +268,6 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     currency = factory.SelfAttribute('invoice.transaction_currency')
     state = Transaction.States.Initial
 
-    created_at = '2017-01-24T12:46:07.590839Z'
-    updated_at = '2017-01-24T12:46:07.590839Z'
-
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         kwargs['invoice'].proforma = kwargs['proforma']
