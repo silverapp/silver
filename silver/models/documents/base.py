@@ -94,8 +94,20 @@ class BillingDocumentQuerySet(models.QuerySet):
         )
 
 
+class BillingDocumentManager(models.Manager):
+    def get_queryset(self):
+        queryset = super(BillingDocumentManager, self).get_queryset()
+        queryset = queryset.select_related('customer', 'provider')
+        if (self.model.kind == 'Invoice'):
+            queryset = queryset.prefetch_related('invoice_entries__product_code')
+        if (self.model.kind == 'Proforma'):
+            queryset = queryset.prefetch_related('proforma_entries__product_code',
+                                                 'proforma_entries__invoice')
+        return queryset
+
+
 class BillingDocumentBase(models.Model):
-    objects = Manager.from_queryset(BillingDocumentQuerySet)()
+    objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 
     class STATES(object):
         DRAFT = 'draft'

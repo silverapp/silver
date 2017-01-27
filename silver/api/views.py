@@ -457,8 +457,8 @@ class InvoiceListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()\
-        .select_related('customer', 'provider', 'proforma')\
-        .prefetch_related('transaction_set', 'invoice_entries__product_code')
+        .select_related('proforma')\
+        .prefetch_related('transaction_set')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = InvoiceFilter
 
@@ -651,9 +651,8 @@ class ProformaListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()\
-        .select_related('customer', 'provider', 'invoice')\
-        .prefetch_related('transaction_set', 'proforma_entries__product_code',
-                          'proforma_entries__invoice')
+        .select_related('invoice')\
+        .prefetch_related('transaction_set')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = ProformaFilter
 
