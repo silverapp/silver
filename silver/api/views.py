@@ -456,7 +456,9 @@ class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 class InvoiceListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
-    queryset = Invoice.objects.all()
+    queryset = Invoice.objects.all()\
+        .select_related('customer', 'provider', 'proforma')\
+        .prefetch_related('transaction_set', 'invoice_entries__product_code')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = InvoiceFilter
 
@@ -648,7 +650,10 @@ class InvoiceStateHandler(APIView):
 class ProformaListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
-    queryset = Proforma.objects.all()
+    queryset = Proforma.objects.all()\
+        .select_related('customer', 'provider', 'invoice')\
+        .prefetch_related('transaction_set', 'proforma_entries__product_code',
+                          'proforma_entries__invoice')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = ProformaFilter
 
