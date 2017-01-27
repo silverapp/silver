@@ -545,6 +545,12 @@ class TestTransactionEndpoint(APITestCase):
                 response = self.client.get(url_method_someprocessor, format='json')
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+                transaction1.refresh_from_db()
+                transaction_data_1['updated_at'] = response.data[0]['updated_at']
+
+                transaction1.refresh_from_db()
+                transaction_data_2['updated_at'] = response.data[1]['updated_at']
+
                 self.assertEqual(response.data[0], transaction_data_1)
                 self.assertEqual(response.data[1], transaction_data_2)
 
@@ -587,6 +593,9 @@ class TestTransactionEndpoint(APITestCase):
 
                 response = self.client.get(url_with_filterable_data, format='json')
 
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
 
@@ -598,6 +607,9 @@ class TestTransactionEndpoint(APITestCase):
                 url_no_output = url + '?max_amount=10'
 
                 response = self.client.get(url_with_filterable_data, format='json')
+
+                transaction.refresh_from_db()
+                transaction_data['updated_at'] = response.data[0]['updated_at']
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data[0], transaction_data)
@@ -637,6 +649,7 @@ class TestTransactionEndpoint(APITestCase):
                                                    'payment_method_id': payment_method.id})),
                 ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
                 ('valid_until', None),
+
                 ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),
                 ('created_at', transaction.created_at.isoformat()[:-6] + 'Z')
             ])

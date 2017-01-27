@@ -127,6 +127,7 @@ class BillingDocumentFilter(FilterSet):
 class DocumentFilter(FilterSet):
     state = CharFilter(name='state', lookup_type='iexact')
     number = NumberFilter(name='number', lookup_type='iexact')
+    customer = NumberFilter(name='customer__pk', lookup_type='iexact')
     customer_name = CharFilter(name='customer__name', lookup_type='icontains')
     customer_company = CharFilter(name='customer__company',
                                   lookup_type='icontains')
