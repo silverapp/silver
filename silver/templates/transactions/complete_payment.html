@@ -21,41 +21,27 @@
     <body>
         <div class="container">
             {% block content%}
-
-                {% if not expired %}
-
-                    {% block transaction_state %}
-                        <div>
-                            <h2>
-                              {% if transaction.state == transaction.States.Failed %}
-                                Payment failed for
-                              {% elif transaction.state == transaction.States.Pending %}
-                                Payment pending for
-                              {% elif transaction.state == transaction.States.Initial %}
-                                Payment is still initializing for
-                              {% else %}
-                                Payment succeded for
-                              {% endif %}
-                            </h2>
-                        </div>
-                    {% endblock %}
-
-                {% else %}
-
-                    {% block transaction_expired %}
+                {% block transaction_state %}
+                    <div>
                         <h2>
-                            Transaction expired for
+                          {% if transaction.state == transaction.States.Failed %}
+                            Payment failed for
+                          {% elif transaction.state == transaction.States.Pending %}
+                            Payment pending for
+                          {% elif transaction.state == transaction.States.Initial %}
+                            Payment is still initializing for
+                          {% else %}
+                            Payment succeded for
+                          {% endif %}
                         </h2>
-                    {% endblock %}
-
-                {% endif %}
+                    </div>
+                {% endblock %}
 
                 {% block document %}
                     <div>
                         <h3>{{ document.kind }} {{ document.series }}-{{ document.number }}</h3>
                     </div>
                 {% endblock %}
-
             {% endblock%}
         </div>
     </body>
