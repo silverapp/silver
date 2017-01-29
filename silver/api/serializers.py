@@ -566,17 +566,16 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
 
     transactions = serializers.SerializerMethodField()
 
-    def get_transactions(self, obj):
+    def get_transactions(self, document):
         transactions = None
-        if obj.kind == 'invoice':
-            transactions = Transaction.objects.filter(invoice_id=obj.id)
-        elif obj.kind == 'proforma':
-            transactions = Transaction.objects.filter(proforma_id=obj.id)
+
+        if document.kind == 'invoice':
+            transactions = Transaction.documentects.filter(invoice_id=document.id)
+        elif document.kind == 'proforma':
+            transactions = Transaction.documentects.filter(proforma_id=document.id)
+
         return TransactionSerializer(transactions, many=True,
                                      context=self.context).data
-
-    # transactions = TransactionSerializer(many=True, read_only=True,
-    #                                      queryset=Transaction.objects.all())
 
     class Meta:
         model = Document
