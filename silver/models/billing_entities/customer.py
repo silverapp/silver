@@ -30,7 +30,7 @@ PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 class Customer(BaseBillingEntity):
     class Meta:
         index_together = (('first_name', 'last_name', 'company'),)
-        ordering = ['last_name', 'first_name', 'company']
+        ordering = ['first_name', 'last_name', 'company']
 
     first_name = models.CharField(
         max_length=128,

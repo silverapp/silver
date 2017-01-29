@@ -103,7 +103,10 @@ class DocumentAutocomplete(autocomplete.Select2QuerySetView):
                 query = (Q(series=q[0]), Q(number=q[1]))
             else:
                 query = (Q(series__istartswith=self.q) |
-                         Q(number__istartswith=self.q))
+                         Q(number__istartswith=self.q) |
+                         Q(customer__first_name__icontains=self.q) |
+                         Q(customer__last_name__icontains=self.q) |
+                         Q(customer__company__icontains=self.q))
             queryset = queryset.filter(query)
 
         return queryset
@@ -118,6 +121,6 @@ class InvoiceAutocomplete(DocumentAutocomplete):
 
 class ProformaAutocomplete(DocumentAutocomplete):
     def __init__(self, **kwargs):
-        self.model = Invoice
+        self.model = Proforma
 
         super(ProformaAutocomplete, self).__init__(**kwargs)
