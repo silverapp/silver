@@ -570,9 +570,9 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
         transactions = None
 
         if document.kind == 'invoice':
-            transactions = Transaction.documentects.filter(invoice_id=document.id)
+            transactions = Transaction.objects.filter(invoice_id=document.id)
         elif document.kind == 'proforma':
-            transactions = Transaction.documentects.filter(proforma_id=document.id)
+            transactions = Transaction.objects.filter(proforma_id=document.id)
 
         return TransactionSerializer(transactions, many=True,
                                      context=self.context).data
