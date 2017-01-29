@@ -41,7 +41,12 @@ class TestPaymentUrls(APITestCase):
             url = get_payment_url(transaction, None)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content,
+                         render_to_string('transactions/expired_payment.html', {
+                             'document': transaction.document,
+                         }))
 
     def test_pay_transaction_view_invalid_state(self):
         transaction = TransactionFactory.create(state=Transaction.States.Settled)
@@ -50,7 +55,6 @@ class TestPaymentUrls(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.content,
                          render_to_string('transactions/complete_payment.html', {
-                             'expired': False,
                              'transaction': transaction,
                              'document': transaction.document,
                          }))
@@ -61,7 +65,11 @@ class TestPaymentUrls(APITestCase):
                                                 valid_until=last_year)
 
         response = self.client.get(get_payment_url(transaction, None))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content,
+                         render_to_string('transactions/expired_payment.html', {
+                             'document': transaction.document,
+                         }))
 
     def test_pay_transaction_view_missing_view(self):
         last_year = timezone.now() - timedelta(days=365)
@@ -74,7 +82,12 @@ class TestPaymentUrls(APITestCase):
         with patch('silver.tests.fixtures.ManualProcessor.get_view',
                    new=get_view):
             response = self.client.get(get_payment_url(transaction, None))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content,
+                         render_to_string('transactions/expired_payment.html', {
+                             'document': transaction.document,
+                         }))
 
     def test_pay_transaction_not_implemented_get_call(self):
         last_year = timezone.now() - timedelta(days=365)
@@ -88,7 +101,11 @@ class TestPaymentUrls(APITestCase):
                    new=get_view):
             response = self.client.get(get_payment_url(transaction, None))
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.content,
+                         render_to_string('transactions/expired_payment.html', {
+                             'document': transaction.document,
+                         }))
 
     def test_complete_payment_view_with_return_url(self):
         transaction = TransactionFactory.create(state=Transaction.States.Settled)
