@@ -14,9 +14,11 @@
 
 import json
 
-from django.test import override_settings
-from freezegun import freeze_time
 from mock import patch
+from freezegun import freeze_time
+
+from django.test import override_settings
+
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
