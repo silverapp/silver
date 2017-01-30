@@ -153,8 +153,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            u'non_field_errors': [u"'additional_data' must not be given after "
-                                  u"the payment method has been enabled once."]
+            'non_field_errors': [u"You can't reuse a canceled payment method."]
         })
 
     def test_put_detail(self):

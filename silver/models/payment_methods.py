@@ -115,7 +115,8 @@ class PaymentMethod(models.Model):
         super(PaymentMethod, self).save(**kwargs)
 
     def clean(self):
-        if hasattr(self, '_old') and self._old.canceled and not self.canceled:
+        old_instance = get_object_or_None(PaymentMethod, pk=self.pk)
+        if old_instance and old_instance.canceled and not self.canceled:
             raise ValidationError("You can't reuse a canceled payment method.")
 
     @property
@@ -129,8 +130,3 @@ class PaymentMethod(models.Model):
     def __unicode__(self):
         return u'{} - {}'.format(self.customer,
                                  self.get_payment_processor_display())
-
-
-@receiver(pre_save, sender=PaymentMethod)
-def pre_payment_method_save(sender, instance=None, **kwargs):
-    setattr(instance, '_old', get_object_or_None(PaymentMethod, pk=instance.pk))
