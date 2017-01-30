@@ -34,6 +34,10 @@
                             Payment succeded for
                           {% endif %}
                         </h2>
+                        {% if fail_data %}
+                        <p>fail_data.message</p>
+                        <p>fail_data.success_message</p>
+                        {% endif %}
                     </div>
                 {% endblock %}
 

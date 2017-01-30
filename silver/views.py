@@ -24,6 +24,7 @@ from django.http import Http404, HttpResponseRedirect
 
 from silver.models.transactions import Transaction
 from silver.models.documents import Proforma, Invoice
+from silver.models.transactions.codes import FAIL_CODES
 from silver.payment_processors import get_instance
 from silver.utils.decorators import get_transaction_from_token
 
@@ -57,6 +58,7 @@ def complete_payment_view(request, transaction, expired=None):
                       {
                           'transaction': transaction,
                           'document': transaction.document,
+                          'fail_data': FAIL_CODES.get(transaction.fail_code),
                       })
 
 
@@ -74,6 +76,7 @@ def pay_transaction_view(request, transaction, expired=None):
                       {
                           'transaction': transaction,
                           'document': transaction.document,
+                          'fail_data': FAIL_CODES.get(transaction.fail_code)
                       })
 
     payment_processor = transaction.payment_method.get_payment_processor()
