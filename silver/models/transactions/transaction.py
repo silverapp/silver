@@ -277,13 +277,13 @@ def _sync_transaction_state_with_document(transaction, target):
 def create_transaction_for_document(document):
     # get a usable, recurring payment_method for the customer
     payment_methods = PaymentMethod.objects.filter(
-        enabled=True,
+        canceled=False,
         verified=True,
         customer=document.customer
     )
     for payment_method in payment_methods:
         if (payment_method.verified and
-                payment_method.enabled):
+                not payment_method.canceled):
             # create transaction
             kwargs = {
                 'invoice': isinstance(document, Invoice) and document or document.related_document,

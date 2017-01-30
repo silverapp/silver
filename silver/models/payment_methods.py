@@ -13,16 +13,20 @@
 # limitations under the License.
 
 from jsonfield import JSONField
-from cryptography.fernet import InvalidToken, Fernet
+from annoying.functions import get_object_or_None
 from model_utils.managers import InheritanceManager
+from cryptography.fernet import InvalidToken, Fernet
 
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-
-from .billing_entities import Customer
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
+from django.core.exceptions import ValidationError
 
 from silver import payment_processors
+
+from .billing_entities import Customer
 
 
 class PaymentMethodInvalid(Exception):
@@ -47,7 +51,7 @@ class PaymentMethod(models.Model):
     data = JSONField(blank=True, null=True, default={})
 
     verified = models.BooleanField(default=False)
-    enabled = models.BooleanField(default=True)
+    canceled = models.BooleanField(default=False)
 
     objects = InheritanceManager()
 
@@ -84,6 +88,10 @@ class PaymentMethod(models.Model):
         except InvalidToken:
             return None
 
+    def clean(self):
+        if self._old and self._old.canceled and not self.canceled:
+            raise ValidationError("You can't reuse a canceled payment method.")
+
     @property
     def allowed_currencies(self):
         return self.get_payment_processor().allowed_currencies
@@ -95,3 +103,8 @@ class PaymentMethod(models.Model):
     def __unicode__(self):
         return u'{} - {}'.format(self.customer,
                                  self.get_payment_processor_display())
+
+
+@receiver(pre_save, sender=PaymentMethod)
+def pre_payment_method_save(sender, instance=None, **kwargs):
+    setattr(instance, '_old', get_object_or_None(PaymentMethod, pk=instance.pk))

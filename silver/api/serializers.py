@@ -402,7 +402,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor_name',
                   'payment_processor', 'added_at', 'verified',
-                  'enabled', 'additional_data')
+                  'canceled', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }
@@ -412,7 +412,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
         additional_data = attrs.get('additional_data')
 
-        if self.instance and additional_data and not self.instance.enabled:
+        if self.instance and additional_data and self.instance.canceled:
             message = "'additional_data' must not be given after the " \
                       "payment method has been enabled once."
             raise serializers.ValidationError(message)
