@@ -863,6 +863,30 @@ class PaymentMethodDetail(RetrieveUpdateAPIView):
         )
 
 
+class PaymentMethodAction(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        payment_method = self.get_object(**kwargs)
+        action_to_execute = getattr(payment_method, kwargs.get('requested_action'),
+                                    None)
+
+        if not action_to_execute:
+            raise Http404
+
+        action_to_execute()
+
+    def get_object(self, **kwargs):
+        payment_method_id = kwargs.get('payment_method_id')
+        customer_pk = kwargs.get('customer_pk')
+
+        return get_object_or_404(
+            PaymentMethod.objects.all().select_subclasses(),
+            id=payment_method_id,
+            customer__pk=customer_pk
+        )
+
+
 class TransactionList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = TransactionSerializer

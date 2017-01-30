@@ -110,8 +110,12 @@ class PaymentMethod(models.Model):
         self.canceled = True
         self.save()
 
+    def save(self, **kwargs):
+        self.clean()
+        super(PaymentMethod, self).save(**kwargs)
+
     def clean(self):
-        if self._old and self._old.canceled and not self.canceled:
+        if hasattr(self, '_old') and self._old.canceled and not self.canceled:
             raise ValidationError("You can't reuse a canceled payment method.")
 
     @property
