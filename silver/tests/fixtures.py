@@ -40,7 +40,7 @@ class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):
 class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
     transaction_view_class = GenericTransactionView
 
-    def update_transaction_status(self, transaction):
+    def fetch_transaction_status(self, transaction):
         pass
 
     def execute_transaction(self, transaction):
