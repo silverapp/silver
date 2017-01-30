@@ -48,7 +48,8 @@ class PaymentProcessorBase(object):
         kwargs.update({
             'form': self.get_form(transaction, request),
             'template': self.get_template(transaction),
-            'transaction': transaction
+            'transaction': transaction,
+            'request': request
         })
         return self.transaction_view_class.as_view(**kwargs)
 

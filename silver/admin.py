@@ -895,7 +895,8 @@ class TransactionAdmin(ModelAdmin):
         return self.form.Meta.readonly_fields
 
     def get_pay_url(self, obj):
-        return u'<a href="%s">%s</a>' % (get_payment_url(obj, None), obj.payment_processor)
+        return u'<a href="%s">%s</a>' % (get_payment_url(obj, None),
+                                         obj.payment_processor)
 
     get_pay_url.allow_tags = True
     get_pay_url.short_description = 'Pay URL'

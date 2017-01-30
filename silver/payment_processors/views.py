@@ -4,12 +4,14 @@
 from django.views.generic import View
 from django.http import HttpResponse
 from rest_framework.exceptions import MethodNotAllowed
+from silver.utils.payments import get_payment_complete_url
 
 
 class GenericTransactionView(View):
     form = None
     template = None
     transaction = None
+    request = None
 
     def get_context_data(self):
         return {
@@ -19,7 +21,9 @@ class GenericTransactionView(View):
             'customer': self.transaction.customer,
             'provider': self.transaction.provider,
             'entries': list(self.transaction.document._entries),
-            'form': self.form
+            'form': self.form,
+            'payment_complete_url': get_payment_complete_url(self.transaction,
+                                                             self.request)
         }
 
     def render_template(self):

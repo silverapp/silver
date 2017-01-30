@@ -154,9 +154,8 @@ LOGGING['formatters']['verbose'] = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 PAYMENT_PROCESSORS = {
-    'silver.models.payment_processors.manual.ManualProcessor': {
-        'setup_data': {},
-        'display_name': 'Manual'
+    'manual': {
+        'class': 'silver.payment_processors.manual.ManualProcessor'
     },
 }
 

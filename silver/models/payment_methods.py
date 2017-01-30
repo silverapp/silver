@@ -41,8 +41,7 @@ class PaymentMethod(models.Model):
             return [name for name in settings.PAYMENT_PROCESSORS.keys()]
 
     payment_processor = models.CharField(choices=PaymentProcessors.as_choices(),
-        blank=False, null=False, max_length=256
-    )
+                                         blank=False, null=False, max_length=256)
     customer = models.ForeignKey(Customer)
     added_at = models.DateTimeField(default=timezone.now)
     data = JSONField(blank=True, null=True, default={})
@@ -57,7 +56,7 @@ class PaymentMethod(models.Model):
 
         if self.id:
             try:
-                payment_method_class = self.payment_processor.payment_method_class
+                payment_method_class = self.get_payment_processor().payment_method_class
 
                 if payment_method_class:
                     self.__class__ = payment_method_class

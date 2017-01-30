@@ -19,12 +19,12 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 
-from rest_framework.exceptions import MethodNotAllowed
 
 from silver.models.transactions import Transaction
 from silver.models.documents import Proforma, Invoice
+from silver.payment_processors import get_instance
 from silver.utils.decorators import get_transaction_from_token
 
 
@@ -44,9 +44,8 @@ def invoice_pdf(request, invoice_id):
 @get_transaction_from_token
 def complete_payment_view(request, transaction, expired=None):
     if transaction.state == transaction.States.Initial:
-        transaction.payment_processor.handle_transaction_response(transaction,
-                                                                  request)
-        transaction.save()
+        payment_processor = get_instance(transaction.payment_processor)
+        payment_processor.handle_transaction_response(transaction, request)
 
     if 'return_url' in request.GET:
         redirect_url = furl(request.GET['return_url']).add({
