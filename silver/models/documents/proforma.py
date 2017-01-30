@@ -19,7 +19,7 @@ from django_fsm import TransitionNotAllowed, transition
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
 from .base import BillingDocumentBase

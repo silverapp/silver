@@ -244,6 +244,23 @@ class PaymentMethodFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
 
 
+class TransactionProformaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Transaction
+
+    payment_method = factory.SubFactory(PaymentMethodFactory)
+    proforma = factory.SubFactory(
+        ProformaFactory,
+        customer=factory.SelfAttribute('..payment_method.customer'),
+        state=Proforma.STATES.ISSUED,
+        issue_date=timezone.now().date()
+    )
+    invoice = None
+    amount = factory.SelfAttribute('proforma.transaction_total')
+    currency = factory.SelfAttribute('proforma.transaction_currency')
+    state = Transaction.States.Initial
+
+
 class TransactionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Transaction
