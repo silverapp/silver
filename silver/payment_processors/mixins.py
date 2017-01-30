@@ -48,7 +48,7 @@ class BaseActionableProcessor(object):
 
     def void_transaction(self, transaction, payment_method=None):
         """
-            Voids / interrupts an ongoing transaction
+            Voids / interrupts a pending / ongoing transaction
 
             :return: True on success, False on failure.
         """
@@ -57,23 +57,34 @@ class BaseActionableProcessor(object):
 
     def execute_transaction(self, transaction):
         """
-            Only gets called for initial transactions that point to this
-            specific Processor
+            Creates a real transaction based on the given transaction.
+
+            Should only be called for initial transactions that belong to the
+            payment processor where this is implemented.
 
             :return: True on success, False on failure.
         """
 
         raise NotImplementedError
 
-    def update_transaction_status(self, transaction):
+    def fetch_transaction_status(self, transaction):
         """
-            Only gets called for pending transactions that point to this
-            specifc Processor
+            Implementation is optional.
+
+            Used for payment processors that do not provide webhooks and require
+            interrogations initiated by us, to obtain the status of the
+            transaction.
+
+            Should only be called for pending transactions that belong to the
+            payment processor where this is implemented.
+
+            Can be called for all pending transactions by using the management
+            command with the same name.
 
             :return: True on success, False on failure.
         """
 
-        raise NotImplementedError
+        return True
 
 
 class AutomaticProcessorMixin(BaseActionableProcessor):

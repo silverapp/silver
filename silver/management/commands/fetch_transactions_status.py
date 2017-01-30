@@ -53,9 +53,7 @@ class Command(BaseCommand):
                 payment_processor = transaction.payment_method.get_payment_processor()
                 if payment_processor.type != PaymentProcessorTypes.Triggered:
                     continue
-                payment_processor.update_transaction_status(transaction)
-            except NotImplementedError:
-                continue
+                payment_processor.fetch_transaction_status(transaction)
             except Exception:
                 logger.error('Encountered exception while updating transaction '
                              'with id=%s.', transaction.id, exc_info=True)

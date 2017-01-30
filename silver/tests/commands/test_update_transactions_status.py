@@ -25,7 +25,7 @@ from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 class TestUpdateTransactionsStatusCommand(TestCase):
-    def test_update_transaction_status_call(self):
+    def test_fetch_transaction_status_call(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor
         )
@@ -34,19 +34,19 @@ class TestUpdateTransactionsStatusCommand(TestCase):
             5, payment_method=payment_method, state=Transaction.States.Pending
         )
 
-        mock_update_status = MagicMock()
+        mock_fetch_status = MagicMock()
         with patch.multiple(TriggeredProcessor,
-                            update_transaction_status=mock_update_status):
-            call_command('update_transactions_status')
+                            fetch_transaction_status=mock_fetch_status):
+            call_command('fetch_transactions_status')
 
             for transaction in transactions:
                 self.assertIn(call(transaction),
-                              mock_update_status.call_args_list)
+                              mock_fetch_status.call_args_list)
 
-            self.assertEqual(mock_update_status.call_count,
+            self.assertEqual(mock_fetch_status.call_count,
                              len(transactions))
 
-    def test_update_transaction_status_transactions_filtering(self):
+    def test_fetch_transaction_status_transactions_filtering(self):
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor
         )
@@ -59,23 +59,23 @@ class TestUpdateTransactionsStatusCommand(TestCase):
             transactions[0], transactions[2], transactions[4]
         ]
 
-        mock_update_status = MagicMock()
+        mock_fetch_status = MagicMock()
         with patch.multiple(TriggeredProcessor,
-                            update_transaction_status=mock_update_status):
+                            fetch_transaction_status=mock_fetch_status):
             transactions_arg = [
                 str(transaction.pk) for transaction in filtered_transactions
             ]
-            call_command('update_transactions_status',
+            call_command('fetch_transactions_status',
                          '--transactions=%s' % ','.join(transactions_arg))
 
             for transaction in filtered_transactions:
                 self.assertIn(call(transaction),
-                              mock_update_status.call_args_list)
+                              mock_fetch_status.call_args_list)
 
-            self.assertEqual(mock_update_status.call_count,
+            self.assertEqual(mock_fetch_status.call_count,
                              len(filtered_transactions))
 
-    @patch('silver.management.commands.update_transactions_status.logger.error')
+    @patch('silver.management.commands.fetch_transactions_status.logger.error')
     def test_transaction_update_status_exception_logging(self, mock_logger):
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor
@@ -84,12 +84,12 @@ class TestUpdateTransactionsStatusCommand(TestCase):
         TransactionFactory.create(payment_method=payment_method,
                                   state=Transaction.States.Pending)
 
-        mock_update_status = MagicMock()
-        mock_update_status.side_effect = Exception('This happened.')
+        mock_fetch_status = MagicMock()
+        mock_fetch_status.side_effect = Exception('This happened.')
 
         with patch.multiple(TriggeredProcessor,
-                            update_transaction_status=mock_update_status):
-            call_command('update_transactions_status')
+                            fetch_transaction_status=mock_fetch_status):
+            call_command('fetch_transactions_status')
             expected_call = call(
                 'Encountered exception while updating transaction with id=%s.',
                 1, exc_info=True
