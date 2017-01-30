@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('silver', '0031_auto_20170125_1343'),
+        ('silver', '0032_auto_20170130_1317'),
     ]
 
     operations = [
@@ -29,5 +29,10 @@ class Migration(migrations.Migration):
             model_name='transaction',
             name='refund_code',
             field=models.CharField(blank=True, max_length=32, null=True, choices=[(b'default', b'default')]),
+        ),
+        migrations.AlterField(
+            model_name='provider',
+            name='email',
+            field=models.CharField(max_length=254, null=True, blank=True),
         ),
     ]
