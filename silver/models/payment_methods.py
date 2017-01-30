@@ -27,6 +27,7 @@ from django.core.exceptions import ValidationError
 from silver import payment_processors
 
 from .billing_entities import Customer
+from .transactions import Transaction
 
 
 class PaymentMethodInvalid(Exception):
@@ -87,6 +88,27 @@ class PaymentMethod(models.Model):
             return str(Fernet(key).decrypt(bytes(crypted_data)))
         except InvalidToken:
             return None
+
+    def cancel(self):
+        if self.canceled:
+            raise ValidationError("You can't cancel a canceled payment method.")
+
+        cancelable_states = [Transaction.States.Initial,
+                             Transaction.States.Pending]
+        transactions = Transaction.objects.filter(payment_method=self,
+                                                  state__in=cancelable_states)
+
+        for transaction in transactions:
+            if transaction.state == Transaction.States.Initial:
+                transaction.cancel()
+
+            if transaction.state == Transaction.States.Pending:
+                transaction.payment_processor.void_transaction(transaction)
+
+            transaction.save()
+
+        self.canceled = True
+        self.save()
 
     def clean(self):
         if self._old and self._old.canceled and not self.canceled:
