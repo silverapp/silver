@@ -155,7 +155,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 PAYMENT_PROCESSORS = {
     'manual': {
-        'class_path': 'silver.models.payment_processors.manual.ManualProcessor'
+        'class': 'silver.models.payment_processors.manual.ManualProcessor'
     },
 }
 
