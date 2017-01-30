@@ -56,13 +56,6 @@ class Provider(BaseBillingEntity):
         max_length=128,
         help_text='The name to be used for billing purposes.'
     )
-    display_email = models.EmailField(
-        blank=True, null=True, help_text='The email that the customers see.'
-    )
-    notification_email = models.EmailField(
-        blank=True, null=True,
-        help_text='The email used by Silver in CC and system notifications.'
-    )
     flow = models.CharField(
         max_length=10, choices=FLOW_CHOICES,
         default=FLOWS.PROFORMA,
@@ -113,14 +106,6 @@ class Provider(BaseBillingEntity):
                                                       "as the chosen flow is "
                                                       "proforma."}
                 raise ValidationError(errors)
-
-    def get_archivable_field_values(self):
-        base_fields = super(Provider, self).get_archivable_field_values()
-        provider_fields = ['display_email', 'notification_email']
-        fields_dict = {field: getattr(self, field, '') for field in
-                       provider_fields}
-        base_fields.update(fields_dict)
-        return base_fields
 
     def get_invoice_archivable_field_values(self):
         base_fields = self.get_archivable_field_values()

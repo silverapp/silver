@@ -41,7 +41,6 @@ class Customer(BaseBillingEntity):
         help_text='The customer\'s last name.'
     )
 
-    email = models.CharField(blank=True, null=True, max_length=254)
     payment_due_days = models.PositiveIntegerField(
         default=PAYMENT_DUE_DAYS,
         help_text='Due days for generated proforma/invoice.'
@@ -89,7 +88,7 @@ class Customer(BaseBillingEntity):
         base_fields = super(Customer, self).get_archivable_field_values()
         customer_fields = ['customer_reference', 'consolidated_billing',
                            'payment_due_days', 'sales_tax_number',
-                           'sales_tax_percent', 'email']
+                           'sales_tax_percent']
         fields_dict = {field: getattr(self, field, '') for field in
                        customer_fields}
         base_fields.update(fields_dict)
