@@ -114,10 +114,10 @@ class ProviderSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Provider
         fields = ('id', 'url', 'name', 'company', 'invoice_series', 'flow',
-                  'display_email', 'notification_email', 'address_1',
-                  'address_2', 'city', 'state', 'zip_code', 'country', 'extra',
-                  'invoice_series', 'invoice_starting_number',
-                  'proforma_series', 'proforma_starting_number', 'meta')
+                  'email', 'address_1', 'address_2', 'city', 'state',
+                  'zip_code', 'country', 'extra', 'invoice_series',
+                  'invoice_starting_number', 'proforma_series',
+                  'proforma_starting_number', 'meta')
 
     def validate(self, data):
         data = super(ProviderSerializer, self).validate(data)

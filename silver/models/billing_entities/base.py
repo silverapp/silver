@@ -32,6 +32,7 @@ class BaseBillingEntity(LiveModel):
     address_2 = models.CharField(max_length=128, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3)
     phone = models.CharField(max_length=15, blank=True, null=True)
+    email = models.CharField(blank=True, null=True, max_length=254)
     city = models.CharField(max_length=128)
     state = models.CharField(max_length=128, blank=True, null=True)
     zip_code = models.CharField(max_length=32, blank=True, null=True)
@@ -64,8 +65,9 @@ class BaseBillingEntity(LiveModel):
         return [getattr(self, field, '') for field in field_names]
 
     def get_archivable_field_values(self):
-        field_names = ['name', 'company', 'address_1', 'address_2', 'city',
-                       'country', 'city', 'state', 'zip_code', 'extra', 'meta']
+        field_names = ['name', 'company', 'email', 'address_1', 'address_2',
+                       'city', 'country', 'city', 'state', 'zip_code', 'extra',
+                       'meta']
         return {field: getattr(self, field, '') for field in field_names}
 
     def __unicode__(self):

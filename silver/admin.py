@@ -315,9 +315,9 @@ class CustomerAdmin(LiveModelAdmin):
 
 
 class ProviderAdmin(LiveModelAdmin):
-    fields = ['company', 'name', 'display_email', 'notification_email', 'address_1',
-              'address_2', 'city', 'state', 'zip_code', 'country', 'flow',
-              'invoice_series', 'invoice_starting_number', 'proforma_series',
+    fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
+              'state', 'zip_code', 'country', 'flow', 'invoice_series',
+              'invoice_starting_number', 'proforma_series',
               'proforma_starting_number', 'default_document_state', 'extra',
               'meta']
     list_display = ['__unicode__', 'invoice_series_list_display',
@@ -565,6 +565,7 @@ class DueDateFilter(SimpleListFilter):
 
         return queryset
 
+
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
@@ -573,15 +574,12 @@ class BillingDocumentAdmin(ModelAdmin):
     list_filter = ('provider__company', 'state', DueDateFilter)
 
     common_fields = ['company', 'address_1', 'address_2', 'city',
-                     'country', 'zip_code', 'state']
+                     'country', 'zip_code', 'state', 'email']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields + ['email',
-                                                            'first_name',
+                              for field in common_fields + ['first_name',
                                                             'last_name']]
     provider_search_fields = ['provider__{field}'.format(field=field)
-                              for field in common_fields + ['name',
-                                                            'display_email',
-                                                            'notification_email']]
+                              for field in common_fields + ['name']]
     search_fields = (customer_search_fields + provider_search_fields +
                      ['series', 'number'])
 

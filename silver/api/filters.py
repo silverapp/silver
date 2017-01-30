@@ -71,13 +71,12 @@ class CustomerFilter(FilterSet):
 
 
 class ProviderFilter(FilterSet):
-    display_email = CharFilter(name='display_email', lookup_type='icontains')
-    notification_email = CharFilter(name='notification_email', lookup_type='icontains')
+    email = CharFilter(name='email', lookup_type='icontains')
     company = CharFilter(name='company', lookup_type='icontains')
 
     class Meta:
         model = Provider
-        fields = ['display_email', 'notification_email', 'company']
+        fields = ['email', 'company']
 
 
 class PlanFilter(FilterSet):

@@ -82,11 +82,8 @@ class ProviderFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
     company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
-    display_email = factory.Sequence(
-        lambda n: u'display{cnt}@email.com'.format(cnt=n)
-    )
-    notification_email = factory.Sequence(
-        lambda n: u'internal{cnt}@email.com'.format(cnt=n)
+    email = factory.Sequence(
+        lambda n: u'provider{cnt}@email.com'.format(cnt=n)
     )
     address_1 = factory.Sequence(lambda n: u'Addãress1{cnt}'.format(cnt=n))
     address_2 = factory.Sequence(lambda n: u'Addåress2{cnt}'.format(cnt=n))
