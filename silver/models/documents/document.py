@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from django.db import models
 
+from .base import _storage, documents_pdf_path
 from silver.models import DocumentEntry
 
 
@@ -49,7 +50,8 @@ class Document(models.Model):
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(max_length=4)
     state = models.CharField(max_length=10)
-    pdf = models.FileField(null=True, blank=True, editable=False)
+    pdf = models.FileField(null=True, blank=True, editable=False,
+                           storage=_storage, upload_to=documents_pdf_path)
 
     class Meta:
         managed = False
