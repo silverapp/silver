@@ -99,8 +99,13 @@ class Transaction(models.Model):
 
     @property
     def final_fields(self):
-        return ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
-                'currency', 'created_at']
+        fields = ['proforma', 'uuid', 'payment_method', 'amount', 'currency',
+                  'created_at']
+
+        if self.invoice:
+            fields.append('invoice')
+
+        return fields
 
     def __init__(self, *args, **kwargs):
         self.form_class = kwargs.pop('form_class', None)
@@ -239,16 +244,22 @@ class Transaction(models.Model):
 
 @receiver(pre_save, sender=Transaction)
 def pre_transaction_save(sender, instance=None, **kwargs):
-    old = get_object_or_None(Transaction, pk=instance.pk)
-    setattr(instance, 'old_value', old)
+    transaction = instance
+
+    old = get_object_or_None(Transaction, pk=transaction.pk)
+    setattr(transaction, 'old_value', old)
 
     if old:
-        for field in instance.final_fields:
-            if getattr(old, field) and getattr(instance, field) != getattr(old, field):
+        for field in transaction.final_fields:
+            if getattr(old, field) and getattr(transaction, field) != getattr(old, field):
                 raise ValidationError("Field '%s' may not be changed." % field)
 
-    if not getattr(instance, 'cleaned', False):
-        instance.full_clean()
+    if not getattr(transaction, 'cleaned', False):
+        transaction.full_clean()
+
+    proforma = transaction.proforma
+    if proforma and proforma.invoice and not transaction.invoice:
+        transaction.invoice = proforma.invoice
 
 
 @receiver(post_save, sender=Transaction)

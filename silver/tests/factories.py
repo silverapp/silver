@@ -261,15 +261,29 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         state=Invoice.STATES.ISSUED,
         issue_date=timezone.now().date()
     )
-    amount = factory.SelfAttribute('invoice.transaction_total')
-    currency = factory.SelfAttribute('invoice.transaction_currency')
+
     state = Transaction.States.Initial
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
-        kwargs['invoice'].proforma = kwargs['proforma']
-        kwargs['invoice'].save()
-        kwargs['proforma'].invoice = kwargs['invoice']
-        kwargs['proforma'].save()
+        invoice = kwargs.get('invoice')
+        proforma = kwargs.get('proforma')
+        if proforma:
+            proforma.invoice = invoice
+            if invoice:
+                proforma.transaction_currency = invoice.transaction_currency
+            proforma.save()
 
+        if invoice:
+            invoice.proforma = proforma
+            if proforma:
+                invoice.transaction_currency = proforma.transaction_currency
+            invoice.save()
+
+        document = proforma or invoice
+
+        kwargs.update({
+            'amount': document.transaction_total,
+            'currency': document.transaction_currency
+        })
         return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)

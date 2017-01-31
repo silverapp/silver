@@ -26,7 +26,7 @@ from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
 class TestDocumentsTransactions(TestCase):
     def test_pay_documents_on_transaction_settle(self):
         transaction = TransactionFactory.create(
-            state=Transaction.States.Pending,
+            state=Transaction.States.Pending
         )
         transaction.settle()
         transaction.save()
@@ -38,6 +38,19 @@ class TestDocumentsTransactions(TestCase):
         self.assertEqual(invoice.state, invoice.STATES.PAID)
 
     # also refunding needs to be tested when implemented
+
+    def test_proforma_adds_invoice_to_transactions(self):
+        transaction = TransactionFactory.create(
+            state=Transaction.States.Pending,
+            invoice=None
+        )
+        transaction.settle()
+        transaction.save()
+
+        proforma = transaction.proforma
+        invoice = transaction.invoice
+
+        self.assertEqual(proforma.invoice, invoice)
 
     def test_transaction_creation_for_issued_documents(self):
         """
