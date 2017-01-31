@@ -244,23 +244,6 @@ class PaymentMethodFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
 
 
-class TransactionProformaFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Transaction
-
-    payment_method = factory.SubFactory(PaymentMethodFactory)
-    proforma = factory.SubFactory(
-        ProformaFactory,
-        customer=factory.SelfAttribute('..payment_method.customer'),
-        state=Proforma.STATES.ISSUED,
-        issue_date=timezone.now().date()
-    )
-    invoice = None
-    amount = factory.SelfAttribute('proforma.transaction_total')
-    currency = factory.SelfAttribute('proforma.transaction_currency')
-    state = Transaction.States.Initial
-
-
 class TransactionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Transaction
@@ -278,15 +261,25 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         state=Invoice.STATES.ISSUED,
         issue_date=timezone.now().date()
     )
-    amount = factory.SelfAttribute('invoice.transaction_total')
-    currency = factory.SelfAttribute('invoice.transaction_currency')
+
     state = Transaction.States.Initial
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
-        kwargs['invoice'].proforma = kwargs['proforma']
-        kwargs['invoice'].save()
-        kwargs['proforma'].invoice = kwargs['invoice']
-        kwargs['proforma'].save()
+        invoice = kwargs.get('invoice')
+        proforma = kwargs.get('proforma')
+        if proforma:
+            proforma.invoice = invoice
+            proforma.save()
 
+        if invoice:
+            invoice.proforma = proforma
+            invoice.save()
+
+        document = proforma or invoice
+
+        kwargs.update({
+            'amount': document.transaction_total,
+            'currency': document.transaction_currency
+        })
         return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)

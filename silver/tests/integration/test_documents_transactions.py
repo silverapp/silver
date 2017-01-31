@@ -17,8 +17,7 @@ from mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from silver.models import Transaction
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
-                                    TransactionFactory,
-                                    TransactionProformaFactory)
+                                    TransactionFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
                                    triggered_processor)
 
@@ -41,8 +40,9 @@ class TestDocumentsTransactions(TestCase):
     # also refunding needs to be tested when implemented
 
     def test_proforma_adds_invoice_to_transactions(self):
-        transaction = TransactionProformaFactory.create(
-            state=Transaction.States.Pending
+        transaction = TransactionFactory.create(
+            state=Transaction.States.Pending,
+            invoice=None
         )
         transaction.settle()
         transaction.save()
