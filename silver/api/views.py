@@ -874,7 +874,15 @@ class PaymentMethodAction(APIView):
         if not action_to_execute:
             raise Http404
 
-        action_to_execute()
+        errors = action_to_execute()
+        if errors:
+            return Response({"errors": errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        payment_method_serialized = PaymentMethodSerializer(payment_method,
+                                                            context={'request': request})
+        return Response(payment_method_serialized.data,
+                        status=status.HTTP_200_OK)
 
     def get_object(self, **kwargs):
         payment_method_id = kwargs.get('payment_method_id')

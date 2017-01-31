@@ -25,7 +25,8 @@ from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 
 from silver.tests.spec.util.api_get_assert import APIGetAssert
-from silver.tests.factories import CustomerFactory, PaymentMethodFactory
+from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
+                                    TransactionFactory)
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    triggered_processor)
 
@@ -287,3 +288,21 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
+
+    def test_cancel_action(self):
+        payment_method = self.create_payment_method(customer=self.customer)
+        transaction_initial = TransactionFactory.create(payment_method=payment_method)
+        transaction_pending = TransactionFactory.create(payment_method=payment_method,
+                                                        state='pending')
+
+        url = reverse('payment-method-action', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk,
+            'requested_action': 'cancel',
+        })
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payment_method.refresh_from_db()
+        self.assertTrue(payment_method.canceled)

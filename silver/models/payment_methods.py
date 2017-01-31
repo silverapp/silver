@@ -97,7 +97,7 @@ class PaymentMethod(models.Model):
         cancelable_states = [Transaction.States.Initial,
                              Transaction.States.Pending]
 
-        transactions = self.transactions.filter(state__in=cancelable_states)
+        transactions = self.transaction_set.filter(state__in=cancelable_states)
 
         errors = []
         for transaction in transactions:
@@ -108,7 +108,9 @@ class PaymentMethod(models.Model):
                     errors.append("Transaction {} couldn't be canceled".format(transaction.uuid))
 
             if transaction.state == Transaction.States.Pending:
-                if not transaction.payment_processor.void_transaction(transaction):
+                payment_processor = self.get_payment_processor()
+                if (hasattr(payment_processor, 'void_transaction') and
+                        not payment_processor.void_transaction(transaction)):
                     errors.append("Transaction {} couldn't be voided".format(transaction.uuid))
 
             transaction.save()
@@ -118,7 +120,8 @@ class PaymentMethod(models.Model):
 
         self.canceled = True
         self.save()
-        return True
+
+        return None
 
     def save(self, **kwargs):
         self.clean()
