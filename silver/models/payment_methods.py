@@ -14,6 +14,7 @@
 
 from jsonfield import JSONField
 from annoying.functions import get_object_or_None
+from django_fsm import TransitionNotAllowed
 from model_utils.managers import InheritanceManager
 from cryptography.fernet import InvalidToken, Fernet
 
@@ -95,20 +96,29 @@ class PaymentMethod(models.Model):
 
         cancelable_states = [Transaction.States.Initial,
                              Transaction.States.Pending]
-        transactions = Transaction.objects.filter(payment_method=self,
-                                                  state__in=cancelable_states)
 
+        transactions = self.transactions.filter(state__in=cancelable_states)
+
+        errors = []
         for transaction in transactions:
             if transaction.state == Transaction.States.Initial:
-                transaction.cancel()
+                try:
+                    transaction.cancel()
+                except TransitionNotAllowed:
+                    errors.append("Transaction {} couldn't be canceled".format(transaction.uuid))
 
             if transaction.state == Transaction.States.Pending:
-                transaction.payment_processor.void_transaction(transaction)
+                if not transaction.payment_processor.void_transaction(transaction):
+                    errors.append("Transaction {} couldn't be voided".format(transaction.uuid))
 
             transaction.save()
 
+        if errors:
+            return errors
+
         self.canceled = True
         self.save()
+        return True
 
     def save(self, **kwargs):
         self.clean()
