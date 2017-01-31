@@ -468,11 +468,13 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'customer', 'provider', 'amount', 'currency',
                   'state', 'proforma', 'invoice', 'can_be_consumed',
                   'payment_processor', 'payment_method', 'pay_url',
-                  'valid_until', 'updated_at', 'created_at')
+                  'valid_until', 'updated_at', 'created_at', 'fail_code',
+                  'refund_code', 'cancel_code')
 
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
                             'id', 'url', 'state', 'updated_at', 'created_at',
-                            'payment_processor')
+                            'payment_processor', 'fail_code', 'refund_code',
+                            'cancel_code')
         updateable_fields = ('valid_until', 'success_url', 'failed_url')
         extra_kwargs = {'amount': {'required': False},
                         'currency': {'required': False}}

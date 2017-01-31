@@ -651,5 +651,8 @@ class TestTransactionEndpoint(APITestCase):
                 ('valid_until', None),
 
                 ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),
-                ('created_at', transaction.created_at.isoformat()[:-6] + 'Z')
+                ('created_at', transaction.created_at.isoformat()[:-6] + 'Z'),
+                ('fail_code', transaction.fail_code),
+                ('refund_code', transaction.refund_code),
+                ('cancel_code', transaction.cancel_code)
             ])

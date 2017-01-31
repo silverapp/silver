@@ -14,7 +14,6 @@
 
 import uuid
 import logging
-import datetime
 from decimal import Decimal
 
 from jsonfield import JSONField
@@ -29,6 +28,8 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MinValueValidator
+from silver.models.transactions.codes import (FAIL_CODES, REFUND_CODES,
+                                              CANCEL_CODES)
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
@@ -82,6 +83,19 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField(default=timezone.now)
 
+    fail_code = models.CharField(
+        choices=[(code, code) for code in FAIL_CODES.keys()], max_length=32,
+        null=True, blank=True
+    )
+    refund_code = models.CharField(
+        choices=[(code, code) for code in REFUND_CODES.keys()], max_length=32,
+        null=True, blank=True
+    )
+    cancel_code = models.CharField(
+        choices=[(code, code) for code in CANCEL_CODES.keys()], max_length=32,
+        null=True, blank=True
+    )
+
     @property
     def final_fields(self):
         return ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
@@ -102,16 +116,16 @@ class Transaction(models.Model):
 
     @transition(field=state, source=[States.Initial, States.Pending],
                 target=States.Canceled)
-    def cancel(self):
-        pass
+    def cancel(self, cancel_code='default'):
+        self.cancel_code = cancel_code
 
     @transition(field=state, source=States.Pending, target=States.Failed)
-    def fail(self):
-        pass
+    def fail(self, fail_code='default'):
+        self.fail_code = fail_code
 
     @transition(field=state, source=States.Settled, target=States.Refunded)
-    def refund(self):
-        pass
+    def refund(self, refund_code='default'):
+        self.refund_code = refund_code
 
     def clean(self):
         document = self.document
