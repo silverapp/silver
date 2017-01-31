@@ -28,8 +28,8 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MinValueValidator
-from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, \
-    CANCEL_CODES
+from silver.models.transactions.codes import (FAIL_CODES, REFUND_CODES,
+                                              CANCEL_CODES)
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
@@ -84,15 +84,15 @@ class Transaction(models.Model):
     updated_at = AutoDateTimeField(default=timezone.now)
 
     fail_code = models.CharField(
-        choices=[(key, key) for key in FAIL_CODES.keys()], max_length=32,
+        choices=[(code, code) for code in FAIL_CODES.keys()], max_length=32,
         null=True, blank=True
     )
     refund_code = models.CharField(
-        choices=[(key, key) for key in REFUND_CODES.keys()], max_length=32,
+        choices=[(code, code) for code in REFUND_CODES.keys()], max_length=32,
         null=True, blank=True
     )
     cancel_code = models.CharField(
-        choices=[(key, key) for key in CANCEL_CODES.keys()], max_length=32,
+        choices=[(code, code) for code in CANCEL_CODES.keys()], max_length=32,
         null=True, blank=True
     )
 
