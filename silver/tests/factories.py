@@ -270,9 +270,11 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         proforma = kwargs.get('proforma')
         if proforma:
             proforma.invoice = invoice
+            proforma.transaction_currency = invoice.transaction_currency
             proforma.save()
 
         if invoice:
+            invoice.transaction_currency = proforma.transaction_currency
             invoice.proforma = proforma
             invoice.save()
 
