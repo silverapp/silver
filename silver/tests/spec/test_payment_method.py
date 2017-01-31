@@ -20,7 +20,7 @@ from django.test import override_settings
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
-from silver.models import PaymentMethod
+from silver.models import PaymentMethod, Transaction
 from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 
@@ -290,7 +290,8 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_no_output, [])
 
     def test_cancel_action(self):
-        payment_method = self.create_payment_method(customer=self.customer)
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    payment_processor='triggered')
         transaction_initial = TransactionFactory.create(payment_method=payment_method)
         transaction_pending = TransactionFactory.create(payment_method=payment_method,
                                                         state='pending')
@@ -305,4 +306,33 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         payment_method.refresh_from_db()
+        transaction_initial.refresh_from_db()
+        transaction_pending.refresh_from_db()
+
         self.assertTrue(payment_method.canceled)
+        self.assertEqual(transaction_initial.state, Transaction.States.Canceled)
+        self.assertEqual(transaction_pending.state, Transaction.States.Canceled)
+
+    @override_settings(PAYMENT_PROCESSORS={
+        'fail_void_processor': {
+            'class': 'silver.tests.fixtures.FailingVoidTriggeredProcessor'
+        }
+    })
+    def test_cancel_action_failed_void(self):
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    payment_processor='fail_void_processor')
+        transaction_initial = TransactionFactory.create(payment_method=payment_method)
+        transaction_pending = TransactionFactory.create(payment_method=payment_method,
+                                                        state='pending')
+
+        url = reverse('payment-method-action', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk,
+            'requested_action': 'cancel',
+        })
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        expected_error = "Transaction {} couldn't be voided".format(transaction_pending.uuid)
+        self.assertEqual(response.data, {'errors': [expected_error]})

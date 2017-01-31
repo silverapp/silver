@@ -46,6 +46,15 @@ class TriggeredProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
     def execute_transaction(self, transaction):
         pass
 
+    def void_transaction(self, transaction):
+        transaction.cancel()
+        return True
+
     @property
     def allowed_currencies(self):
         return ['RON', 'USD']
+
+
+class FailingVoidTriggeredProcessor(TriggeredProcessor):
+    def void_transaction(self, transaction):
+        return False
