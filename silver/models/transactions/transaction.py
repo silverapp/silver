@@ -285,20 +285,17 @@ def create_transaction_for_document(document):
         customer=document.customer
     )
     for payment_method in payment_methods:
-        if (payment_method.verified and
-                not payment_method.canceled):
-            # create transaction
-            kwargs = {
-                'invoice': isinstance(document, Invoice) and document or document.related_document,
-                'proforma': isinstance(document, Proforma) and document or document.related_document,
-                'payment_method': payment_method,
-                'amount': document.transaction_total,
-            }
+        kwargs = {
+            'invoice': isinstance(document, Invoice) and document or document.related_document,
+            'proforma': isinstance(document, Proforma) and document or document.related_document,
+            'payment_method': payment_method,
+            'amount': document.transaction_total,
+        }
 
-            try:
-                return Transaction.objects.create(**kwargs)
-            except ValidationError:
-                return None
+        try:
+            return Transaction.objects.create(**kwargs)
+        except ValidationError:
+            return None
 
 
 @receiver(post_transition)
