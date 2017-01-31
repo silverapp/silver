@@ -95,7 +95,7 @@ class PlanFilter(FilterSet):
 
 
 class BillingDocumentFilter(FilterSet):
-    state = CharFilter(name='state', lookup_type='iexact')
+    state = MultipleCharFilter(name='state', lookup_type='iexact')
     number = NumberFilter(name='number', lookup_type='iexact')
     customer_name = CharFilter(name='customer__name', lookup_type='icontains')
     customer_company = CharFilter(name='customer__company',
@@ -107,8 +107,8 @@ class BillingDocumentFilter(FilterSet):
     due_date = DateFilter(name='due_date', lookup_type='iexact')
     paid_date = DateFilter(name='due_date', lookup_type='iexact')
     cancel_date = DateFilter(name='cancel_date', lookup_type='iexact')
-    currency = CharFilter(name='currency', lookup_type='icontains')
-    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+    currency = MultipleCharFilter(name='currency', lookup_type='icontains')
+    sales_tax_name = MultipleCharFilter(name='sales_tax_name', lookup_type='icontains')
     is_overdue = BooleanFilter(name='overdue', method='filter_is_overdue')
 
     def filter_is_overdue(self, queryset, _, value):
@@ -124,7 +124,7 @@ class BillingDocumentFilter(FilterSet):
 
 
 class DocumentFilter(FilterSet):
-    state = CharFilter(name='state', lookup_type='iexact')
+    state = MultipleCharFilter(name='state', lookup_type='iexact')
     number = NumberFilter(name='number', lookup_type='iexact')
     customer = NumberFilter(name='customer__pk', lookup_type='iexact')
     customer_name = CharFilter(name='customer__name', lookup_type='icontains')
@@ -137,8 +137,9 @@ class DocumentFilter(FilterSet):
     due_date = DateFilter(name='due_date', lookup_type='iexact')
     paid_date = DateFilter(name='due_date', lookup_type='iexact')
     cancel_date = DateFilter(name='cancel_date', lookup_type='iexact')
-    currency = CharFilter(name='currency', lookup_type='icontains')
-    sales_tax_name = CharFilter(name='sales_tax_name', lookup_type='icontains')
+    currency = MultipleCharFilter(name='currency', lookup_type='icontains')
+    sales_tax_name = MultipleCharFilter(name='sales_tax_name',
+                                        lookup_type='icontains')
 
     class Meta:
         model = Document
