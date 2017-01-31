@@ -1001,7 +1001,7 @@ class TransactionAdmin(ModelAdmin):
 
 class PaymentMethodAdmin(ModelAdmin):
     list_display = ('customer', 'payment_processor', 'added_at', 'verified',
-                    'enabled')
+                    'canceled')
 
 
 site.register(Transaction, TransactionAdmin)

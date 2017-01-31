@@ -31,8 +31,8 @@ class TestDocumentsTransactions(TestCase):
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor,
             customer=invoice.customer,
-            enabled=True,
-            verified=True,
+            canceled=False,
+            verified=True
         )
 
         expected_exception = ValidationError

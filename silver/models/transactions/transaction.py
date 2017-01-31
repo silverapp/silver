@@ -25,6 +25,7 @@ from django.db import models
 from django.utils import timezone
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+from django.db.models.loading import get_model
 from django.db.models.signals import pre_save, post_save
 from django.utils.translation import ugettext_lazy as _
 from django.core.validators import MinValueValidator
@@ -33,7 +34,7 @@ from silver.models.transactions.codes import (FAIL_CODES, REFUND_CODES,
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
-from silver.models import BillingDocumentBase, Invoice, PaymentMethod, Proforma
+from silver.models import BillingDocumentBase, Invoice, Proforma
 
 
 logger = logging.getLogger(__name__)
@@ -276,26 +277,25 @@ def _sync_transaction_state_with_document(transaction, target):
 
 def create_transaction_for_document(document):
     # get a usable, recurring payment_method for the customer
+    PaymentMethod = get_model('silver.PaymentMethod')
+
     payment_methods = PaymentMethod.objects.filter(
-        enabled=True,
+        canceled=False,
         verified=True,
         customer=document.customer
     )
     for payment_method in payment_methods:
-        if (payment_method.verified and
-                payment_method.enabled):
-            # create transaction
-            kwargs = {
-                'invoice': isinstance(document, Invoice) and document or document.related_document,
-                'proforma': isinstance(document, Proforma) and document or document.related_document,
-                'payment_method': payment_method,
-                'amount': document.transaction_total,
-            }
+        kwargs = {
+            'invoice': isinstance(document, Invoice) and document or document.related_document,
+            'proforma': isinstance(document, Proforma) and document or document.related_document,
+            'payment_method': payment_method,
+            'amount': document.transaction_total,
+        }
 
-            try:
-                return Transaction.objects.create(**kwargs)
-            except ValidationError:
-                return None
+        try:
+            return Transaction.objects.create(**kwargs)
+        except ValidationError:
+            return None
 
 
 @receiver(post_transition)

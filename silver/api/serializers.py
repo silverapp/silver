@@ -15,8 +15,8 @@
 import jwt
 
 from django.conf import settings
-from django.core.exceptions import ValidationError, ObjectDoesNotExist, \
-    NON_FIELD_ERRORS
+from django.core.exceptions import (ValidationError, ObjectDoesNotExist,
+                                    NON_FIELD_ERRORS)
 
 from rest_framework import serializers
 from rest_framework.relations import HyperlinkedRelatedField
@@ -402,7 +402,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor_name',
                   'payment_processor', 'added_at', 'verified',
-                  'enabled', 'additional_data')
+                  'canceled', 'additional_data')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }
@@ -412,7 +412,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
         additional_data = attrs.get('additional_data')
 
-        if self.instance and additional_data and not self.instance.enabled:
+        if self.instance and additional_data and self.instance.canceled:
             message = "'additional_data' must not be given after the " \
                       "payment method has been enabled once."
             raise serializers.ValidationError(message)
@@ -421,6 +421,30 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
             message = "If 'additional_data' is specified, then the " \
                       "payment method need to be unverified."
             raise serializers.ValidationError(message)
+
+
+        # Run model clean and handle ValidationErrors
+        try:
+            # Use the existing instance to avoid unique field errors
+            if self.instance:
+                payment_method = self.instance
+                payment_method_dict = payment_method.__dict__.copy()
+
+                for attribute, value in attrs.items():
+                    setattr(payment_method, attribute, value)
+
+                payment_method.full_clean()
+
+                # Revert changes to existing instance
+                payment_method.__dict__ = payment_method_dict
+        except ValidationError as e:
+            errors = e.error_dict
+            non_field_errors = errors.pop(NON_FIELD_ERRORS, None)
+            if non_field_errors:
+                errors['non_field_errors'] = [
+                    error for sublist in non_field_errors for error in sublist
+                ]
+            raise serializers.ValidationError(errors)
 
         return attrs
 

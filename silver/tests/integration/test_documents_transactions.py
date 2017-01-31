@@ -48,7 +48,7 @@ class TestDocumentsTransactions(TestCase):
 
         PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
-            enabled=True,
+            canceled=False,
             verified=True,
         )
 
@@ -67,7 +67,7 @@ class TestDocumentsTransactions(TestCase):
         customer = invoice.customer
         PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
-            enabled=True,
+            canceled=False,
             verified=False
         )
 
@@ -88,7 +88,7 @@ class TestDocumentsTransactions(TestCase):
         customer = invoice.customer
         PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
-            enabled=False
+            canceled=False
         )
 
         mock_execute = MagicMock()
@@ -109,7 +109,7 @@ class TestDocumentsTransactions(TestCase):
         customer = invoice.customer
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
-            enabled=True,
+            canceled=False,
             verified=True,
         )
 

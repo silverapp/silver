@@ -20,12 +20,13 @@ from django.test import override_settings
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
-from silver.models import PaymentMethod
+from silver.models import PaymentMethod, Transaction
 from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 
 from silver.tests.spec.util.api_get_assert import APIGetAssert
-from silver.tests.factories import CustomerFactory, PaymentMethodFactory
+from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
+                                    TransactionFactory)
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    triggered_processor)
 
@@ -79,7 +80,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_put_detail_additional_data_disabled_state(self):
         payment_method = self.create_payment_method(customer=self.customer,
-                                                    enabled=False)
+                                                    canceled=True)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
@@ -135,9 +136,9 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'payment_processor_name': [u'This field may not be modified.']
         })
 
-    def test_put_detail(self):
+    def test_put_detail_canceled_payment_method(self):
         payment_method = self.create_payment_method(customer=self.customer,
-                                                    enabled=False,
+                                                    canceled=True,
                                                     verified=False)
 
         url = reverse('payment-method-detail', kwargs={
@@ -147,7 +148,28 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         response = self.client.get(url, format='json')
         data = response.data
-        data['enabled'] = True
+        data['canceled'] = False
+        data['verified'] = True
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'non_field_errors': [u"You can't reuse a canceled payment method."]
+        })
+
+    def test_put_detail(self):
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    canceled=False,
+                                                    verified=False)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk
+        })
+
+        response = self.client.get(url, format='json')
+        data = response.data
+        data['canceled'] = True
         data['verified'] = True
 
         response = self.client.put(url, data=data, format='json')
@@ -241,15 +263,15 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
 
-    def test_filter_enabled(self):
+    def test_filter_canceled(self):
         payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={
             'customer_pk': self.customer.pk
         })
 
-        url_manual_processor = url + '?enabled=True'
-        url_no_output = url + '?enabled=False'
+        url_manual_processor = url + '?canceled=False'
+        url_no_output = url + '?canceled=True'
 
         self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
@@ -266,3 +288,51 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
         self.assert_get_data(url_manual_processor, [payment_method])
         self.assert_get_data(url_no_output, [])
+
+    def test_cancel_action(self):
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    payment_processor='triggered')
+        transaction_initial = TransactionFactory.create(payment_method=payment_method)
+        transaction_pending = TransactionFactory.create(payment_method=payment_method,
+                                                        state='pending')
+
+        url = reverse('payment-method-action', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk,
+            'requested_action': 'cancel',
+        })
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payment_method.refresh_from_db()
+        transaction_initial.refresh_from_db()
+        transaction_pending.refresh_from_db()
+
+        self.assertTrue(payment_method.canceled)
+        self.assertEqual(transaction_initial.state, Transaction.States.Canceled)
+        self.assertEqual(transaction_pending.state, Transaction.States.Canceled)
+
+    @override_settings(PAYMENT_PROCESSORS={
+        'fail_void_processor': {
+            'class': 'silver.tests.fixtures.FailingVoidTriggeredProcessor'
+        }
+    })
+    def test_cancel_action_failed_void(self):
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    payment_processor='fail_void_processor')
+        transaction_initial = TransactionFactory.create(payment_method=payment_method)
+        transaction_pending = TransactionFactory.create(payment_method=payment_method,
+                                                        state='pending')
+
+        url = reverse('payment-method-action', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk,
+            'requested_action': 'cancel',
+        })
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        expected_error = "Transaction {} couldn't be voided".format(transaction_pending.uuid)
+        self.assertEqual(response.data, {'errors': [expected_error]})

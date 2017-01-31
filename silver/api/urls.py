@@ -41,6 +41,8 @@ urlpatterns = [
         views.PaymentMethodList.as_view(), name='payment-method-list'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/$',
         views.PaymentMethodDetail.as_view(), name='payment-method-detail'),
+    url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/(?P<requested_action>(cancel))_request/$',
+        views.PaymentMethodAction.as_view(), name='payment-method-action'),
 
     url(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/transactions/$',
         views.TransactionList.as_view(), name='payment-method-transaction-list'),

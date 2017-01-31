@@ -13,16 +13,22 @@
 # limitations under the License.
 
 from jsonfield import JSONField
-from cryptography.fernet import InvalidToken, Fernet
+from annoying.functions import get_object_or_None
+from django_fsm import TransitionNotAllowed
 from model_utils.managers import InheritanceManager
+from cryptography.fernet import InvalidToken, Fernet
 
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-
-from .billing_entities import Customer
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
+from django.core.exceptions import ValidationError
 
 from silver import payment_processors
+
+from .billing_entities import Customer
+from .transactions import Transaction
 
 
 class PaymentMethodInvalid(Exception):
@@ -47,7 +53,7 @@ class PaymentMethod(models.Model):
     data = JSONField(blank=True, null=True, default={})
 
     verified = models.BooleanField(default=False)
-    enabled = models.BooleanField(default=True)
+    canceled = models.BooleanField(default=False)
 
     objects = InheritanceManager()
 
@@ -83,6 +89,48 @@ class PaymentMethod(models.Model):
             return str(Fernet(key).decrypt(bytes(crypted_data)))
         except InvalidToken:
             return None
+
+    def cancel(self):
+        if self.canceled:
+            raise ValidationError("You can't cancel a canceled payment method.")
+
+        cancelable_states = [Transaction.States.Initial,
+                             Transaction.States.Pending]
+
+        transactions = self.transaction_set.filter(state__in=cancelable_states)
+
+        errors = []
+        for transaction in transactions:
+            if transaction.state == Transaction.States.Initial:
+                try:
+                    transaction.cancel()
+                except TransitionNotAllowed:
+                    errors.append("Transaction {} couldn't be canceled".format(transaction.uuid))
+
+            if transaction.state == Transaction.States.Pending:
+                payment_processor = self.get_payment_processor()
+                if (hasattr(payment_processor, 'void_transaction') and
+                        not payment_processor.void_transaction(transaction)):
+                    errors.append("Transaction {} couldn't be voided".format(transaction.uuid))
+
+            transaction.save()
+
+        if errors:
+            return errors
+
+        self.canceled = True
+        self.save()
+
+        return None
+
+    def save(self, **kwargs):
+        self.clean()
+        super(PaymentMethod, self).save(**kwargs)
+
+    def clean(self):
+        old_instance = get_object_or_None(PaymentMethod, pk=self.pk)
+        if old_instance and old_instance.canceled and not self.canceled:
+            raise ValidationError("You can't reuse a canceled payment method.")
 
     @property
     def allowed_currencies(self):
