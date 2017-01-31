@@ -116,7 +116,8 @@ class Transaction(models.Model):
     def process(self):
         pass
 
-    @transition(field=state, source=[States.Initial, States.Pending], target=States.Settled)
+    @transition(field=state, source=[States.Initial, States.Pending],
+                target=States.Settled)
     def settle(self):
         pass
 
@@ -125,7 +126,8 @@ class Transaction(models.Model):
     def cancel(self, cancel_code='default'):
         self.cancel_code = cancel_code
 
-    @transition(field=state, source=States.Pending, target=States.Failed)
+    @transition(field=state, source=[States.Initial, States.Pending],
+                target=States.Failed)
     def fail(self, fail_code='default'):
         self.fail_code = fail_code
 
