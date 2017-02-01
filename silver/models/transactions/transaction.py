@@ -123,17 +123,20 @@ class Transaction(models.Model):
 
     @transition(field=state, source=[States.Initial, States.Pending],
                 target=States.Canceled)
-    def cancel(self, cancel_code='default'):
+    def cancel(self, cancel_code='default', cancel_reason='Unknown cancel reason'):
         self.cancel_code = cancel_code
+        logger.error(str(cancel_reason))
 
     @transition(field=state, source=[States.Initial, States.Pending],
                 target=States.Failed)
-    def fail(self, fail_code='default'):
+    def fail(self, fail_code='default', fail_reason='Unknown fail reason'):
         self.fail_code = fail_code
+        logger.error(str(fail_reason))
 
     @transition(field=state, source=States.Settled, target=States.Refunded)
-    def refund(self, refund_code='default'):
+    def refund(self, refund_code='default', refund_reason='Unknown refund reason'):
         self.refund_code = refund_code
+        logger.error(str(refund_reason))
 
     def clean(self):
         document = self.document
