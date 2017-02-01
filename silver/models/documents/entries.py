@@ -64,6 +64,22 @@ class DocumentEntry(models.Model):
         res = Decimal(self.total_before_tax * sales_tax_percent / 100)
         return res.quantize(Decimal('0.00'))
 
+    @property
+    def total_in_transaction_currency(self):
+        return self.total * self.document.transaction_xe_rate
+
+    @property
+    def total_before_tax_in_transaction_currency(self):
+        return self.total_before_tax * self.document.transaction_xe_rate
+
+    @property
+    def unit_price_in_transaction_currency(self):
+        return self.unit_price * self.document.transaction_xe_rate
+
+    @property
+    def tax_value_in_transaction_currency(self):
+        return self.tax_value * self.document.transaction_xe_rate
+
     def clone(self):
         return DocumentEntry(
             description=self.description,
