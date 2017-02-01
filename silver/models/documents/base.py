@@ -181,9 +181,9 @@ class BillingDocumentBase(models.Model):
                 self.transaction_xe_date = self.issue_date - timedelta(days=1)
 
             try:
-                xe_rate = currency_converter.convert(1, self.currency,
-                                                     self.transaction_currency,
-                                                     self.transaction_xe_date)
+                xe_rate = CurrencyConverter.convert(1, self.currency,
+                                                    self.transaction_currency,
+                                                    self.transaction_xe_date)
             except RateNotFound:
                 raise TransitionNotAllowed('Couldn\'t automatically obtain an'
                                            'exchange rate.')
@@ -469,3 +469,41 @@ class BillingDocumentBase(models.Model):
                 'id': self.id
             }
         }
+
+    @property
+    def entries(self):
+        raise NotImplementedError
+
+    @property
+    def total(self):
+        entries_total = [Decimal(entry.total) for entry in self.entries]
+        return sum(entries_total)
+
+    @property
+    def total_before_tax(self):
+        entries_total = [Decimal(entry.total_before_tax)
+                         for entry in self.entries]
+        return sum(entries_total)
+
+    @property
+    def tax_value(self):
+        entries_tax_value = [Decimal(entry.tax_value) for entry in self.entries]
+        return sum(entries_tax_value)
+
+    @property
+    def total_in_transaction_currency(self):
+        entries_total = [Decimal(entry.total_in_transaction_currency)
+                         for entry in self.entries]
+        return sum(entries_total)
+
+    @property
+    def total_before_tax_in_transaction_currency(self):
+        entries_total = [Decimal(entry.total_before_tax_in_transaction_currency)
+                         for entry in self.entries]
+        return sum(entries_total)
+
+    @property
+    def tax_value_in_transaction_currency(self):
+        entries_tax_value = [Decimal(entry.tax_value_in_transaction_currency)
+                             for entry in self.entries]
+        return sum(entries_tax_value)

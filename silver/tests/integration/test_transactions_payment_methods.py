@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
@@ -26,7 +26,7 @@ from silver.tests.fixtures import (PAYMENT_PROCESSORS, triggered_processor)
 class TestDocumentsTransactions(TestCase):
     def test_create_transaction_with_not_allowed_currency(self):
         invoice = InvoiceFactory.create(transaction_currency='EUR',
-                                        transaction_xe_rate=1,
+                                        transaction_xe_rate=Decimal('1.0'),
                                         state=Invoice.STATES.ISSUED)
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor,
