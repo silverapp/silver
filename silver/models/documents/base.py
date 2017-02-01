@@ -30,7 +30,6 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Max
-from django.db.models.manager import Manager
 from django.http import HttpResponse
 from django.template.loader import select_template
 from django.utils import timezone
@@ -39,8 +38,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
 from silver.models.billing_entities import Customer, Provider
-from silver.models.currency import CurrencyConverter
-from silver.models.currency.exceptions import RateNotFound
+from silver.currencies import CurrencyConverter, RateNotFound
 from silver.utils.international import currencies
 
 from .entries import DocumentEntry
@@ -183,9 +181,9 @@ class BillingDocumentBase(models.Model):
                 self.transaction_xe_date = self.issue_date - timedelta(days=1)
 
             try:
-                xe_rate = CurrencyConverter.convert(1, self.currency,
-                                                    self.transaction_currency,
-                                                    self.transaction_xe_date)
+                xe_rate = currency_converter.convert(1, self.currency,
+                                                     self.transaction_currency,
+                                                     self.transaction_xe_date)
             except RateNotFound:
                 raise TransitionNotAllowed('Couldn\'t automatically obtain an'
                                            'exchange rate.')
