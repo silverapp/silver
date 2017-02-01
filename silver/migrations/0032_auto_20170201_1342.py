@@ -36,6 +36,27 @@ class Migration(migrations.Migration):
             customer.save()
 
     operations = [
+        migrations.CreateModel(
+            name='Document',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('kind', models.CharField(max_length=40)),
+                ('series', models.CharField(max_length=20, null=True, blank=True)),
+                ('number', models.IntegerField(null=True, blank=True)),
+                ('due_date', models.DateField(null=True, blank=True)),
+                ('issue_date', models.DateField(null=True, blank=True)),
+                ('paid_date', models.DateField(null=True, blank=True)),
+                ('cancel_date', models.DateField(null=True, blank=True)),
+                ('sales_tax_percent', models.DecimalField(null=True, max_digits=4, decimal_places=2, blank=True)),
+                ('sales_tax_name', models.CharField(max_length=64, null=True, blank=True)),
+                ('currency', models.CharField(max_length=4)),
+                ('state', models.CharField(max_length=10)),
+                ('pdf', models.FileField(upload_to=silver.models.documents.base.documents_pdf_path, null=True, editable=False, blank=True)),
+            ],
+            options={
+                'managed': False,
+            },
+        ),
         migrations.RunSQL("""
                 DROP VIEW IF EXISTS silver_document;
                 CREATE VIEW silver_document AS SELECT
