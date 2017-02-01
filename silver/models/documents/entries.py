@@ -40,6 +40,10 @@ class DocumentEntry(models.Model):
         verbose_name_plural = 'Entries'
 
     @property
+    def document(self):
+        return self.invoice or self.proforma
+
+    @property
     def total(self):
         res = self.total_before_tax + self.tax_value
         return res.quantize(Decimal('0.00'))
