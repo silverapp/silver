@@ -1,13 +1,15 @@
-from .base import CurrencyConverterBase
+from decimal import Decimal
+
+from .rates import ExchangeRateBase
 from .exceptions import RateNotFound
-from .managers import CurrencyConverter
+from .converters import CurrencyConverter
 
 
-class DummyConverter(CurrencyConverterBase):
-    def convert(self, amount, to_currency, from_currency, date):
+class DummyExchangeRate(ExchangeRateBase):
+    def get_rate(self, to_currency, from_currency, date):
         if to_currency != from_currency:
             raise RateNotFound(to_currency, from_currency, date)
 
-        return amount
+        return Decimal('1.00')
 
-CurrencyConverter.register(DummyConverter)
+CurrencyConverter.register(DummyExchangeRate)

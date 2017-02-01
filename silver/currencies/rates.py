@@ -1,7 +1,7 @@
 from .exceptions import RateNotFound
 
 
-class CurrencyConverterBase(object):
+class RateExchangerBase(object):
     @property
     def known_currencies(self):
         """
@@ -10,5 +10,5 @@ class CurrencyConverterBase(object):
         """
         return []
 
-    def convert(self, amount, from_currency, to_currency, date):
+    def get_rate(self, from_currency, to_currency, date):
         raise RateNotFound(from_currency, to_currency, date)

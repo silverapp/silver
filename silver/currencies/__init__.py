@@ -1,2 +1,2 @@
-from .managers import CurrencyConverter
-from .dummy import DummyConverter
+from .converters import CurrencyConverter
+from .rates import RateExchangerBase
