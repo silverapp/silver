@@ -30,7 +30,6 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Max
-from django.db.models.manager import Manager
 from django.http import HttpResponse
 from django.template.loader import select_template
 from django.utils import timezone
@@ -39,8 +38,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
 from silver.models.billing_entities import Customer, Provider
-from silver.models.currency import CurrencyConverter
-from silver.models.currency.exceptions import RateNotFound
+from silver.currencies import CurrencyConverter
+from silver.currencies.exceptions import RateNotFound
 from silver.utils.international import currencies
 
 from .entries import DocumentEntry
