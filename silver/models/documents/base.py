@@ -477,39 +477,33 @@ class BillingDocumentBase(models.Model):
     @property
     def total(self):
         entries_total = [Decimal(entry.total) for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        return sum(entries_total)
 
     @property
     def total_before_tax(self):
         entries_total = [Decimal(entry.total_before_tax)
                          for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        return sum(entries_total)
 
     @property
     def tax_value(self):
-        entries_total = [Decimal(entry.tax_value) for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        entries_tax_value = [Decimal(entry.tax_value) for entry in self.entries]
+        return sum(entries_tax_value)
 
     @property
     def total_in_transaction_currency(self):
         entries_total = [Decimal(entry.total_in_transaction_currency)
                          for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        return sum(entries_total)
 
     @property
     def total_before_tax_in_transaction_currency(self):
         entries_total = [Decimal(entry.total_before_tax_in_transaction_currency)
                          for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        return sum(entries_total)
 
     @property
     def tax_value_in_transaction_currency(self):
-        entries_total = [Decimal(entry.tax_value_in_transaction_currency)
-                         for entry in self.entries]
-        res = sum(entries_total)
-        return res
+        entries_tax_value = [Decimal(entry.tax_value_in_transaction_currency)
+                             for entry in self.entries]
+        return sum(entries_tax_value)

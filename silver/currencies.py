@@ -21,6 +21,6 @@ class DummyConverter(object):
         return amount
 
 try:
-    CurrencyConverter = import_string(settings.SILVER_CURRENCY_CONVERTER)
+    CurrencyConverter = import_string(settings.SILVER_CURRENCY_CONVERTER)()
 except AttributeError:
-    CurrencyConverter = DummyConverter
+    CurrencyConverter = DummyConverter()
