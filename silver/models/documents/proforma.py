@@ -149,29 +149,12 @@ class Proforma(BillingDocumentBase):
         return {field: getattr(self, field, None) for field in fields}
 
     @property
-    def total(self):
-        entries_total = [Decimal(item.total)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def total_before_tax(self):
-        entries_total = [Decimal(item.total_before_tax)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
-    def tax_value(self):
-        entries_total = [Decimal(item.tax_value)
-                         for item in self.proforma_entries.all()]
-        res = sum(entries_total)
-        return res
-
-    @property
     def related_document(self):
         return self.invoice
+
+    @property
+    def entries(self):
+        return self.proforma_entries.all()
 
 
 @receiver(pre_delete, sender=Proforma)
