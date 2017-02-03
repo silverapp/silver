@@ -55,6 +55,9 @@ class PaymentMethod(models.Model):
     verified = models.BooleanField(default=False)
     canceled = models.BooleanField(default=False)
 
+    valid_until = models.DateTimeField(null=True, blank=True)
+    display_info = models.CharField(max_length=256, null=True, blank=True)
+
     objects = InheritanceManager()
 
     def __init__(self, *args, **kwargs):
