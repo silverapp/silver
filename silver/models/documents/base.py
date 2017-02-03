@@ -178,7 +178,7 @@ class BillingDocumentBase(models.Model):
 
         if not self.transaction_xe_rate:
             if not self.transaction_xe_date:
-                self.transaction_xe_date = self.issue_date - timedelta(days=1)
+                self.transaction_xe_date = self.issue_date
 
             try:
                 xe_rate = CurrencyConverter.convert(1, self.currency,
