@@ -476,7 +476,7 @@ class BillingDocumentForm(forms.ModelForm):
     def clean(self, *args, **kwargs):
         cleaned_data = super(BillingDocumentForm, self).clean(*args, **kwargs)
 
-        customer = cleaned_data.get('customer')
+        customer = cleaned_data.get('customer', None)
         if not customer:
             return cleaned_data
 
