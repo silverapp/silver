@@ -49,6 +49,7 @@ class Document(models.Model):
                                             null=True, blank=True)
     sales_tax_name = models.CharField(max_length=64, blank=True, null=True)
     currency = models.CharField(max_length=4)
+    transaction_currency = models.CharField(max_length=4)
     state = models.CharField(max_length=10)
     pdf = models.FileField(null=True, blank=True, editable=False,
                            storage=_storage, upload_to=documents_pdf_path)

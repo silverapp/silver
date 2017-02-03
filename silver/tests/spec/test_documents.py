@@ -78,6 +78,7 @@ class TestDocumentEndpoints(APITestCase):
             u'sales_tax_name': document.sales_tax_name,
             u'sales_tax_percent': u'%.2f' % document.sales_tax_percent,
             u'currency': document.currency,
+            u'transaction_currency': document.transaction_currency,
             u'state': document.state,
             u'total': document.total,
             u'pdf_url': (u'http://testserver%s' % document.pdf.url) if document.pdf else None,
