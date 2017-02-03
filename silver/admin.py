@@ -190,8 +190,8 @@ class SubscriptionAdmin(ModelAdmin):
     list_filter = ['plan', 'state', 'plan__provider', 'customer']
     readonly_fields = ['state', ]
     actions = ['activate', 'cancel_now', 'cancel_at_end_of_cycle', 'end']
-    search_fields = ['customer__name', 'customer__company', 'plan__name',
-                     'meta']
+    search_fields = ['customer__first_name', 'customer__last_name',
+                     'customer__company', 'plan__name', 'meta']
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
 
     def perform_action(self, request, action, queryset):
