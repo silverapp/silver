@@ -87,6 +87,7 @@ class TestInvoiceEndpoints(APITestCase):
             "invoice_entries": [],
             "pdf_url": None,
             "total": invoice.total,
+            "total_in_transaction_currency": invoice.total,
             "transactions": []
         })
 

@@ -169,6 +169,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
     transaction_currency = 'RON'
+    transaction_xe_rate = 1
 
     @factory.post_generation
     def invoice_entries(self, create, extracted, **kwargs):
@@ -190,6 +191,7 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
     transaction_currency = 'RON'
+    transaction_xe_rate = 1
 
     @factory.post_generation
     def subscriptions(self, create, extracted, **kwargs):

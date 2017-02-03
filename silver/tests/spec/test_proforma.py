@@ -84,6 +84,7 @@ class TestProformaEndpoints(APITestCase):
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal("0.00"),
+            "total_in_transaction_currency": Decimal("0.00"),
             "transactions": []
         })
 
@@ -158,6 +159,7 @@ class TestProformaEndpoints(APITestCase):
             "invoice": None,
             "proforma_entries": [],
             "total": Decimal('0.00'),
+            "total_in_transaction_currency": Decimal('0.00'),
             "transactions": []
         })
 
