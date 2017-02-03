@@ -36,6 +36,9 @@
         table {
           width: 100%;
         }
+        table thead td {
+          vertical-align: top;
+        }
         table small {
           color: gray;
         }
@@ -56,67 +59,71 @@
                 <thead>
                     <tr>
                         <td>
-                            <h5>Issuer: {{ provider.billing_name }}</h5>
-                            <p>{{ provider.address_1 }}<br />
+                            {% block document_issuer %}
+                                <h5><span>Issuer:</span> {{ provider.billing_name }}</h5>
+                                <p>{{ provider.address_1 }}<br />
 
-                            {% if provider.address_2 %}
-                                {{ provider.address_2 }}<br />
-                            {% endif %}
+                                {% if provider.address_2 %}
+                                    {{ provider.address_2 }}<br />
+                                {% endif %}
 
-                            {{ provider.city }}<br />
+                                {{ provider.city }}<br />
 
-                            {% if provider.state %}
-                                {{ provider.state }}<br />
-                            {% endif %}
+                                {% if provider.state %}
+                                    {{ provider.state }}<br />
+                                {% endif %}
 
-                            {% if provider.zip_code %}
-                                {{ provider.zip_code }}<br />
-                            {% endif %}
+                                {% if provider.zip_code %}
+                                    {{ provider.zip_code }}<br />
+                                {% endif %}
 
-                            {% if provider.email %}
-                                <strong>Email:</strong> {{ provider.email }}<br />
-                            {% endif %}
+                                {% if provider.email %}
+                                    <strong>Email:</strong> {{ provider.email }}<br />
+                                {% endif %}
 
-                            {% if provider.extra %}
-                                {{ provider.extra|linebreaksbr }}
-                            {% endif %}
-                            </p>
+                                {% if provider.extra %}
+                                    {{ provider.extra|linebreaksbr }}
+                                {% endif %}
+                                </p>
+                            {% endblock %}
                         </td>
                         <td>
-                            <h5>Customer: {{ customer.billing_name }}</h5>
-                            <p>
-                            {% if customer.sales_tax_number %}
-                                {{ customer.sales_tax_number }}<br />
-                            {% endif %}
+                            {% block document_customer %}
+                                <h5><span>Customer:</span> {{ customer.billing_name }}</h5>
+                                <p>
+                                {% if customer.sales_tax_number %}
+                                    {{ customer.sales_tax_number }}<br />
+                                {% endif %}
 
-                            {{ customer.address_1 }}<br />
+                                {{ customer.address_1 }}<br />
 
-                            {% if customer.address_2 %}
-                                {{ customer.address_2 }}<br />
-                            {% endif %}
+                                {% if customer.address_2 %}
+                                    {{ customer.address_2 }}<br />
+                                {% endif %}
 
-                            {{ customer.city }}<br />
+                                {{ customer.city }}<br />
 
-                            {% if customer.state %}
-                                {{ customer.state }}<br />
-                            {% endif %}
+                                {% if customer.state %}
+                                    {{ customer.state }}<br />
+                                {% endif %}
 
-                            {% if customer.zip_code %}
-                                {{ customer.zip_code }}<br />
-                            {% endif %}
+                                {% if customer.zip_code %}
+                                    {{ customer.zip_code }}<br />
+                                {% endif %}
 
-                            {% if customer.email %}
-                                {{ customer.email }}<br />
-                            {% endif %}
+                                {% if customer.email %}
+                                    {{ customer.email }}<br />
+                                {% endif %}
 
-                            {% if customer.company %}
-                                {{ customer.company }}<br />
-                            {% endif %}
+                                {% if customer.company %}
+                                    {{ customer.company }}<br />
+                                {% endif %}
 
-                            {% if customer.extra %}
-                                {{ customer.extra|linebreaksbr }}<br />
-                            {% endif %}
-                            </p>
+                                {% if customer.extra %}
+                                    {{ customer.extra|linebreaksbr }}<br />
+                                {% endif %}
+                                </p>
+                            {% endblock %}
                         </td>
                       </tr>
                     </thead>
@@ -184,6 +191,9 @@
                     </tfoot>
                 </table>
             {% endblock %}
+        {% endblock %}
+
+        {% block footer %}
         {% endblock %}
     </div>
 </body>
