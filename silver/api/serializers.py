@@ -608,7 +608,8 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'kind', 'series', 'number', 'provider',
                   'customer', 'due_date', 'issue_date', 'paid_date',
                   'cancel_date', 'sales_tax_name', 'sales_tax_percent',
-                  'currency', 'state', 'total', 'pdf_url', 'transactions')
+                  'currency', 'state', 'total', 'total_in_transaction_currency',
+                  'pdf_url', 'transactions')
         read_only_fields = fields
 
 

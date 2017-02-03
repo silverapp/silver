@@ -81,7 +81,8 @@ class TestDocumentEndpoints(APITestCase):
             u'state': document.state,
             u'total': document.total,
             u'pdf_url': (u'http://testserver%s' % document.pdf.url) if document.pdf else None,
-            u'transactions': transactions
+            u'transactions': transactions,
+            u'total_in_transaction_currency': document.total_in_transaction_currency
         }
 
     def _jwt_token(self, *args, **kwargs):

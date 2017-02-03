@@ -25,16 +25,16 @@ class Document(models.Model):
 
     @property
     def total(self):
-        data = {
-            'invoice_id': self.id
-        } if self.kind == 'invoice' else {
-            'proforma_id': self.id
-        }
-
-        entries = DocumentEntry.objects.filter(**data)\
-            .select_related('invoice', 'proforma')
+        entries = self._get_entries()
         entries_total = [Decimal(entry.total) for entry in entries.all()]
 
+        return sum(entries_total)
+
+    @property
+    def total_in_transaction_currency(self):
+        entries = self._get_entries()
+        entries_total = [Decimal(entry.total_in_transaction_currency)
+                         for entry in entries.all()]
         return sum(entries_total)
 
     series = models.CharField(max_length=20, blank=True, null=True)
@@ -55,3 +55,13 @@ class Document(models.Model):
 
     class Meta:
         managed = False
+
+    def _get_entries(self):
+        data = {
+            'invoice_id': self.id
+        } if self.kind == 'invoice' else {
+            'proforma_id': self.id
+        }
+
+        return DocumentEntry.objects.filter(**data)\
+            .select_related('invoice', 'proforma')
