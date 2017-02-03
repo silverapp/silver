@@ -80,7 +80,7 @@ class TestInvoiceEndpoints(APITestCase):
             "sales_tax_percent": str(invoice.sales_tax_percent),
             "currency": "RON",
             "transaction_currency": invoice.transaction_currency,
-            "transaction_xe_rate": "%.4f" % invoice.transaction_xe_rate,
+            "transaction_xe_rate": None,
             "transaction_xe_date": invoice.transaction_xe_date,
             "state": invoice.state,
             "proforma": None,
@@ -187,7 +187,8 @@ class TestInvoiceEndpoints(APITestCase):
                 "sales_tax_percent": '1.00',
                 "currency": "RON",
                 "transaction_currency": invoice.transaction_currency,
-                "transaction_xe_rate": "%.4f" % invoice.transaction_xe_rate,
+                "transaction_xe_rate": ("%.4f" % invoice.transaction_xe_rate
+                                        if invoice.transaction_xe_rate else None),
                 "transaction_xe_date": invoice.transaction_xe_date,
                 "state": "issued",
                 "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,

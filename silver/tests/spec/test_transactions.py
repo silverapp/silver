@@ -328,7 +328,7 @@ class TestTransactionEndpoint(APITestCase):
                                       kwargs={'customer_pk': customer.pk,
                                               'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
-            'currency': 'RON',
+            'currency': 'EUR',
             'amount': invoice.transaction_total,
             'invoice': invoice_url,
             'proforma': proforma_url
@@ -434,7 +434,7 @@ class TestTransactionEndpoint(APITestCase):
         data = {
             'proforma': proforma_url,
             'invoice': invoice_url,
-            'currency': 'RON',
+            'currency': 'EUR',
             'amount': 1234,
             'payment_method': new_payment_method_url
         }

@@ -76,7 +76,8 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_percent": "1.00",
             "currency": "RON",
             "transaction_currency": proforma.transaction_currency,
-            "transaction_xe_rate": str(proforma.transaction_xe_rate),
+            "transaction_xe_rate": (str(proforma.transaction_xe_rate)
+                                    if proforma.transaction_xe_rate else None),
             "transaction_xe_date": proforma.transaction_xe_date,
             "pdf_url": None,
             "state": "draft",
@@ -149,7 +150,8 @@ class TestProformaEndpoints(APITestCase):
             "sales_tax_percent": '1.00',
             "currency": "RON",
             "transaction_currency": proforma.transaction_currency,
-            "transaction_xe_rate": "%.4f" % proforma.transaction_xe_rate,
+            "transaction_xe_rate": ("%.4f" % proforma.transaction_xe_rate
+                                    if proforma.transaction_xe_rate else None),
             "transaction_xe_date": proforma.transaction_xe_date,
             "pdf_url": None,
             "state": "draft",
