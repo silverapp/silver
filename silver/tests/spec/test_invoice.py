@@ -103,6 +103,7 @@ class TestInvoiceEndpoints(APITestCase):
             'series': None,
             'number': None,
             'currency': 'RON',
+            'transaction_xe_rate': 1,
             'invoice_entries': [{
                 "description": "Page views",
                 "unit_price": 10.0,
