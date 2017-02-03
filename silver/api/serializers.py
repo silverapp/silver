@@ -402,7 +402,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor_name',
                   'payment_processor', 'added_at', 'verified',
-                  'canceled', 'additional_data')
+                  'canceled', 'additional_data', 'valid_until', 'display_info')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }

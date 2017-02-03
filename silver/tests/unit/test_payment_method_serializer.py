@@ -56,7 +56,9 @@ class TestPaymentMethodSerializer(TestCase):
             ])),
             ('added_at', payment_method.added_at),
             ('verified', False),
-            ('canceled', False)
+            ('canceled', False),
+            ('valid_until', None),
+            ('display_info', None),
         ])
 
         json = JSONRenderer().render(serializer.data)
