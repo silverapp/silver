@@ -168,6 +168,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
+    transaction_currency = 'RON'
 
     @factory.post_generation
     def invoice_entries(self, create, extracted, **kwargs):
@@ -188,6 +189,7 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
+    transaction_currency = 'RON'
 
     @factory.post_generation
     def subscriptions(self, create, extracted, **kwargs):
@@ -253,13 +255,15 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         ProformaFactory,
         customer=factory.SelfAttribute('..payment_method.customer'),
         state=Proforma.STATES.ISSUED,
-        issue_date=timezone.now().date()
+        issue_date=timezone.now().date(),
+        transaction_xe_rate=Decimal('1')
     )
     invoice = factory.SubFactory(
         InvoiceFactory,
         customer=factory.SelfAttribute('..payment_method.customer'),
         state=Invoice.STATES.ISSUED,
-        issue_date=timezone.now().date()
+        issue_date=timezone.now().date(),
+        transaction_xe_rate=Decimal('1')
     )
 
     state = Transaction.States.Initial

@@ -118,7 +118,8 @@ class TestDocumentsTransactions(TestCase):
             There already is an active (initial/pending) transaction for the
             document.
         """
-        invoice = InvoiceFactory.create(state='issued')
+        invoice = InvoiceFactory.create()
+        invoice.issue()
         customer = invoice.customer
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,

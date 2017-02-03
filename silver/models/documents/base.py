@@ -185,7 +185,7 @@ class BillingDocumentBase(models.Model):
                                                     self.transaction_currency,
                                                     self.transaction_xe_date)
             except RateNotFound:
-                raise TransitionNotAllowed('Couldn\'t automatically obtain an'
+                raise TransitionNotAllowed('Couldn\'t automatically obtain an '
                                            'exchange rate.')
 
             self.transaction_xe_rate = xe_rate

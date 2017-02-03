@@ -71,8 +71,8 @@ class TestDocumentEndpoints(APITestCase):
             u'number': document.number,
             u'provider': u'http://testserver/providers/%s/' % document.provider.pk,
             u'customer': u'http://testserver/customers/%s/' % document.customer.pk,
-            u'due_date': document.due_date,
-            u'issue_date': document.issue_date,
+            u'due_date': unicode(document.due_date) if document.due_date else None,
+            u'issue_date': unicode(document.issue_date) if document.issue_date else None,
             u'paid_date': document.paid_date,
             u'cancel_date': document.cancel_date,
             u'sales_tax_name': document.sales_tax_name,
@@ -80,7 +80,7 @@ class TestDocumentEndpoints(APITestCase):
             u'currency': document.currency,
             u'state': document.state,
             u'total': document.total,
-            u'pdf_url': None,
+            u'pdf_url': (u'http://testserver%s' % document.pdf.url) if document.pdf else None,
             u'transactions': transactions
         }
 
@@ -92,11 +92,11 @@ class TestDocumentEndpoints(APITestCase):
             One proforma, one invoice, without related documents
         """
         proforma = ProformaFactory.create()
-        invoice = InvoiceFactory.create(state='issued')
+        invoice = InvoiceFactory.create()
+        invoice.issue()
         payment_method = PaymentMethodFactory.create(customer=invoice.customer)
         transaction = TransactionFactory.create(payment_method=payment_method,
                                                 invoice=invoice)
-
 
         url = reverse('document-list')
 
@@ -109,7 +109,6 @@ class TestDocumentEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response_data), 2)
-
 
         self.assertIn(self._get_expected_data(invoice, [transaction]),
                       response_data)
