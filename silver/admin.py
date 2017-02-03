@@ -569,9 +569,9 @@ class DueDateFilter(SimpleListFilter):
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
-                    'cancel_date', tax, 'total', 'currency']
+                    'cancel_date', tax, 'total', 'transaction_total']
 
-    list_filter = ('provider__company', 'state', DueDateFilter)
+    list_filter = ('provider__company', 'state', 'customer', DueDateFilter)
 
     common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'state', 'email']
@@ -679,6 +679,12 @@ class BillingDocumentAdmin(ModelAdmin):
     def total(self, obj):
         return '{:.2f} {currency}'.format(obj.total,
                                           currency=obj.currency)
+
+    def transaction_total(self, obj):
+        if obj.transaction_total is not None:
+            return '{:.2f} {currency}'.format(obj.transaction_total,
+                                              currency=obj.transaction_currency)
+        return None
 
     def _download_pdf(self, url, base_path):
         local_file_path = os.path.join(base_path, 'billing-temp-document.pdf')
@@ -884,7 +890,8 @@ class TransactionAdmin(ModelAdmin):
 
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
                     'amount', 'state', 'get_customer', 'get_pay_url')
-    list_filter = ('payment_method__customer', 'state')
+    list_filter = ('payment_method__customer', 'state',
+                   'payment_method__payment_processor')
     actions = ['process', 'cancel', 'settle', 'fail']
 
     def get_readonly_fields(self, request, instance=None):
