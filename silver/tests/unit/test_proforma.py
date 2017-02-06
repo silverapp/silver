@@ -18,7 +18,8 @@ from decimal import Decimal
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
-from silver.tests.factories import ProformaFactory, DocumentEntryFactory
+from silver.tests.factories import ProformaFactory, DocumentEntryFactory, \
+    CustomerFactory
 
 
 class TestProforma(TestCase):
@@ -138,3 +139,18 @@ class TestProforma(TestCase):
 
         assert proforma.series_number == '%s-%s' % (proforma.series,
                                                     proforma.number)
+
+    def test_customer_currency_used_for_transaction_currency(self):
+        customer = CustomerFactory.create(currency='EUR')
+        proforma = ProformaFactory.create(customer=customer,
+                                          transaction_currency=None)
+
+        self.assertEqual(proforma.transaction_currency, 'EUR')
+
+    def test_proforma_currency_used_for_transaction_currency(self):
+        customer = CustomerFactory.create(currency=None)
+        proforma = ProformaFactory.create(customer=customer,
+                                          currency='EUR',
+                                          transaction_currency=None)
+
+        self.assertEqual(proforma.transaction_currency, 'EUR')
