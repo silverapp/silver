@@ -13,12 +13,11 @@
 # limitations under the License.
 
 
-from decimal import Decimal
-
 from django_fsm import TransitionNotAllowed, transition
 
 from django.db import models
-from django.db.models.signals import pre_delete
+from django.db.models.loading import get_model
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
 from .base import BillingDocumentBase
@@ -102,3 +101,16 @@ def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
     if instance.proforma:
         if instance.proforma.pdf:
             instance.proforma.pdf.delete(False)
+
+
+@receiver(post_save, sender=Invoice)
+def post_invoice_save(sender, instance, created=False, **kwargs):
+    if not created:
+        return
+
+    Transaction = get_model('silver.Transaction')
+    invoice = instance
+    proforma = invoice.proforma
+
+    if proforma:
+        Transaction.objects.filter(proforma=proforma).update(invoice=invoice)
