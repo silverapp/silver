@@ -17,7 +17,7 @@ from mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from silver.models import Transaction
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
-                                    TransactionFactory)
+                                    TransactionFactory, ProformaFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
                                    triggered_processor)
 
@@ -38,19 +38,6 @@ class TestDocumentsTransactions(TestCase):
         self.assertEqual(invoice.state, invoice.STATES.PAID)
 
     # also refunding needs to be tested when implemented
-
-    def test_proforma_adds_invoice_to_transactions(self):
-        transaction = TransactionFactory.create(
-            state=Transaction.States.Pending,
-            invoice=None
-        )
-        transaction.settle()
-        transaction.save()
-
-        proforma = transaction.proforma
-        invoice = transaction.invoice
-
-        self.assertEqual(proforma.invoice, invoice)
 
     def test_transaction_creation_for_issued_documents(self):
         """
@@ -149,3 +136,101 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(transactions[0], transaction)
 
             self.assertEqual(mock_execute.call_count, 0)
+
+    def test_no_transaction_creation_at_invoice_creation_from_proforma(self):
+        proforma = ProformaFactory.create(invoice=None)
+
+        customer = proforma.customer
+        PaymentMethodFactory.create(
+            payment_processor=triggered_processor, customer=customer,
+            canceled=False,
+            verified=True,
+        )
+
+        proforma.issue()
+        proforma.save()
+
+        self.assertEqual(len(Transaction.objects.filter(proforma=proforma)),
+                         1)
+
+        invoice = proforma.create_invoice()
+
+        self.assertEqual(len(Transaction.objects.filter(proforma=proforma)), 1)
+
+        transaction = Transaction.objects.filter(proforma=proforma)[0]
+        self.assertEqual(transaction.invoice, invoice)
+
+    def test_no_transaction_creation_at_proforma_pay(self):
+        proforma = ProformaFactory.create(invoice=None)
+
+        customer = proforma.customer
+        PaymentMethodFactory.create(
+            payment_processor=triggered_processor, customer=customer,
+            canceled=False,
+            verified=True,
+        )
+
+        proforma.issue()
+        proforma.save()
+
+        proforma.pay()
+        proforma.save()
+
+        invoice = proforma.invoice
+
+        self.assertEqual(len(Transaction.objects.filter(proforma=proforma)), 1)
+
+        transaction = Transaction.objects.filter(proforma=proforma)[0]
+        self.assertEqual(transaction.invoice, invoice)
+
+    def test_no_transaction_settle_with_only_related_proforma(self):
+        proforma = ProformaFactory.create(invoice=None)
+
+        customer = proforma.customer
+        PaymentMethodFactory.create(
+            payment_processor=triggered_processor, customer=customer,
+            canceled=False,
+            verified=True,
+        )
+
+        proforma.issue()
+        proforma.save()
+
+        transaction = proforma.transactions[0]
+        # here transaction.proforma is the same object as the proforma from the
+        # DB due to the way transition callbacks and saves are called
+
+        transaction.settle()
+        transaction.save()
+
+        self.assertEqual(proforma.state, proforma.STATES.PAID)
+
+        invoice = proforma.invoice
+        self.assertEqual(invoice.state, invoice.STATES.PAID)
+
+        self.assertEqual(list(proforma.transactions),
+                         list(invoice.transactions))
+
+        self.assertEqual(len(proforma.transactions), 1)
+
+    def test_transaction_invoice_on_transaction_settle(self):
+        transaction = TransactionFactory.create(
+            state=Transaction.States.Pending,
+            invoice=None
+        )
+
+        # here transaction.proforma is an old version of itself
+        # the actual proforma that is saved in db has a related invoice
+        # so a refresh_from_db is needed
+        # test_no_transaction_settle_with_only_related_proforma would be enough
+        # if the transition callbacks would be handled in post_save
+
+        transaction.settle()
+        transaction.save()
+
+        transaction.refresh_from_db()
+
+        proforma = transaction.proforma
+        invoice = transaction.invoice
+
+        self.assertEqual(proforma.invoice, invoice)

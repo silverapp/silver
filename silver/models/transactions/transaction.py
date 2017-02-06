@@ -146,7 +146,7 @@ class Transaction(models.Model):
                 '(invoice or proforma).'
             )
 
-        if document.state == 'draft':
+        if document.state == document.STATES.DRAFT:
             raise ValidationError(
                 'The transaction must have a non-draft document '
                 '(invoice or proforma).'
@@ -171,7 +171,13 @@ class Transaction(models.Model):
             else:
                 self.invoice = self.proforma.invoice
 
+        # New transaction
         if not self.pk:
+            if document.state != document.STATES.ISSUED:
+                raise ValidationError(
+                    'Transactions can only be created for issued documents.'
+                )
+
             if self.currency:
                 if self.currency != self.document.transaction_currency:
                     raise ValidationError(
@@ -199,9 +205,11 @@ class Transaction(models.Model):
             else:
                 self.amount = self.document.transaction_total
 
+            # We also check for settled because document pay transition might fail
             if self.document.transactions.filter(
                 state__in=[Transaction.States.Initial,
-                           Transaction.States.Pending]
+                           Transaction.States.Pending,
+                           Transaction.States.Settled]
             ).exists():
                 raise ValidationError(
                     'There already are active transactions for the same '
@@ -243,44 +251,14 @@ class Transaction(models.Model):
     def payment_processor(self):
         return self.payment_method.payment_processor
 
+    def update_document_state(self):
+        if (self.state == Transaction.States.Settled and
+                self.document.state != self.document.STATES.PAID):
+            self.document.pay()
+            self.document.save()
+
     def __unicode__(self):
         return unicode(self.uuid)
-
-
-@receiver(pre_save, sender=Transaction)
-def pre_transaction_save(sender, instance=None, **kwargs):
-    transaction = instance
-
-    old = get_object_or_None(Transaction, pk=transaction.pk)
-    setattr(transaction, 'old_value', old)
-
-    if old:
-        for field in transaction.final_fields:
-            if getattr(old, field) and getattr(transaction, field) != getattr(old, field):
-                raise ValidationError("Field '%s' may not be changed." % field)
-
-    if not getattr(transaction, 'cleaned', False):
-        transaction.full_clean()
-
-    proforma = transaction.proforma
-    if proforma and proforma.invoice and not transaction.invoice:
-        transaction.invoice = proforma.invoice
-
-
-@receiver(post_save, sender=Transaction)
-def post_transaction_save(sender, instance, **kwargs):
-    if getattr(instance, 'old_value', None):
-        return
-
-    # we know this instance is freshly made as it doesn't have an old_value
-    logger.info('[Models][Transaction]: %s', {
-        'detail': 'A transaction was created.',
-        'transaction_id': instance.id,
-        'customer_id': instance.customer.id,
-        'invoice_id': instance.invoice.id if instance.invoice else None,
-        'proforma_id':
-            instance.proforma.id if instance.proforma else None
-    })
 
 
 def _sync_transaction_state_with_document(transaction, target):
@@ -322,8 +300,42 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
     """
 
     if issubclass(sender, Transaction):
-        _sync_transaction_state_with_document(instance, target)
+        setattr(instance, '.recently_transitioned', target)
 
     elif issubclass(sender, BillingDocumentBase):
         if target == BillingDocumentBase.STATES.ISSUED:
             create_transaction_for_document(instance)
+
+
+@receiver(pre_save, sender=Transaction)
+def pre_transaction_save(sender, instance=None, **kwargs):
+    transaction = instance
+
+    old = get_object_or_None(Transaction, pk=transaction.pk)
+    setattr(transaction, 'old_value', old)
+
+    if old:
+        for field in transaction.final_fields:
+            if getattr(old, field) and getattr(transaction, field) != getattr(old, field):
+                raise ValidationError("Field '%s' may not be changed." % field)
+
+    if not getattr(transaction, 'cleaned', False):
+        transaction.full_clean()
+
+
+@receiver(post_save, sender=Transaction)
+def post_transaction_save(sender, instance, **kwargs):
+    if getattr(instance, '.recently_transitioned', False):
+        delattr(instance, '.recently_transitioned')
+        instance.update_document_state()
+
+    if not getattr(instance, 'old_value', None):
+        # we know this instance is freshly made as it doesn't have an old_value
+        logger.info('[Models][Transaction]: %s', {
+            'detail': 'A transaction was created.',
+            'transaction_id': instance.id,
+            'customer_id': instance.customer.id,
+            'invoice_id': instance.invoice.id if instance.invoice else None,
+            'proforma_id':
+                instance.proforma.id if instance.proforma else None
+        })
