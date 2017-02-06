@@ -50,6 +50,8 @@ class Command(BaseCommand):
 
         for transaction in executable_transactions:
             try:
+                if not transaction.payment_method.verified or transaction.payment_method.canceled:
+                    continue
                 payment_processor = transaction.payment_method.get_payment_processor()
                 if payment_processor.type != PaymentProcessorTypes.Triggered:
                     continue
