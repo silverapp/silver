@@ -140,7 +140,7 @@ class BillingDocumentBase(models.Model):
         help_text='The currency used for billing.'
     )
     transaction_currency = models.CharField(
-        choices=currencies, max_length=4, default='USD',
+        choices=currencies, max_length=4,
         help_text='The currency used when making a transaction.'
     )
     transaction_xe_rate = models.DecimalField(

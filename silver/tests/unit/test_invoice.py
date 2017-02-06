@@ -22,7 +22,7 @@ from django.test import TestCase
 
 from silver.models import DocumentEntry, Proforma, Invoice
 from silver.tests.factories import (ProformaFactory, InvoiceFactory,
-                                    DocumentEntryFactory)
+                                    DocumentEntryFactory, CustomerFactory)
 
 
 class TestInvoice(TestCase):
@@ -234,3 +234,18 @@ class TestInvoice(TestCase):
 
         assert queryset.count() == 1
         assert invoices[1] in queryset
+
+    def test_customer_currency_used_for_transaction_currency(self):
+        customer = CustomerFactory.create(currency='EUR')
+        invoice = InvoiceFactory.create(customer=customer,
+                                        transaction_currency=None)
+
+        self.assertEqual(invoice.transaction_currency, 'EUR')
+
+    def test_invoice_currency_used_for_transaction_currency(self):
+        customer = CustomerFactory.create(currency=None)
+        invoice = InvoiceFactory.create(customer=customer,
+                                        currency='EUR',
+                                        transaction_currency=None)
+
+        self.assertEqual(invoice.transaction_currency, 'EUR')
