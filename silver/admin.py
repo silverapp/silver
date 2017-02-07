@@ -1029,6 +1029,10 @@ class TransactionAdmin(ModelAdmin):
 class PaymentMethodAdmin(ModelAdmin):
     list_display = ('customer', 'payment_processor', 'added_at', 'verified',
                     'canceled')
+    list_filter = ('customer', 'verified', 'canceled',
+                   'payment_processor')
+    search_fields = ['customer__first_name', 'customer__last_name',
+                     'customer__company']
 
 
 site.register(Transaction, TransactionAdmin)
