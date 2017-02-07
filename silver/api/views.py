@@ -941,3 +941,35 @@ class TransactionDetail(RetrieveUpdateAPIView):
             raise Http404
 
         return get_object_or_404(Transaction, uuid=uuid)
+
+
+class TransactionAction(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        transaction = self.get_object(**kwargs)
+        action_to_execute = getattr(transaction, kwargs.get('requested_action'),
+                                    None)
+
+        if not action_to_execute:
+            raise Http404
+
+        errors = action_to_execute()
+        if errors:
+            return Response({"errors": errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        transaction_serialized = TransactionSerializer(transaction,
+                                                       context={'request': request})
+        return Response(transaction_serialized.data,
+                        status=status.HTTP_200_OK)
+
+    def get_object(self, **kwargs):
+        transaction_uuid = kwargs.get('transaction_uuid')
+        customer_pk = kwargs.get('customer_pk')
+
+        return get_object_or_404(
+            Transaction.objects.all().select_subclasses(),
+            uuid=transaction_uuid,
+            customer__pk=customer_pk
+        )

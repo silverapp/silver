@@ -494,7 +494,7 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                   'refund_code', 'cancel_code')
 
         read_only_fields = ('customer', 'provider', 'can_be_consumed', 'pay_url',
-                            'id', 'url', 'updated_at', 'created_at',
+                            'id', 'url', 'state', 'updated_at', 'created_at',
                             'payment_processor', 'fail_code', 'refund_code',
                             'cancel_code')
         updateable_fields = ('valid_until', 'success_url', 'failed_url')
