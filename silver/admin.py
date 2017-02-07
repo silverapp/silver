@@ -872,7 +872,7 @@ class TransactionForm(forms.ModelForm):
         model = Transaction
         fields = ['amount', 'currency', 'proforma', 'invoice', 'state',
                   'payment_method', 'uuid', 'valid_until', 'last_access',
-                  'data']
+                  'data', 'fail_code', 'cancel_code', 'refund_code']
 
         readonly_fields = ['state', 'uuid', 'last_access']
         create_only_fields = ['amount', 'currency', 'proforma', 'invoice',
@@ -892,7 +892,8 @@ class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
-                    'amount', 'state', 'get_customer', 'get_pay_url')
+                    'amount', 'state', 'get_customer', 'get_pay_url',
+                    'get_payment_method', 'get_is_recurring')
     list_filter = ('payment_method__customer', 'state',
                    'payment_method__payment_processor')
     actions = ['process', 'cancel', 'settle', 'fail']
@@ -915,6 +916,18 @@ class TransactionAdmin(ModelAdmin):
         return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
     get_customer.allow_tags = True
     get_customer.short_description = 'Customer'
+
+    def get_is_recurring(self, obj):
+        return obj.payment_method.verified
+    get_is_recurring.boolean = True
+    get_is_recurring.short_description = 'Recurring'
+
+    def get_payment_method(self, obj):
+        link = urlresolvers.reverse("admin:silver_paymentmethod_change",
+                                    args=[obj.payment_method.pk])
+        return u'<a href="%s">%s</a>' % (link, obj.payment_method)
+    get_payment_method.allow_tags = True
+    get_payment_method.short_description = 'Payment Method'
 
     def perform_action(self, request, queryset, action, display_verb=None):
         failed_count = 0
