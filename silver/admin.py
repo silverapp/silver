@@ -902,6 +902,7 @@ class TransactionAdmin(ModelAdmin):
     list_filter = ('payment_method__customer', 'state',
                    'payment_method__payment_processor')
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
+    ordering = ['-created_at']
 
     def get_readonly_fields(self, request, instance=None):
         if instance:
