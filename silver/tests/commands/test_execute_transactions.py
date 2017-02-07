@@ -26,7 +26,8 @@ from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
 class TestExecuteTransactionsCommand(TestCase):
     def test_transaction_executing(self):
         payment_method = PaymentMethodFactory.create(
-            payment_processor=triggered_processor
+            payment_processor=triggered_processor,
+            verified=True
         )
 
         transactions = TransactionFactory.create_batch(
@@ -45,7 +46,8 @@ class TestExecuteTransactionsCommand(TestCase):
 
     def test_transaction_filtering(self):
         payment_method = PaymentMethodFactory.create(
-            payment_processor=triggered_processor
+            payment_processor=triggered_processor,
+            verified=True
         )
 
         transactions = TransactionFactory.create_batch(
@@ -72,9 +74,9 @@ class TestExecuteTransactionsCommand(TestCase):
 
     @patch('silver.management.commands.execute_transactions.logger.error')
     def test_exception_logging(self, mock_logger):
-
         payment_method = PaymentMethodFactory.create(
-            payment_processor=triggered_processor
+            payment_processor=triggered_processor,
+            verified=True
         )
 
         TransactionFactory.create(payment_method=payment_method)
@@ -91,3 +93,18 @@ class TestExecuteTransactionsCommand(TestCase):
             )
 
             self.assertEqual(expected_call, mock_logger.call_args)
+
+    def test_skip_transaction_with_unverified_payment_method(self):
+        payment_method = PaymentMethodFactory.create(
+            payment_processor=triggered_processor,
+            verified=False
+        )
+
+        TransactionFactory.create(payment_method=payment_method)
+
+        mock_execute = MagicMock()
+        with patch.multiple(TriggeredProcessor,
+                            execute_transaction=mock_execute):
+            call_command('execute_transactions')
+
+            self.assertEqual(mock_execute.call_count, 0)
