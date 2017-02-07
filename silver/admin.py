@@ -43,6 +43,7 @@ from django.http import HttpResponse
 
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
+from silver.payment_processors.mixins import PaymentProcessorTypes
 
 from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
@@ -51,7 +52,7 @@ from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
 from documents_generator import DocumentsGenerator
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('silver')
 
 
 def metadata(obj):
@@ -900,7 +901,8 @@ class TransactionAdmin(ModelAdmin):
                     'get_payment_method', 'get_is_recurring')
     list_filter = ('payment_method__customer', 'state',
                    'payment_method__payment_processor')
-    actions = ['process', 'cancel', 'settle', 'fail']
+    actions = ['execute', 'process', 'cancel', 'settle', 'fail']
+    ordering = ['-created_at']
 
     def get_readonly_fields(self, request, instance=None):
         if instance:
@@ -984,6 +986,52 @@ class TransactionAdmin(ModelAdmin):
             'failed_count': failed_count,
             'settled_count': settled_count
         })
+
+    def execute(self, request, queryset):
+        failed_count = 0
+        transactions_count = len(queryset)
+
+        for transaction in queryset:
+            try:
+                payment_processor = transaction.payment_method.get_payment_processor()
+                if payment_processor.type != PaymentProcessorTypes.Triggered:
+                    continue
+                payment_processor.execute_transaction(transaction)
+            except Exception:
+                failed_count += 1
+                logger.error('Encountered exception while executing transaction '
+                             'with id=%s.', transaction.id, exc_info=True)
+
+        settled_count = transactions_count - failed_count
+
+        if not failed_count:
+            self.message_user(
+                request,
+                'Successfully executed %d transactions.' % (transactions_count)
+            )
+        elif failed_count != transactions_count:
+            self.message_user(
+                request,
+                'Executed %d transactions, %d failed.' % (
+                    settled_count, failed_count
+                ),
+                level=messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                'Couldn\'t execute any of the selected transactions.',
+                level=messages.ERROR
+            )
+
+        logger.info('[Admin][%s Transaction]: Execute', {
+            'detail': 'Execute Transaction action initiated by user.',
+            'user_id': request.user.id,
+            'user_staff': request.user.is_staff,
+            'failed_count': failed_count,
+            'settled_count': settled_count
+        })
+    execute.short_description = 'Execute the selected transactions'
 
     def process(self, request, queryset):
         self.perform_action(request, queryset, 'process', 'processed')
