@@ -45,13 +45,11 @@ class DocumentEntry(models.Model):
 
     @property
     def total(self):
-        res = self.total_before_tax + self.tax_value
-        return res.quantize(Decimal('0.00'))
+        return (self.total_before_tax + self.tax_value).quantize(Decimal('0.0000'))
 
     @property
     def total_before_tax(self):
-        res = Decimal(self.quantity * self.unit_price)
-        return res.quantize(Decimal('0.00'))
+        return Decimal(self.quantity * self.unit_price).quantize(Decimal('0.0000'))
 
     @property
     def tax_value(self):
@@ -63,26 +61,37 @@ class DocumentEntry(models.Model):
             sales_tax_percent = None
 
         if not sales_tax_percent:
-            return Decimal(0)
+            return Decimal('0.0000')
+        else:
+            sales_tax_percent = Decimal(sales_tax_percent)
 
-        res = Decimal(self.total_before_tax * sales_tax_percent / 100)
-        return res.quantize(Decimal('0.00'))
+        return (
+            self.total_before_tax * sales_tax_percent / Decimal('100')
+        ).quantize(Decimal('0.0000'))
 
     @property
     def total_in_transaction_currency(self):
-        return self.total * self.document.transaction_xe_rate
+        return (
+            self.total * Decimal(self.document.transaction_xe_rate)
+        ).quantize(Decimal('0.0000'))
 
     @property
     def total_before_tax_in_transaction_currency(self):
-        return self.total_before_tax * self.document.transaction_xe_rate
+        return (
+            self.total_before_tax * Decimal(self.document.transaction_xe_rate)
+        ).quantize(Decimal('0.0000'))
 
     @property
     def unit_price_in_transaction_currency(self):
-        return self.unit_price * self.document.transaction_xe_rate
+        return (
+            Decimal(self.unit_price) * Decimal(self.document.transaction_xe_rate)
+        ).quantize(Decimal('0.0000'))
 
     @property
     def tax_value_in_transaction_currency(self):
-        return self.tax_value * self.document.transaction_xe_rate
+        return (
+            self.tax_value * Decimal(self.document.transaction_xe_rate)
+        ).quantize(Decimal('0.0000'))
 
     def clone(self):
         return DocumentEntry(
