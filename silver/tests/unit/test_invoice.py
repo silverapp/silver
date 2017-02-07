@@ -125,7 +125,7 @@ class TestInvoice(TestCase):
 
         invoice.sales_tax_percent = Decimal('20.00')
 
-        assert invoice.total == invoice.total_before_tax + invoice.tax_value
+        self.assertEqual(invoice.total, invoice.total_before_tax + invoice.tax_value)
 
     def test_draft_invoice_series_number(self):
         invoice = InvoiceFactory.create()

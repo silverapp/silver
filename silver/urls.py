@@ -19,7 +19,8 @@ from django.conf.urls import include, url
 from django.contrib import admin
 
 from silver.views import (pay_transaction_view, complete_payment_view,
-                          InvoiceAutocomplete, ProformaAutocomplete)
+                          InvoiceAutocomplete, ProformaAutocomplete,
+                          PaymentMethodAutocomplete)
 
 admin.autodiscover()
 
@@ -38,5 +39,6 @@ urlpatterns = [
         InvoiceAutocomplete.as_view(), name='autocomplete-invoice'),
     url(r'^autocomplete/proformas/$',
         ProformaAutocomplete.as_view(), name='autocomplete-proforma'),
-
+    url(r'^autocomplete/payment-method/$',
+        PaymentMethodAutocomplete.as_view(), name='autocomplete-payment-method'),
 ]

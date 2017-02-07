@@ -22,6 +22,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404, HttpResponseRedirect
 
 
+from silver.models.payment_methods import PaymentMethod
 from silver.models.transactions import Transaction
 from silver.models.documents import Proforma, Invoice
 from silver.models.transactions.codes import FAIL_CODES
@@ -131,3 +132,20 @@ class ProformaAutocomplete(DocumentAutocomplete):
         self.model = Proforma
 
         super(ProformaAutocomplete, self).__init__(**kwargs)
+
+
+class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+            raise Http404
+
+        queryset = PaymentMethod.objects.all()
+
+        if self.q:
+            query = (Q(customer__first_name__istartswith=self.q) |
+                     Q(customer__last_name__istartswith=self.q) |
+                     Q(payment_processor__istartswith=self.q) |
+                     Q(display_info__istartswith=self.q))
+            queryset = queryset.filter(query)
+
+        return queryset
