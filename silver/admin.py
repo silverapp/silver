@@ -884,7 +884,11 @@ class TransactionForm(forms.ModelForm):
             ),
             'proforma': autocomplete.ModelSelect2(
                 url='autocomplete-proforma'
-            )
+            ),
+            'payment_method': autocomplete.ModelSelect2(
+                url='autocomplete-payment-method'
+            ),
+
         }
 
 
