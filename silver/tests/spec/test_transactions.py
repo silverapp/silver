@@ -618,6 +618,40 @@ class TestTransactionEndpoint(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data, [])
 
+    def test_cancel_action(self):
+        transaction_initial = TransactionFactory.create(state='initial')
+        transaction_pending = TransactionFactory.create(state='pending')
+
+        for transaction in [transaction_initial, transaction_pending]:
+            url = reverse('transaction-action', kwargs={
+                'customer_pk': transaction.payment_method.customer.pk,
+                'transaction_uuid': str(transaction.uuid),
+                'requested_action': 'cancel',
+            })
+
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            transaction.refresh_from_db()
+            self.assertEqual(transaction.state,
+                             Transaction.States.Canceled)
+
+    def test_invalid_transaction_action(self):
+        transaction = TransactionFactory.create(state='settled')
+
+        url = reverse('transaction-action', kwargs={
+            'customer_pk': transaction.payment_method.customer.pk,
+            'transaction_uuid': str(transaction.uuid),
+            'requested_action': 'cancel',
+        })
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        expected_error = "Can't execute action because the transaction is in "\
+                         "an incorrect state: settled"
+        self.assertEqual(response.data, {'errors': expected_error})
+
     def _transaction_data(self, transaction):
         transaction.refresh_from_db()
 
