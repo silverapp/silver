@@ -18,8 +18,12 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
-from django.http.response import Http404
+from django_fsm import TransitionNotAllowed
+from annoying.functions import get_object_or_None
+
 from django.utils import timezone
+from django.http.response import Http404
+
 from rest_framework import generics, permissions, status, filters
 from rest_framework.generics import (get_object_or_404, ListCreateAPIView,
                                      RetrieveUpdateAPIView, ListAPIView,
@@ -28,7 +32,6 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
-from annoying.functions import get_object_or_None
 
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
@@ -865,11 +868,18 @@ class PaymentMethodDetail(RetrieveUpdateAPIView):
 
 class PaymentMethodAction(APIView):
     permission_classes = (permissions.IsAuthenticated,)
+    allowed_actions = ('cancel', )
 
     def post(self, request, *args, **kwargs):
         payment_method = self.get_object(**kwargs)
-        action_to_execute = getattr(payment_method, kwargs.get('requested_action'),
-                                    None)
+        requested_action = kwargs.get('requested_action')
+
+        if requested_action not in self.allowed_actions:
+            error_message = "{} is not an allowed".format(requested_action)
+            return Response({"errors": error_message},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        action_to_execute = getattr(payment_method, requested_action, None)
 
         if not action_to_execute:
             raise Http404
@@ -941,3 +951,47 @@ class TransactionDetail(RetrieveUpdateAPIView):
             raise Http404
 
         return get_object_or_404(Transaction, uuid=uuid)
+
+
+class TransactionAction(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    allowed_actions = ('cancel', )
+
+    def post(self, request, *args, **kwargs):
+        transaction = self.get_object(**kwargs)
+        requested_action = kwargs.get('requested_action')
+
+        if requested_action not in self.allowed_actions:
+            error_message = "{} is not an allowed".format(requested_action)
+            return Response({"errors": error_message},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        action_to_execute = getattr(transaction, requested_action, None)
+        if not action_to_execute:
+            raise Http404
+
+        try:
+            errors = action_to_execute()
+            transaction.save()
+        except TransitionNotAllowed:
+            errors = "Can't execute action because the transaction is in an " \
+                     "incorrect state: {}".format(transaction.state)
+
+        if errors:
+            return Response({"errors": errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        transaction_serialized = TransactionSerializer(transaction,
+                                                       context={'request': request})
+        return Response(transaction_serialized.data,
+                        status=status.HTTP_200_OK)
+
+    def get_object(self, **kwargs):
+        transaction_uuid = kwargs.get('transaction_uuid')
+        customer_pk = kwargs.get('customer_pk')
+
+        return get_object_or_404(
+            Transaction.objects.all(),
+            uuid=transaction_uuid,
+            payment_method__customer__pk=customer_pk
+        )

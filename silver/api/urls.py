@@ -50,6 +50,8 @@ urlpatterns = [
         views.TransactionList.as_view(), name='transaction-list'),
     url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/$',
         views.TransactionDetail.as_view(), name='transaction-detail'),
+    url(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/(?P<requested_action>(cancel))_request/$',
+        views.TransactionAction.as_view(), name='transaction-action'),
 
     url(r'^payment_processors/$',
         views.PaymentProcessorList.as_view(), name='payment-processor-list'),
