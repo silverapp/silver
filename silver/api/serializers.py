@@ -385,7 +385,6 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
                            read_only=True)
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
-    additional_data = serializers.JSONField(required=False, write_only=True)
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     payment_processor_name = serializers.ModelField(
         model_field=PaymentMethod()._meta.get_field('payment_processor'),
@@ -402,7 +401,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         model = PaymentMethod
         fields = ('url', 'transactions', 'customer', 'payment_processor_name',
                   'payment_processor', 'added_at', 'verified',
-                  'canceled', 'additional_data', 'valid_until', 'display_info')
+                  'canceled', 'valid_until', 'display_info')
         extra_kwargs = {
             'added_at': {'read_only': True},
         }
@@ -410,23 +409,15 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
     def validate(self, attrs):
         attrs = super(PaymentMethodSerializer, self).validate(attrs)
 
-        additional_data = attrs.get('additional_data')
+        if self.instance:
+            if self.instance.canceled:
+                raise ValidationError(
+                    'You cannot update a canceled payment method.'
+                )
 
-        if self.instance and additional_data and self.instance.canceled:
-            message = "'additional_data' must not be given after the " \
-                      "payment method has been enabled once."
-            raise serializers.ValidationError(message)
-
-        if additional_data and not attrs.get('verified', True):
-            message = "If 'additional_data' is specified, then the " \
-                      "payment method need to be unverified."
-            raise serializers.ValidationError(message)
-
-
-        # Run model clean and handle ValidationErrors
-        try:
-            # Use the existing instance to avoid unique field errors
-            if self.instance:
+            # Run model clean and handle ValidationErrors
+            try:
+                # Use the existing instance to avoid unique field errors
                 payment_method = self.instance
                 payment_method_dict = payment_method.__dict__.copy()
 
@@ -437,14 +428,14 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
 
                 # Revert changes to existing instance
                 payment_method.__dict__ = payment_method_dict
-        except ValidationError as e:
-            errors = e.error_dict
-            non_field_errors = errors.pop(NON_FIELD_ERRORS, None)
-            if non_field_errors:
-                errors['non_field_errors'] = [
-                    error for sublist in non_field_errors for error in sublist
-                ]
-            raise serializers.ValidationError(errors)
+            except ValidationError as e:
+                errors = e.error_dict
+                non_field_errors = errors.pop(NON_FIELD_ERRORS, None)
+                if non_field_errors:
+                    errors['non_field_errors'] = [
+                        error for sublist in non_field_errors for error in sublist
+                    ]
+                raise serializers.ValidationError(errors)
 
         return attrs
 
@@ -454,6 +445,13 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
                                               'choice'.format(value))
         if self.instance and value != self.instance.payment_processor:
             message = "This field may not be modified."
+            raise serializers.ValidationError(message)
+
+        return value
+
+    def validate_verified(self, value):
+        if self.instance and not value and self.instance.verified:
+            message = "You cannot unverify a payment method."
             raise serializers.ValidationError(message)
 
         return value

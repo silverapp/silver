@@ -28,7 +28,7 @@ from silver.tests.spec.util.api_get_assert import APIGetAssert
 from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
                                     TransactionFactory)
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
-                                   triggered_processor)
+                                   triggered_processor, failing_void_processor)
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
@@ -78,26 +78,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         payment_method = PaymentMethod.objects.get(customer=self.customer)
         self.assert_get_data(response.data['url'], payment_method)
 
-    def test_put_detail_additional_data_disabled_state(self):
-        payment_method = self.create_payment_method(customer=self.customer,
-                                                    canceled=True)
-
-        url = reverse('payment-method-detail', kwargs={
-            'customer_pk': self.customer.pk,
-            'payment_method_id': payment_method.pk
-        })
-        response = self.client.get(url, format='json')
-
-        data = response.data
-        data['additional_data'] = '{"random": "value"}'
-
-        response = self.client.put(url, data=data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {
-            u'non_field_errors': [u"'additional_data' must not be given after "
-                                  u"the payment method has been enabled once."]
-        })
-
     def test_put_detail_ignore_customer_change(self):
         other_customer = CustomerFactory.create()
         payment_method = self.create_payment_method(customer=self.customer)
@@ -136,10 +116,13 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'payment_processor_name': [u'This field may not be modified.']
         })
 
-    def test_put_detail_canceled_payment_method(self):
+    def test_put_detail_reenable_payment_method(self):
+        """
+            payment_method.canceled from True to False
+        """
+
         payment_method = self.create_payment_method(customer=self.customer,
-                                                    canceled=True,
-                                                    verified=False)
+                                                    canceled=True)
 
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
@@ -149,12 +132,34 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.get(url, format='json')
         data = response.data
         data['canceled'] = False
-        data['verified'] = True
 
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {
-            'non_field_errors': [u"You can't reuse a canceled payment method."]
+            'non_field_errors': [u'You cannot update a canceled payment method.']
+        })
+
+    def test_put_detail_unverify_payment_method(self):
+        """
+            payment_method.canceled from True to False
+        """
+
+        payment_method = self.create_payment_method(customer=self.customer,
+                                                    verified=True)
+
+        url = reverse('payment-method-detail', kwargs={
+            'customer_pk': self.customer.pk,
+            'payment_method_id': payment_method.pk
+        })
+
+        response = self.client.get(url, format='json')
+        data = response.data
+        data['verified'] = False
+
+        response = self.client.put(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {
+            'verified': [u'You cannot unverify a payment method.']
         })
 
     def test_put_detail(self):
@@ -175,23 +180,6 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         response = self.client.put(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, data)
-
-    def test_post_listing_additional_data_unverified(self):
-        url = reverse('payment-method-list', kwargs={
-            'customer_pk': self.customer.pk
-        })
-
-        response = self.client.post(url, data={
-            'payment_processor_name': manual_processor,
-            'verified': False,
-            'additional_data': '{"random": "value"}'
-        }, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {
-            'non_field_errors':
-                ["If 'additional_data' is specified, then the payment "
-                 "method need to be unverified."]})
 
     def test_get_listing_no_customer(self):
         url = reverse('payment-method-list', kwargs={
@@ -313,14 +301,12 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assertEqual(transaction_initial.state, Transaction.States.Canceled)
         self.assertEqual(transaction_pending.state, Transaction.States.Canceled)
 
-    @override_settings(PAYMENT_PROCESSORS={
-        'fail_void_processor': {
-            'class': 'silver.tests.fixtures.FailingVoidTriggeredProcessor'
-        }
-    })
+    @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
     def test_cancel_action_failed_void(self):
-        payment_method = self.create_payment_method(customer=self.customer,
-                                                    payment_processor='fail_void_processor')
+        payment_method = self.create_payment_method(
+            customer=self.customer, payment_processor=failing_void_processor
+        )
+
         transaction_initial = TransactionFactory.create(payment_method=payment_method)
         transaction_pending = TransactionFactory.create(payment_method=payment_method,
                                                         state='pending')

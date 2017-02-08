@@ -21,20 +21,21 @@ from django_fsm import post_transition
 from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None
 
-from django.db import models
-from django.utils import timezone
-from django.dispatch import receiver
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
 from django.db.models.loading import get_model
 from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.core.validators import MinValueValidator
-from silver.models.transactions.codes import (FAIL_CODES, REFUND_CODES,
-                                              CANCEL_CODES)
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
 from silver.models import BillingDocumentBase, Invoice, Proforma
+
+from .codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 
 
 logger = logging.getLogger(__name__)
@@ -99,11 +100,8 @@ class Transaction(models.Model):
 
     @property
     def final_fields(self):
-        fields = ['proforma', 'uuid', 'payment_method', 'amount', 'currency',
-                  'created_at']
-
-        if self.invoice:
-            fields.append('invoice')
+        fields = ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
+                  'currency', 'created_at']
 
         return fields
 
@@ -139,6 +137,7 @@ class Transaction(models.Model):
         logger.error(str(refund_reason))
 
     def clean(self):
+        # Validate documents
         document = self.document
         if not document:
             raise ValidationError(
@@ -152,16 +151,6 @@ class Transaction(models.Model):
                 '(invoice or proforma).'
             )
 
-        if document.provider != self.provider:
-            raise ValidationError(
-                'Provider doesn\'t match with the one in documents.'
-            )
-
-        if document.customer != self.customer:
-            raise ValidationError(
-                'Customer doesn\'t match with the one in documents.'
-            )
-
         if self.invoice and self.proforma:
             if self.invoice.proforma != self.proforma:
                 raise ValidationError('Invoice and proforma are not related.')
@@ -170,6 +159,11 @@ class Transaction(models.Model):
                 self.proforma = self.invoice.proforma
             else:
                 self.invoice = self.proforma.invoice
+
+        if document.customer != self.customer:
+            raise ValidationError(
+                'Customer doesn\'t match with the one in documents.'
+            )
 
         # New transaction
         if not self.pk:
@@ -216,14 +210,30 @@ class Transaction(models.Model):
                     'billing documents.'
                 )
 
+    def clean_with_previous_instance(self, previous_instance):
+        if not previous_instance:
+            return
+
+        for field in self.final_fields:
+            old_value = getattr(previous_instance, field, None)
+            current_value = getattr(self, field, None)
+
+            if old_value is not None and old_value != current_value:
+                raise ValidationError("Field '%s' may not be changed." % field)
+
     def full_clean(self, *args, **kwargs):
         # 'amount' and 'currency' are handled in our clean method
         kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
+
+        previous_instance = kwargs.pop('previous_instance', None)
+
         super(Transaction, self).full_clean(*args, **kwargs)
+
+        self.clean_with_previous_instance(previous_instance)
 
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
-        self.cleaned = True
+        setattr(self, '.cleaned', True)
 
     @property
     def can_be_consumed(self):
@@ -242,6 +252,17 @@ class Transaction(models.Model):
     @property
     def document(self):
         return self.invoice or self.proforma
+
+    @document.setter
+    def document(self, value):
+        if isinstance(value, Invoice):
+            self.invoice = value
+        elif isinstance(value, Proforma):
+            self.proforma = value
+        else:
+            raise ValueError(
+                'The provided document is not an invoice or a proforma.'
+            )
 
     @property
     def provider(self):
@@ -279,15 +300,9 @@ def create_transaction_for_document(document):
         customer=document.customer
     )
     for payment_method in payment_methods:
-        kwargs = {
-            'invoice': isinstance(document, Invoice) and document or document.related_document,
-            'proforma': isinstance(document, Proforma) and document or document.related_document,
-            'payment_method': payment_method,
-            'amount': document.total_in_transaction_currency,
-        }
-
         try:
-            return Transaction.objects.create(**kwargs)
+            return Transaction.objects.create(document=document,
+                                              payment_method=payment_method)
         except ValidationError:
             return None
 
@@ -303,7 +318,8 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
         setattr(instance, '.recently_transitioned', target)
 
     elif issubclass(sender, BillingDocumentBase):
-        if target == BillingDocumentBase.STATES.ISSUED:
+        if (target == BillingDocumentBase.STATES.ISSUED
+                and settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
             create_transaction_for_document(instance)
 
 
@@ -311,31 +327,31 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
 def pre_transaction_save(sender, instance=None, **kwargs):
     transaction = instance
 
-    old = get_object_or_None(Transaction, pk=transaction.pk)
-    setattr(transaction, 'old_value', old)
+    previous_instance = get_object_or_None(Transaction, pk=transaction.pk)
+    setattr(transaction, 'previous_instance', previous_instance)
 
-    if old:
-        for field in transaction.final_fields:
-            if getattr(old, field) and getattr(transaction, field) != getattr(old, field):
-                raise ValidationError("Field '%s' may not be changed." % field)
-
-    if not getattr(transaction, 'cleaned', False):
-        transaction.full_clean()
+    if not getattr(transaction, '.cleaned', False):
+        transaction.full_clean(previous_instance=previous_instance)
 
 
 @receiver(post_save, sender=Transaction)
 def post_transaction_save(sender, instance, **kwargs):
-    if getattr(instance, '.recently_transitioned', False):
-        delattr(instance, '.recently_transitioned')
-        instance.update_document_state()
+    transaction = instance
 
-    if not getattr(instance, 'old_value', None):
+    if hasattr(transaction, '.recently_transitioned'):
+        delattr(transaction, '.recently_transitioned')
+        transaction.update_document_state()
+
+    if hasattr(transaction, '.cleaned'):
+        delattr(transaction, '.cleaned')
+
+    if not getattr(transaction, 'previous_instance', None):
         # we know this instance is freshly made as it doesn't have an old_value
         logger.info('[Models][Transaction]: %s', {
             'detail': 'A transaction was created.',
-            'transaction_id': instance.id,
-            'customer_id': instance.customer.id,
-            'invoice_id': instance.invoice.id if instance.invoice else None,
+            'transaction_id': transaction.id,
+            'customer_id': transaction.customer.id,
+            'invoice_id': transaction.invoice.id if transaction.invoice else None,
             'proforma_id':
-                instance.proforma.id if instance.proforma else None
+                transaction.proforma.id if transaction.proforma else None
         })

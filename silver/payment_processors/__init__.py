@@ -13,4 +13,5 @@
 # limitations under the License.
 
 from .base import PaymentProcessorBase, get_instance, get_all_instances
+from .mixins import PaymentProcessorTypes as Types
 from .manual import ManualProcessor

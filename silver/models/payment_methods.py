@@ -11,21 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from itertools import chain
 
-from jsonfield import JSONField
 from annoying.functions import get_object_or_None
-from django_fsm import TransitionNotAllowed
-from model_utils.managers import InheritanceManager
 from cryptography.fernet import InvalidToken, Fernet
+from django_fsm import TransitionNotAllowed
+from jsonfield import JSONField
+from model_utils.managers import InheritanceManager
 
-from django.db import models
 from django.conf import settings
-from django.utils import timezone
-from django.dispatch import receiver
-from django.db.models.signals import pre_save
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+from django.utils import timezone
 
 from silver import payment_processors
+from silver.models import Invoice, Proforma
 
 from .billing_entities import Customer
 from .transactions import Transaction
@@ -60,6 +62,14 @@ class PaymentMethod(models.Model):
 
     objects = InheritanceManager()
 
+    @property
+    def final_fields(self):
+        return ['payment_processor', 'customer', 'added_at']
+
+    @property
+    def irreversible_fields(self):
+        return ['verified', 'canceled']
+
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
 
@@ -71,6 +81,10 @@ class PaymentMethod(models.Model):
                     self.__class__ = payment_method_class
             except AttributeError:
                 pass
+
+    @property
+    def transactions(self):
+        return self.transaction_set.all()
 
     def get_payment_processor(self):
         return payment_processors.get_instance(self.payment_processor)
@@ -100,7 +114,7 @@ class PaymentMethod(models.Model):
         cancelable_states = [Transaction.States.Initial,
                              Transaction.States.Pending]
 
-        transactions = self.transaction_set.filter(state__in=cancelable_states)
+        transactions = self.transactions.filter(state__in=cancelable_states)
 
         errors = []
         for transaction in transactions:
@@ -126,14 +140,38 @@ class PaymentMethod(models.Model):
 
         return None
 
-    def save(self, **kwargs):
-        self.clean()
-        super(PaymentMethod, self).save(**kwargs)
+    def clean_with_previous_instance(self, previous_instance):
+        if not previous_instance:
+            return
 
-    def clean(self):
-        old_instance = get_object_or_None(PaymentMethod, pk=self.pk)
-        if old_instance and old_instance.canceled and not self.canceled:
-            raise ValidationError("You can't reuse a canceled payment method.")
+        for field in self.final_fields:
+            old_value = getattr(previous_instance, field, None)
+            current_value = getattr(self, field, None)
+
+            if old_value != current_value:
+                raise ValidationError(
+                    "Field '%s' may not be changed." % field
+                )
+
+        for field in self.irreversible_fields:
+            old_value = getattr(previous_instance, field, None)
+            current_value = getattr(self, field, None)
+
+            if old_value and old_value != current_value:
+                raise ValidationError(
+                    "Field '%s' may not be changed anymore." % field
+                )
+
+    def full_clean(self, *args, **kwargs):
+        previous_instance = kwargs.pop('previous_instance', None)
+
+        super(PaymentMethod, self).full_clean(*args, **kwargs)
+
+        self.clean_with_previous_instance(previous_instance)
+
+        # this assumes that nobody calls clean and then modifies this object
+        # without calling clean again
+        setattr(self, '.cleaned', True)
 
     @property
     def allowed_currencies(self):
@@ -146,3 +184,62 @@ class PaymentMethod(models.Model):
     def __unicode__(self):
         return u'{} - {}'.format(self.customer,
                                  self.get_payment_processor_display())
+
+
+def create_transactions_for_issued_documents(payment_method):
+    customer = payment_method.customer
+
+    if payment_method.canceled or not payment_method.verified:
+        return []
+
+    transactions = []
+
+    for document in chain(
+        Proforma.objects.filter(invoice=None, customer=customer,
+                                state=Proforma.STATES.ISSUED),
+        Invoice.objects.filter(state=Invoice.STATES.ISSUED, customer=customer)
+    ):
+        try:
+            transactions.append(Transaction.objects.create(
+                document=document, payment_method=payment_method
+            ))
+        except ValidationError:
+            continue
+
+    return transactions
+
+
+@receiver(pre_save)
+def pre_payment_method_save(sender, instance=None, **kwargs):
+    if not isinstance(instance, PaymentMethod):
+        return
+
+    payment_method = instance
+
+    previous_instance = get_object_or_None(PaymentMethod, pk=payment_method.pk)
+    setattr(payment_method, '.previous_instance', previous_instance)
+
+    if not getattr(payment_method, '.cleaned', False):
+        payment_method.full_clean(previous_instance=previous_instance)
+
+
+@receiver(post_save)
+def post_payment_method_save(sender, instance, **kwargs):
+    if not isinstance(instance, PaymentMethod):
+        return
+
+    payment_method = instance
+
+    if hasattr(payment_method, '.cleaned'):
+        delattr(payment_method, '.cleaned')
+
+    previous_instance = getattr(payment_method, '.previous_instance', None)
+
+    if not (settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS or
+            not payment_method.verified or
+            (not payment_method.get_payment_processor().type ==
+                payment_processors.Types.Triggered)):
+        return
+
+    if not previous_instance or not previous_instance.verified:
+        create_transactions_for_issued_documents(payment_method)
