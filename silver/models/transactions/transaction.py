@@ -197,13 +197,13 @@ class Transaction(models.Model):
                 )
 
             if self.amount:
-                if self.amount != self.document.transaction_total:
+                if self.amount != self.document.total_in_transaction_currency:
                     raise ValidationError(
                         "Transaction amount is different from it's document's "
-                        "transaction_total."
+                        "total_in_transaction_currency."
                     )
             else:
-                self.amount = self.document.transaction_total
+                self.amount = self.document.total_in_transaction_currency
 
             # We also check for settled because document pay transition might fail
             if self.document.transactions.filter(
@@ -283,7 +283,7 @@ def create_transaction_for_document(document):
             'invoice': isinstance(document, Invoice) and document or document.related_document,
             'proforma': isinstance(document, Proforma) and document or document.related_document,
             'payment_method': payment_method,
-            'amount': document.transaction_total,
+            'amount': document.total_in_transaction_currency,
         }
 
         try:

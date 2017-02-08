@@ -115,7 +115,7 @@ class TestTransactionEndpoint(APITestCase):
             'payment_method': reverse('payment-method-detail',
                                       kwargs={'customer_pk': customer.pk,
                                               'payment_method_id': payment_method.id}),
-            'amount': invoice.transaction_total,
+            'amount': invoice.total_in_transaction_currency,
             'invoice': invoice_url,
             'proforma': proforma_url,
             'valid_until': valid_until,
@@ -130,7 +130,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(Decimal('0.00') + invoice.transaction_total))
+                         unicode(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
@@ -301,7 +301,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(Decimal('0.00') + invoice.transaction_total))
+                         unicode(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], invoice.transaction_currency)
@@ -329,7 +329,7 @@ class TestTransactionEndpoint(APITestCase):
                                               'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
             'currency': 'EUR',
-            'amount': invoice.transaction_total,
+            'amount': invoice.total_in_transaction_currency,
             'invoice': invoice_url,
             'proforma': proforma_url
         }
@@ -365,7 +365,7 @@ class TestTransactionEndpoint(APITestCase):
                                       kwargs={'customer_pk': customer.pk,
                                               'payment_method_id': payment_method.id}),
             'valid_until': valid_until,
-            'amount': invoice.transaction_total + 1,
+            'amount': invoice.total_in_transaction_currency + 1,
             'invoice': invoice_url,
             'proforma': proforma_url
         }
@@ -374,7 +374,7 @@ class TestTransactionEndpoint(APITestCase):
 
         expected_data = {
             'non_field_errors': [u"Transaction amount is different from it's "
-                                 u"document's transaction_total."]
+                                 u"document's total_in_transaction_currency."]
         }
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

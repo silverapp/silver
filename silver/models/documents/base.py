@@ -387,13 +387,6 @@ class BillingDocumentBase(models.Model):
     def transactions(self):
         return self.transaction_set.all()
 
-    @property
-    def transaction_total(self):
-        if self.transaction_xe_rate:
-            return Decimal(self.total * self.transaction_xe_rate).quantize(
-                Decimal('0.00')
-            )
-
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
@@ -476,37 +469,27 @@ class BillingDocumentBase(models.Model):
 
     @property
     def total(self):
-        return Decimal(sum(
-            [entry.total for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.total for entry in self.entries])
 
     @property
     def total_before_tax(self):
-        return Decimal(sum(
-            [entry.total_before_tax for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.total_before_tax for entry in self.entries])
 
     @property
     def tax_value(self):
-        return Decimal(sum(
-            [entry.tax_value for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.tax_value for entry in self.entries])
 
     @property
     def total_in_transaction_currency(self):
-        return Decimal(sum(
-            [entry.total_in_transaction_currency for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.total_in_transaction_currency
+                    for entry in self.entries])
 
     @property
     def total_before_tax_in_transaction_currency(self):
-        return Decimal(sum(
-            [entry.total_before_tax_in_transaction_currency
-             for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.total_before_tax_in_transaction_currency
+                    for entry in self.entries])
 
     @property
     def tax_value_in_transaction_currency(self):
-        return Decimal(sum(
-            [entry.tax_value_in_transaction_currency for entry in self.entries]
-        )).quantize(Decimal('0.00'))
+        return sum([entry.tax_value_in_transaction_currency
+                    for entry in self.entries])

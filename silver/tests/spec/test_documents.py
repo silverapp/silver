@@ -58,7 +58,7 @@ class TestDocumentEndpoints(APITestCase):
             u'valid_until': transaction.valid_until,
             u'updated_at': FREEZED_TIME,
             u'currency': u'%s' % transaction.currency,
-            u'amount': u'%s' % transaction.amount,
+            u'amount': u'%.2f' % transaction.amount,
             u'payment_method': u'http://testserver/customers/%d/payment_methods/%d/' % (document.customer.pk, transaction.payment_method.pk),
             u'pay_url': u'http://testserver/pay/token/',
         } for transaction in transactions or []]

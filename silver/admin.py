@@ -685,8 +685,8 @@ class BillingDocumentAdmin(ModelAdmin):
                                           currency=obj.currency)
 
     def transaction_total(self, obj):
-        if obj.transaction_total is not None:
-            return '{:.2f} {currency}'.format(obj.transaction_total,
+        if obj.transaction_xe_rate:
+            return '{:.2f} {currency}'.format(obj.total_in_transaction_currency,
                                               currency=obj.transaction_currency)
         return None
 
