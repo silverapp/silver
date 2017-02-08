@@ -387,13 +387,6 @@ class BillingDocumentBase(models.Model):
     def transactions(self):
         return self.transaction_set.all()
 
-    @property
-    def transaction_total(self):
-        if self.transaction_xe_rate:
-            return Decimal(self.total * self.transaction_xe_rate).quantize(
-                Decimal('0.00')
-            )
-
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
