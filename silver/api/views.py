@@ -872,8 +872,14 @@ class PaymentMethodAction(APIView):
 
     def post(self, request, *args, **kwargs):
         payment_method = self.get_object(**kwargs)
-        action_to_execute = getattr(payment_method, kwargs.get('requested_action'),
-                                    None)
+        requested_action = kwargs.get('requested_action')
+
+        if requested_action not in self.allowed_actions:
+            error_message = "{} is not an allowed".format(requested_action)
+            return Response({"errors": error_message},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        action_to_execute = getattr(payment_method, requested_action, None)
 
         if not action_to_execute:
             raise Http404
