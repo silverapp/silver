@@ -63,9 +63,12 @@ class PaymentMethod(models.Model):
     objects = InheritanceManager()
 
     @property
-    def one_way_fields(self):
-        return ['payment_processor', 'customer', 'added_at', 'verified',
-                'canceled']
+    def final_fields(self):
+        return ['payment_processor', 'customer', 'added_at']
+
+    @property
+    def irreversible_fields(self):
+        return ['verified', 'canceled']
 
     def __init__(self, *args, **kwargs):
         super(PaymentMethod, self).__init__(*args, **kwargs)
@@ -137,12 +140,21 @@ class PaymentMethod(models.Model):
 
         return None
 
-    def clean_with_old_state(self, old_state):
-        if not old_state:
+    def clean_with_previous_instance(self, previous_instance):
+        if not previous_instance:
             return
 
-        for field in self.one_way_fields:
-            old_value = getattr(old_state, field, None)
+        for field in self.final_fields:
+            old_value = getattr(previous_instance, field, None)
+            current_value = getattr(self, field, None)
+
+            if old_value != current_value:
+                raise ValidationError(
+                    "Field '%s' may not be changed." % field
+                )
+
+        for field in self.irreversible_fields:
+            old_value = getattr(previous_instance, field, None)
             current_value = getattr(self, field, None)
 
             if old_value and old_value != current_value:
@@ -151,11 +163,11 @@ class PaymentMethod(models.Model):
                 )
 
     def full_clean(self, *args, **kwargs):
-        old_state = kwargs.pop('old_state', None)
+        previous_instance = kwargs.pop('previous_instance', None)
 
         super(PaymentMethod, self).full_clean(*args, **kwargs)
 
-        self.clean_with_old_state(old_state)
+        self.clean_with_previous_instance(previous_instance)
 
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
@@ -204,11 +216,11 @@ def pre_payment_method_save(sender, instance=None, **kwargs):
 
     payment_method = instance
 
-    old_state = get_object_or_None(PaymentMethod, pk=payment_method.pk)
-    setattr(payment_method, '.old_state', old_state)
+    previous_instance = get_object_or_None(PaymentMethod, pk=payment_method.pk)
+    setattr(payment_method, '.previous_instance', previous_instance)
 
     if not getattr(payment_method, '.cleaned', False):
-        payment_method.full_clean(old_state=old_state)
+        payment_method.full_clean(previous_instance=previous_instance)
 
 
 @receiver(post_save)
@@ -221,7 +233,7 @@ def post_payment_method_save(sender, instance, **kwargs):
     if hasattr(payment_method, '.cleaned'):
         delattr(payment_method, '.cleaned')
 
-    old_state = getattr(payment_method, '.old_state', None)
+    previous_instance = getattr(payment_method, '.previous_instance', None)
 
     if not (settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS or
             not payment_method.verified or
@@ -229,5 +241,5 @@ def post_payment_method_save(sender, instance, **kwargs):
                 payment_processors.Types.Triggered)):
         return
 
-    if not old_state or not old_state.verified:
+    if not previous_instance or not previous_instance.verified:
         create_transactions_for_issued_documents(payment_method)

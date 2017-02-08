@@ -210,12 +210,12 @@ class Transaction(models.Model):
                     'billing documents.'
                 )
 
-    def clean_with_old_state(self, old_state):
-        if not old_state:
+    def clean_with_previous_instance(self, previous_instance):
+        if not previous_instance:
             return
 
         for field in self.final_fields:
-            old_value = getattr(old_state, field, None)
+            old_value = getattr(previous_instance, field, None)
             current_value = getattr(self, field, None)
 
             if old_value is not None and old_value != current_value:
@@ -225,11 +225,11 @@ class Transaction(models.Model):
         # 'amount' and 'currency' are handled in our clean method
         kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
 
-        old_state = kwargs.pop('old_state', None)
+        previous_instance = kwargs.pop('previous_instance', None)
 
         super(Transaction, self).full_clean(*args, **kwargs)
 
-        self.clean_with_old_state(old_state)
+        self.clean_with_previous_instance(previous_instance)
 
         # this assumes that nobody calls clean and then modifies this object
         # without calling clean again
@@ -327,11 +327,11 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
 def pre_transaction_save(sender, instance=None, **kwargs):
     transaction = instance
 
-    old_state = get_object_or_None(Transaction, pk=transaction.pk)
-    setattr(transaction, 'old_state', old_state)
+    previous_instance = get_object_or_None(Transaction, pk=transaction.pk)
+    setattr(transaction, 'previous_instance', previous_instance)
 
     if not getattr(transaction, '.cleaned', False):
-        transaction.full_clean(old_state=old_state)
+        transaction.full_clean(previous_instance=previous_instance)
 
 
 @receiver(post_save, sender=Transaction)
@@ -345,7 +345,7 @@ def post_transaction_save(sender, instance, **kwargs):
     if hasattr(transaction, '.cleaned'):
         delattr(transaction, '.cleaned')
 
-    if not getattr(transaction, 'old_state', None):
+    if not getattr(transaction, 'previous_instance', None):
         # we know this instance is freshly made as it doesn't have an old_value
         logger.info('[Models][Transaction]: %s', {
             'detail': 'A transaction was created.',

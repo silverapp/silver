@@ -450,7 +450,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
         return value
 
     def validate_verified(self, value):
-        if self.instance and value is False and self.instance.verified is True:
+        if self.instance and not value and self.instance.verified:
             message = "You cannot unverify a payment method."
             raise serializers.ValidationError(message)
 
