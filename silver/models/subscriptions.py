@@ -1183,7 +1183,7 @@ class Subscription(models.Model):
         last_day_index = calendar.monthrange(start_date.year,
                                              start_date.month)[1]
         last_day_of_month = date(start_date.year, start_date.month,
-                                          last_day_index)
+                                 last_day_index)
 
         if start_date == first_day_of_month and end_date == last_day_of_month:
             return False, Decimal('1.0000')

@@ -65,7 +65,6 @@ class TestPaymentsUtilMethods(TestCase):
                           mocked_view())
         mocked_view.has_calls([call(None, transaction, False), call()])
 
-
     def test_get_transaction_from_expired_token(self):
         transaction = TransactionFactory()
 

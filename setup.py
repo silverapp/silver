@@ -55,6 +55,7 @@ install_requires = [line.strip()
                     for line in open("requirements/common.txt").readlines()
                     if not line.strip().startswith('#')]
 
+
 def read(fname):
     try:
         return open(os.path.join(os.path.dirname(__file__), fname)).read()

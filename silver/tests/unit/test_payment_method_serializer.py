@@ -41,12 +41,15 @@ class TestPaymentMethodSerializer(TestCase):
             'request': request
         })
 
+        self_url_skelet = 'http://testserver/customers/{}/payment_methods/{}/'
+        transactions_url_skelet = "http://testserver/customers/{}/payment_methods/{}/transactions/"
+        customer_url_skelet = 'http://testserver/customers/{}/'
         expected_data = OrderedDict([
-            ('url', 'http://testserver/customers/{}/payment_methods/{}/'.format(payment_method.customer.pk,
-                                                                                payment_method.pk)),
-            ('transactions', "http://testserver/customers/{}/payment_methods/{}/transactions/".format(payment_method.customer.pk,
-                                                                                payment_method.pk)),
-            ('customer', 'http://testserver/customers/{}/'.format(payment_method.customer.pk)),
+            ('url', self_url_skelet.format(payment_method.customer.pk,
+                                           payment_method.pk)),
+            ('transactions', transactions_url_skelet.format(payment_method.customer.pk,
+                                                            payment_method.pk)),
+            ('customer', customer_url_skelet.format(payment_method.customer.pk)),
             ('payment_processor_name', manual_processor),
             ('payment_processor', OrderedDict([
                 ("type", ManualProcessor.type),

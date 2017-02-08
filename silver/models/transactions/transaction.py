@@ -318,8 +318,8 @@ def post_transition_callback(sender, instance, name, source, target, **kwargs):
         setattr(instance, '.recently_transitioned', target)
 
     elif issubclass(sender, BillingDocumentBase):
-        if (target == BillingDocumentBase.STATES.ISSUED
-                and settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
+        if (target == BillingDocumentBase.STATES.ISSUED and
+                settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
             create_transaction_for_document(instance)
 
 

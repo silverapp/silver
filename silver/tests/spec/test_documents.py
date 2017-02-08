@@ -41,9 +41,11 @@ class TestDocumentEndpoints(APITestCase):
 
     def _get_expected_data(self, document, transactions=None):
         kind = unicode(document.kind.lower())
+        payment_method_url = u'http://testserver/customers/%d/payment_methods/%d/'
         transactions = [{
             u'id': u'%s' % transaction.uuid,
-            u'url': u'http://testserver/customers/%d/transactions/%s/' % (document.customer.pk, transaction.uuid),
+            u'url': u'http://testserver/customers/%d/transactions/%s/' % (document.customer.pk,
+                                                                          transaction.uuid),
             u'customer': u'http://testserver/customers/%s/' % document.customer.pk,
             u'provider': u'http://testserver/providers/%s/' % document.provider.pk,
             u'invoice': u'http://testserver/invoices/%d/' % (transaction.invoice_id),
@@ -59,7 +61,8 @@ class TestDocumentEndpoints(APITestCase):
             u'updated_at': FREEZED_TIME,
             u'currency': u'%s' % transaction.currency,
             u'amount': u'%.2f' % transaction.amount,
-            u'payment_method': u'http://testserver/customers/%d/payment_methods/%d/' % (document.customer.pk, transaction.payment_method.pk),
+            u'payment_method': payment_method_url % (document.customer.pk,
+                                                     transaction.payment_method.pk),
             u'pay_url': u'http://testserver/pay/token/',
         } for transaction in transactions or []]
 
