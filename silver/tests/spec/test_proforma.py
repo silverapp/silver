@@ -370,7 +370,8 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in issued state.']}
+        error_message = 'You cannot edit the document once it is in issued state.'
+        assert response.data == {'non_field_errors': [error_message]}
 
     def test_edit_proforma_in_canceled_state(self):
         proforma = ProformaFactory.create()
@@ -384,7 +385,8 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in canceled state.']}
+        error_message = 'You cannot edit the document once it is in canceled state.'
+        assert response.data == {'non_field_errors': [error_message]}
 
     def test_edit_proforma_in_paid_state(self):
         proforma = ProformaFactory.create()
@@ -398,7 +400,8 @@ class TestProformaEndpoints(APITestCase):
                                      content_type='application/json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {'non_field_errors': ['You cannot edit the document once it is in paid state.']}
+        error_message = 'You cannot edit the document once it is in paid state.'
+        assert response.data == {'non_field_errors': [error_message]}
 
     def test_issue_proforma_with_default_dates(self):
         provider = ProviderFactory.create()
@@ -661,7 +664,9 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
+
+        asserted_response = 'A proforma can be canceled only if it is in issued state.'
+        assert response.data == {'detail': asserted_response}
         assert Invoice.objects.count() == 0
 
     def test_cancel_proforma_in_canceled_state(self):
@@ -678,7 +683,9 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
+
+        asserted_response = 'A proforma can be canceled only if it is in issued state.'
+        assert response.data == {'detail': asserted_response}
         assert Invoice.objects.count() == 0
 
     def test_cancel_proforma_in_paid_state(self):
@@ -695,7 +702,8 @@ class TestProformaEndpoints(APITestCase):
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'A proforma can be canceled only if it is in issued state.'}
+        asserted_response = 'A proforma can be canceled only if it is in issued state.'
+        assert response.data == {'detail': asserted_response}
         assert Invoice.objects.count() == 1
 
     def test_illegal_state_change_when_in_draft_state(self):

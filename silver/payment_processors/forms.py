@@ -22,4 +22,3 @@ class GenericTransactionForm(Form):
         self.request = request
 
         super(GenericTransactionForm, self).__init__(*args, **kwargs)
-

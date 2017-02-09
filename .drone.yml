@@ -13,7 +13,9 @@ build:
     - SILVER_DB_PASSWORD=silver
   commands:
     - pip install -U -r requirements/test.txt
-    - mkdir /var/log/silver && python manage.py test -v2
+    - mkdir /var/log/silver
+    - make lint
+    - make test
 
 compose:
   mysql:

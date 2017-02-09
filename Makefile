@@ -10,6 +10,6 @@ build:
 	echo "No need to build someting"
 
 lint:
-	echo "TBA"
+	pep8 --max-line-length=100 --exclude=migrations,urls.py .
 
 .PHONY: test full-test build lint run

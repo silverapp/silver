@@ -163,7 +163,8 @@ class TestProviderEndpoints(APITestCase):
             serialized_providers.append(item['fields'])
 
         url = reverse('provider-list')
-        response = self.client.post(url, data=json.dumps(serialized_providers, ensure_ascii=True).encode('utf8'),
+        request_body = json.dumps(serialized_providers, ensure_ascii=True).encode('utf8')
+        response = self.client.post(url, data=request_body,
                                     content_type='application/json')
 
         assert response.status_code == status.HTTP_201_CREATED

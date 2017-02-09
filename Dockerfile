@@ -29,8 +29,8 @@ RUN set -ex \
         libffi-dev \
         zlib-dev \
         jpeg-dev \
-    && apk add --no-cache --virtual .build-deps \
         build-base \
+    && apk add --no-cache --virtual .build-deps \
         mariadb-dev \
     && update-ca-certificates \
     && pip install --no-cache-dir -r requirements/common.txt \

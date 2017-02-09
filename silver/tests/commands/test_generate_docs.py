@@ -661,7 +661,9 @@ class TestInvoiceGenerationCommand(TestCase):
 
             doc = document_entries[4]
             assert doc.unit_price == metered_feature.price_per_unit
-            assert doc.quantity == units_consumed_during_trial - metered_feature.included_units_during_trial
+
+            included_trial_units = metered_feature.included_units_during_trial
+            assert doc.quantity == units_consumed_during_trial - included_trial_units
 
             doc = document_entries[5]
             assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
@@ -1631,7 +1633,8 @@ class TestInvoiceGenerationCommand(TestCase):
                 subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                 subscription.save()
 
-                call_command('generate_docs', date=billing_date, subscription=subscription.pk, stdout=self.output)
+                call_command('generate_docs', date=billing_date,
+                             subscription=subscription.pk, stdout=self.output)
 
                 assert Subscription.objects.filter(state='ended').count() == 1
 
