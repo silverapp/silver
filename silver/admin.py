@@ -897,8 +897,9 @@ class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
     list_display = ('__unicode__', 'related_invoice', 'related_proforma',
-                    'amount', 'state', 'get_customer', 'get_pay_url',
-                    'get_payment_method', 'get_is_recurring')
+                    'amount', 'state', 'created_at', 'updated_at',
+                    'get_customer', 'get_pay_url', 'get_payment_method',
+                    'get_is_recurring')
     list_filter = ('payment_method__customer', 'state',
                    'payment_method__payment_processor')
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
