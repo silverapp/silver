@@ -34,7 +34,6 @@ class TestInvoice(TestCase):
         assert proforma.invoice.state == Invoice.STATES.ISSUED
 
         proforma.invoice.pay()
-        proforma.invoice.save()
 
         assert proforma.invoice.state == Invoice.STATES.PAID
         assert proforma.state == Proforma.STATES.PAID
@@ -43,7 +42,6 @@ class TestInvoice(TestCase):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         entries = DocumentEntryFactory.create_batch(3)
         invoice.invoice_entries.add(*entries)
@@ -90,7 +88,6 @@ class TestInvoice(TestCase):
             proforma.create_invoice()
 
         proforma.invoice.cancel()
-        proforma.invoice.save()
 
         assert proforma.invoice.state == proforma.state == Invoice.STATES.CANCELED
 
@@ -147,25 +144,22 @@ class TestInvoice(TestCase):
     def test_invoice_due_today_queryset(self):
         invoices = InvoiceFactory.create_batch(5)
 
-        invoices[0].state = Invoice.STATES.DRAFT
         invoices[0].due_date = date.today()
         invoices[0].save()
 
-        invoices[1].state = Invoice.STATES.ISSUED
         invoices[1].due_date = date.today()
-        invoices[1].save()
+        invoices[1].issue()
 
-        invoices[2].state = Invoice.STATES.PAID
         invoices[2].due_date = date.today() - timedelta(days=1)
-        invoices[2].save()
+        invoices[2].issue()
+        invoices[2].pay()
 
-        invoices[3].state = Invoice.STATES.CANCELED
         invoices[3].due_date = date.today()
-        invoices[3].save()
+        invoices[3].issue()
+        invoices[3].cancel()
 
-        invoices[4].state = Invoice.STATES.ISSUED
         invoices[4].due_date = date.today() + timedelta(days=1)
-        invoices[4].save()
+        invoices[4].issue()
 
         queryset = Invoice.objects.due_today()
 
@@ -175,20 +169,17 @@ class TestInvoice(TestCase):
     def test_invoice_due_this_month_queryset(self):
         invoices = InvoiceFactory.create_batch(4)
 
-        invoices[0].state = Invoice.STATES.ISSUED
         invoices[0].due_date = date.today().replace(day=20)
-        invoices[0].save()
+        invoices[0].issue()
 
-        invoices[1].state = Invoice.STATES.ISSUED
         invoices[1].due_date = date.today().replace(day=1)
-        invoices[1].save()
+        invoices[1].issue()
 
-        invoices[1].state = Invoice.STATES.ISSUED
         invoices[2].due_date = date.today() - timedelta(days=31)
-        invoices[2].save()
+        invoices[2].issue()
 
-        invoices[3].state = Invoice.STATES.CANCELED
-        invoices[3].save()
+        invoices[3].issue()
+        invoices[3].cancel()
 
         queryset = Invoice.objects.due_this_month()
 
@@ -199,17 +190,15 @@ class TestInvoice(TestCase):
     def test_invoice_overdue_queryset(self):
         invoices = InvoiceFactory.create_batch(3)
 
-        invoices[0].state = Invoice.STATES.ISSUED
         invoices[0].due_date = date.today() - timedelta(days=1)
-        invoices[0].save()
+        invoices[0].issue()
 
-        invoices[1].state = Invoice.STATES.ISSUED
         invoices[1].due_date = date.today() - timedelta(days=3)
-        invoices[1].save()
+        invoices[1].issue()
 
-        invoices[2].state = Invoice.STATES.PAID
         invoices[2].due_date = date.today() - timedelta(days=31)
-        invoices[2].save()
+        invoices[2].issue()
+        invoices[2].pay()
 
         queryset = Invoice.objects.overdue()
 
@@ -220,16 +209,12 @@ class TestInvoice(TestCase):
     def test_invoice_overdue_since_last_month_queryset(self):
         invoices = InvoiceFactory.create_batch(3)
 
-        invoices[0].state = Invoice.STATES.ISSUED
         invoices[0].due_date = date.today().replace(day=1)
-        invoices[0].save()
+        invoices[0].issue()
 
-        invoices[1].state = Invoice.STATES.ISSUED
         invoices[1].due_date = date.today() - timedelta(days=31)
-        invoices[1].save()
+        invoices[1].issue()
 
-        invoices[2].state = Invoice.STATES.DRAFT
-        invoices[2].save()
         queryset = Invoice.objects.overdue_since_last_month()
 
         assert queryset.count() == 1
