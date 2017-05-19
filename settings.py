@@ -161,6 +161,16 @@ PAYMENT_PROCESSORS = {
 }
 
 PAYMENT_METHOD_SECRET = b'YOUR_FERNET_KEY_HERE'  # Fernet.generate_key()
+
+CELERY_BROKER_URL = 'redis://localhost:6379/'
+CELERY_BEAT_SCHEDULE = {
+    'generate-pdfs': {
+        'task': 'silver.tasks.generate_pdfs',
+        'schedule': datetime.timedelta(seconds=5)
+    },
+}
+LOCK_MANAGER_CONNECTION = {'host': 'localhost', 'port': 6379, 'db': 1}
+
 try:
     from settings_local import *
 except ImportError:
