@@ -619,7 +619,6 @@ class InvoiceStateHandler(APIView):
             issue_date = request.data.get('issue_date', None)
             due_date = request.data.get('due_date', None)
             invoice.issue(issue_date, due_date)
-            invoice.save()
         elif state == Invoice.STATES.PAID:
             if invoice.state != Invoice.STATES.ISSUED:
                 msg = "An invoice can be paid only if it is in issued state."
@@ -628,7 +627,6 @@ class InvoiceStateHandler(APIView):
 
             paid_date = request.data.get('paid_date', None)
             invoice.pay(paid_date)
-            invoice.save()
         elif state == Invoice.STATES.CANCELED:
             if invoice.state != Invoice.STATES.ISSUED:
                 msg = "An invoice can be canceled only if it is in issued " \
@@ -638,7 +636,6 @@ class InvoiceStateHandler(APIView):
 
             cancel_date = request.data.get('cancel_date', None)
             invoice.cancel(cancel_date)
-            invoice.save()
         elif not state:
             msg = "You have to provide a value for the state field."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
@@ -757,7 +754,6 @@ class ProformaStateHandler(APIView):
             issue_date = request.data.get('issue_date', None)
             due_date = request.data.get('due_date', None)
             proforma.issue(issue_date, due_date)
-            proforma.save()
         elif state == Proforma.STATES.PAID:
             if proforma.state != Proforma.STATES.ISSUED:
                 msg = "A proforma can be paid only if it is in issued state."
@@ -766,7 +762,6 @@ class ProformaStateHandler(APIView):
 
             paid_date = request.data.get('paid_date', None)
             proforma.pay(paid_date)
-            proforma.save()
         elif state == Proforma.STATES.CANCELED:
             if proforma.state != Proforma.STATES.ISSUED:
                 msg = "A proforma can be canceled only if it is in issued " \
@@ -776,7 +771,6 @@ class ProformaStateHandler(APIView):
 
             cancel_date = request.data.get('cancel_date', None)
             proforma.cancel(cancel_date)
-            proforma.save()
         elif not state:
             msg = "You have to provide a value for the state field."
             return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
