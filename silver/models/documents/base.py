@@ -15,22 +15,21 @@
 
 import logging
 from datetime import datetime, timedelta
-from decimal import Decimal
 
 import pytz
-from django_fsm import FSMField, transition, TransitionNotAllowed
-from django_xhtml2pdf.utils import generate_pdf_template_object
+from django.db.models.loading import get_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
 from jsonfield import JSONField
 from model_utils import Choices
 
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
-from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
-from django.db import models
-from django.db.models import Max
-from django.http import HttpResponse
+from django.db import models, transaction
+from django.db.models import Max, ForeignKey
 from django.template.loader import select_template
 from django.utils import timezone
 from django.utils.text import slugify
@@ -39,6 +38,7 @@ from django.utils.module_loading import import_string
 
 from silver.models.billing_entities import Customer, Provider
 from silver.currencies import CurrencyConverter, RateNotFound
+from silver.models.documents.pdf import PDF
 from silver.utils.international import currencies
 
 from .entries import DocumentEntry
@@ -153,8 +153,7 @@ class BillingDocumentBase(models.Model):
         help_text='Date of the transaction exchange rate.'
     )
 
-    pdf = models.FileField(null=True, blank=True, editable=False,
-                           storage=_storage, upload_to=documents_pdf_path)
+    pdf = ForeignKey(PDF, null=True)
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.DRAFT,
                      verbose_name="State",
                      help_text='The state the invoice is in.')
@@ -169,6 +168,10 @@ class BillingDocumentBase(models.Model):
     def __init__(self, *args, **kwargs):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
         self._last_state = self.state
+
+    def set_pdf_for_generation(self):
+        self.pdf.dirty = True
+        self.pdf.save()
 
     def _issue(self, issue_date=None, due_date=None):
         if issue_date:
@@ -206,8 +209,6 @@ class BillingDocumentBase(models.Model):
 
         self.archived_customer = self.customer.get_archivable_field_values()
 
-        self._save_pdf(state=self.STATES.ISSUED)
-
     @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
         self._issue(issue_date=issue_date, due_date=due_date)
@@ -218,8 +219,6 @@ class BillingDocumentBase(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-        self._save_pdf(state=self.STATES.PAID)
-
     @transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
     def pay(self, paid_date=None):
         self._pay(paid_date=paid_date)
@@ -229,8 +228,6 @@ class BillingDocumentBase(models.Model):
             self.cancel_date = datetime.strptime(cancel_date, '%Y-%m-%d').date()
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
-
-        self._save_pdf(state=self.STATES.CANCELED)
 
     @transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
     def cancel(self, cancel_date=None):
@@ -302,7 +299,13 @@ class BillingDocumentBase(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
         self._last_state = self.state
-        super(BillingDocumentBase, self).save(*args, **kwargs)
+
+        with transaction.atomic():
+            # Create pdf object
+            if not self.pdf and self.state != self.STATES.DRAFT:
+                self.pdf = PDF.objects.create(upload_path=self.get_pdf_upload_path(), dirty=True)
+
+            super(BillingDocumentBase, self).save(*args, **kwargs)
 
     def _generate_number(self, default_starting_number=1):
         """Generates the number for a proforma/invoice."""
@@ -419,37 +422,62 @@ class BillingDocumentBase(models.Model):
 
         return select_template(templates)
 
-    def generate_pdf(self, state=None):
+    def get_pdf_filename(self):
+        return '{doc_type}_{series}-{number}.pdf'.format(
+            doc_type=self.__class__.__name__,
+            series=self.series,
+            number=self.number
+        )
+
+    def get_pdf_upload_path(self):
+        path_template = getattr(
+            settings, 'SILVER_DOCUMENT_UPLOAD_PATH',
+            'documents/{provider}/{doc.kind}/{issue_date}/{filename}'
+        )
+
+        context = {
+            'doc': self,
+            'filename': self.get_pdf_filename(),
+            'provider': self.provider.slug,
+            'customer': self.customer.slug,
+            'issue_date': self.issue_date.strftime('%Y/%m/%d')
+        }
+
+        return path_template.format(**context)
+
+    def generate_pdf(self, state=None, upload=True):
+        # !!! ensure this is not concurrently called for the same document
+        self.refresh_from_db()
+
+        state_before_generation = self.state
+
         context = self.get_template_context(state)
-        template = self.get_template(state=context['state'])
-        file_object = HttpResponse(content_type='application/pdf')
+        context['filename'] = self.get_pdf_filename()
 
-        generate_pdf_template_object(template, file_object, context)
+        pdf_file_object = self.pdf.generate(template=self.get_template(state),
+                                            context=context,
+                                            upload=upload)
+        with transaction.atomic():
+            # lock pdf
+            PDF.objects.select_for_update().filter(pk=self.pdf.pk)
 
-        return file_object
+            # lock document (self)
+            document = self.__class__.objects.select_for_update().get(pk=self.pk)
+
+            # document.state and pdf.dirty cannot change in other places
+
+            # state changed while generating
+            if document.state == state_before_generation:
+                self.pdf.dirty = False
+                self.pdf.save()
+
+        return pdf_file_object
 
     def generate_html(self, state=None, request=None):
         context = self.get_template_context(state)
         template = self.get_template(state=context['state'])
 
         return template.render(context, request)
-
-    def _save_pdf(self, state=None):
-        file_object = self.generate_pdf(state)
-
-        if file_object:
-            pdf_content = ContentFile(file_object)
-            filename = '{doc_type}_{series}-{number}.pdf'.format(
-                doc_type=self.__class__.__name__,
-                series=self.series,
-                number=self.number
-            )
-
-            if self.pdf:
-                self.pdf.delete()
-            self.pdf.save(filename, pdf_content, True)
-        else:
-            raise RuntimeError(_('Could not generate invoice pdf.'))
 
     def serialize_hook(self, hook):
         """
@@ -493,3 +521,72 @@ class BillingDocumentBase(models.Model):
     def tax_value_in_transaction_currency(self):
         return sum([entry.tax_value_in_transaction_currency
                     for entry in self.entries])
+
+
+def create_transaction_for_document(document):
+    # get a usable, recurring payment_method for the customer
+    PaymentMethod = get_model('silver.PaymentMethod')
+    Transaction = get_model('silver.Transaction')
+
+    payment_methods = PaymentMethod.objects.filter(
+        canceled=False,
+        verified=True,
+        customer=document.customer
+    )
+    for payment_method in payment_methods:
+        try:
+            return Transaction.objects.create(document=document,
+                                              payment_method=payment_method)
+        except ValidationError:
+            continue
+
+
+@receiver(post_transition)
+def post_transition_callback(sender, instance, name, source, target, **kwargs):
+    if not isinstance(instance, BillingDocumentBase):
+        return
+
+    document = instance
+    setattr(document, '.recently_transitioned', target)
+
+    document.save()
+
+
+@receiver(post_save)
+def post_document_save(sender, instance, created=False, **kwargs):
+    if not isinstance(instance, BillingDocumentBase):
+        return
+
+    document = instance
+
+    if hasattr(document, '.recently_transitioned'):
+        delattr(document, '.recently_transitioned')
+
+        # Transition related document too, if needed
+        if document.related_document and document.state != document.related_document.state:
+            state_transition_map = {
+                BillingDocumentBase.STATES.ISSUED: 'issue',
+                BillingDocumentBase.STATES.CANCELED: 'cancel',
+                BillingDocumentBase.STATES.PAID: 'pay'
+            }
+            transition_name = state_transition_map[document.state]
+
+            bound_transition_method = getattr(document.related_document, transition_name)
+            bound_transition_method()
+
+        # Create a transaction if the document was recently issued
+        if (document.state == BillingDocumentBase.STATES.ISSUED and
+                settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
+            # But only if there is no pending transaction
+            Transaction = get_model('silver', 'Transaction')
+
+            # The related document might have the only reference to an existing transaction
+            if not (document.related_document or document).transactions.filter(
+                state__in=[Transaction.States.Pending,
+                           Transaction.States.Initial,
+                           Transaction.States.Settled]
+            ):
+                create_transaction_for_document(document)
+
+        # Generate a PDF
+        document.set_pdf_for_generation()

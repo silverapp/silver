@@ -13,13 +13,11 @@
 # limitations under the License.
 
 
-from decimal import Decimal
-
-from django_fsm import TransitionNotAllowed, transition
+from django_fsm import transition
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.signals import pre_delete, post_save
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 from .base import BillingDocumentBase
@@ -65,40 +63,19 @@ class Proforma(BillingDocumentBase):
 
     @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
                 target=BillingDocumentBase.STATES.PAID)
-    def pay(self, paid_date=None, affect_related_document=True):
+    def pay(self, paid_date=None):
         super(Proforma, self)._pay(paid_date)
 
         if not self.invoice:
             self.invoice = self._new_invoice()
             self.invoice.issue()
-            self.invoice.pay(paid_date=paid_date,
-                             affect_related_document=False)
+            self.invoice.pay(paid_date=paid_date)
 
             # if the proforma is paid, the invoice due_date should be issue_date
             self.invoice.due_date = self.invoice.issue_date
 
             self.invoice.save()
             self.save()
-
-        elif affect_related_document:
-            try:
-                self.invoice.pay(paid_date=paid_date,
-                                 affect_related_document=False)
-                self.invoice.save()
-            except TransitionNotAllowed:
-                # the related invoice is already paid
-                # other inconsistencies should've been fixed before
-                pass
-
-    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
-                target=BillingDocumentBase.STATES.CANCELED)
-    def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Proforma, self)._cancel(cancel_date)
-
-        if self.invoice and affect_related_document:
-            self.invoice.cancel(cancel_date=cancel_date,
-                                affect_related_document=False)
-            self.invoice.save()
 
     def create_invoice(self):
         if self.state != BillingDocumentBase.STATES.ISSUED:
@@ -111,7 +88,6 @@ class Proforma(BillingDocumentBase):
 
         self.invoice = self._new_invoice()
         self.invoice.issue()
-        self.invoice.save()
 
         self.save()
 
