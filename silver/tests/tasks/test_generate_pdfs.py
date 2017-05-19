@@ -6,7 +6,7 @@ from silver.tests.factories import InvoiceFactory, ProformaFactory
 
 
 @pytest.mark.django_db
-def test_generate_pdfs_task():
+def test_generate_pdfs_task(monkeypatch):
     issued_invoice = InvoiceFactory.create()
     issued_invoice.issue()
 
@@ -37,12 +37,32 @@ def test_generate_pdfs_task():
     for document in documents_to_generate:
         assert document.pdf.dirty
 
+    lock_manager_mock = MagicMock()
+    monkeypatch.setattr('silver.tasks.lock_manager', lock_manager_mock)
+
     with patch('silver.tasks.generate_pdf') as generate_pdf_mock:
         generate_pdfs()
 
         generate_pdf_mock.assert_has_calls([call.delay(document.id, document.kind)
                                             for document in documents_to_generate],
                                            any_order=True)
+
+
+@pytest.mark.django_db
+def test_generate_pdfs_task_lock_not_owned(monkeypatch):
+    issued_invoice = InvoiceFactory.create()
+    issued_invoice.issue()
+
+    issued_proforma = ProformaFactory.create()
+    issued_proforma.issue()
+
+    lock_manager_mock = MagicMock(return_value=None)
+    monkeypatch.setattr('silver.tasks.lock_manager.lock', lock_manager_mock)
+
+    with patch('silver.tasks.generate_pdf') as generate_pdf_mock:
+        generate_pdfs()
+
+        assert not generate_pdf_mock.called
 
 
 @pytest.mark.django_db
@@ -58,6 +78,7 @@ def test_generate_pdf_task(settings, tmpdir, monkeypatch):
 
     monkeypatch.setattr('silver.models.documents.pdf.generate_pdf_template_object',
                         generate_pdf_mock)
+
     generate_pdf(invoice.id, invoice.kind)
 
     # pdf needs to be refreshed as the invoice reference in the test is not the same with the one
