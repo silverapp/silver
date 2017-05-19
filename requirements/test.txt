@@ -5,8 +5,8 @@ flake8==2.4.1
 freezegun==0.3.8
 coverage==3.7.1
 django-coverage==1.2.4
-pytest==2.7.2
-pytest-django>=2.8.0
+pytest==3.0.7
+pytest-django==2.9.1
 factory-boy==2.5.2
 simplejson==3.8.0
 pep8==1.7.0
