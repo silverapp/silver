@@ -17,3 +17,4 @@ from .base import BillingDocumentBase
 from .entries import DocumentEntry
 from .invoice import Invoice
 from .proforma import Proforma
+from .pdf import PDF

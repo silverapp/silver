@@ -51,8 +51,7 @@ class Document(models.Model):
     currency = models.CharField(max_length=4)
     transaction_currency = models.CharField(max_length=4)
     state = models.CharField(max_length=10)
-    pdf = models.FileField(null=True, blank=True, editable=False,
-                           storage=_storage, upload_to=documents_pdf_path)
+    pdf = models.ForeignKey('PDF', null=True)
 
     class Meta:
         managed = False

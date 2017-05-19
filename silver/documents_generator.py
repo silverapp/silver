@@ -149,7 +149,6 @@ class DocumentsGenerator(object):
         for provider, document in cached_documents.iteritems():
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
-                document.save()
 
     def _generate_for_user_without_consolidated_billing(self, customer,
                                                         billing_date,
@@ -197,7 +196,6 @@ class DocumentsGenerator(object):
 
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
-                document.save()
 
     def _generate_for_single_subscription(self, subscription=None,
                                           billing_date=None):
@@ -228,7 +226,6 @@ class DocumentsGenerator(object):
 
         if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
             document.issue()
-            document.save()
 
     def _create_document(self, provider, customer, subscription, billing_date):
         DocumentModel = (Proforma if provider.flow == provider.FLOWS.PROFORMA
