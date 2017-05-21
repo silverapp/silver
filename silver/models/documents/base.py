@@ -28,7 +28,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
+from django.db import models
+from django.db import transaction as db_transaction
 from django.db.models import Max, ForeignKey
 from django.template.loader import select_template
 from django.utils import timezone
@@ -305,7 +306,7 @@ class BillingDocumentBase(models.Model):
 
         self._last_state = self.state
 
-        with transaction.atomic():
+        with db_transaction.atomic():
             # Create pdf object
             if not self.pdf and self.state != self.STATES.DRAFT:
                 self.pdf = PDF.objects.create(upload_path=self.get_pdf_upload_path(), dirty=True)
@@ -462,7 +463,7 @@ class BillingDocumentBase(models.Model):
         pdf_file_object = self.pdf.generate(template=self.get_template(state),
                                             context=context,
                                             upload=upload)
-        with transaction.atomic():
+        with db_transaction.atomic():
             # lock pdf
             PDF.objects.select_for_update().filter(pk=self.pdf.pk)
 
@@ -526,6 +527,33 @@ class BillingDocumentBase(models.Model):
     def tax_value_in_transaction_currency(self):
         return sum([entry.tax_value_in_transaction_currency
                     for entry in self.entries])
+
+    @property
+    def amount_paid_in_transaction_currency(self):
+        Transaction = get_model('silver.Transaction')
+
+        return sum([transaction.amount
+                    for transaction in self.transactions.filter(state=Transaction.States.Settled)])
+
+    @property
+    def amount_pending_in_transaction_currency(self):
+        Transaction = get_model('silver.Transaction')
+
+        return sum([transaction.amount
+                    for transaction in self.transactions.filter(state=Transaction.States.Pending)])
+
+    @property
+    def amount_to_be_charged_in_transaction_currency(self):
+        Transaction = get_model('silver.Transaction')
+
+        return self.total_in_transaction_currency - sum([
+            transaction.amount
+            for transaction in self.transactions.filter(state__in=[
+                Transaction.States.Initial,
+                Transaction.States.Pending,
+                Transaction.States.Settled
+            ])
+        ])
 
 
 def create_transaction_for_document(document):

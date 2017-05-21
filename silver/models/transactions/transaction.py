@@ -172,41 +172,27 @@ class Transaction(models.Model):
 
             if self.currency:
                 if self.currency != self.document.transaction_currency:
-                    raise ValidationError(
-                        "Transaction currency is different from it's document's"
-                        " transaction_currency."
-                    )
+                    message = "Transaction currency is different from it's document's "\
+                              "transaction_currency."
+                    raise ValidationError({'currency': message})
             else:
                 self.currency = self.document.transaction_currency
 
             if (self.payment_method.allowed_currencies and
                     self.currency not in self.payment_method.allowed_currencies):
-                raise ValidationError(
-                    'Currency {} is not allowed by the payment method. '
-                    'Allowed currencies are {}.'.format(
-                        self.currency, self.payment_method.allowed_currencies
-                    )
-                )
+                message = 'Currency {} is not allowed by the payment method. Allowed currencies ' \
+                          'are {}.'.format(
+                              self.currency, self.payment_method.allowed_currencies
+                          )
+                raise ValidationError({'currency': message})
 
             if self.amount:
-                if self.amount != self.document.total_in_transaction_currency:
-                    raise ValidationError(
-                        "Transaction amount is different from it's document's "
-                        "total_in_transaction_currency."
-                    )
+                if self.amount > self.document.amount_to_be_charged_in_transaction_currency:
+                    message = "Amount is more than the amount that should be charged in order " \
+                              "to pay the billing document."
+                    raise ValidationError({'amount': message})
             else:
-                self.amount = self.document.total_in_transaction_currency
-
-            # We also check for settled because document pay transition might fail
-            if self.document.transactions.filter(
-                state__in=[Transaction.States.Initial,
-                           Transaction.States.Pending,
-                           Transaction.States.Settled]
-            ).exists():
-                raise ValidationError(
-                    'There already are active transactions for the same '
-                    'billing documents.'
-                )
+                self.amount = self.document.amount_to_be_charged_in_transaction_currency
 
     def clean_with_previous_instance(self, previous_instance):
         if not previous_instance:
@@ -272,18 +258,11 @@ class Transaction(models.Model):
 
     def update_document_state(self):
         if (self.state == Transaction.States.Settled and
-                self.document.state != self.document.STATES.PAID):
+                not self.document.amount_to_be_charged_in_transaction_currency):
             self.document.pay()
 
     def __unicode__(self):
         return unicode(self.uuid)
-
-
-def _sync_transaction_state_with_document(transaction, target):
-    if target == Transaction.States.Settled:
-        if transaction.document and \
-                transaction.document.state != transaction.document.STATES.PAID:
-            transaction.document.pay()
 
 
 @receiver(post_transition)
