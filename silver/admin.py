@@ -30,6 +30,7 @@ from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import connections
 from django.db.models import BLANK_CHOICE_DASH
 from django.forms import ChoiceField
@@ -871,7 +872,7 @@ class ProformaAdmin(BillingDocumentAdmin):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ['amount', 'currency', 'proforma', 'invoice', 'state',
+        fields = ['proforma', 'invoice', 'amount', 'currency', 'state',
                   'payment_method', 'uuid', 'valid_until', 'last_access',
                   'data', 'fail_code', 'cancel_code', 'refund_code']
 
@@ -891,6 +892,27 @@ class TransactionForm(forms.ModelForm):
             ),
 
         }
+
+    def __init__(self, *args, **kwargs):
+        super(TransactionForm, self).__init__(*args, **kwargs)
+
+        if 'amount' in self.fields:
+            self.fields['amount'].required = False
+        if 'currency' in self.fields:
+            self.fields['currency'].required = False
+
+    def clean(self):
+        if ((self.cleaned_data['amount'] and not self.cleaned_data['currency']) or
+                (self.cleaned_data['amount'] is None and self.cleaned_data['currency'])):
+            raise ValidationError('You must either specify both amount and currency fields or '
+                                  'leave them both blank.')
+
+        document = self.cleaned_data['proforma'] or self.cleaned_data['invoice']
+        if not self.cleaned_data['currency']:
+            self.cleaned_data['amount'] = document.amount_to_be_charged_in_transaction_currency
+            self.cleaned_data['currency'] = document.transaction_currency
+
+        return self.cleaned_data
 
 
 class TransactionAdmin(ModelAdmin):
