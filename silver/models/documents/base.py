@@ -281,6 +281,11 @@ class BillingDocumentBase(models.Model):
             msg = 'You cannot edit the document once it is in paid state.'
             raise ValidationError({NON_FIELD_ERRORS: msg})
 
+        if self.transactions.exclude(currency=self.transaction_currency).exists():
+            message = 'There are unfinished transactions of this document that use a ' \
+                      'different currency.'
+            raise ValidationError({'transaction_currency': message})
+
     def save(self, *args, **kwargs):
         if not self.transaction_currency:
             self.transaction_currency = self.customer.currency or self.currency
