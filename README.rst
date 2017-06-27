@@ -27,7 +27,7 @@ To get the latest commit from GitHub
 
 .. code-block:: bash
 
-    pip install -e git+git://github.com/PressLabs/silver.git#egg=silver
+    pip install -e git+git://github.com/silverapp/silver.git#egg=silver
 
 Add ``silver`` to your ``INSTALLED_APPS``
 
@@ -57,7 +57,7 @@ Don't forget to migrate your database
 Configuration
 -----
 
-For the complete API reference, check the project's wiki: <https://github.com/PressLabs/silver/wiki>.
+For the complete API reference, check the project's wiki: <https://github.com/silverapp/silver/wiki>.
 
 To run Silver automatically, you will have to setup a cron which calls the ``generate_documents`` Django command.
 
@@ -122,9 +122,9 @@ Getting Started
 Contribute
 ----------
 
-Development of silver happens at http://github.com/PressLabs/silver.
+Development of silver happens at http://github.com/silverapp/silver.
 
-Issues are tracked at http://github.com/PressLabs/silver/issues.
+Issues are tracked at http://github.com/silverapp/silver/issues.
 
 The Python package can be found at https://pypi.python.org/pypi/django-silver/.
 
