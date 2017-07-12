@@ -171,6 +171,8 @@ CELERY_BEAT_SCHEDULE = {
 }
 LOCK_MANAGER_CONNECTION = {'host': 'localhost', 'port': 6379, 'db': 1}
 
+PDF_GENERATION_TIME_LIMIT = 60
+
 try:
     from settings_local import *
 except ImportError:
