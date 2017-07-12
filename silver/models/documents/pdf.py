@@ -1,8 +1,10 @@
+import uuid
+
 from django_xhtml2pdf.utils import generate_pdf_template_object
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.db.models import Model, BooleanField, FileField, TextField
+from django.db.models import Model, BooleanField, FileField, TextField, UUIDField
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
 
@@ -21,6 +23,7 @@ def get_upload_path(instance, filename):
 
 
 class PDF(Model):
+    uuid = UUIDField(default=uuid.uuid4, unique=True)
     pdf_file = FileField(null=True, blank=True, editable=False,
                          storage=get_storage(), upload_to=get_upload_path)
     dirty = BooleanField(default=False)
