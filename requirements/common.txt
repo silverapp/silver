@@ -26,4 +26,3 @@ cryptography==1.7.1
 sqlparse==0.2.2
 django-autocomplete-light==3.2.1
 celery[redis]
-redlock-py==1.0.8

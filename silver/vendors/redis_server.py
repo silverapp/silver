@@ -1,6 +1,7 @@
-from redlock import Redlock
+from redis import StrictRedis
 
 from django.conf import settings
 
-
-lock_manager = Redlock([settings.LOCK_MANAGER_CONNECTION])
+redis = StrictRedis.from_url(
+    getattr(settings, 'CONFIG_SERVER', 'redis://127.0.0.1:6379')
+)

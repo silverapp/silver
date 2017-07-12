@@ -37,15 +37,13 @@ def test_generate_pdfs_task(monkeypatch):
     for document in documents_to_generate:
         assert document.pdf.dirty
 
-    lock_manager_mock = MagicMock()
-    monkeypatch.setattr('silver.tasks.lock_manager', lock_manager_mock)
+    lock_mock = MagicMock()
+    monkeypatch.setattr('silver.tasks.redis.lock', lock_mock)
 
-    with patch('silver.tasks.generate_pdf') as generate_pdf_mock:
+    with patch('silver.tasks.group') as group_mock:
         generate_pdfs()
 
-        generate_pdf_mock.assert_has_calls([call.delay(document.id, document.kind)
-                                            for document in documents_to_generate],
-                                           any_order=True)
+        assert group_mock.call_count
 
 
 @pytest.mark.django_db
@@ -56,13 +54,14 @@ def test_generate_pdfs_task_lock_not_owned(monkeypatch):
     issued_proforma = ProformaFactory.create()
     issued_proforma.issue()
 
-    lock_manager_mock = MagicMock(return_value=None)
-    monkeypatch.setattr('silver.tasks.lock_manager.lock', lock_manager_mock)
+    lock_acquire = MagicMock(acquire=lambda *args, **kwargs: False)
+    lock_mock = MagicMock(return_value=lock_acquire)
+    monkeypatch.setattr('silver.tasks.redis.lock', lock_mock)
 
-    with patch('silver.tasks.generate_pdf') as generate_pdf_mock:
+    with patch('silver.tasks.group') as group_mock:
         generate_pdfs()
 
-        assert not generate_pdf_mock.called
+        assert not group_mock.called
 
 
 @pytest.mark.django_db
