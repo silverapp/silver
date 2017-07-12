@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import uuid
+
 from django.db import migrations, models
-from django.db.models import Q
 
 import silver.models.documents.pdf
 from silver.models import BillingDocumentBase
@@ -21,8 +22,8 @@ class Migration(migrations.Migration):
         Proforma = apps.get_model('silver', 'Proforma')
         PDF = apps.get_model('silver', 'PDF')
 
-        for invoice in Invoice.objects.using(db_alias).filter(
-            ~Q(state=BillingDocumentBase.STATES.DRAFT)
+        for invoice in Invoice.objects.using(db_alias).exclude(
+            state=BillingDocumentBase.STATES.DRAFT
         ):
             pdf_object = PDF.objects.using(db_alias).create(
                 upload_path=invoice.get_pdf_upload_path()
@@ -41,6 +42,7 @@ class Migration(migrations.Migration):
             name='PDF',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('uuid', models.UUIDField(default=uuid.uuid4, unique=True)),
                 ('pdf_file', models.FileField(upload_to=silver.models.documents.pdf.get_upload_path, null=True, editable=False, blank=True)),
                 ('dirty', models.BooleanField(default=False)),
                 ('upload_path', models.TextField(null=True, blank=True)),
