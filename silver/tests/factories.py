@@ -294,10 +294,4 @@ class TransactionFactory(factory.django.DjangoModelFactory):
                 invoice.transaction_currency = proforma.transaction_currency
             invoice.save()
 
-        document = proforma or invoice
-
-        kwargs.update({
-            'amount': document.total_in_transaction_currency,
-            'currency': document.transaction_currency
-        })
         return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)

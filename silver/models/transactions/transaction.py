@@ -28,10 +28,12 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from redis.exceptions import LockError
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
 from silver.models import Invoice, Proforma
+from silver.vendors.redis_server import redis
 
 from .codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 
@@ -134,6 +136,43 @@ class Transaction(models.Model):
         self.refund_code = refund_code
         logger.error(str(refund_reason))
 
+    def save(self, *args, **kwargs):
+        previous_instance = get_object_or_None(Transaction, pk=self.pk) if self.pk else None
+        setattr(self, 'previous_instance', previous_instance)
+
+        def _clean_and_save():
+            if not getattr(self, '.cleaned', False):
+                self.full_clean(previous_instance=previous_instance)
+
+            super(Transaction, self).save(*args, **kwargs)
+
+        if not previous_instance:
+            # Creating a new Transaction, therefore a lock is used to ensure there are no
+            # overcharges
+            if self.proforma:
+                lock_key = 'proforma_{pk}'.format(pk=self.proforma.pk)
+            elif self.invoice:
+                lock_key = 'invoice_{pk}'.format(pk=self.invoice.pk)
+            else:
+                raise ValidationError(
+                    'The transaction must have at least one document '
+                    '(invoice or proforma).'
+                )
+
+            lock = redis.lock(lock_key, timeout=5)  # 5 seconds should be more than enough to save
+
+            if not lock.acquire(blocking_timeout=5):
+                raise ValidationError("Couldn't create a transaction for the given document.")
+
+            _clean_and_save()
+
+            try:
+                lock.release()
+            except LockError:
+                pass
+        else:
+            _clean_and_save()
+
     def clean(self):
         # Validate documents
         document = self.document
@@ -174,7 +213,7 @@ class Transaction(models.Model):
                 if self.currency != self.document.transaction_currency:
                     message = "Transaction currency is different from it's document's "\
                               "transaction_currency."
-                    raise ValidationError({'currency': message})
+                    raise ValidationError(message)
             else:
                 self.currency = self.document.transaction_currency
 
@@ -184,13 +223,13 @@ class Transaction(models.Model):
                           'are {}.'.format(
                               self.currency, self.payment_method.allowed_currencies
                           )
-                raise ValidationError({'currency': message})
+                raise ValidationError(message)
 
             if self.amount:
                 if self.amount > self.document.amount_to_be_charged_in_transaction_currency:
-                    message = "Amount is more than the amount that should be charged in order " \
+                    message = "Amount is greater than the amount that should be charged in order " \
                               "to pay the billing document."
-                    raise ValidationError({'amount': message})
+                    raise ValidationError(message)
             else:
                 self.amount = self.document.amount_to_be_charged_in_transaction_currency
 
@@ -269,17 +308,6 @@ class Transaction(models.Model):
 def post_transition_callback(sender, instance, name, source, target, **kwargs):
     if issubclass(sender, Transaction):
         setattr(instance, '.recently_transitioned', target)
-
-
-@receiver(pre_save, sender=Transaction, dispatch_uid='pre_transaction_save')
-def pre_transaction_save(sender, instance=None, **kwargs):
-    transaction = instance
-
-    previous_instance = get_object_or_None(Transaction, pk=transaction.pk)
-    setattr(transaction, 'previous_instance', previous_instance)
-
-    if not getattr(transaction, '.cleaned', False):
-        transaction.full_clean(previous_instance=previous_instance)
 
 
 @receiver(post_save, sender=Transaction)
