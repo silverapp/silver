@@ -17,7 +17,7 @@ from mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from silver.models import Transaction
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
-                                    TransactionFactory, ProformaFactory)
+                                    TransactionFactory, ProformaFactory, DocumentEntryFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
                                    triggered_processor)
 
@@ -102,26 +102,39 @@ class TestDocumentsTransactions(TestCase):
 
     def test_no_transaction_creation_for_issued_documents_case3(self):
         """
-            There already is an active (initial/pending) transaction for the
-            document.
+            There are 1 pending and 1 settled transactions that together cover the document amount.
         """
-        invoice = InvoiceFactory.create()
-        invoice.issue()  # this creates a Transaction
+        entry = DocumentEntryFactory(quantity=1, unit_price=100)
+        invoice = InvoiceFactory.create(invoice_entries=[entry])
+        invoice.issue()
+
         customer = invoice.customer
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
             canceled=False,
-            verified=True,
+            verified=False,
         )
+
+        TransactionFactory.create(invoice=invoice,
+                                  payment_method=payment_method,
+                                  amount=invoice.total_in_transaction_currency / 2,
+                                  state=Transaction.States.Settled)
+
+        TransactionFactory.create(invoice=invoice,
+                                  payment_method=payment_method,
+                                  amount=invoice.total_in_transaction_currency / 2,
+                                  state=Transaction.States.Pending)
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             expected_exception = ValidationError
-            expected_message = "{'__all__': [u'There already are active " \
-                               "transactions for the same billing documents.']}"
+            expected_message = "{'__all__': [u'Amount is greater than the amount that should be " \
+                               "charged in order to pay the billing document.']}"
             try:
                 TransactionFactory.create(invoice=invoice,
-                                          payment_method=payment_method)
+                                          payment_method=payment_method,
+                                          amount=1)
+
                 self.fail('{} not raised.'.format(str(expected_exception)))
             except expected_exception as e:
                 self.assertEqual(str(e), expected_message)
@@ -129,7 +142,7 @@ class TestDocumentsTransactions(TestCase):
             transactions = Transaction.objects.filter(
                 payment_method=payment_method, invoice=invoice,
             )
-            self.assertEqual(len(transactions), 1)
+            self.assertEqual(len(transactions), 2)
 
             self.assertEqual(mock_execute.call_count, 0)
 

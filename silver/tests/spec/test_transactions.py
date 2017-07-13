@@ -341,7 +341,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_add_transaction_with_amount_different_from_document(self):
+    def test_add_transaction_with_amount_greater_than_what_should_be_charged(self):
         customer = CustomerFactory.create()
         payment_method = PaymentMethodFactory.create(customer=customer)
 
@@ -371,8 +371,8 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.post(url, format='json', data=data)
 
         expected_data = {
-            'non_field_errors': [u"Transaction amount is different from it's "
-                                 u"document's total_in_transaction_currency."]
+            'non_field_errors': [u"Amount is greater than the amount that should be charged in "
+                                 u"order to pay the billing document."]
         }
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
