@@ -25,6 +25,7 @@ from django.dispatch import receiver
 from django.utils.translation import ugettext_lazy as _
 
 from silver.models.billing_entities.base import BaseBillingEntity
+from silver.retry_patterns import RetryPatterns
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -105,6 +106,10 @@ class Provider(BaseBillingEntity):
                   "still be generated after that day during the billing cycle, but their billing "
                   "date will appear to be the end of the cycle billing duration."
     )
+
+    transaction_maximum_automatic_retries = models.PositiveIntegerField(default=5)
+    transaction_retry_pattern = models.CharField(choices=RetryPatterns.as_choices(), max_length=16,
+                                                 default=RetryPatterns.as_choices()[0][0])
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)

@@ -893,11 +893,11 @@ class ProformaAdmin(BillingDocumentAdmin):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ['proforma', 'invoice', 'amount', 'currency', 'state',
+        fields = ['proforma', 'invoice', 'amount', 'currency', 'state', 'retried_transaction',
                   'payment_method', 'uuid', 'valid_until', 'last_access',
                   'data', 'fail_code', 'cancel_code', 'refund_code']
 
-        readonly_fields = ['state', 'uuid', 'last_access']
+        readonly_fields = ['state', 'uuid', 'last_access', 'retried_transaction']
         create_only_fields = ['amount', 'currency', 'proforma', 'invoice',
                               'payment_method', 'valid_until']
 
@@ -942,10 +942,10 @@ class TransactionAdmin(ModelAdmin):
     list_display = ('uuid', 'related_invoice', 'related_proforma',
                     'amount', 'state', 'created_at', 'updated_at',
                     'get_customer', 'get_pay_url', 'get_payment_method',
-                    'get_is_recurring')
+                    'get_is_recurring', 'get_is_retrial')
     list_filter = ('payment_method__customer', 'state',
                    'payment_method__payment_processor')
-    actions = ['execute', 'process', 'cancel', 'settle', 'fail']
+    actions = ['execute', 'process', 'cancel', 'settle', 'fail', 'retry']
     ordering = ['-created_at']
 
     def get_queryset(self, request):
@@ -971,11 +971,19 @@ class TransactionAdmin(ModelAdmin):
         return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
     get_customer.allow_tags = True
     get_customer.short_description = 'Customer'
+    get_customer.admin_order_field = 'payment_method__customer'
 
     def get_is_recurring(self, obj):
         return obj.payment_method.verified
     get_is_recurring.boolean = True
     get_is_recurring.short_description = 'Recurring'
+    get_is_recurring.admin_order_field = 'verified'
+
+    def get_is_retrial(self, obj):
+        return bool(obj.retried_transaction)
+    get_is_retrial.boolean = True
+    get_is_retrial.short_description = 'Retrial'
+    get_is_retrial.admin_order_field = 'retried_transaction'
 
     def get_payment_method(self, obj):
         link = urlresolvers.reverse("admin:silver_paymentmethod_change",
@@ -983,6 +991,7 @@ class TransactionAdmin(ModelAdmin):
         return u'<a href="%s">%s</a>' % (link, obj.payment_method)
     get_payment_method.allow_tags = True
     get_payment_method.short_description = 'Payment Method'
+    get_payment_method.admin_order_field = 'payment_method'
 
     def perform_action(self, request, queryset, action, display_verb=None):
         failed_count = 0
@@ -998,7 +1007,7 @@ class TransactionAdmin(ModelAdmin):
             try:
                 method(transaction)
                 transaction.save()
-            except TransitionNotAllowed:
+            except (TransitionNotAllowed, ValidationError):
                 failed_count += 1
 
         settled_count = transactions_count - failed_count
@@ -1098,16 +1107,21 @@ class TransactionAdmin(ModelAdmin):
         self.perform_action(request, queryset, 'fail', 'failed')
     fail.short_description = 'Fail the selected transactions'
 
+    def retry(self, request, queryset):
+        self.perform_action(request, queryset, 'retry', 'retried')
+    retry.short_description = 'Retry the selected transactions'
+
     def related_invoice(self, obj):
         return obj.invoice.admin_change_url if obj.invoice else None
     related_invoice.allow_tags = True
     related_invoice.short_description = 'Invoice'
+    related_invoice.admin_order_field = 'invoice'
 
     def related_proforma(self, obj):
         return obj.proforma.admin_change_url if obj.proforma else None
     related_proforma.allow_tags = True
     related_proforma.short_description = 'Proforma'
-
+    related_proforma.admin_order_field = 'proforma'
 
 class PaymentMethodAdmin(ModelAdmin):
     list_display = ('customer', 'payment_processor', 'added_at', 'verified',

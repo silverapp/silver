@@ -14,19 +14,23 @@
 
 from __future__ import absolute_import
 
+import logging
 from itertools import chain
 
 from celery import group, shared_task
 from celery_once import QueueOnce
-from redis.exceptions import LockError
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from silver.documents_generator import DocumentsGenerator
-from silver.models import Invoice, Proforma, Transaction, BillingDocumentBase
+from silver.models import Invoice, Proforma, Transaction, PaymentMethod, BillingDocumentBase
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.vendors.redis_server import redis
+
+
+logger = logging.getLogger(__name__)
 
 
 PDF_GENERATION_TIME_LIMIT = getattr(settings, 'PDF_GENERATION_TIME_LIMIT',
@@ -121,3 +125,25 @@ def execute_transactions(transaction_ids=None):
         executable_transactions = executable_transactions.filter(pk__in=transaction_ids)
 
     group(execute_transaction.s(transaction.id) for transaction in executable_transactions)()
+
+
+
+@shared_task()
+def retry_transactions():
+    for transaction in Transaction.objects.filter(Q(invoice__state=Invoice.STATES.ISSUED) |
+                                                  Q(proforma__state=Proforma.STATES.ISSUED),
+                                                  state=Transaction.States.Failed,
+                                                  retried_by=None):
+        if not transaction.should_be_retried:
+            continue
+
+        for payment_method in PaymentMethod.objects.filter(customer=transaction.customer,
+                                                           verified=True, canceled=False):
+            try:
+                transaction.retry(payment_method=payment_method)
+                break
+            except Exception:
+                logger.exception('[Tasks][Transaction]: %s', {
+                    'detail': 'There was an error while retrying the transaction.',
+                    'transaction_id': transaction.id
+                })

@@ -373,7 +373,7 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.post(url, format='json', data=data)
 
         expected_data = {
-            'non_field_errors': ["Amount is greater than the amount that should be charged in "
+            'non_field_errors': ["Amount is greater than what should be charged in "
                                  "order to pay the billing document."]
         }
         self.assertEqual(response.data, expected_data)

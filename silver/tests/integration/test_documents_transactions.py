@@ -132,7 +132,7 @@ class TestDocumentsTransactions(TestCase):
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             expected_exception = ValidationError
-            expected_message = "Amount is greater than the amount that should be " \
+            expected_message = "Amount is greater than what should be " \
                                "charged in order to pay the billing document."
             try:
                 TransactionFactory.create(invoice=invoice,

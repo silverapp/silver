@@ -16,14 +16,14 @@ from __future__ import absolute_import, unicode_literals
 
 import uuid
 import logging
-
+from datetime import timedelta
 from decimal import Decimal
 
 from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from django_fsm import FSMField, post_transition, transition
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import Q
@@ -35,6 +35,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from silver.models import Invoice, Proforma
 from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
+from silver.retry_patterns import RetryPatterns
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
 
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 class Transaction(models.Model):
     _provider = None
 
+    uuid = models.UUIDField(default=uuid.uuid4)
     amount = models.DecimalField(
         decimal_places=2, max_digits=12,
         validators=[MinValueValidator(Decimal('0.00'))]
@@ -88,12 +90,34 @@ class Transaction(models.Model):
                                 related_name='invoice_transactions')
 
     payment_method = models.ForeignKey('PaymentMethod')
-    uuid = models.UUIDField(default=uuid.uuid4)
+
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField(default=timezone.now)
+
+    class RetryTypes:
+        Automatic = 'automatic'
+        Staff = 'staff'
+        Customer = 'customer'
+        PaymentProcessor = 'payment_processor'
+
+        @classmethod
+        def as_list(cls):
+            return [getattr(cls, state) for state in vars(cls).keys() if
+                    state[0].isupper()]
+
+        @classmethod
+        def as_choices(cls):
+            return (
+                (state, _(state.capitalize())) for state in cls.as_list()
+            )
+
+    retrial_type = models.CharField(choices=RetryTypes.as_choices(), max_length=16,
+                                    null=True, blank=True)
+    retried_transaction = models.OneToOneField('self', related_name='retried_by',
+                                               null=True, blank=True)
 
     fail_code = models.CharField(
         choices=[(code, code) for code in FAIL_CODES.keys()], max_length=32,
@@ -146,6 +170,77 @@ class Transaction(models.Model):
     def refund(self, refund_code='default', refund_reason='Unknown refund reason'):
         self.refund_code = refund_code
         logger.error(str(refund_reason))
+
+    @property
+    def automatic_retries_count(self):
+        if not self.retried_transaction:
+            return 0
+
+        if self.retrial_type == self.RetryTypes.Automatic:
+            return self.retried_transaction.automatic_retries_count + 1
+
+        return self.retried_transaction.automatic_retries_count
+
+    @property
+    def last_automatic_retried_transaction(self):
+        transaction = self
+
+        while transaction:
+            if transaction.retrial_type == self.RetryTypes.Automatic:
+                return transaction.retried_transaction
+
+            transaction = transaction.retried_transaction
+
+    @property
+    def next_retry_datetime(self):
+        pattern_method = RetryPatterns.get_pattern_method(self.provider.transaction_retry_pattern)
+        days_gap = pattern_method(self.automatic_retries_count)
+
+        return self.created_at + timedelta(days=days_gap)
+
+    @property
+    def can_be_retried(self):
+        if not self.state == self.States.Failed:
+            return False
+
+        try:
+            self.retried_by
+        except ObjectDoesNotExist:
+            pass
+        else:
+            return False
+
+        if self.document.state != self.document.STATES.ISSUED:
+            return False
+
+        return True
+
+    @property
+    def should_be_automatically_retried(self):
+        if not self.can_be_retried:
+            return False
+
+        automatic_retries_count = self.automatic_retries_count
+        if automatic_retries_count >= self.provider.transaction_maximum_automatic_retries:
+            return False
+
+        if timezone.now() < self.next_retry_datetime:
+            return False
+
+        return True
+
+    def retry(self, payment_method=None, retrial_type=RetryTypes.Automatic):
+        if not self.can_be_retried:
+            raise ValidationError('The transaction cannot be retried.')
+
+        payment_method = payment_method or self.payment_method
+
+        if not payment_method.verified or payment_method.canceled:
+            raise ValidationError({'payment_method': 'The payment method is not recurring.'})
+
+        return Transaction.objects.create(amount=self.amount, currency=self.currency,
+                                          retried_transaction=self, retrial_type=retrial_type,
+                                          document=self.document, payment_method=payment_method)
 
     @transaction.atomic()
     def save(self, *args, **kwargs):
@@ -221,7 +316,7 @@ class Transaction(models.Model):
                 raise ValidationError(message)
             if self.amount:
                 if self.amount > self.document.amount_to_be_charged_in_transaction_currency:
-                    message = "Amount is greater than the amount that should be charged in order " \
+                    message = "Amount is greater than what should be charged in order " \
                               "to pay the billing document."
                     raise ValidationError(message)
             else:
