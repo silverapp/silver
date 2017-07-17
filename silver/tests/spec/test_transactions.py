@@ -155,8 +155,8 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.post(url, format='json', data=data)
 
         expected_data = {
-            'non_field_errors': [u'The transaction must have at '
-                                 u'least one document (invoice or proforma).']
+            'non_field_errors': [u'The transaction must have at least one billing document '
+                                 u'(invoice or proforma).']
         }
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -182,7 +182,7 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.post(url, format='json', data=data)
 
         expected_data = {
-            'non_field_errors': [u'The transaction must have a non-draft document '
+            'non_field_errors': [u'The transaction must have a non-draft billing document '
                                  u'(invoice or proforma).']
         }
         self.assertEqual(response.data, expected_data)

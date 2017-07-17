@@ -234,6 +234,18 @@ class BillingDocumentBase(models.Model):
     def cancel(self, cancel_date=None):
         self._cancel(cancel_date=cancel_date)
 
+    def sync_related_document_state(self):
+        if self.related_document and self.state != self.related_document.state:
+            state_transition_map = {
+                BillingDocumentBase.STATES.ISSUED: 'issue',
+                BillingDocumentBase.STATES.CANCELED: 'cancel',
+                BillingDocumentBase.STATES.PAID: 'pay'
+            }
+            transition_name = state_transition_map[self.state]
+
+            bound_transition_method = getattr(self.related_document, transition_name)
+            bound_transition_method()
+
     def clone_into_draft(self):
         copied_fields = {
             'customer': self.customer,
@@ -592,34 +604,28 @@ def post_document_save(sender, instance, created=False, **kwargs):
 
     document = instance
 
-    if hasattr(document, '.recently_transitioned'):
-        delattr(document, '.recently_transitioned')
+    if not hasattr(document, '.recently_transitioned'):
+        return
 
-        # Transition related document too, if needed
-        if document.related_document and document.state != document.related_document.state:
-            state_transition_map = {
-                BillingDocumentBase.STATES.ISSUED: 'issue',
-                BillingDocumentBase.STATES.CANCELED: 'cancel',
-                BillingDocumentBase.STATES.PAID: 'pay'
-            }
-            transition_name = state_transition_map[document.state]
+    # The document has been transitioned before being saved
+    delattr(document, '.recently_transitioned')
 
-            bound_transition_method = getattr(document.related_document, transition_name)
-            bound_transition_method()
+    # Transition related document too, if needed
+    document.sync_related_document_state()
 
-        # Create a transaction if the document was recently issued
-        if (document.state == BillingDocumentBase.STATES.ISSUED and
-                settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
-            # But only if there is no pending transaction
-            Transaction = get_model('silver', 'Transaction')
+    # Create a transaction if the document was recently issued
+    if (document.state == BillingDocumentBase.STATES.ISSUED and
+            settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
+        # But only if there is no pending transaction
+        Transaction = get_model('silver', 'Transaction')
 
-            # The related document might have the only reference to an existing transaction
-            if not (document.related_document or document).transactions.filter(
-                state__in=[Transaction.States.Pending,
-                           Transaction.States.Initial,
-                           Transaction.States.Settled]
-            ):
-                create_transaction_for_document(document)
+        # The related document might have the only reference to an existing transaction
+        if not (document.related_document or document).transactions.filter(
+            state__in=[Transaction.States.Pending,
+                       Transaction.States.Initial,
+                       Transaction.States.Settled]
+        ):
+            create_transaction_for_document(document)
 
-        # Generate a PDF
-        document.mark_for_generation()
+    # Generate a PDF
+    document.mark_for_generation()

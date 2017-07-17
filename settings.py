@@ -173,6 +173,8 @@ LOCK_MANAGER_CONNECTION = {'host': 'localhost', 'port': 6379, 'db': 1}
 
 PDF_GENERATION_TIME_LIMIT = 60
 
+TRANSACTION_SAVE_TIME_LIMIT = 5
+
 try:
     from settings_local import *
 except ImportError:

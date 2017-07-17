@@ -16,6 +16,7 @@ import uuid
 import logging
 from decimal import Decimal
 
+from django.conf import settings
 from jsonfield import JSONField
 from django_fsm import post_transition
 from django_fsm import FSMField, transition
@@ -159,10 +160,12 @@ class Transaction(models.Model):
                     '(invoice or proforma).'
                 )
 
-            lock = redis.lock(lock_key, timeout=5)  # 5 seconds should be more than enough to save
+            transaction_save_timeout = getattr(settings, 'TRANSACTION_SAVE_TIME_LIMIT', 5)
+            lock = redis.lock(lock_key, timeout=transaction_save_timeout)
 
-            if not lock.acquire(blocking_timeout=5):
-                raise ValidationError("Couldn't create a transaction for the given document.")
+            if not lock.acquire(blocking_timeout=transaction_save_timeout):
+                raise ValidationError("A transaction for the same billing document is currently "
+                                      "being created.")
 
             _clean_and_save()
 
@@ -178,13 +181,13 @@ class Transaction(models.Model):
         document = self.document
         if not document:
             raise ValidationError(
-                'The transaction must have at least one document '
+                'The transaction must have at least one billing document '
                 '(invoice or proforma).'
             )
 
         if document.state == document.STATES.DRAFT:
             raise ValidationError(
-                'The transaction must have a non-draft document '
+                'The transaction must have a non-draft billing document '
                 '(invoice or proforma).'
             )
 
