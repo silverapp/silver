@@ -182,7 +182,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "archived_provider": {},
                 "archived_customer": {},
                 "due_date": None,
-                "issue_date": None,
+                "issue_date": str(invoice.issue_date),
                 "paid_date": None,
                 "cancel_date": None,
                 "sales_tax_name": "VAT",
@@ -195,7 +195,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "state": "issued",
                 "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
                 "invoice_entries": [],
-                "pdf_url": None,
+                "pdf_url": invoice.pdf.url,
                 "total": Decimal('0.00')
             }
             for field in expected_response:
@@ -347,7 +347,6 @@ class TestInvoiceEndpoints(APITestCase):
     def test_add_invoice_entry_in_issued_state(self):
         invoice = InvoiceFactory.create()
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
@@ -371,7 +370,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.cancel()
-        invoice.save()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
@@ -395,7 +393,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
         entry_data = {
@@ -418,7 +415,6 @@ class TestInvoiceEndpoints(APITestCase):
     def test_edit_invoice_in_issued_state(self):
         invoice = InvoiceFactory.create()
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
@@ -433,7 +429,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.cancel()
-        invoice.save()
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
@@ -448,7 +443,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create()
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
         data = {"description": "New Page views"}
@@ -537,7 +531,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued'}
@@ -554,7 +547,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'issued'}
@@ -570,7 +562,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'paid'}
@@ -594,7 +585,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {
@@ -636,7 +626,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'paid'}
@@ -652,7 +641,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
@@ -676,7 +664,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {
@@ -721,7 +708,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
         invoice.cancel()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
@@ -740,7 +726,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'canceled'}
@@ -772,7 +757,6 @@ class TestInvoiceEndpoints(APITestCase):
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'illegal-state'}
@@ -789,7 +773,6 @@ class TestInvoiceEndpoints(APITestCase):
         invoice = InvoiceFactory.create(provider=provider, customer=customer)
         invoice.issue()
         invoice.pay()
-        invoice.save()
 
         url = reverse('invoice-state', kwargs={'pk': invoice.pk})
         data = {'state': 'illegal-state'}

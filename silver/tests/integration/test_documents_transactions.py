@@ -106,16 +106,13 @@ class TestDocumentsTransactions(TestCase):
             document.
         """
         invoice = InvoiceFactory.create()
-        invoice.issue()
+        invoice.issue()  # this creates a Transaction
         customer = invoice.customer
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor, customer=customer,
             canceled=False,
             verified=True,
         )
-
-        transaction = TransactionFactory.create(invoice=invoice,
-                                                payment_method=payment_method)
 
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
@@ -133,7 +130,6 @@ class TestDocumentsTransactions(TestCase):
                 payment_method=payment_method, invoice=invoice,
             )
             self.assertEqual(len(transactions), 1)
-            self.assertEqual(transactions[0], transaction)
 
             self.assertEqual(mock_execute.call_count, 0)
 
@@ -148,7 +144,6 @@ class TestDocumentsTransactions(TestCase):
         )
 
         proforma.issue()
-        proforma.save()
 
         self.assertEqual(len(Transaction.objects.filter(proforma=proforma)),
                          1)
@@ -171,10 +166,7 @@ class TestDocumentsTransactions(TestCase):
         )
 
         proforma.issue()
-        proforma.save()
-
         proforma.pay()
-        proforma.save()
 
         invoice = proforma.invoice
 
@@ -194,7 +186,6 @@ class TestDocumentsTransactions(TestCase):
         )
 
         proforma.issue()
-        proforma.save()
 
         transaction = proforma.transactions[0]
         # here transaction.proforma is the same object as the proforma from the

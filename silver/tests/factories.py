@@ -170,6 +170,10 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     currency = 'RON'
     transaction_currency = 'RON'
     transaction_xe_rate = Decimal(1)
+    state = Invoice.STATES.DRAFT
+    issue_date = factory.LazyAttribute(
+        lambda invoice: timezone.now().date() if invoice.state == Invoice.STATES.ISSUED else None
+    )
 
     @factory.post_generation
     def invoice_entries(self, create, extracted, **kwargs):
@@ -192,6 +196,10 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     currency = 'RON'
     transaction_currency = 'RON'
     transaction_xe_rate = Decimal(1)
+    state = Proforma.STATES.DRAFT
+    issue_date = factory.LazyAttribute(
+        lambda proforma: timezone.now().date() if proforma.state == Proforma.STATES.ISSUED else None
+    )
 
     @factory.post_generation
     def subscriptions(self, create, extracted, **kwargs):

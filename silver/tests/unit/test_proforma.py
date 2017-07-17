@@ -29,7 +29,6 @@ class TestProforma(TestCase):
         proforma.create_invoice()
 
         proforma.pay()
-        proforma.save()
 
         assert proforma.invoice.state == Invoice.STATES.PAID
         assert proforma.state == Invoice.STATES.PAID
@@ -38,7 +37,6 @@ class TestProforma(TestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         entries = DocumentEntryFactory.create_batch(3)
         proforma.proforma_entries.add(*entries)
@@ -86,7 +84,6 @@ class TestProforma(TestCase):
             proforma.create_invoice()
 
         proforma.cancel()
-        proforma.save()
 
         assert proforma.state == proforma.invoice.state == Proforma.STATES.CANCELED
 

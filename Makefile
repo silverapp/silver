@@ -1,7 +1,7 @@
 full-test: test
 
 test:
-	python manage.py test -v2
+	DJANGO_SETTINGS_MODULE=settings pytest -vv
 
 run:
 	echo "TBA"

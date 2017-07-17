@@ -291,7 +291,6 @@ class TestProformaEndpoints(APITestCase):
     def test_add_proforma_entry_in_issued_state(self):
         proforma = ProformaFactory.create()
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
@@ -315,7 +314,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.cancel()
-        proforma.save()
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
@@ -339,7 +337,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
@@ -362,7 +359,6 @@ class TestProformaEndpoints(APITestCase):
     def test_edit_proforma_in_issued_state(self):
         proforma = ProformaFactory.create()
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
@@ -377,7 +373,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.cancel()
-        proforma.save()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
@@ -392,7 +387,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         data = {"description": "New Page views"}
@@ -485,7 +479,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
@@ -500,7 +493,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
@@ -514,7 +506,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'paid'}
@@ -545,7 +536,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {
@@ -592,7 +582,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'paid'}
@@ -606,7 +595,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
@@ -630,7 +618,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {
@@ -675,7 +662,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
         proforma.cancel()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
@@ -694,7 +680,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'canceled'}
@@ -725,7 +710,6 @@ class TestProformaEndpoints(APITestCase):
         customer = CustomerFactory.create()
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'illegal-state'}
@@ -742,7 +726,6 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
         proforma.pay()
-        proforma.save()
 
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'illegal-state'}

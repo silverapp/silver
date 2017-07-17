@@ -348,7 +348,7 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        return request.build_absolute_uri(obj.pdf.url) if obj.pdf else None
+        return request.build_absolute_uri(obj.pdf.url) if (obj.pdf and obj.pdf.url) else None
 
 
 class PaymentMethodUrl(serializers.HyperlinkedRelatedField):

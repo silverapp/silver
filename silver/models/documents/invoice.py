@@ -46,31 +46,6 @@ class Invoice(BillingDocumentBase):
 
         super(Invoice, self)._issue(issue_date, due_date)
 
-    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
-                target=BillingDocumentBase.STATES.PAID)
-    def pay(self, paid_date=None, affect_related_document=True):
-        super(Invoice, self)._pay(paid_date)
-
-        if self.proforma and affect_related_document:
-            try:
-                self.proforma.pay(paid_date=paid_date,
-                                  affect_related_document=False)
-                self.proforma.save()
-            except TransitionNotAllowed:
-                # the related proforma is already paid
-                # other inconsistencies should've been fixed before
-                pass
-
-    @transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
-                target=BillingDocumentBase.STATES.CANCELED)
-    def cancel(self, cancel_date=None, affect_related_document=True):
-        super(Invoice, self)._cancel(cancel_date)
-
-        if self.proforma and affect_related_document:
-            self.proforma.cancel(cancel_date=cancel_date,
-                                 affect_related_document=False)
-            self.proforma.save()
-
     @property
     def _starting_number(self):
         return self.provider.invoice_starting_number

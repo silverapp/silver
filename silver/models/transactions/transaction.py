@@ -21,11 +21,9 @@ from django_fsm import post_transition
 from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models.loading import get_model
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -33,7 +31,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
-from silver.models import BillingDocumentBase, Invoice, Proforma
+from silver.models import Invoice, Proforma
 
 from .codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 
@@ -276,7 +274,6 @@ class Transaction(models.Model):
         if (self.state == Transaction.States.Settled and
                 self.document.state != self.document.STATES.PAID):
             self.document.pay()
-            self.document.save()
 
     def __unicode__(self):
         return unicode(self.uuid)
@@ -287,43 +284,15 @@ def _sync_transaction_state_with_document(transaction, target):
         if transaction.document and \
                 transaction.document.state != transaction.document.STATES.PAID:
             transaction.document.pay()
-            transaction.document.save()
-
-
-def create_transaction_for_document(document):
-    # get a usable, recurring payment_method for the customer
-    PaymentMethod = get_model('silver.PaymentMethod')
-
-    payment_methods = PaymentMethod.objects.filter(
-        canceled=False,
-        verified=True,
-        customer=document.customer
-    )
-    for payment_method in payment_methods:
-        try:
-            return Transaction.objects.create(document=document,
-                                              payment_method=payment_method)
-        except ValidationError:
-            return None
 
 
 @receiver(post_transition)
 def post_transition_callback(sender, instance, name, source, target, **kwargs):
-    """
-    Syncs the state of the related documents of the transaction with the
-    transaction state
-    """
-
     if issubclass(sender, Transaction):
         setattr(instance, '.recently_transitioned', target)
 
-    elif issubclass(sender, BillingDocumentBase):
-        if (target == BillingDocumentBase.STATES.ISSUED and
-                settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
-            create_transaction_for_document(instance)
 
-
-@receiver(pre_save, sender=Transaction)
+@receiver(pre_save, sender=Transaction, dispatch_uid='pre_transaction_save')
 def pre_transaction_save(sender, instance=None, **kwargs):
     transaction = instance
 

@@ -91,7 +91,7 @@ class TestTransactionEndpoint(APITestCase):
         entry = DocumentEntryFactory(quantity=1, unit_price=200)
         proforma = ProformaFactory.create(customer=customer,
                                           proforma_entries=[entry])
-        proforma.state = proforma.STATES.ISSUED
+        proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
         invoice = proforma.invoice
@@ -194,11 +194,9 @@ class TestTransactionEndpoint(APITestCase):
 
         invoice = InvoiceFactory.create(customer=customer)
         invoice.issue()
-        invoice.save()
 
         proforma = ProformaFactory.create(customer=customer)
         proforma.issue()
-        proforma.save()
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -230,7 +228,7 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(customer=customer)
 
         proforma = ProformaFactory.create()
-        proforma.state = proforma.STATES.ISSUED
+        proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
         invoice = proforma.invoice
