@@ -169,7 +169,7 @@ class BillingDocumentBase(models.Model):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
         self._last_state = self.state
 
-    def set_pdf_for_generation(self):
+    def mark_for_generation(self):
         self.pdf.dirty = True
         self.pdf.save()
 
@@ -589,4 +589,4 @@ def post_document_save(sender, instance, created=False, **kwargs):
                 create_transaction_for_document(document)
 
         # Generate a PDF
-        document.set_pdf_for_generation()
+        document.mark_for_generation()
