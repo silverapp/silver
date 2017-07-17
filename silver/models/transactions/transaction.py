@@ -16,7 +16,7 @@ import uuid
 import logging
 from decimal import Decimal
 
-from django.conf import settings
+from django.db.models import Q
 from jsonfield import JSONField
 from django_fsm import post_transition
 from django_fsm import FSMField, transition
@@ -24,17 +24,15 @@ from annoying.functions import get_object_or_None
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models
-from django.db.models.signals import pre_save, post_save
+from django.db import models, transaction
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from redis.exceptions import LockError
 
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
 from silver.models import Invoice, Proforma
-from silver.vendors.redis_server import redis
 
 from .codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 
@@ -137,44 +135,26 @@ class Transaction(models.Model):
         self.refund_code = refund_code
         logger.error(str(refund_reason))
 
+    @transaction.atomic()
     def save(self, *args, **kwargs):
         previous_instance = get_object_or_None(Transaction, pk=self.pk) if self.pk else None
         setattr(self, 'previous_instance', previous_instance)
 
-        def _clean_and_save():
-            if not getattr(self, '.cleaned', False):
-                self.full_clean(previous_instance=previous_instance)
-
-            super(Transaction, self).save(*args, **kwargs)
-
         if not previous_instance:
-            # Creating a new Transaction, therefore a lock is used to ensure there are no
-            # overcharges
+            # Creating a new Transaction so we lock the DB rows for related billing documents and
+            # transactions
             if self.proforma:
-                lock_key = 'proforma_{pk}'.format(pk=self.proforma.pk)
+                Proforma.objects.select_for_update().filter(pk=self.proforma.pk)
             elif self.invoice:
-                lock_key = 'invoice_{pk}'.format(pk=self.invoice.pk)
-            else:
-                raise ValidationError(
-                    'The transaction must have at least one document '
-                    '(invoice or proforma).'
-                )
+                Invoice.objects.select_for_update().filter(pk=self.invoice.pk)
 
-            transaction_save_timeout = getattr(settings, 'TRANSACTION_SAVE_TIME_LIMIT', 5)
-            lock = redis.lock(lock_key, timeout=transaction_save_timeout)
+            Transaction.objects.select_for_update().filter(Q(proforma=self.proforma) |
+                                                           Q(invoice=self.invoice))
 
-            if not lock.acquire(blocking_timeout=transaction_save_timeout):
-                raise ValidationError("A transaction for the same billing document is currently "
-                                      "being created.")
+        if not getattr(self, '.cleaned', False):
+            self.full_clean(previous_instance=previous_instance)
 
-            _clean_and_save()
-
-            try:
-                lock.release()
-            except LockError:
-                pass
-        else:
-            _clean_and_save()
+        super(Transaction, self).save(*args, **kwargs)
 
     def clean(self):
         # Validate documents
