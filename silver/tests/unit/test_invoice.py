@@ -136,7 +136,7 @@ class TestInvoice(TestCase):
         assert invoice.series_number == 'draft-id:%d' % invoice.pk
 
     def test_issues_invoice_series_number(self):
-        invoice = InvoiceFactory.create()
+        invoice = InvoiceFactory.create(state=Invoice.STATES.ISSUED)
 
         assert invoice.series_number == '%s-%s' % (invoice.series,
                                                    invoice.number)
