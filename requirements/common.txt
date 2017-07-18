@@ -22,7 +22,7 @@ pyvat
 PyPDF2
 furl
 html5lib==0.999
-cryptography==1.9.0
+cryptography==1.9
 sqlparse==0.2.2
 django-autocomplete-light==3.2.1
 celery[redis]
