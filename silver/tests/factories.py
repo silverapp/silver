@@ -19,6 +19,7 @@ from decimal import Decimal
 
 import factory
 import factory.fuzzy
+from faker import Faker
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -31,35 +32,38 @@ from silver.utils.international import countries
 from silver.tests.fixtures import manual_processor
 
 
+faker = Faker()
+
+
 class ProductCodeFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = ProductCode
 
-    value = factory.Sequence(lambda n: 'ProductCode{cnt}'.format(cnt=n))
+    value = factory.Sequence(lambda n: faker.ean8())
 
 
 class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    first_name = factory.Sequence(lambda n: u'FirstNáme{cnt}'.format(cnt=n))
-    last_name = factory.Sequence(lambda n: u'LastNáme{cnt}'.format(cnt=n))
-    company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
-    email = factory.Sequence(lambda n: u'some{cnt}@email.com'.format(cnt=n))
-    address_1 = factory.Sequence(lambda n: u'Addrâss1{cnt}'.format(cnt=n))
-    address_2 = factory.Sequence(lambda n: u'Addrãess2{cnt}'.format(cnt=n))
-    country = factory.Sequence(lambda n: countries[n % len(countries)][0])
-    city = factory.Sequence(lambda n: u'Citŷ{cnt}'.format(cnt=n))
-    state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: str(n))
-    phone = factory.Sequence(str)
-    extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+    first_name = factory.Sequence(lambda n: faker.first_name())
+    last_name = factory.Sequence(lambda n: faker.last_name())
+    company = factory.Sequence(lambda n: faker.company())
+    email = factory.Sequence(lambda n: faker.company_email())
+    address_1 = factory.Sequence(lambda n: faker.address())
+    address_2 = factory.Sequence(lambda n: faker.secondary_address())
+    country = factory.Sequence(lambda n: faker.country_code())
+    city = factory.Sequence(lambda n: faker.city())
+    state = factory.Sequence(lambda n: faker.state())
+    zip_code = factory.Sequence(lambda n: faker.zipcode())
+    phone = factory.Sequence(lambda n: faker.phone_number())
+    extra = factory.Sequence(lambda n: faker.text())
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
     consolidated_billing = True
 
-    customer_reference = factory.Sequence(lambda n: 'Reference{cnt}'.format(cnt=n))
+    customer_reference = factory.Sequence(lambda n: faker.uuid4())
     sales_tax_percent = Decimal(1.0)
-    sales_tax_name = factory.Sequence(lambda n: 'VAT'.format(cnt=n))
+    sales_tax_name = factory.Sequence(lambda n: 'VAT')
     payment_due_days = 5
 
 
@@ -67,7 +71,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = MeteredFeature
 
-    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: faker.catch_phrase())
     unit = factory.Sequence(lambda n: 'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
@@ -80,18 +84,16 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Provider
 
-    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
-    company = factory.Sequence(lambda n: u'Compány{cnt}'.format(cnt=n))
-    email = factory.Sequence(
-        lambda n: u'provider{cnt}@email.com'.format(cnt=n)
-    )
-    address_1 = factory.Sequence(lambda n: u'Addãress1{cnt}'.format(cnt=n))
-    address_2 = factory.Sequence(lambda n: u'Addåress2{cnt}'.format(cnt=n))
-    country = factory.Sequence(lambda n: countries[n % len(countries)][0])
-    city = factory.Sequence(lambda n: u'Citŷ{cnt}'.format(cnt=n))
-    state = factory.Sequence(lambda n: 'State{cnt}'.format(cnt=n))
-    zip_code = factory.Sequence(lambda n: str(n))
-    extra = factory.Sequence(lambda n: 'Extra{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: faker.name())
+    company = factory.Sequence(lambda n: faker.company())
+    email = factory.Sequence(lambda n: faker.company_email())
+    address_1 = factory.Sequence(lambda n: faker.address())
+    address_2 = factory.Sequence(lambda n: faker.secondary_address())
+    country = factory.Sequence(lambda n: faker.country_code())
+    city = factory.Sequence(lambda n: faker.city())
+    state = factory.Sequence(lambda n: faker.state())
+    zip_code = factory.Sequence(lambda n: faker.zipcode())
+    extra = factory.Sequence(lambda n: faker.text())
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
     flow = 'proforma'
@@ -105,7 +107,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Plan
 
-    name = factory.Sequence(lambda n: u'Náme{cnt}'.format(cnt=n))
+    name = factory.Sequence(lambda n: faker.name())
     interval = Plan.INTERVALS.MONTH
     interval_count = factory.Sequence(lambda n: n)
     amount = factory.Sequence(lambda n: n)
@@ -164,7 +166,6 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Invoice
 
-    number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
@@ -172,7 +173,14 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     transaction_xe_rate = Decimal(1)
     state = Invoice.STATES.DRAFT
     issue_date = factory.LazyAttribute(
-        lambda invoice: timezone.now().date() if invoice.state == Invoice.STATES.ISSUED else None
+        lambda invoice: (faker.past_datetime(start_date="-200d", tzinfo=None)
+                         if invoice.state != Invoice.STATES.DRAFT else None)
+    )
+    paid_date = factory.LazyAttribute(
+        lambda invoice: timezone.now().date() if invoice.state == Invoice.STATES.PAID else None
+    )
+    cancel_date = factory.LazyAttribute(
+        lambda invoice: timezone.now().date() if invoice.state == Invoice.STATES.CANCELED else None
     )
 
     @factory.post_generation
@@ -190,7 +198,6 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Proforma
 
-    number = factory.Sequence(lambda n: n)
     customer = factory.SubFactory(CustomerFactory)
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
@@ -198,7 +205,15 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     transaction_xe_rate = Decimal(1)
     state = Proforma.STATES.DRAFT
     issue_date = factory.LazyAttribute(
-        lambda proforma: timezone.now().date() if proforma.state == Proforma.STATES.ISSUED else None
+        lambda proforma: (faker.past_datetime(start_date="-200d", tzinfo=None)
+                          if proforma.state != Invoice.STATES.DRAFT else None)
+    )
+    paid_date = factory.LazyAttribute(
+        lambda proforma: timezone.now().date() if proforma.state == Invoice.STATES.PAID else None
+    )
+    cancel_date = factory.LazyAttribute(
+        lambda proforma: (timezone.now().date()
+                          if proforma.state == Invoice.STATES.CANCELED else None)
     )
 
     @factory.post_generation
@@ -227,7 +242,7 @@ class DocumentEntryFactory(factory.django.DjangoModelFactory):
 
     description = factory.Sequence(lambda n: 'Description{cnt}'.format(cnt=n))
     unit = factory.Sequence(lambda n: 'Unit{cnt}'.format(cnt=n))
-    quantity = factory.fuzzy.FuzzyDecimal(low=0.00, high=50000.00, precision=4)
+    quantity = factory.fuzzy.FuzzyDecimal(low=1.00, high=50000.00, precision=4)
     unit_price = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00, precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
     end_date = factory.Sequence(

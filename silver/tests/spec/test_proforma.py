@@ -139,7 +139,7 @@ class TestProformaEndpoints(APITestCase):
         self.assertEqual(response.data, {
             "id": proforma.pk,
             "series": "ProformaSeries",
-            "number": 1,
+            "number": None,
             "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
             "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
             "archived_provider": '{}',

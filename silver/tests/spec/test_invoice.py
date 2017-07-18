@@ -182,7 +182,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "archived_provider": '{}',
                 "archived_customer": '{}',
                 "due_date": None,
-                "issue_date": str(invoice.issue_date),
+                "issue_date": invoice.issue_date.strftime('%Y-%m-%d'),
                 "paid_date": None,
                 "cancel_date": None,
                 "sales_tax_name": "VAT",

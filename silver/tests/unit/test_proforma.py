@@ -132,7 +132,7 @@ class TestProforma(TestCase):
         assert proforma.series_number == 'draft-id:%d' % proforma.pk
 
     def test_issues_proforma_series_number(self):
-        proforma = ProformaFactory.create()
+        proforma = ProformaFactory.create(state=Invoice.STATES.ISSUED)
 
         assert proforma.series_number == '%s-%s' % (proforma.series,
                                                     proforma.number)
