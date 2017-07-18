@@ -26,6 +26,7 @@ RUN set -ex \
         zlib \
         ca-certificates wget \
         openssl \
+        openssl-dev \
         libffi-dev \
         zlib-dev \
         jpeg-dev \
@@ -39,6 +40,7 @@ RUN set -ex \
     && apk del .build-deps \
     && wget -qO- https://github.com/jwilder/dockerize/releases/download/v0.2.0/dockerize-linux-amd64-v0.2.0.tar.gz | tar -zxf - -C /usr/bin \
     && chown root:root /usr/bin/dockerize
+
 
 COPY ./ /silver
 
