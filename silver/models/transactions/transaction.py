@@ -17,7 +17,7 @@ import logging
 from decimal import Decimal
 
 from django.db.models import Q
-from jsonfield import JSONField
+from annoying.fields import JSONField
 from django_fsm import post_transition
 from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None

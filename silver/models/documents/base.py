@@ -17,11 +17,11 @@ import logging
 from datetime import datetime, timedelta
 
 import pytz
-from django.db.models.loading import get_model
+from django.apps import apps
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
-from jsonfield import JSONField
+from annoying.fields import JSONField
 from model_utils import Choices
 
 from django.conf import settings
@@ -126,8 +126,8 @@ class BillingDocumentBase(models.Model):
     number = models.IntegerField(blank=True, null=True, db_index=True)
     customer = models.ForeignKey('Customer')
     provider = models.ForeignKey('Provider')
-    archived_customer = JSONField()
-    archived_provider = JSONField()
+    archived_customer = JSONField(default=dict, null=True, blank=True)
+    archived_provider = JSONField(default=dict, null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True, db_index=True)
     paid_date = models.DateField(null=True, blank=True)
@@ -542,21 +542,21 @@ class BillingDocumentBase(models.Model):
 
     @property
     def amount_paid_in_transaction_currency(self):
-        Transaction = get_model('silver.Transaction')
+        Transaction = apps.get_model('silver.Transaction')
 
         return sum([transaction.amount
                     for transaction in self.transactions.filter(state=Transaction.States.Settled)])
 
     @property
     def amount_pending_in_transaction_currency(self):
-        Transaction = get_model('silver.Transaction')
+        Transaction = apps.get_model('silver.Transaction')
 
         return sum([transaction.amount
                     for transaction in self.transactions.filter(state=Transaction.States.Pending)])
 
     @property
     def amount_to_be_charged_in_transaction_currency(self):
-        Transaction = get_model('silver.Transaction')
+        Transaction = apps.get_model('silver.Transaction')
 
         return self.total_in_transaction_currency - sum([
             transaction.amount
@@ -570,8 +570,8 @@ class BillingDocumentBase(models.Model):
 
 def create_transaction_for_document(document):
     # get a usable, recurring payment_method for the customer
-    PaymentMethod = get_model('silver.PaymentMethod')
-    Transaction = get_model('silver.Transaction')
+    PaymentMethod = apps.get_model('silver.PaymentMethod')
+    Transaction = apps.get_model('silver.Transaction')
 
     payment_methods = PaymentMethod.objects.filter(
         canceled=False,
@@ -617,7 +617,7 @@ def post_document_save(sender, instance, created=False, **kwargs):
     if (document.state == BillingDocumentBase.STATES.ISSUED and
             settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
         # But only if there is no pending transaction
-        Transaction = get_model('silver', 'Transaction')
+        Transaction = apps.get_model('silver', 'Transaction')
 
         # The related document might have the only reference to an existing transaction
         if not (document.related_document or document).transactions.filter(

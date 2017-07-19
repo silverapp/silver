@@ -16,7 +16,7 @@ from itertools import chain
 from annoying.functions import get_object_or_None
 from cryptography.fernet import InvalidToken, Fernet
 from django_fsm import TransitionNotAllowed
-from jsonfield import JSONField
+from annoying.fields import JSONField
 from model_utils.managers import InheritanceManager
 
 from django.conf import settings
