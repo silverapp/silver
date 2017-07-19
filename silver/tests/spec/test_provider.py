@@ -154,21 +154,57 @@ class TestProviderEndpoints(APITestCase):
              '<' + full_url + '?page=2; rel="last">')
 
     def test_POST_bulk_providers(self):
-        providers = ProviderFactory.create_batch(5)
-
-        raw_providers = json.loads(serializers.serialize('json', providers))
-
-        serialized_providers = []
-        for item in raw_providers:
-            serialized_providers.append(item['fields'])
+        request_body = [
+            {
+                u'city': u'Cit\u01770',
+                u'proforma_series': u'ProformaSeries',
+                u'name': u'N\xe1me0',
+                u'extra': u'Extra0',
+                u'default_document_state': u'draft',
+                u'country': u'AD',
+                u'company': u'Comp\xe1ny0',
+                u'flow': u'proforma',
+                u'state': u'State0',
+                u'invoice_starting_number': 1,
+                u'phone': None,
+                u'live': True,
+                u'meta': {"something": [0, 1]},
+                u'address_1': u'Add\xe3ress10',
+                u'address_2': u'Add\xe5ress20',
+                u'proforma_starting_number': 1,
+                u'invoice_series': u'InvoiceSeries',
+                u'email': u'provider0@email.com',
+                u'zip_code': u'0'
+            },
+            {
+                u'city': u'Cit\u01771',
+                u'proforma_series': u'ProformaSeries',
+                u'name': u'N\xe1me1',
+                u'extra': u'Extra1',
+                u'default_document_state': u'draft',
+                u'country': u'AD',
+                u'company': u'Comp\xe1ny1',
+                u'flow': u'proforma',
+                u'state': u'State1',
+                u'invoice_starting_number': 1,
+                u'phone': None,
+                u'live': True,
+                u'meta': {"something": [2, 3]},
+                u'address_1': u'Add\xe3ress11',
+                u'address_2': u'Add\xe5ress21',
+                u'proforma_starting_number': 1,
+                u'invoice_series': u'InvoiceSeries',
+                u'email': u'provider10@email.com',
+                u'zip_code': u'1'
+            }
+        ]
 
         url = reverse('provider-list')
-        request_body = json.dumps(serialized_providers, ensure_ascii=True).encode('utf8')
-        response = self.client.post(url, data=request_body,
+        response = self.client.post(url, data=json.dumps(request_body),
                                     content_type='application/json')
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert len(response.data) == 5
+        assert len(response.data) == 2
 
     def test_get_provider(self):
         ProviderFactory.reset_sequence(1)
