@@ -146,7 +146,7 @@ LOGGING['loggers']['django.security'] = {
     'level': 'DEBUG',
     'handlers': ['console']
 }
-LOGGING['formatters'] = {}
+LOGGING['formatters'] = LOGGING.get('formatters', {})
 LOGGING['formatters']['verbose'] = {
     'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
     'datefmt': "%d/%b/%Y %H:%M:%S"
