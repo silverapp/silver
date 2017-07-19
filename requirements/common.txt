@@ -6,10 +6,10 @@ django
 djangorestframework>=3.3.0
 pycountry>=16.11.08
 django-fsm>=2.3.0
-django-filter==0.15.3
+django-filter==1.0.4
 djangorestframework-bulk
 django-livefield
-django-jsonfield==0.9.15
+django-jsonfield==1.0.1
 python-dateutil
 django-model-utils
 django-annoying
@@ -22,7 +22,7 @@ pyvat
 PyPDF2
 furl
 html5lib==0.999
-cryptography==1.7.1
+cryptography==1.9.0
 sqlparse==0.2.2
 django-autocomplete-light==3.2.1
 celery[redis]
