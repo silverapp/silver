@@ -1,9 +1,20 @@
 language: python
-python:
-  - "2.7"
+matrix:
+  - include:
+    - python: 2.7
+      env: DJANGO_VERSION="<1.9"
+    - python: 2.7
+      env: DJANGO_VERSION="<1.11"
+    - python: 3.6
+      env: DJANGO_VERSION="<1.9"
+    - python: 3.6
+      env: DJANGO_VERSION="<1.11"
+
 cache: pip
 install:
   - pip install -U -r requirements/test.txt
+  - pip install Django$DJANGO_VERSION
+
 script:
   - make lint
   - make test

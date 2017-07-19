@@ -2,7 +2,7 @@
 # dependency==x.x  # we really need this
 # DON'T do it the file will be parsed on deploy
 
-django<1.9
+django
 djangorestframework>=3.3.0
 pycountry>=16.11.08
 django-fsm>=2.3.0
