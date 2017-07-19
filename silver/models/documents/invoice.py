@@ -16,7 +16,7 @@
 from django_fsm import TransitionNotAllowed, transition
 
 from django.db import models
-from django.db.models.loading import get_model
+from django.apps import apps
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
@@ -83,7 +83,7 @@ def post_invoice_save(sender, instance, created=False, **kwargs):
     if not created:
         return
 
-    Transaction = get_model('silver.Transaction')
+    Transaction = apps.get_model('silver.Transaction')
     invoice = instance
     proforma = invoice.proforma
 

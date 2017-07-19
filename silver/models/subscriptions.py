@@ -21,7 +21,7 @@ from decimal import Decimal
 from annoying.functions import get_object_or_None
 from dateutil import rrule
 from django_fsm import FSMField, transition, TransitionNotAllowed
-from jsonfield import JSONField
+from annoying.fields import JSONField
 from model_utils import Choices
 
 from django.core.exceptions import ValidationError
