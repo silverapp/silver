@@ -66,8 +66,8 @@ class TestProformaEndpoints(APITestCase):
             "number": None,
             "provider": "http://testserver/providers/%s/" % provider.pk,
             "customer": "http://testserver/customers/%s/" % customer.pk,
-            "archived_provider": {},
-            "archived_customer": {},
+            "archived_provider": '{}',
+            "archived_customer": '{}',
             "due_date": None,
             "issue_date": None,
             "paid_date": None,
@@ -83,8 +83,8 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": Decimal("0.00"),
-            "total_in_transaction_currency": Decimal("0.00"),
+            "total": 0,
+            "total_in_transaction_currency": 0,
             "transactions": []
         })
 
@@ -142,8 +142,8 @@ class TestProformaEndpoints(APITestCase):
             "number": 1,
             "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
             "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
-            "archived_provider": {},
-            "archived_customer": {},
+            "archived_provider": '{}',
+            "archived_customer": '{}',
             "due_date": None,
             "issue_date": None,
             "paid_date": None,
@@ -159,8 +159,8 @@ class TestProformaEndpoints(APITestCase):
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
-            "total": Decimal('0.00'),
-            "total_in_transaction_currency": Decimal('0.00'),
+            "total": 0,
+            "total_in_transaction_currency": 0,
             "transactions": []
         })
 
