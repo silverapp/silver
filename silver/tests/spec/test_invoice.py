@@ -70,8 +70,8 @@ class TestInvoiceEndpoints(APITestCase):
             "number": invoice.number,
             "provider": "http://testserver/providers/%s/" % provider.pk,
             "customer": "http://testserver/customers/%s/" % customer.pk,
-            "archived_provider": {},
-            "archived_customer": {},
+            "archived_provider": '{}',
+            "archived_customer": '{}',
             "due_date": None,
             "issue_date": None,
             "paid_date": None,
@@ -179,8 +179,8 @@ class TestInvoiceEndpoints(APITestCase):
                 "number": 1,
                 "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
                 "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
-                "archived_provider": {},
-                "archived_customer": {},
+                "archived_provider": '{}',
+                "archived_customer": '{}',
                 "due_date": None,
                 "issue_date": str(invoice.issue_date),
                 "paid_date": None,
@@ -196,7 +196,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
                 "invoice_entries": [],
                 "pdf_url": invoice.pdf.url,
-                "total": Decimal('0.00')
+                "total": 0
             }
             for field in expected_response:
                 self.assertEqual(expected_response[field], response.data[field],
