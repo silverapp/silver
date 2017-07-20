@@ -63,7 +63,7 @@ class BaseBillingEntity(LiveModel):
         return [getattr(self, field, '') for field in field_names]
 
     def get_archivable_field_values(self):
-        field_names = ['name', 'company', 'email', 'address_1', 'address_2',
+        field_names = ['company', 'email', 'address_1', 'address_2',
                        'city', 'country', 'city', 'state', 'zip_code', 'extra',
                        'meta']
         return {field: getattr(self, field, '') for field in field_names}

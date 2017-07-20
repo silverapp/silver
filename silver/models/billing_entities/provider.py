@@ -107,6 +107,13 @@ class Provider(BaseBillingEntity):
                                                       "proforma."}
                 raise ValidationError(errors)
 
+    def get_archivable_field_values(self):
+        base_fields = super(Provider, self).get_archivable_field_values()
+        provider_fields = ['name']
+        fields_dict = {field: getattr(self, field, '') for field in provider_fields}
+        base_fields.update(fields_dict)
+        return base_fields
+
     def get_invoice_archivable_field_values(self):
         base_fields = self.get_archivable_field_values()
         base_fields.update({'invoice_series': getattr(self, 'invoice_series', '')})
