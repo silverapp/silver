@@ -97,3 +97,9 @@ settings_local.py
 *.swp
 .drone.sec.yml
 db.sqlite3
+
+# Pycharm
+.idea/
+
+# Redis dump
+dump.rdb
