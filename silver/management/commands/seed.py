@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Adding paid invoices.'
+    help = 'Creating entities for testing purposes'
 
     def handle(self, *args, **options):
         proforma = ProformaFactory.create(proforma_entries=[DocumentEntryFactory.create()],
