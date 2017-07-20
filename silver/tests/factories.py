@@ -28,11 +28,10 @@ from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
                            Transaction, PaymentMethod)
-from silver.utils.international import countries
 from silver.tests.fixtures import manual_processor
 
 
-faker = Faker()
+faker = Faker(locale='hu_HU')
 
 
 class ProductCodeFactory(factory.django.DjangoModelFactory):
@@ -51,11 +50,11 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     company = factory.Sequence(lambda n: faker.company())
     email = factory.Sequence(lambda n: faker.company_email())
     address_1 = factory.Sequence(lambda n: faker.address())
-    address_2 = factory.Sequence(lambda n: faker.secondary_address())
+    address_2 = factory.Sequence(lambda n: faker.address())
     country = factory.Sequence(lambda n: faker.country_code())
     city = factory.Sequence(lambda n: faker.city())
-    state = factory.Sequence(lambda n: faker.state())
-    zip_code = factory.Sequence(lambda n: faker.zipcode())
+    state = factory.Sequence(lambda n: faker.city_part())
+    zip_code = factory.Sequence(lambda n: faker.postcode())
     phone = factory.Sequence(lambda n: faker.phone_number())
     extra = factory.Sequence(lambda n: faker.text())
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
@@ -71,7 +70,7 @@ class MeteredFeatureFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = MeteredFeature
 
-    name = factory.Sequence(lambda n: faker.catch_phrase())
+    name = factory.Sequence(lambda n: faker.sentence(nb_words=2))
     unit = factory.Sequence(lambda n: 'MeteredFeature{cnt}Unit'.format(cnt=n))
     price_per_unit = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00,
                                                 precision=4)
@@ -88,11 +87,11 @@ class ProviderFactory(factory.django.DjangoModelFactory):
     company = factory.Sequence(lambda n: faker.company())
     email = factory.Sequence(lambda n: faker.company_email())
     address_1 = factory.Sequence(lambda n: faker.address())
-    address_2 = factory.Sequence(lambda n: faker.secondary_address())
+    address_2 = factory.Sequence(lambda n: faker.address())
     country = factory.Sequence(lambda n: faker.country_code())
     city = factory.Sequence(lambda n: faker.city())
-    state = factory.Sequence(lambda n: faker.state())
-    zip_code = factory.Sequence(lambda n: faker.zipcode())
+    state = factory.Sequence(lambda n: faker.city_part())
+    zip_code = factory.Sequence(lambda n: faker.postcode())
     extra = factory.Sequence(lambda n: faker.text())
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})
 
