@@ -1,4 +1,6 @@
 language: python
+services: redis-server
+
 matrix:
   - include:
     - python: 2.7
@@ -13,7 +15,7 @@ matrix:
 cache: pip
 install:
   - pip install -U -r requirements/test.txt
-  - pip install Django$DJANGO_VERSION
+  - pip install -U Django$DJANGO_VERSION
 
 script:
   - make lint
