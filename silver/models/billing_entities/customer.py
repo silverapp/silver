@@ -86,9 +86,8 @@ class Customer(BaseBillingEntity):
 
     def get_archivable_field_values(self):
         base_fields = super(Customer, self).get_archivable_field_values()
-        customer_fields = ['customer_reference', 'consolidated_billing',
-                           'payment_due_days', 'sales_tax_number',
-                           'sales_tax_percent']
+        customer_fields = ['first_name', 'last_name', 'customer_reference', 'consolidated_billing',
+                           'payment_due_days', 'sales_tax_number', 'sales_tax_percent']
         fields_dict = {field: getattr(self, field, '') for field in
                        customer_fields}
         base_fields.update(fields_dict)
