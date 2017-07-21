@@ -1,3 +1,10 @@
+matrix:
+  PYTHON_VERSION:
+    - 2.7
+  DJANGO_VERSION:
+    - <1.9
+    - <2.0
+
 pipeline:
   test:
     image: presslabs/silver
@@ -10,6 +17,7 @@ pipeline:
       - SILVER_DB_PASSWORD=silver
     commands:
       - make dependencies
+      - pip install -U Django${DJANGO_VERSION}
       - mkdir /var/log/silver
       - make lint
       - make test
@@ -35,3 +43,5 @@ services:
       - MYSQL_PASSWORD=silver
   redis:
     image: redis:3-alpine
+  python:
+    image: python:${PYTHON_VERSION}
