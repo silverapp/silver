@@ -1,23 +1,41 @@
-build:
-  image: presslabs/silver
-  pull: true
-  auth_config:
-      username: presslabsbot
-      password: $$DOCKER_PASSWORD
-      email: ping@presslabs.com
-  environment:
-    - SILVER_DB_ENGINE=django.db.backends.mysql
-    - SILVER_DB_NAME=test_db
-    - SILVER_DB_HOST=127.0.0.1
-    - SILVER_DB_USER=silver
-    - SILVER_DB_PASSWORD=silver
-  commands:
-    - pip install -U -r requirements/test.txt
-    - mkdir /var/log/silver
-    - make lint
-    - make test
+pipeline:
+  test:
+    image: presslabs/silver
+    pull: true
+    environment:
+      - SILVER_DB_ENGINE=django.db.backends.mysql
+      - SILVER_DB_NAME=test_db
+      - SILVER_DB_HOST=127.0.0.1
+      - SILVER_DB_USER=silver
+      - SILVER_DB_PASSWORD=silver
+    commands:
+      - make dependencies
+      - mkdir /var/log/silver
+      - make lint
+      - make test
 
-compose:
+  publish-docker-image:
+    docker-master:
+      image: plugins/docker
+      repo: presslabs/silver
+      tag: $${BRANCH/master/latest}
+      secrets:
+        - DOCKER_USERNAME
+        - DOCKER_PASSWORD
+      when:
+        event: push
+        branch: master
+    docker-tag:
+      image: plugins/docker
+      repo: presslabs/silver
+      tag: "$${TAG##v}"
+      secrets:
+        - DOCKER_USERNAME
+        - DOCKER_PASSWORD
+      when:
+        event: tag
+
+services:
   mysql:
     image: mysql:5.5
     environment:
@@ -25,22 +43,5 @@ compose:
       - MYSQL_ROOT_PASSWORD=secret
       - MYSQL_USER=silver
       - MYSQL_PASSWORD=silver
-
-publish:
-  docker:
-    username: presslabsbot
-    password: $$DOCKER_PASSWORD
-    email: ping@presslabs.com
-    repo: presslabs/silver
-    tag: $${BRANCH/master/latest}
-    when:
-      event: push
-      branch: master
-  docker:
-    username: presslabsbot
-    password: $$DOCKER_PASSWORD
-    email: ping@presslabs.com
-    repo: presslabs/silver
-    tag: "$${TAG##v}"
-    when:
-      event: tag
+  redis:
+    image: redis:3-alpine
