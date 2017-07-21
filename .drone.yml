@@ -17,7 +17,7 @@ pipeline:
       - SILVER_DB_PASSWORD=silver
     commands:
       - make dependencies
-      - pip install -U Django${DJANGO_VERSION}
+      - pip install -U "Django${DJANGO_VERSION}"
       - mkdir /var/log/silver
       - make lint
       - make test
