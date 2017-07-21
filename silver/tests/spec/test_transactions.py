@@ -81,8 +81,8 @@ class TestTransactionEndpoint(APITestCase):
 
             response = self.client.get(url, format='json')
 
-            self.assertEqual(response.data[0], expected_t1)
-            self.assertEqual(response.data[1], expected_t2)
+            self.assertEqual(response.data[1], expected_t1)
+            self.assertEqual(response.data[0], expected_t2)
 
     def test_add_transaction(self):
         customer = CustomerFactory.create()
@@ -544,13 +544,13 @@ class TestTransactionEndpoint(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
                 transaction1.refresh_from_db()
-                transaction_data_1['updated_at'] = response.data[0]['updated_at']
+                transaction_data_1['updated_at'] = response.data[1]['updated_at']
 
                 transaction1.refresh_from_db()
-                transaction_data_2['updated_at'] = response.data[1]['updated_at']
+                transaction_data_2['updated_at'] = response.data[0]['updated_at']
 
-                self.assertEqual(response.data[0], transaction_data_1)
-                self.assertEqual(response.data[1], transaction_data_2)
+                self.assertEqual(response.data[1], transaction_data_1)
+                self.assertEqual(response.data[0], transaction_data_2)
 
                 response = self.client.get(url_no_output, format='json')
                 self.assertEqual(response.status_code, status.HTTP_200_OK)

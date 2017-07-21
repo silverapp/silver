@@ -62,6 +62,9 @@ class PaymentMethod(models.Model):
 
     objects = InheritanceManager()
 
+    class Meta:
+        ordering = ['-id']
+
     @property
     def final_fields(self):
         return ['payment_processor', 'customer', 'added_at']

@@ -50,6 +50,9 @@ class Transaction(models.Model):
         help_text='The currency used for billing.'
     )
 
+    class Meta:
+        ordering = ['-id']
+
     class States:
         Initial = 'initial'
         Pending = 'pending'
