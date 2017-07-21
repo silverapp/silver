@@ -18,10 +18,11 @@ pipeline:
     image: plugins/docker
     repo: presslabs/silver
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
-    tag: $${BRANCH/master/latest}
     secrets:
       - DOCKER_USERNAME
       - DOCKER_PASSWORD
+    when:
+      event: push
 
 services:
   mysql:
