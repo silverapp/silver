@@ -16,8 +16,7 @@ from decimal import Decimal
 
 from django.db import models
 
-from .base import _storage, documents_pdf_path
-from silver.models import DocumentEntry
+from .entries import DocumentEntry
 
 
 class Document(models.Model):
