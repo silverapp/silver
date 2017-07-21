@@ -5,7 +5,7 @@ pipeline:
     environment:
       - SILVER_DB_ENGINE=django.db.backends.mysql
       - SILVER_DB_NAME=test_db
-      - SILVER_DB_HOST=127.0.0.1
+      - SILVER_DB_HOST=mysql
       - SILVER_DB_USER=silver
       - SILVER_DB_PASSWORD=silver
     commands:
@@ -32,8 +32,8 @@ pipeline:
     secrets:
       - DOCKER_USERNAME
       - DOCKER_PASSWORD
-    when:
-      event: tag
+    # when:
+    #   event: tag
 
 services:
   mysql:
