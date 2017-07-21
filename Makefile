@@ -6,8 +6,11 @@ test:
 run:
 	echo "TBA"
 
+dependencies:
+	pip install -U -r requirements/test.txt
+
 build:
-	echo "No need to build someting"
+	echo "No need to build something. You may try 'make dependencies'."
 
 lint:
 	pep8 --max-line-length=100 --exclude=migrations,urls.py .
