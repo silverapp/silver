@@ -1,15 +1,14 @@
 from itertools import chain
 
-from celery import group
+from celery import group, shared_task
 from django.conf import settings
 from redis.exceptions import LockError
 
 from silver.models import Invoice, Proforma
-from silver.vendors.celery_app import task
 from silver.vendors.redis_server import redis
 
 
-@task()
+@shared_task()
 def generate_pdf(document_id, document_type):
     if document_type == 'Invoice':
         document = Invoice.objects.get(id=document_id)
@@ -22,7 +21,7 @@ def generate_pdf(document_id, document_type):
 PDF_GENERATION_TIME_LIMIT = getattr(settings, 'PDF_GENERATION_TIME_LIMIT', 60)
 
 
-@task(time_limit=PDF_GENERATION_TIME_LIMIT, ignore_result=True)
+@shared_task(time_limit=PDF_GENERATION_TIME_LIMIT, ignore_result=True)
 def generate_pdfs():
     lock = redis.lock('reconcile_new_domains_without_cert', timeout=PDF_GENERATION_TIME_LIMIT)
 
