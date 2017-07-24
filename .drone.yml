@@ -1,6 +1,4 @@
 matrix:
-  PYTHON_VERSION:
-    - 2.7
   DJANGO_VERSION:
     - <1.9
     - <2.0
@@ -43,5 +41,3 @@ services:
       - MYSQL_PASSWORD=silver
   redis:
     image: redis:3-alpine
-  python:
-    image: python:${PYTHON_VERSION}
