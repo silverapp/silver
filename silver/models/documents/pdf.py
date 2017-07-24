@@ -4,7 +4,8 @@ from django_xhtml2pdf.utils import generate_pdf_template_object
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.db.models import Model, BooleanField, FileField, TextField, UUIDField
+from django.db import transaction
+from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
 
@@ -26,7 +27,7 @@ class PDF(Model):
     uuid = UUIDField(default=uuid.uuid4, unique=True)
     pdf_file = FileField(null=True, blank=True, editable=False,
                          storage=get_storage(), upload_to=get_upload_path)
-    dirty = BooleanField(default=False)
+    dirty = PositiveIntegerField(default=0)
     upload_path = TextField(null=True, blank=True)
 
     @property
@@ -44,6 +45,8 @@ class PDF(Model):
         if upload:
             self.upload(pdf_file_object=pdf_file_object, filename=context['filename'])
 
+        self.mark_as_clean()
+
         return pdf_file_object
 
     def upload(self, pdf_file_object, filename):
@@ -56,3 +59,11 @@ class PDF(Model):
             self.pdf_file.delete()
 
         self.pdf_file.save(filename, pdf_content, True)
+
+    def mark_as_dirty(self):
+        with transaction.atomic():
+            PDF.objects.filter(id=self.id).update(dirty=F('dirty') + 1)
+            self.refresh_from_db(fields=['dirty'])
+
+    def mark_as_clean(self):
+        PDF.objects.filter(id=self.id).update(dirty=F('dirty') - self.dirty)

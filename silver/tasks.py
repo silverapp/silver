@@ -29,8 +29,8 @@ def generate_pdfs():
     if not lock.acquire(blocking=False):
         return
 
-    dirty_documents = chain(Invoice.objects.filter(pdf__dirty=True),
-                            Proforma.objects.filter(pdf__dirty=True))
+    dirty_documents = chain(Invoice.objects.filter(pdf__dirty__gt=0),
+                            Proforma.objects.filter(pdf__dirty__gt=0))
 
     # Generate PDFs in parallel
     group(generate_pdf.s(document.id, document.kind)
