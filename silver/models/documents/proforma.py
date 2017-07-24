@@ -137,9 +137,4 @@ class Proforma(BillingDocumentBase):
 def delete_proforma_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
         # Delete the proforma's PDF
-        instance.pdf.delete(False)
-
-    # If exists, delete the PDF of the related invoice
-    if instance.invoice:
-        if instance.invoice.pdf:
-            instance.invoice.pdf.delete(False)
+        instance.pdf.pdf_file.delete(False)

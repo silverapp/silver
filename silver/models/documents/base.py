@@ -30,7 +30,7 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db import transaction as db_transaction
-from django.db.models import Max, ForeignKey
+from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
 from django.utils.text import slugify
@@ -171,8 +171,7 @@ class BillingDocumentBase(models.Model):
         self._last_state = self.state
 
     def mark_for_generation(self):
-        self.pdf.dirty = True
-        self.pdf.save()
+        self.pdf.mark_as_dirty()
 
     def _issue(self, issue_date=None, due_date=None):
         if issue_date:
@@ -321,7 +320,7 @@ class BillingDocumentBase(models.Model):
         with db_transaction.atomic():
             # Create pdf object
             if not self.pdf and self.state != self.STATES.DRAFT:
-                self.pdf = PDF.objects.create(upload_path=self.get_pdf_upload_path(), dirty=True)
+                self.pdf = PDF.objects.create(upload_path=self.get_pdf_upload_path(), dirty=1)
 
             super(BillingDocumentBase, self).save(*args, **kwargs)
 
@@ -464,10 +463,7 @@ class BillingDocumentBase(models.Model):
         return path_template.format(**context)
 
     def generate_pdf(self, state=None, upload=True):
-        # !!! ensure this is not concurrently called for the same document
-        self.refresh_from_db()
-
-        state_before_generation = self.state
+        # !!! ensure this is not called concurrently for the same document
 
         context = self.get_template_context(state)
         context['filename'] = self.get_pdf_filename()
@@ -475,19 +471,6 @@ class BillingDocumentBase(models.Model):
         pdf_file_object = self.pdf.generate(template=self.get_template(state),
                                             context=context,
                                             upload=upload)
-        with db_transaction.atomic():
-            # lock pdf
-            PDF.objects.select_for_update().filter(pk=self.pdf.pk)
-
-            # lock document (self)
-            document = self.__class__.objects.select_for_update().get(pk=self.pk)
-
-            # document.state and pdf.dirty cannot change in other places
-
-            # state changed while generating
-            if document.state == state_before_generation:
-                self.pdf.dirty = False
-                self.pdf.save()
 
         return pdf_file_object
 

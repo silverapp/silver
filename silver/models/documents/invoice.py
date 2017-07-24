@@ -69,13 +69,8 @@ class Invoice(BillingDocumentBase):
 @receiver(pre_delete, sender=Invoice)
 def delete_invoice_pdf_from_storage(sender, instance, **kwargs):
     if instance.pdf:
-        # Delete the invoice's PDF
-        instance.pdf.delete(False)
-
-    # If exists, delete the PDF of the related proforma
-    if instance.proforma:
-        if instance.proforma.pdf:
-            instance.proforma.pdf.delete(False)
+        # Delete the invoice's PDF file
+        instance.pdf.pdf_file.delete(False)
 
 
 @receiver(post_save, sender=Invoice)
