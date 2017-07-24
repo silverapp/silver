@@ -597,7 +597,8 @@ class BillingDocumentAdmin(ModelAdmin):
               'transaction_xe_date', 'state', 'total', )
     readonly_fields = ('state', 'total')
     inlines = [DocumentEntryInline]
-    actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents']
+    actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents',
+               'mark_pdf_for_generation']
 
     @property
     def _model(self):
@@ -613,10 +614,10 @@ class BillingDocumentAdmin(ModelAdmin):
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
-        exist_failed_changes = False
-        exist_failed_actions = False
         failed_changes = []
         failed_actions = []
+
+        readable_action = action.replace('_', ' ').strip().capitalize()
 
         results = []
         for entry in queryset:
@@ -633,28 +634,30 @@ class BillingDocumentAdmin(ModelAdmin):
                     object_repr=unicode(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
-                        action=action.replace('_', ' ').strip().capitalize()
+                        action=readable_action
                     )
                 )
             except TransitionNotAllowed:
-                exist_failed_changes = True
                 failed_changes.append(entry.id)
             except ValueError as error:
-                exist_failed_actions = True
                 failed_actions.append(error.message)
+            except AttributeError:
+                failed_actions.append('{action} failed for {document}.'.format(
+                    action=readable_action, document=entry
+                ))
 
-        if exist_failed_actions:
+        if failed_actions:
             msg = "\n".join(failed_actions)
             self.message_user(request, msg, level=messages.ERROR)
 
-        if exist_failed_changes:
+        if failed_changes:
             failed_ids = ' '.join(map(str, failed_changes))
             msg = "The state change failed for {model_name}(s) with "\
                   "ids: {ids}".format(model_name=self._model_name.lower(),
                                       ids=failed_ids)
             self.message_user(request, msg, level=messages.ERROR)
 
-        if not exist_failed_actions and not exist_failed_changes:
+        if not failed_actions and not failed_changes:
             qs_count = queryset.count()
             if action == 'clone_into_draft':
                 results = ', '.join(result.series_number for result in results)
@@ -791,12 +794,16 @@ class InvoiceAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'clone_into_draft')
     clone.short_description = 'Clone the selected invoice(s) into draft'
 
+    def mark_pdf_for_generation(self, request, queryset):
+        self.perform_action(request, queryset, 'mark_for_generation')
+    mark_pdf_for_generation.short_description = 'Mark the selected invoice(s) for PDF generation'
+
     def invoice_pdf(self, invoice):
         if invoice.pdf:
             url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
             return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
-            return ''
+            return None
     invoice_pdf.allow_tags = True
 
     @property
@@ -847,12 +854,16 @@ class ProformaAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'clone_into_draft')
     clone.short_description = 'Clone the selected proforma(s) into draft'
 
+    def mark_pdf_for_generation(self, request, queryset):
+        self.perform_action(request, queryset, 'mark_for_generation')
+    mark_pdf_for_generation.short_description = 'Mark the selected proforma(s) for PDF generation'
+
     def proforma_pdf(self, proforma):
         if proforma.pdf:
             url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
             return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
         else:
-            return ''
+            return None
     proforma_pdf.allow_tags = True
 
     @property
@@ -864,7 +875,7 @@ class ProformaAdmin(BillingDocumentAdmin):
         return "Proforma"
 
     def related_invoice(self, obj):
-        return obj.invoice.admin_change_url if obj.invoice else 'None'
+        return obj.invoice.admin_change_url if obj.invoice else None
     related_invoice.short_description = 'Related invoice'
     related_invoice.allow_tags = True
 
@@ -1073,26 +1084,12 @@ class TransactionAdmin(ModelAdmin):
     fail.short_description = 'Fail the selected transactions'
 
     def related_invoice(self, obj):
-        if obj.invoice:
-            url = reverse('admin:silver_invoice_change', args=(obj.invoice.pk,))
-            return '<a href="%s">%s</a>' % (
-                url, obj.invoice.series_number
-            )
-        else:
-            return '(None)'
+        return obj.invoice.admin_change_url if obj.invoice else None
     related_invoice.allow_tags = True
     related_invoice.short_description = 'Invoice'
 
     def related_proforma(self, obj):
-        if obj.proforma:
-            url = reverse(
-                'admin:silver_proforma_change', args=(obj.proforma.pk,)
-            )
-            return '<a href="%s">%s</a>' % (
-                url, obj.proforma.series_number
-            )
-        else:
-            return '(None)'
+        return obj.proforma.admin_change_url if obj.proforma else None
     related_proforma.allow_tags = True
     related_proforma.short_description = 'Proforma'
 
