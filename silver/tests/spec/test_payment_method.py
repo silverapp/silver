@@ -19,7 +19,7 @@ from django.test import override_settings
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
-from silver.api.serializers import PaymentMethodSerializer
+from silver.api.serializers.payment_methods_serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
 from silver.models import PaymentMethod, Transaction
 from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,

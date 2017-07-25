@@ -33,21 +33,23 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_bulk import ListBulkCreateAPIView
 
+from silver.api.serializers.billing_entities_serializers import CustomerSerializer, \
+    ProviderSerializer
+from silver.api.serializers.documents_serializers import InvoiceSerializer, DocumentEntrySerializer, \
+    ProformaSerializer, DocumentSerializer
+from silver.api.serializers.payment_methods_serializers import PaymentProcessorSerializer, \
+    PaymentMethodSerializer
+from silver.api.serializers.plans_serializer import PlanSerializer
+from silver.api.serializers.product_codes_serializer import ProductCodeSerializer
+from silver.api.serializers.subscriptions_serializers import SubscriptionSerializer, SubscriptionDetailSerializer, MFUnitsLogSerializer
+from silver.api.serializers.common import MeteredFeatureSerializer
+from silver.api.serializers.transaction_serializers import TransactionSerializer
 from silver.models import (MeteredFeatureUnitsLog, Subscription, MeteredFeature,
                            Customer, Plan, Provider, Invoice, ProductCode,
                            DocumentEntry, Proforma, BillingDocumentBase,
                            PaymentMethod, Transaction)
 from silver.models.documents.document import Document
-from silver.api.serializers import (MFUnitsLogSerializer,
-                                    CustomerSerializer, SubscriptionSerializer,
-                                    SubscriptionDetailSerializer,
-                                    PlanSerializer, MeteredFeatureSerializer,
-                                    ProviderSerializer, InvoiceSerializer,
-                                    ProductCodeSerializer, ProformaSerializer,
-                                    DocumentEntrySerializer,
-                                    PaymentProcessorSerializer,
-                                    PaymentMethodSerializer,
-                                    TransactionSerializer, DocumentSerializer)
+
 from silver.api.filters import (MeteredFeaturesFilter, SubscriptionFilter,
                                 CustomerFilter, ProviderFilter, PlanFilter,
                                 InvoiceFilter, ProformaFilter,

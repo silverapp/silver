@@ -19,7 +19,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 
-from silver.api.serializers import PaymentMethodSerializer
+from silver.api.serializers.payment_methods_serializers import PaymentMethodSerializer
 from silver.tests.factories import PaymentMethodFactory
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    ManualProcessor)
