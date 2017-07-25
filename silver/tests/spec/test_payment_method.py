@@ -16,19 +16,17 @@ import sys
 from copy import deepcopy
 
 from django.test import override_settings
-
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
-from silver.models import PaymentMethod, Transaction
 from silver.api.serializers import PaymentMethodSerializer
 from silver.api.views import PaymentMethodList, PaymentMethodDetail
-
-from silver.tests.spec.util.api_get_assert import APIGetAssert
+from silver.models import PaymentMethod, Transaction
 from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
                                     TransactionFactory)
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    triggered_processor, failing_void_processor)
+from silver.tests.spec.util.api_get_assert import APIGetAssert
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

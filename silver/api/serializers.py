@@ -13,22 +13,20 @@
 # limitations under the License.
 
 import jwt
-
 from django.conf import settings
 from django.core.exceptions import (ValidationError, ObjectDoesNotExist,
                                     NON_FIELD_ERRORS)
-
 from rest_framework import serializers
+from rest_framework.fields import JSONField
 from rest_framework.relations import HyperlinkedRelatedField
 from rest_framework.reverse import reverse
 
-from silver.models.documents.document import Document
+from silver import payment_processors
 from silver.models import (MeteredFeatureUnitsLog, Customer, Subscription,
                            MeteredFeature, Plan, Provider, Invoice,
                            DocumentEntry, ProductCode, Proforma, PaymentMethod, Transaction)
+from silver.models.documents.document import Document
 from silver.utils.payments import get_payment_url
-
-from silver import payment_processors
 
 
 class ProductCodeRelatedField(serializers.SlugRelatedField):
@@ -94,22 +92,8 @@ class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('consumed_units', 'start_date', 'end_date')
 
 
-class JSONSerializerField(serializers.Field):
-    def to_internal_value(self, data):
-        if not data:
-            return data
-
-        if (data is not None and not isinstance(data, dict) and
-                not isinstance(data, list)):
-            raise ValidationError("Invalid JSON <{}>".format(data))
-        return data
-
-    def to_representation(self, value):
-        return value
-
-
 class ProviderSerializer(serializers.HyperlinkedModelSerializer):
-    meta = JSONSerializerField(required=False)
+    meta = JSONField(required=False)
 
     class Meta:
         model = Provider
@@ -247,7 +231,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
-    meta = JSONSerializerField(required=False)
+    meta = JSONField(required=False)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
 
@@ -284,7 +268,7 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         view_name='transaction-list', source='*',
         lookup_url_kwarg='customer_pk'
     )
-    meta = JSONSerializerField(required=False)
+    meta = JSONField(required=False)
     url = CustomerUrl(view_name='customer-detail', read_only=True, source='*')
 
     class Meta:
