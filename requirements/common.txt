@@ -3,11 +3,11 @@
 # DON'T do it the file will be parsed on deploy
 
 django<2.0
-djangorestframework>=3.3.0
+djangorestframework<3.7
 pycountry>=16.11.08
 django-fsm>=2.3.0
 django-filter==1.0.4
-djangorestframework-bulk
+djangorestframework-bulk<0.3
 django-livefield
 django-jsonfield==1.0.1
 python-dateutil
@@ -24,4 +24,5 @@ furl
 html5lib==0.999
 cryptography==1.9
 sqlparse==0.2.2
-django-autocomplete-light==3.2.1
+django-autocomplete-light==3.2.9
+celery[redis]
