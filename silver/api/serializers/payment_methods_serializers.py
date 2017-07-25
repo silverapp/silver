@@ -121,5 +121,3 @@ class PaymentProcessorSerializer(serializers.Serializer):
         view_name='payment-processor-detail', source='*', lookup_field='name',
         read_only=True
     )
-
-
