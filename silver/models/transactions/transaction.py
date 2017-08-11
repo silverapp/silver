@@ -230,7 +230,6 @@ class Transaction(models.Model):
             if old_value is not None and old_value != current_value:
                 raise ValidationError("Field '%s' may not be changed." % field)
 
-
     def full_clean(self, *args, **kwargs):
         # 'amount' and 'currency' are handled in our clean method
         kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
