@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
+    url(r'^', include('stats.api.urls')),
 
     url(r'pay/(?P<token>[0-9a-zA-Z-_\.]+)/$',
         pay_transaction_view, name='payment'),
