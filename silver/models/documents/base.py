@@ -38,7 +38,7 @@ from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
-from silver.models import DocumentEntry
+from .entries import DocumentEntry
 from silver.models.billing_entities import Customer, Provider
 from silver.currencies import CurrencyConverter, RateNotFound
 from silver.models.documents.pdf import PDF
@@ -48,7 +48,6 @@ _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
     _storage_klass = import_string(_storage[0])
     _storage = _storage_klass(*_storage[1], **_storage[2])
-
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
