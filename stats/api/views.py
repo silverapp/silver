@@ -1,11 +1,37 @@
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views import View
 from rest_framework import generics, permissions, filters
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from silver.api.filters import TransactionFilter, SubscriptionFilter
 from silver.models import Transaction, Subscription
 from stats.api.serializers import TransactionStatsSerializer
 from stats.stats import Stats
 from datetime import datetime, timedelta
+
+
+class HomeView(View):
+    def get(self, request, *args, **argv):
+        return render(request, 'charts.html', {})
+
+
+class SubscriptionStatsChart(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, format=None):
+        labels = ["plan1", "plan2", "plan3", "plan4", "plan5"]
+        default_items = [1, 6, 9, 3, 1]
+        default_items2 = [2, 2, 3, 9]
+        data = {
+            "labels": labels,
+            "default": default_items,
+            "default2": default_items2
+        }
+
+        return Response(data)
 
 
 class TransactionStats(generics.ListAPIView):
@@ -30,6 +56,7 @@ class TransactionStats(generics.ListAPIView):
 
         return Response(data=stats.get_result())
 
+
 class SubscriptionStats(generics.ListAPIView):
     queryset = Subscription.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
@@ -44,7 +71,7 @@ class SubscriptionStats(generics.ListAPIView):
         # end_date = query_params.get('end_date')
 
         stats = Stats(self.queryset, result_type, modifier, {})
+        result = stats.get_result()
 
-        return Response(data=stats.get_result())
-
+        return Response(data=result)
 
