@@ -74,23 +74,29 @@ class Stats(object):
             }
         },
         'subscriptions': {
+            'estimated_income':{
                 'modifiers': ['include_unused_plans'],
                 'granulations': {
-                    'plan': None,
-                    'month': ['Jan']
+                    'billing_date': ['year', 'month'],
+                    'plan': None
                 }
             }
+        }
     }
 
     def validate(self):
-        if self.queryset.model != Transaction and self.queryset.model != Invoice:
-            raise ValueError('invalid model!')
+        if self.queryset.model != Transaction and self.queryset.model != Invoice \
+                and self.model != Subscription:
+            raise ValueError('invalid model : choices are: Transaction, Invoice, Subscription')
         if self.queryset.model == Invoice:
             model = 'documents'
         elif self.queryset.model == Transaction:
             model = 'transactions'
+        else:
+            model = 'subscriptions'
         if self.result_type is None:
-            raise ValueError('Select a result type!')
+            raise ValueError('Select a result type: choices are: amount, count, overdue_payments, '
+                             'estimated_income')
 
         for key, value in self.result_types.iteritems():
             if key != model:
@@ -167,7 +173,6 @@ class Stats(object):
                 granulation_arguments['time_granulation_interval'] = granulation['value']
             else:
                 granulation_arguments['additional_granulation_field'] = name
-            print ("aici: %s" % granulation_arguments)
         return granulation_arguments
 
     def transactions_count(self, queryset):
@@ -222,40 +227,46 @@ class Stats(object):
             overdue[i.customer_id] = new
         return overdue
 
+    def add_list_item(self, stats_list, plan_name, plan_id, subscription_id, subscription_amount, customer):
+        data = {'granulations': {
+            'plan': {
+                'name': plan_name,
+                'id': plan_id
+            }},
+            'values': [
+                {
+                    'subscription_id': subscription_id,
+                    'estimated_income': subscription_amount,
+                    'customer_name': customer
+                }
+            ]
+        }
+        stats_list.append(data)
+        return stats_list
+
     def subscriptions_estimated_income(self, queryset):
         entries = BillingLog.objects.filter(subscription_id=OuterRef('pk')).order_by().\
-        values('subscription_id').annotate(sum=Sum('total')).values('sum')
+            values('subscription_id').annotate(sum=Sum('total')).values('sum')
 
         final = queryset.annotate(
             subscription_amount=Coalesce(ExpressionWrapper(
                 Subquery(entries),
                 output_field=DecimalField(decimal_places=2)
-            ), Decimal('0.00')) + F('plan__amount')
+            ), Decimal('0.00'))
         ).values(
             'subscription_amount', 'id', 'plan', 'plan__name', 'customer__first_name',
             'customer__last_name'
         ).order_by('-subscription_amount')
 
-        tupleList = []
+        stats_list = []
         for i in final:
-            if not tupleList:
-                data = {'granulations': {
-                    'plan': {
-                        'name': i['plan__name'],
-                        'id': i['plan']
-                    }},
-                    'values': [
-                        {
-                            'subscription_id': i['id'],
-                            'estimated_income': i['subscription_amount'],
-                            'customer_name': i['customer__first_name'] + i['customer__last_name']
-                        }
-                    ]
-                }
-                tupleList.append(data)
+            if not stats_list:
+                stats_list = self.add_list_item(stats_list, i['plan__name'], i['plan'],
+                                                i['id'], i['subscription_amount'],
+                                                i['customer__first_name'] + " " + i['customer__last_name'])
             else:
                 ok = 0
-                for item in tupleList:
+                for item in stats_list:
                     for key, value in item.iteritems():
                         if key == 'granulations':
                             for keys, values in value.iteritems():
@@ -264,40 +275,29 @@ class Stats(object):
                                         {
                                             'subscription_id': i['id'],
                                             'estimated_income': i['subscription_amount'],
-                                            'customer_name': i['customer__first_name'] + i['customer__last_name']
+                                            'customer_name': i['customer__first_name'] + " " +
+                                                                            i['customer__last_name']
                                         }
                                     )
                                     ok = 1
                 if ok == 0:
-                    data = {
-                        'granulations': {
-                            'plan': {
-                                'name': i['plan__name'],
-                                'id': i['plan']
-                            }},
-                        'values': [
-                            {
-                                'subscription_id': i['id'],
-                                'estimated_income': i['subscription_amount'],
-                                'customer_name': i['customer__first_name'] + i[
-                                    'customer__last_name']
-                            }
-                        ]
-                    }
-                    tupleList.append(data)
+                    stats_list = self.add_list_item(stats_list, i['plan__name'], i['plan'], i['id'],
+                                                    i['subscription_amount'],
+                                                    i['customer__first_name'] + " " + i[
+                                                        'customer__last_name'])
 
         if self.modifier is not None:
             for i in Plan.objects.exclude(subscription__isnull=False).distinct():
                 data = {'granulations': {
                     'plan': {
                         'name': i.name,
-                        'url': 'someUrl'
+                        'id': i.id
                     }},
                     'values': []
                 }
-                tupleList.append(data)
+                stats_list.append(data)
 
-        return tupleList
+        return stats_list
 
     def get_result(self):
         if self.queryset.model == Transaction:
