@@ -83,6 +83,7 @@ TEMPLATES = [
             PROJECT_ROOT + '/payment_processors/templates/',
             PROJECT_ROOT + '/templates/',
             PROJECT_ROOT + '/silver/templates/',
+            PROJECT_ROOT + '/stats/templates/',
         ],
         'OPTIONS': {
             'context_processors': (
