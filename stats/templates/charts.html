@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+<script>
+    {% block jquery %}
+        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=some/'
+        var labels = []
+        var datasets = []
+
+            $.ajax({
+                method: "GET",
+                url: endpoint,
+                success: function(data){
+                    var plan_count = data.length
+                    labels = data.map(function (entry) {return entry.granulations.plan.name})
+
+                    data.forEach(function (entry, index) {
+                        entry.values.forEach(function (subscription) {
+                        var _data = new Array(plan_count).fill(0)
+                        _data[index] = subscription.estimated_income
+                        datasets.push({data: _data, label: subscription.customer_name,
+                                    backgroundColor: getRandomColor() })
+                    })
+                  })
+                  console.log(datasets)
+                  setStackedChart()
+                },
+                error: function(error_data){
+                    console.log("error")
+                    console.log(error_data)
+                }
+            })
+
+            function getRandomColor() {
+                var letters = '0123456789ABCDEF'.split('');
+                var color = '#';
+                for (var i = 0; i < 6; i++ ) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            function setStackedChart(){
+                var ctx = document.getElementById("canvas").getContext("2d");
+
+                chart = {
+                    type: 'bar',
+                    data: {
+                      labels: labels,
+                      datasets: datasets
+                    },
+                    options: {
+                        title:{
+                            display:true,
+                            text:"Estimated Income"
+                        },
+                        responsive: true,
+                        animation: {
+                            onComplete: function(animation) {
+                                var sourceCanvas = myLiveChart.chart.canvas;
+                                var copyWidth = myLiveChart.scales['y-axis-0'].width - 5;
+                                var copyHeight = myLiveChart.scales['y-axis-0'].height + myLiveChart.scales['y-axis-0'].top + 5;
+                                var targetCtx = document.getElementById("myChartAxis").getContext("2d");
+                                targetCtx.canvas.width = copyWidth;
+                                targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+                            }
+                        },
+                        scales: {
+                            xAxes: [{
+                            ticks: {
+                                  autoSkip: false,
+                                  maxRotation: 90,
+                                  minRotation: 90
+                                },
+                                barThickness : 10,
+                                stacked: true
+                            }],
+                            yAxes: [{
+                                stacked: true
+                                }]
+                        }
+                    }
+                };
+
+                 var newwidth = (labels.length * 40) + 100
+                 $('.chartAreaWrapper2').width(newwidth);
+                 var myLiveChart = new Chart(ctx, chart);
+
+              };
+
+    {% endblock %}
+</script>
+
+    {% block content %}
+
+        <div class="chartWrapper">
+          <div class="chartAreaWrapper">
+            <div class="chartAreaWrapper2">
+                <canvas id="canvas"></canvas>
+            </div>
+          </div>
+
+            <canvas id="myChartAxis" height="200" width="0"></canvas>
+        </div>
+    {% endblock content %}
