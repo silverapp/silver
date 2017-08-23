@@ -241,17 +241,17 @@ class TestSubscriptionEndpoint(APITestCase):
 
         assert response.status_code == status.HTTP_200_OK
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '?page=2; rel="next">, ' +
-             '<' + full_url + '?page=1; rel="first">, ' +
-             '<' + full_url + '?page=2; rel="last">')
+            ('Link', '<' + full_url + '?page=2>; rel="next", ' +
+             '<' + full_url + '?page=1>; rel="first", ' +
+             '<' + full_url + '?page=2> rel="last"')
 
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
         assert response._headers['link'] == \
-            ('Link', '<' + full_url + '; rel="prev">, ' +
-             '<' + full_url + '?page=1; rel="first">, ' +
-             '<' + full_url + '?page=2; rel="last">')
+            ('Link', '<' + full_url + '>; rel="prev", ' +
+             '<' + full_url + '?page=1>; rel="first", ' +
+             '<' + full_url + '?page=2> rel="last"')
 
     def test_get_subscription_list_reference_filter(self):
         customer = CustomerFactory.create()

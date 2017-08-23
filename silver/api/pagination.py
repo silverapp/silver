@@ -44,18 +44,18 @@ class LinkHeaderPagination(PageNumberPagination):
         last_url = self.get_last_link()
 
         if next_url is not None and previous_url is not None:
-            link = '<{next_url}; rel="next">, <{previous_url}; rel="prev">'
+            link = '<{next_url}>; rel="next", <{previous_url}>; rel="prev"'
         elif next_url is not None:
-            link = '<{next_url}; rel="next">'
+            link = '<{next_url}>; rel="next"'
         elif previous_url is not None:
-            link = '<{previous_url}; rel="prev">'
+            link = '<{previous_url}>; rel="prev"'
         else:
             link = ''
 
         if link:
             link += ', '
 
-        link += '<{first_url}; rel="first">, <{last_url}; rel="last">'
+        link += '<{first_url}>; rel="first", <{last_url}> rel="last"'
 
         link = link.format(next_url=next_url, previous_url=previous_url,
                            first_url=first_url, last_url=last_url)
