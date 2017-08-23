@@ -97,6 +97,7 @@ class Transaction(models.Model):
     )
     cancel_code = models.CharField(
         choices=[(code, code) for code in CANCEL_CODES.keys()], max_length=32,
+
         null=True, blank=True
     )
 
@@ -210,7 +211,6 @@ class Transaction(models.Model):
                               self.currency, self.payment_method.allowed_currencies
                           )
                 raise ValidationError(message)
-
             if self.amount:
                 if self.amount > self.document.amount_to_be_charged_in_transaction_currency:
                     message = "Amount is greater than the amount that should be charged in order " \

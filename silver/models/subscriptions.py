@@ -657,6 +657,8 @@ class Subscription(models.Model):
 
         ONE_DAY = timedelta(days=1)
 
+        total = Decimal('0.00')
+
         if self.is_billed_first_time:
             if not self.trial_end:  # has no trial
                 if billing_date.month in [self.start_date.month,
@@ -668,9 +670,9 @@ class Subscription(models.Model):
                     # Generate first invoice, when the subscription starts
                     # => add the prorated value of the plan for the current month
                     end_date = self._get_interval_end_date(date=self.start_date)
-                    self._add_plan_value(start_date=self.start_date,
-                                         end_date=end_date,
-                                         invoice=invoice, proforma=proforma)
+                    total += self._add_plan_value(start_date=self.start_date,
+                                                  end_date=end_date,
+                                                  invoice=invoice, proforma=proforma)
 
                     if (self.state == self.STATES.CANCELED and
                         self.cancel_date.month == self.start_date.month and
@@ -681,18 +683,18 @@ class Subscription(models.Model):
                         # not have consolidated billing => add the mfs as this
                         # is the last subscription of the customer and (s)he
                         # is probably leaving the service.
-                        self._add_mfs(start_date=self.start_date,
-                                      end_date=end_date,
-                                      invoice=invoice, proforma=proforma)
+                        total += self._add_mfs(start_date=self.start_date,
+                                               end_date=end_date,
+                                               invoice=invoice, proforma=proforma)
 
                     if billing_date.month == next_month(self.start_date):
                         # If it gets here => a new subscription, with no trial
                         # and the customer has other subscriptions => it's
                         # an old customer.
                         # Add consumed mfs from last month
-                        self._add_mfs(start_date=self.start_date,
-                                      end_date=end_date,
-                                      invoice=invoice, proforma=proforma)
+                        total += self._add_mfs(start_date=self.start_date,
+                                               end_date=end_date,
+                                               invoice=invoice, proforma=proforma)
 
                         if self.state == self.STATES.ACTIVE:
                             # If the subscription is still active, add the
@@ -701,7 +703,7 @@ class Subscription(models.Model):
                                 reference_date=billing_date)
                             bed = self.bucket_end_date(
                                 reference_date=billing_date)
-                            self._add_plan_value(
+                            total += self._add_plan_value(
                                 start_date=bsd, end_date=bed,
                                 invoice=invoice, proforma=proforma)
             elif self.on_trial(billing_date):
@@ -759,18 +761,18 @@ class Subscription(models.Model):
                         # between trial_end -> end_of_month.
                         # note: it could have been canceled before trial_end
                         # and in that case the value does not have to be added
-                        self._add_plan_value(start_date=first_day_after_trial,
-                                             end_date=end_date,
-                                             invoice=invoice, proforma=proforma)
+                        total += self._add_plan_value(start_date=first_day_after_trial,
+                                                      end_date=end_date,
+                                                      invoice=invoice, proforma=proforma)
 
                         if billing_date.month == next_month(self.start_date):
                             # It's the next month after the subscription start
                             # and there was a prorated period between trial_end ->
                             # end_of_month => add the consumed metered features
                             # from that period.
-                            self._add_mfs(start_date=first_day_after_trial,
-                                          end_date=end_date,
-                                          invoice=invoice, proforma=proforma)
+                            total += self._add_mfs(start_date=first_day_after_trial,
+                                                   end_date=end_date,
+                                                   invoice=invoice, proforma=proforma)
 
                 if (self.state == self.STATES.ACTIVE and
                         billing_date.month == next_month(self.start_date)):
@@ -778,8 +780,8 @@ class Subscription(models.Model):
                     # still active => add the prorated value for the next month
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
-                    self._add_plan_value(start_date=bsd, end_date=bed,
-                                         invoice=invoice, proforma=proforma)
+                    total += self._add_plan_value(start_date=bsd, end_date=bed,
+                                                  invoice=invoice, proforma=proforma)
         else:
             last_billing_date = self.last_billing_date
             if (self.trial_end and
@@ -827,14 +829,14 @@ class Subscription(models.Model):
                         if bsd <= self.cancel_date <= bed:
                             bed = self.cancel_date
 
-                    if (self.state == self.STATES.ACTIVE or self.cancel_date >= self.trial_end):
+                    if self.state == self.STATES.ACTIVE or self.cancel_date >= self.trial_end:
                         # Add the prorated value only if the subscription is still
                         # active or it was canceled during the period right after
                         # the trial. If it was canceled during the trial, skip
                         # adding the mfs, as there was no active period after
                         # trial_end
-                        self._add_plan_value(start_date=bsd, end_date=bed,
-                                             invoice=invoice, proforma=proforma)
+                        total += self._add_plan_value(start_date=bsd, end_date=bed,
+                                                      invoice=invoice, proforma=proforma)
 
                         if billing_date.month == next_month(first_day_after_trial):
                             # If there was a period of paid subscription between
@@ -842,8 +844,8 @@ class Subscription(models.Model):
                             # for that period.
                             # Note: the bsd and bed that were previously
                             # computed are being used
-                            self._add_mfs(start_date=bsd, end_date=bed,
-                                          invoice=invoice, proforma=proforma)
+                            total += self._add_mfs(start_date=bsd, end_date=bed,
+                                                   invoice=invoice, proforma=proforma)
 
                 # The subscription was not canceled and we bill it the
                 # next month after the trial end => add the value of the
@@ -854,8 +856,8 @@ class Subscription(models.Model):
                     # for the month ahead
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
-                    self._add_plan_value(start_date=bsd, end_date=bed,
-                                         invoice=invoice, proforma=proforma)
+                    total += self._add_plan_value(start_date=bsd, end_date=bed,
+                                                  invoice=invoice, proforma=proforma)
 
             else:
                 self._log_value_state('billed before, normal')
@@ -868,18 +870,18 @@ class Subscription(models.Model):
                 # Add mfs for the last month or part of month
                 bsd = self.bucket_start_date(reference_date=last_billing_date)
                 bed = self.bucket_end_date(reference_date=last_billing_date)
-                self._add_mfs(start_date=bsd, end_date=bed,
-                              invoice=invoice, proforma=proforma)
+                total += self._add_mfs(start_date=bsd, end_date=bed,
+                                       invoice=invoice, proforma=proforma)
 
                 if self.state == self.STATES.ACTIVE:
                     # Add the plan's value for the month ahead
                     bsd = self.bucket_start_date(reference_date=billing_date)
                     bed = self.bucket_end_date(reference_date=billing_date)
 
-                    self._add_plan_value(start_date=bsd, end_date=bed,
-                                         invoice=invoice, proforma=proforma)
+                    total += self._add_plan_value(start_date=bsd, end_date=bed,
+                                                  invoice=invoice, proforma=proforma)
 
-        BillingLog.objects.create(subscription=self, invoice=invoice,
+        BillingLog.objects.create(subscription=self, invoice=invoice, total=total,
                                   proforma=proforma, billing_date=billing_date)
 
     def _add_plan_trial(self, start_date, end_date, invoice=None,
@@ -1111,12 +1113,16 @@ class Subscription(models.Model):
 
         unit = self._entry_unit(context)
 
-        DocumentEntry.objects.create(
+        mfs_total = Decimal('0.00')
+
+        mf = DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
             unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date
         )
+
+        return mfs_total + mf.total
 
     def _get_consumed_units(self, metered_feature, proration_percent,
                             start_date, end_date):
@@ -1147,6 +1153,7 @@ class Subscription(models.Model):
             'context': 'metered-feature'
         })
 
+        mfs_total = Decimal('0.00')
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_date, end_date)
@@ -1159,7 +1166,7 @@ class Subscription(models.Model):
             description = self._entry_description(context)
             unit = self._entry_unit(context)
 
-            DocumentEntry.objects.create(
+            mf = DocumentEntry.objects.create(
                 invoice=invoice, proforma=proforma,
                 description=description, unit=unit,
                 quantity=consumed_units, prorated=prorated,
@@ -1167,6 +1174,10 @@ class Subscription(models.Model):
                 product_code=metered_feature.product_code,
                 start_date=start_date, end_date=end_date
             )
+
+            mfs_total += mf.total
+
+        return mfs_total
 
     def _get_proration_status_and_percent(self, start_date, end_date):
         """
@@ -1242,6 +1253,10 @@ class BillingLog(models.Model):
                                  related_name='billing_log_entries')
     billing_date = models.DateField(
         help_text="The date when the invoice/proforma was issued."
+    )
+    total = models.DecimalField(
+        decimal_places=2, max_digits=12,
+        null=True, blank=True
     )
 
     class Meta:
