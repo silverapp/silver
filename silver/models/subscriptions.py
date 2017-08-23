@@ -1122,9 +1122,7 @@ class Subscription(models.Model):
             start_date=start_date, end_date=end_date
         )
 
-        mfs_total += mf.total
-
-        return mfs_total
+        return mfs_total + mf.total
 
     def _get_consumed_units(self, metered_feature, proration_percent,
                             start_date, end_date):
