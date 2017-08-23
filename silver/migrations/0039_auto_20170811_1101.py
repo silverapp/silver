@@ -12,14 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name='paymentmethod',
-            options={'ordering': ['-id']},
-        ),
-        migrations.AlterModelOptions(
-            name='transaction',
-            options={'ordering': ['-id']},
-        ),
         migrations.AddField(
             model_name='billinglog',
             name='total',
