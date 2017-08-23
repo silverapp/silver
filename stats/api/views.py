@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from silver.api.filters import TransactionFilter, SubscriptionFilter
 from silver.models import Transaction, Subscription
+from silver.utils.decorators import remember_last_query_params
 from stats.api.serializers import TransactionStatsSerializer
 from stats.stats import Stats
 from datetime import datetime, timedelta
@@ -17,21 +18,21 @@ class HomeView(View):
         return render(request, 'charts.html', {})
 
 
-class SubscriptionStatsChart(APIView):
-    authentication_classes = []
-    permission_classes = []
-
-    def get(self, request, format=None):
-        labels = ["plan1", "plan2", "plan3", "plan4", "plan5"]
-        default_items = [1, 6, 9, 3, 1]
-        default_items2 = [2, 2, 3, 9]
-        data = {
-            "labels": labels,
-            "default": default_items,
-            "default2": default_items2
-        }
-
-        return Response(data)
+# class SubscriptionStatsChart(APIView):
+#     authentication_classes = []
+#     permission_classes = []
+#
+#     def get(self, request, format=None):
+#         labels = ["plan1", "plan2", "plan3", "plan4", "plan5"]
+#         default_items = [1, 6, 9, 3, 1]
+#         default_items2 = [2, 2, 3, 9]
+#         data = {
+#             "labels": labels,
+#             "default": default_items,
+#             "default2": default_items2
+#         }
+#
+#         return Response(data)
 
 
 class TransactionStats(generics.ListAPIView):
@@ -70,7 +71,9 @@ class SubscriptionStats(generics.ListAPIView):
         # start_date = query_params.get('start_date')
         # end_date = query_params.get('end_date')
 
-        stats = Stats(self.queryset, result_type, modifier, {})
+        queryset = self.queryset.filter(plan__provider=1)
+        stats = Stats(queryset, result_type, modifier, {})
+
         result = stats.get_result()
 
         return Response(data=result)

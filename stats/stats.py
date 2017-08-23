@@ -1,4 +1,5 @@
 from decimal import Decimal
+from random import randint
 
 from silver.models import Transaction, Invoice, Proforma, MeteredFeatureUnitsLog, Subscription, \
     Plan, BillingLog
@@ -86,7 +87,7 @@ class Stats(object):
 
     def validate(self):
         if self.queryset.model != Transaction and self.queryset.model != Invoice \
-                and self.model != Subscription:
+                and self.queryset.model != Subscription:
             raise ValueError('invalid model : choices are: Transaction, Invoice, Subscription')
         if self.queryset.model == Invoice:
             model = 'documents'
@@ -287,7 +288,7 @@ class Stats(object):
                                                         'customer__last_name'])
 
         if self.modifier is not None:
-            for i in Plan.objects.exclude(subscription__isnull=False).distinct():
+            for i in Plan.objects.exclude(subscription__isnull=False).distinct().filter(id=1):
                 data = {'granulations': {
                     'plan': {
                         'name': i.name,

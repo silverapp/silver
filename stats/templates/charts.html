@@ -2,7 +2,7 @@
 
 <script>
     {% block jquery %}
-        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=some/'
+        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans/'
         var labels = []
         var datasets = []
 
@@ -13,14 +13,18 @@
                     var plan_count = data.length
                     labels = data.map(function (entry) {return entry.granulations.plan.name})
 
+                    customer_list = []
+
                     data.forEach(function (entry, index) {
                         entry.values.forEach(function (subscription) {
-                        var _data = new Array(plan_count).fill(0)
-                        _data[index] = subscription.estimated_income
-                        datasets.push({data: _data, label: subscription.customer_name,
-                                    backgroundColor: getRandomColor() })
+                            var _data = new Array(plan_count).fill(0)
+                            _data[index] = subscription.estimated_income
+
+                            datasets.push({data: _data, label: subscription.customer_name,
+                                        backgroundColor: getRandomColor() })
+                        })
                     })
-                  })
+
                   console.log(datasets)
                   setStackedChart()
                 },
