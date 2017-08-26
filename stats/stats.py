@@ -1,25 +1,11 @@
 from decimal import Decimal
-from random import randint
 
-from silver.models import Transaction, Invoice, Proforma, MeteredFeatureUnitsLog, Subscription, \
-    Plan, BillingLog
+from silver.models import Transaction, Invoice, Proforma, Subscription, Plan, BillingLog
 from datetime import datetime, date, timedelta
-from django.db.models.functions import ExtractYear, ExtractMonth, ExtractWeekDay, ExtractWeek, \
-    Coalesce
-from django.db.models import Avg, Sum, Count, DecimalField, F, Case, When, Max, Subquery, OuterRef
+from django.db.models.functions import (ExtractYear, ExtractMonth, ExtractWeekDay, ExtractWeek,
+                                        Coalesce)
+from django.db.models import Avg, Sum, Count, DecimalField, Subquery, OuterRef
 from django.db.models import ExpressionWrapper
-
-{
-    'granulations': [
-        {
-            'name': 'time',
-            'value': 'month'
-        },
-        {
-            'name': 'currency'
-        }
-    ]
-}
 
 
 class Stats(object):
@@ -31,38 +17,40 @@ class Stats(object):
                 'modifiers': [],
                 'granulations': {
                     'created_at': ['year', 'month', 'week', 'day'],
-                    'currency': None
+                    'currency': []
                 }
             },
             'amount': {
                 'modifiers': ['average', 'total'],
-                'granulation': ['year', 'month', 'week', 'day', 'none'],
-                'currency': None
+                'granulations': {
+                    'created_at': ['year', 'month', 'week', 'day'],
+                    'currency': []
+                }
             }
         },
         'documents': {
             'count': {
                 'modifiers': [],
                 'granulations': {
-                    'issued_at': ['year', 'month', 'week', 'day'],
+                    'issue_date': ['year', 'month', 'week', 'day'],
                     'paid_at': ['year', 'month', 'week', 'day'],
-                    'currency': None
+                    'currency': []
                 }
             },
             'amount': {
                 'modifiers': ['average', 'total'],
                 'granulations': {
-                    'issued_at': ['year', 'month', 'week', 'day'],
+                    'issue_date': ['year', 'month', 'week', 'day'],
                     'paid_at': ['year', 'month', 'week', 'day'],
-                    'currency': None
+                    'currency': []
                 }
             },
             'paid_date': {
                 'modifiers': ['average'],
                 'granulations': {
-                    'issued_at': ['year', 'month', 'week', 'day'],
+                    'issue_date': ['year', 'month', 'week', 'day'],
                     'paid_at': ['year', 'month', 'week', 'day'],
-                    'currency': None
+                    'currency': []
                 }
             },
             'overdue_payments': {
@@ -70,15 +58,15 @@ class Stats(object):
                 'granulations': {
                     'issued_at': ['year', 'month', 'week', 'day'],
                     'paid_at': ['year', 'month', 'week', 'day'],
-                    'currency': None
+                    'currency': []
                 }
             }
         },
         'subscriptions': {
-            'estimated_income':{
-                'modifiers': ['include_unused_plans'],
+            'estimated_income': {
+                'modifiers': ['include_unused_plans', None],
                 'granulations': {
-                    'billing_date': ['year', 'month'],
+                    'billing_period': ['year', 'month'],
                     'plan': None
                 }
             }
@@ -88,33 +76,37 @@ class Stats(object):
     def validate(self):
         if self.queryset.model != Transaction and self.queryset.model != Invoice \
                 and self.queryset.model != Subscription:
-            raise ValueError('invalid model : choices are: Transaction, Invoice, Subscription')
-        if self.queryset.model == Invoice:
-            model = 'documents'
-        elif self.queryset.model == Transaction:
-            model = 'transactions'
-        else:
-            model = 'subscriptions'
+            raise ValueError('Invalid model, choices are: Transaction, Invoice, Subscription')
         if self.result_type is None:
             raise ValueError('Select a result type: choices are: amount, count, overdue_payments, '
                              'estimated_income')
 
-        for key, value in self.result_types.iteritems():
-            if key != model:
+        for model, metrics in self.result_types.iteritems():
+            if model != self._get_model_name():
                 continue
-            if self.result_type not in value:
-                raise ValueError('Invalid result type!')
-            for result_type, values in value.iteritems():
+            if self.result_type not in metrics:
+                raise ValueError('Invalid result type')
+            for result_type, values in metrics.iteritems():
                 if result_type == self.result_type:
-                    if self.granulations['value'] not in values:
-                        raise ValueError('Invalid granulation!')
-                    elif not values['modifiers']:
+                    if not values['modifiers']:
                         if self.modifier is not None:
-                            raise ValueError("This result type doesn't have modifiers!")
-                    elif self.modifier is None:
-                            raise ValueError('Select a modifier!')
+                            raise ValueError("The result type doesn't have modifiers")
+                    elif None not in values['modifiers'] and self.modifier is None:
+                        raise ValueError('The modifier argument is required.')
                     elif self.modifier not in values['modifiers']:
                         raise ValueError('Invalid modifier')
+                else:
+                    continue
+                for granulation in self.granulations:
+                    if granulation['name'] not in values['granulations']:
+                        raise ValueError("The granulation field is incorrect")
+                for granulation_field, granulation_parameters in values['granulations'].iteritems():
+                    if not granulation_parameters:
+                        continue
+                    for granulation in self.granulations:
+                        if granulation['value'] is not None and granulation['value'] not in granulation_parameters:
+                            raise ValueError("The granulation parameter is incorrect")
+
         return self.get_result()
 
     def __init__(self, queryset, result_type, modifier=None, granulations=None):
@@ -149,18 +141,18 @@ class Stats(object):
                                              values('year', *group_by))
 
         elif time_granulation_interval == 'month':
-                return self.serialize_result(queryset.
-                                             annotate(month=ExtractMonth(time_granulation_field)).
-                                             values('year', 'month').
-                                             annotate(**annotate_with).
-                                             values('year', 'month', *group_by))
+            return self.serialize_result(queryset.
+                                         annotate(month=ExtractMonth(time_granulation_field)).
+                                         values('year', 'month').
+                                         annotate(**annotate_with).
+                                         values('year', 'month', *group_by))
 
         elif time_granulation_interval == 'week':
-                return self.serialize_result(queryset.
-                                             annotate(week=ExtractWeek(time_granulation_field)).
-                                             values('year', 'week').
-                                             annotate(**annotate_with).
-                                             values('year', 'week', *group_by))
+            return self.serialize_result(queryset.
+                                         annotate(week=ExtractWeek(time_granulation_field)).
+                                         values('year', 'week').
+                                         annotate(**annotate_with).
+                                         values('year', 'week', *group_by))
         elif time_granulation_field is None:
             pass
 
@@ -169,19 +161,14 @@ class Stats(object):
         for granulation in self.granulations:
             name = granulation['name']
             if ((self.queryset.model == Transaction and name in ['created_at', 'updated_at'])
-                or (self.queryset.model == Invoice and name in ['issue_date', 'paid_date'])):
-                granulation_arguments['time_granulation_field'] = name
-                granulation_arguments['time_granulation_interval'] = granulation['value']
+                    or (self.queryset.model == Invoice and name in ['issue_date', 'paid_date'])):
+                        granulation_arguments['time_granulation_field'] = name
+                        granulation_arguments['time_granulation_interval'] = granulation['value']
             else:
                 granulation_arguments['additional_granulation_field'] = name
         return granulation_arguments
 
     def transactions_count(self, queryset):
-        granulation_arguments = self.get_granulations()
-        modifier_field = 'id'
-        return self.get_data(queryset, modifier_field, **granulation_arguments)
-
-    def documents_count(self, queryset):
         granulation_arguments = self.get_granulations()
         modifier_field = 'id'
         return self.get_data(queryset, modifier_field, **granulation_arguments)
@@ -196,11 +183,24 @@ class Stats(object):
         modifier_field = 'amount'
         return self.get_data(queryset, modifier_field=modifier_field, **granulation_arguments)
 
+    def documents_count(self, queryset):
+        granulation_arguments = self.get_granulations()
+        modifier_field = 'id'
+        return self.get_data(queryset, modifier_field, **granulation_arguments)
+
+    def documents_amount_average(self, queryset):
+        granulation_arguments = self.get_granulations()
+        modifier_field = 'id'
+        return self.get_data(queryset, modifier_field, **granulation_arguments)
+
+    def documents_amount_total(self, queryset):
+        granulation_arguments = self.get_granulations()
+        modifier_field = 'id'
+        return self.get_data(queryset, modifier_field=modifier_field, **granulation_arguments)
+
     def serialize_result(self, queryset):
         tupleList = []
-
         additional_granulation = self.get_granulations().get('additional_granulation_field')
-
         for i in queryset:
             timestamp_date = date(
                 year=i['year'], month=i.get('month', 1), day=i.get('day', 1)
@@ -208,8 +208,6 @@ class Stats(object):
 
             if i.get('week'):
                 timestamp_date += timedelta(days=i['week'] * 7 - 1)
-                print(i['week'], timedelta(days=i['week'] * 7 - 1))
-
             timestamp = timestamp_date.strftime('%s')
 
             datapoint = ((timestamp, i[self.MODIFIER_ANNOTATION])
@@ -228,7 +226,8 @@ class Stats(object):
             overdue[i.customer_id] = new
         return overdue
 
-    def add_list_item(self, stats_list, plan_name, plan_id, subscription_id, subscription_amount, customer):
+    def _add_estimated_income_to_list(self, stats_list, plan_name, plan_id, subscription_id,
+                                      subscription_amount, customer):
         data = {'granulations': {
             'plan': {
                 'name': plan_name,
@@ -243,13 +242,12 @@ class Stats(object):
             ]
         }
         stats_list.append(data)
-        return stats_list
 
     def subscriptions_estimated_income(self, queryset):
         entries = BillingLog.objects.filter(subscription_id=OuterRef('pk')).order_by().\
             values('subscription_id').annotate(sum=Sum('total')).values('sum')
 
-        final = queryset.annotate(
+        subscriptions = queryset.annotate(
             subscription_amount=Coalesce(ExpressionWrapper(
                 Subquery(entries),
                 output_field=DecimalField(decimal_places=2)
@@ -260,66 +258,66 @@ class Stats(object):
         ).order_by('-subscription_amount')
 
         stats_list = []
-        for i in final:
+        for subscription in subscriptions:
             if not stats_list:
-                stats_list = self.add_list_item(stats_list, i['plan__name'], i['plan'],
-                                                i['id'], i['subscription_amount'],
-                                                i['customer__first_name'] + " " + i['customer__last_name'])
+                self._add_estimated_income_to_list(
+                    stats_list, subscription['plan__name'], subscription['plan'],
+                    subscription['id'], subscription['subscription_amount'],
+                    subscription['customer__first_name'] + " " + subscription['customer__last_name']
+                )
             else:
-                ok = 0
-                for item in stats_list:
-                    for key, value in item.iteritems():
-                        if key == 'granulations':
-                            for keys, values in value.iteritems():
-                                if values['name'] == i['plan__name']:
-                                    item['values'].append(
+                found = 0
+                for list_item in stats_list:
+                    for modifier, modifier_values in list_item.iteritems():
+                        if modifier == 'granulations':
+                            for plan, plan_details in modifier_values.iteritems():
+                                if plan_details['name'] == subscription['plan__name']:
+                                    list_item['values'].append(
                                         {
-                                            'subscription_id': i['id'],
-                                            'estimated_income': i['subscription_amount'],
-                                            'customer_name': i['customer__first_name'] + " " +
-                                                                            i['customer__last_name']
+                                            'subscription_id': subscription['id'],
+                                            'estimated_income': subscription['subscription_amount'],
+                                            'customer_name':
+                                                subscription['customer__first_name'] + " " +
+                                                subscription['customer__last_name']
                                         }
                                     )
-                                    ok = 1
-                if ok == 0:
-                    stats_list = self.add_list_item(stats_list, i['plan__name'], i['plan'], i['id'],
-                                                    i['subscription_amount'],
-                                                    i['customer__first_name'] + " " + i[
-                                                        'customer__last_name'])
-
-        if self.modifier is not None:
-            for i in Plan.objects.exclude(subscription__isnull=False).distinct().filter(id=1):
-                data = {'granulations': {
-                    'plan': {
-                        'name': i.name,
-                        'id': i.id
-                    }},
-                    'values': []
-                }
-                stats_list.append(data)
-
+                                    found = 1
+                if found == 0:
+                    self._add_estimated_income_to_list(
+                        stats_list, subscription['plan__name'], subscription['plan'],
+                        subscription['id'], subscription['subscription_amount'],
+                        subscription['customer__first_name'] + " " +
+                        subscription['customer__last_name']
+                    )
         return stats_list
 
-    def get_result(self):
+    def subscriptions_estimated_income_include_unused_plans(self, queryset):
+        stats_list = self.subscriptions_estimated_income(queryset)
+        for i in Plan.objects.exclude(subscription__isnull=False).distinct().filter(id=1):
+            data = {'granulations': {
+                'plan': {
+                    'name': i.name,
+                    'id': i.id
+                }},
+                'values': []
+            }
+            stats_list.append(data)
+        return stats_list
+
+    def _get_model_name(self):
         if self.queryset.model == Transaction:
-            if self.modifier is not None:
-                method_name = 'transactions_' + self.result_type + '_' + self.modifier
-                method = getattr(self, method_name)
-                return method(self.queryset)
-            else:
-                method_name = 'transactions_' + self.result_type
-                method = getattr(self, method_name)
-                return method(self.queryset)
+            return 'transactions'
         elif self.queryset.model == Invoice or self.queryset.model == Proforma:
-            if self.modifier is not None:
-                method_name = 'documents_' + self.result_type + '_' + self.modifier
-                method = getattr(self, method_name)
-                return method(self.queryset)
-            else:
-                method_name = 'documents_' + self.result_type
-                method = getattr(self, method_name)
-                return method(self.queryset)
+            return 'documents'
         elif self.queryset.model == Subscription:
-                method_name = 'subscriptions_' + self.result_type
-                method = getattr(self, method_name)
-                return method(self.queryset)
+            return 'subscriptions'
+
+    def get_result(self):
+        if self.modifier is not None:
+            method_name = self._get_model_name() + '_' + self.result_type + '_' + self.modifier
+            method = getattr(self, method_name)
+            return method(self.queryset)
+        else:
+            method_name = self._get_model_name() + '_' + self.result_type
+            method = getattr(self, method_name)
+            return method(self.queryset)
