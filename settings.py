@@ -62,6 +62,9 @@ EXTERNAL_APPS = [
 
 INTERNAL_APPS = [
     'silver',
+    'payu',
+    'silver_payu',
+    'silver_braintree',
     'stats'
 ]
 
@@ -156,9 +159,29 @@ LOGGING['formatters']['verbose'] = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 PAYMENT_PROCESSORS = {
-    'manual': {
+    'wire': {
         'class': 'silver.payment_processors.manual.ManualProcessor'
     },
+
+    'wire_triggered': {
+        'class': 'silver.payment_processors.manual.ManualProcessor'
+    },
+
+    'payu_triggered': {
+        'class': 'silver_payu.payment_processors.PayUTriggered'}, 'payu_manual': {
+        'class': 'silver_payu.payment_processors.PayUManual'}, 'braintree_manual': {
+        'class': 'silver_braintree.payment_processors.BraintreeTriggered',
+        'setup_data': {
+            'environment': None,
+            'merchant_id': "merchant_id",
+            'public_key': "public_key",
+            'private_key': "private_key"}, }, 'braintree_triggered': {
+        'class': 'silver_braintree.payment_processors.BraintreeTriggeredRecurring',
+        'setup_data': {
+            'environment': None,
+            'merchant_id': "merchant_id",
+            'public_key': "public_key",
+            'private_key': "private_key"}, },
 }
 
 PAYMENT_METHOD_SECRET = b'YOUR_FERNET_KEY_HERE'  # Fernet.generate_key()
