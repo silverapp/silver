@@ -2,9 +2,10 @@
 
 <script>
     {% block jquery %}
-        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans/'
+        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans'
         var labels = []
         var datasets = []
+        customer_list = []
 
             $.ajax({
                 method: "GET",
@@ -13,15 +14,25 @@
                     var plan_count = data.length
                     labels = data.map(function (entry) {return entry.granulations.plan.name})
 
-                    customer_list = []
-
                     data.forEach(function (entry, index) {
                         entry.values.forEach(function (subscription) {
                             var _data = new Array(plan_count).fill(0)
                             _data[index] = subscription.estimated_income
 
-                            datasets.push({data: _data, label: subscription.customer_name,
-                                        backgroundColor: getRandomColor() })
+                            var data = customer_list.find( function( e ) {
+                                return e.customer == subscription.customer_name;
+                            });
+
+                            if (data) {
+                                datasets.push({data: _data, label: data.customer,
+                                                    backgroundColor: data.backgroundColor })
+                            }
+                            else {
+                                color = getRandomColor()
+                                datasets.push({data: _data, label: subscription.customer_name,
+                                    backgroundColor: color })
+                                customer_list.push({customer: subscription.customer_name, backgroundColor: color})
+                            }
                         })
                     })
 
@@ -61,8 +72,8 @@
                         animation: {
                             onComplete: function(animation) {
                                 var sourceCanvas = myLiveChart.chart.canvas;
-                                var copyWidth = myLiveChart.scales['y-axis-0'].width - 5;
-                                var copyHeight = myLiveChart.scales['y-axis-0'].height + myLiveChart.scales['y-axis-0'].top + 5;
+                                var copyWidth = myLiveChart.scales['y-axis-0'].width - 20;
+                                var copyHeight = myLiveChart.scales['y-axis-0'].height + myLiveChart.scales['y-axis-0'].top + 20;
                                 var targetCtx = document.getElementById("myChartAxis").getContext("2d");
                                 targetCtx.canvas.width = copyWidth;
                                 targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
@@ -70,14 +81,16 @@
                         },
                         scales: {
                             xAxes: [{
-                            ticks: {
-                                  autoSkip: false,
-                                  maxRotation: 90,
-                                  minRotation: 90
-                                },
-                                barThickness : 10,
-                                stacked: true
-                            }],
+                                maxBarThickness : 10,
+                                categoryPercentage: 0.2,
+                                barPercentage: 0.2,
+                                ticks: {
+                                      autoSkip: false,
+                                      maxRotation: 90,
+                                      minRotation: 90
+                                    },
+                                    stacked: true
+                                }],
                             yAxes: [{
                                 stacked: true
                                 }]
@@ -85,10 +98,9 @@
                     }
                 };
 
-                 var newwidth = (labels.length * 40) + 100
+                 var newwidth = (labels.length * 70)
                  $('.chartAreaWrapper2').width(newwidth);
                  var myLiveChart = new Chart(ctx, chart);
-
               };
 
     {% endblock %}
@@ -103,6 +115,6 @@
             </div>
           </div>
 
-            <canvas id="myChartAxis" height="200" width="0"></canvas>
+            <canvas id="myChartAxis" height="200" width=""></canvas>
         </div>
     {% endblock content %}
