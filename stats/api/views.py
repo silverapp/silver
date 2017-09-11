@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from silver.api.filters import TransactionFilter, SubscriptionFilter, DocumentFilter
-from silver.models import Transaction, Subscription, Invoice
+from silver.models import Transaction, Subscription, Invoice, BillingLog
 from silver.utils.decorators import remember_last_query_params
 from stats.api.serializers import TransactionStatsSerializer
 from stats.stats import Stats
@@ -16,6 +16,11 @@ from datetime import datetime, timedelta
 class ChartsView(View):
     def get(self, request, *args, **argv):
         return render(request, 'charts.html', {})
+
+
+class ChartsJsView(View):
+    def get(self, request, *args, **argv):
+        return render(request, 'charts_js.html', {})
 
 
 class SubscriptionStats(generics.ListAPIView):
@@ -34,7 +39,7 @@ class SubscriptionStats(generics.ListAPIView):
         queryset = self.queryset.filter(plan__provider=1)
         stats = Stats(queryset, result_type, modifier, [])
 
-        return Response(data=stats.get_result())
+        return Response(data=stats.validate())
 
 
 class DocumentStats(generics.ListAPIView):
@@ -53,12 +58,31 @@ class DocumentStats(generics.ListAPIView):
             granulations_list.append({'name': 'issue_date',
                                       'value': query_params.get('granulations_issue_date')})
         if query_params.get('granulations_currency', None) is not None:
-            granulations_list.append({'name': 'currency'})
+            granulations_list.append({'name': 'currency', 'value': None})
 
         queryset = self.queryset.exclude(issue_date__isnull=True)
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
-        return Response(data=stats.get_result())
+        return Response(data=stats.validate())
+
+
+class BillingStats(generics.ListAPIView):
+    queryset = BillingLog.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def list(self, request, *args, **kwargs):
+        granulations_list = []
+
+        query_params = self.request.query_params
+        result_type = query_params.get('result_type')
+        modifier = query_params.get('modifier', None)
+        granulations_list.append({'name': 'billing_date',
+                                 'value': query_params.get('granulations_issue_date')})
+
+        queryset = self.queryset.exclude(billing_date__isnull=True)
+        stats = Stats(queryset, result_type, modifier, granulations_list)
+
+        return Response(data=stats.validate())
 
 
 class TransactionStats(generics.ListAPIView):
@@ -77,11 +101,11 @@ class TransactionStats(generics.ListAPIView):
             granulations_list.append({'name': 'created_at',
                                       'value': query_params.get('granulations_issue_date')})
         if query_params.get('granulations_currency', None) is not None:
-            granulations_list.append({'name': 'currency'})
+            granulations_list.append({'name': 'currency', 'value': None})
 
         stats = Stats(self.queryset, result_type, modifier, granulations_list)
 
-        return Response(data=stats.get_result())
+        return Response(data=stats.validate())
 
 
 
