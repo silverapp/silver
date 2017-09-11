@@ -2,119 +2,136 @@
 
 <script>
     {% block jquery %}
-        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans'
-        var labels = []
-        var datasets = []
-        customer_list = []
+    var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans'
+    var labels = []
+    var datasets = []
+    customer_list = []
 
-            $.ajax({
-                method: "GET",
-                url: endpoint,
-                success: function(data){
-                    var plan_count = data.length
-                    labels = data.map(function (entry) {return entry.granulations.plan.name})
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function (data) {
+            var plan_count = data.length
+            labels = data.map(function (entry) { return entry.granulations.plan.name })
+            data.forEach(function (entry, index) {
+                entry.values.forEach(function (subscription) {
+                    if (subscription.estimated_income != 0) {
+                        var _data = new Array(plan_count).fill(0)
+                        _data[index] = subscription.estimated_income
+                        _data.unshift(String(subscription.subscription_id));
 
-                    data.forEach(function (entry, index) {
-                        entry.values.forEach(function (subscription) {
-                            var _data = new Array(plan_count).fill(0)
-                            _data[index] = subscription.estimated_income
-
-                            var data = customer_list.find( function( e ) {
-                                return e.customer == subscription.customer_name;
-                            });
-
-                            if (data) {
-                                datasets.push({data: _data, label: data.customer,
-                                                    backgroundColor: data.backgroundColor })
-                            }
-                            else {
-                                color = getRandomColor()
-                                datasets.push({data: _data, label: subscription.customer_name,
-                                    backgroundColor: color })
-                                customer_list.push({customer: subscription.customer_name, backgroundColor: color})
-                            }
-                        })
-                    })
-
-                  console.log(datasets)
-                  setStackedChart()
-                },
-                error: function(error_data){
-                    console.log("error")
-                    console.log(error_data)
-                }
-            })
-
-            function getRandomColor() {
-                var letters = '0123456789ABCDEF'.split('');
-                var color = '#';
-                for (var i = 0; i < 6; i++ ) {
-                    color += letters[Math.floor(Math.random() * 16)];
-                }
-                return color;
-            }
-
-            function setStackedChart(){
-                var ctx = document.getElementById("canvas").getContext("2d");
-
-                chart = {
-                    type: 'bar',
-                    data: {
-                      labels: labels,
-                      datasets: datasets
-                    },
-                    options: {
-                        title:{
-                            display:true,
-                            text:"Estimated Income"
-                        },
-                        responsive: true,
-                        animation: {
-                            onComplete: function(animation) {
-                                var sourceCanvas = myLiveChart.chart.canvas;
-                                var copyWidth = myLiveChart.scales['y-axis-0'].width - 20;
-                                var copyHeight = myLiveChart.scales['y-axis-0'].height + myLiveChart.scales['y-axis-0'].top + 20;
-                                var targetCtx = document.getElementById("myChartAxis").getContext("2d");
-                                targetCtx.canvas.width = copyWidth;
-                                targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
-                            }
-                        },
-                        scales: {
-                            xAxes: [{
-                                maxBarThickness : 10,
-                                categoryPercentage: 0.2,
-                                barPercentage: 0.2,
-                                ticks: {
-                                      autoSkip: false,
-                                      maxRotation: 90,
-                                      minRotation: 90
-                                    },
-                                    stacked: true
-                                }],
-                            yAxes: [{
-                                stacked: true
-                                }]
-                        }
+                        datasets.push(_data)
+                        customer_list.push(String(subscription.subscription_id));
                     }
-                };
 
-                 var newwidth = (labels.length * 70)
-                 $('.chartAreaWrapper2').width(newwidth);
-                 var myLiveChart = new Chart(ctx, chart);
-              };
+                })
+            })
+            console.log(datasets)
+            stackedChartBillboard()
+        },
+        error: function (error_data) {
+            console.log("error")
+            console.log(error_data)
+        }
+    })
+
+    function stackedChartBillboard() {
+
+        var _groups = JSON.stringify(customer_list);
+        console.log(_groups);
+        var chart = bb.generate({
+            "data": {
+                "columns": datasets,
+                "type": "bar",
+                "groups": [customer_list]
+            },
+            "legend": {
+                "position": "right",
+            },
+            "tooltip": {
+                "contents": function (d, defaultTitleFormat, defaultValueFormat, color) {
+                    var new_data = [];
+                    for (var i = 0, size = d.length; i < size; i++) {
+                        var item = d[i];
+                        str = JSON.stringify(item);
+                        console.log(str);
+                        if (item.value != 0)
+                            new_data.push(item)
+                    }
+                    if(!new_data.length){
+                        new_data = [{name:'N/A', 'x':0, 'value':0, 'id':0}];
+                    }
+                    return this.getTooltipContent ? this.getTooltipContent(new_data, defaultTitleFormat, defaultValueFormat, color) : "";
+                },
+            },
+            "axis": {
+                "x": {
+                    "type": "category",
+                    "categories": labels,
+                    tick: {
+                        fit: true
+                    },
+                }
+            },
+            "bindto": "#StackedBarChart"
+        });
+    }
+
+    // function setStackedChart() {
+    //     var ctx = document.getElementById("canvas").getContext("2d");
+
+    //     chart = {
+    //         type: 'bar',
+    //         data: {
+    //             labels: labels,
+    //             datasets: datasets
+    //         },
+    //         options: {
+    //             title: {
+    //                 display: true,
+    //                 text: "Estimated Income"
+    //             },
+    //             responsive: true,
+    //             animation: {
+    //                 onComplete: function (animation) {
+    //                     var sourceCanvas = myLiveChart.chart.canvas;
+    //                     var copyWidth = myLiveChart.scales['y-axis-0'].width - 20;
+    //                     var copyHeight = myLiveChart.scales['y-axis-0'].height + myLiveChart.scales['y-axis-0'].top + 20;
+    //                     var targetCtx = document.getElementById("myChartAxis").getContext("2d");
+    //                     targetCtx.canvas.width = copyWidth;
+    //                     targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+    //                 }
+    //             },
+    //             scales: {
+    //                 xAxes: [{
+    //                     maxBarThickness: 10,
+    //                     categoryPercentage: 0.2,
+    //                     barPercentage: 0.2,
+    //                     ticks: {
+    //                         autoSkip: false,
+    //                         maxRotation: 90,
+    //                         minRotation: 90
+    //                     },
+    //                     stacked: true
+    //                 }],
+    //                 yAxes: [{
+    //                     stacked: true
+    //                 }]
+    //             }
+    //         }
+    //     };
+
+    //     var newwidth = (labels.length * 70)
+    //     $('.chartAreaWrapper2').width(newwidth);
+    //     var myLiveChart = new Chart(ctx, chart);
+    // };
 
     {% endblock %}
+
 </script>
 
-    {% block content %}
+{% block content %}
 
-        <div class="chartWrapper">
-          <div class="chartAreaWrapper">
-            <div class="chartAreaWrapper2">
-                <canvas id="canvas"></canvas>
-            </div>
-          </div>
+<div id="StackedBarChart"></div>
 
-            <canvas id="myChartAxis" height="200" width=""></canvas>
-        </div>
-    {% endblock content %}
+{% endblock content %}

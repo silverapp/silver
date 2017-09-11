@@ -1,0 +1,123 @@
+{% extends 'base_js.html' %}
+
+<script>
+    {% block jquery %}
+        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans'
+        var labels = []
+        var datasets = []
+        customer_list = []
+
+            $.ajax({
+                method: "GET",
+                url: endpoint,
+                success: function(data){
+                    var plan_count = data.length
+                    labels = data.map(function (entry) {return entry.granulations.plan.name})
+
+                    data.forEach(function (entry, index) {
+                        entry.values.forEach(function (subscription) {
+                            var _data = new Array(plan_count).fill(0)
+                            _data[index] = subscription.estimated_income
+
+                            color = getRandomColor()
+                            datasets.push({data: _data, label: subscription.customer_name,
+                                backgroundColor: color })
+                        })
+                    })
+
+                  console.log(datasets)
+                  setStackedChart()
+                },
+                error: function(error_data){
+                    console.log("error")
+                    console.log(error_data)
+                }
+            })
+
+            function getRandomColor() {
+                var letters = '0123456789ABCDEF'.split('');
+                var color = '#';
+                for (var i = 0; i < 6; i++ ) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            function setStackedChart(){
+                var ctx = document.getElementById("canvas").getContext("2d");
+                var total = 0;
+
+                chart = {
+                    type: 'bar',
+                    data: {
+                      labels: labels,
+                      datasets: datasets
+                    },
+                    options: {
+                        title:{
+                            display:true,
+                            text:"Estimated Income"
+                        },
+                        responsive: true,
+                        legend: {
+                        display: false,
+                          labels: {
+                            display: false
+                          }
+                        },
+                        layout: {
+                            padding: {
+                                top: 50
+                            }
+                        },
+                        tooltips: {
+                            mode: 'label',
+                            intersect: false,
+                            yAlign: 'middle',
+                            callbacks: {
+                                 afterTitle: function() {
+                                    total = 0;
+                                },
+                                label: function(tooltipItem, data) {
+                                    var corporation = data.datasets[tooltipItem.datasetIndex].label;
+                                    var valor = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+                                    total += valor;
+                                    if (valor>0)
+                                    {
+                                        return corporation + ": $" + valor.toString();
+                                    }
+                                },
+                                footer: function() {
+                                    return "TOTAL: $" + total.toString();
+                                }
+                            }
+                        },
+                        scales: {
+                            xAxes: [{
+                                ticks: {
+                                      autoSkip: true,
+                                      maxRotation: 90,
+                                      minRotation: 90
+                                    },
+                                    stacked: true
+                                }],
+                            yAxes: [{
+                                stacked: true
+                                }]
+                        }
+                    }
+                };
+
+                 var myLiveChart = new Chart(ctx, chart);
+              };
+
+    {% endblock %}
+</script>
+
+    {% block content %}
+
+        <div>
+            <canvas id="canvas" height="300%"></canvas>
+        </div>
+
+    {% endblock content %}

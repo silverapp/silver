@@ -1,4 +1,9 @@
+{% load static %}
+
+<!-- JQUERY -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+<!-- CHART JS -->
 
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
@@ -6,3 +11,11 @@
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.js"></script>
+
+
+<!-- BILLBOARD -->
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+<script src=" {% static 'js/billboard.js' %}"></script>
+<link rel="stylesheet" href=" {% static 'css/billboard.css' %}">
