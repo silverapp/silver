@@ -62,10 +62,9 @@ EXTERNAL_APPS = [
 
 INTERNAL_APPS = [
     'silver',
-    'payu',
-    'silver_payu',
-    'silver_braintree',
-    'stats'
+    'stats',
+    # 'silver_payu',
+    # 'silver_braintree'
 ]
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
@@ -107,6 +106,10 @@ MEDIA_URL = '/app_media/'
 
 STATIC_ROOT = PROJECT_ROOT + '/app_static/'
 STATIC_URL = '/app_static/'
+
+STATICFILES_DIRS = [
+    os.path.join(PROJECT_ROOT, "static")
+]
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
