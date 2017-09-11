@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from silver.models import Transaction, Invoice, Proforma, Subscription, Plan, BillingLog
 from datetime import datetime, date, timedelta
+from django.utils import timezone
+
 from django.db.models.functions import (ExtractYear, ExtractMonth, ExtractWeekDay, ExtractWeek,
                                         Coalesce)
 from django.db.models import Avg, Sum, Count, DecimalField, Subquery, OuterRef
@@ -37,14 +39,7 @@ class Stats(object):
                     'currency': []
                 }
             },
-            'amount': {
-                'modifiers': ['average', 'total'],
-                'granulations': {
-                    'issue_date': ['year', 'month', 'week', 'day'],
-                    'paid_at': ['year', 'month', 'week', 'day'],
-                    'currency': []
-                }
-            },
+            # not implemented yet
             'paid_date': {
                 'modifiers': ['average'],
                 'granulations': {
@@ -62,6 +57,15 @@ class Stats(object):
                 }
             }
         },
+        # not tested
+        'billing': {
+            'amount': {
+                'modifiers': ['average', 'total'],
+                'granulations': {
+                    'billing_date': ['year', 'month', 'week', 'day'],
+                }
+            }
+        },
         'subscriptions': {
             'estimated_income': {
                 'modifiers': ['include_unused_plans', None],
@@ -75,8 +79,9 @@ class Stats(object):
 
     def validate(self):
         if self.queryset.model != Transaction and self.queryset.model != Invoice \
-                and self.queryset.model != Subscription:
-            raise ValueError('Invalid model, choices are: Transaction, Invoice, Subscription')
+                and self.queryset.model != Subscription and self.queryset.model != BillingLog:
+            raise ValueError('Invalid model, choices are: Transaction, Invoice, Subscription, '
+                             'BillingLog')
         if self.result_type is None:
             raise ValueError('Select a result type: choices are: amount, count, overdue_payments, '
                              'estimated_income')
@@ -117,7 +122,6 @@ class Stats(object):
 
     def get_data(self, queryset, modifier_field, time_granulation_field, time_granulation_interval,
                  additional_granulation_field=None):
-
         if self.result_type == 'count':
             annotate_with = {self.MODIFIER_ANNOTATION: Count(modifier_field)}
         elif self.result_type == 'amount':
@@ -161,7 +165,8 @@ class Stats(object):
         for granulation in self.granulations:
             name = granulation['name']
             if ((self.queryset.model == Transaction and name in ['created_at', 'updated_at'])
-                    or (self.queryset.model == Invoice and name in ['issue_date', 'paid_date'])):
+                    or (self.queryset.model == Invoice and name in ['issue_date', 'paid_date'])
+                    or (self.queryset.model == BillingLog and name == 'billing_date' )):
                         granulation_arguments['time_granulation_field'] = name
                         granulation_arguments['time_granulation_interval'] = granulation['value']
             else:
@@ -188,14 +193,25 @@ class Stats(object):
         modifier_field = 'id'
         return self.get_data(queryset, modifier_field, **granulation_arguments)
 
-    def documents_amount_average(self, queryset):
+    # set default value 0 if the fields do not exist
+    def documents_overdue_payments(self, queryset):
+        overdue = {}
+        for i in queryset.filter(due_date__lte=datetime.now()):
+            new = {i.customer: [{'total': i.total, 'paid': i.amount_paid_in_transaction_currency,
+                                 'left': i.amount_to_be_charged_in_transaction_currency}]}
+            overdue[i.customer_id] = new
+        return overdue
+
+    # fix this
+    def billing_amount_average(self, queryset):
         granulation_arguments = self.get_granulations()
-        modifier_field = 'id'
+        modifier_field = 'total'
         return self.get_data(queryset, modifier_field, **granulation_arguments)
 
-    def documents_amount_total(self, queryset):
+    # fix this
+    def billing_amount_total(self, queryset):
         granulation_arguments = self.get_granulations()
-        modifier_field = 'id'
+        modifier_field = 'total'
         return self.get_data(queryset, modifier_field=modifier_field, **granulation_arguments)
 
     def serialize_result(self, queryset):
@@ -218,14 +234,6 @@ class Stats(object):
 
         return tupleList
 
-    def documents_overdue_payments(self, queryset):
-        overdue = {}
-        for i in queryset.filter(due_date__lte=datetime.now()):
-            new = {i.customer: [{'total': i.total, 'paid': i.amount_paid_in_transaction_currency,
-                                 'left': i.amount_to_be_charged_in_transaction_currency}]}
-            overdue[i.customer_id] = new
-        return overdue
-
     def _add_estimated_income_to_list(self, stats_list, plan_name, plan_id, subscription_id,
                                       subscription_amount, customer):
         data = {'granulations': {
@@ -244,8 +252,13 @@ class Stats(object):
         stats_list.append(data)
 
     def subscriptions_estimated_income(self, queryset):
-        entries = BillingLog.objects.filter(subscription_id=OuterRef('pk')).order_by().\
-            values('subscription_id').annotate(sum=Sum('total')).values('sum')
+        last_month = timezone.now() - timedelta(days=31)
+        entries = BillingLog.objects.filter(billing_date__gt=last_month,
+                                            subscription_id=OuterRef('pk'))\
+                                    .order_by()\
+                                    .values('subscription_id')\
+                                    .annotate(sum=Sum('total'))\
+                                    .values('sum')
 
         subscriptions = queryset.annotate(
             subscription_amount=Coalesce(ExpressionWrapper(
@@ -311,6 +324,8 @@ class Stats(object):
             return 'documents'
         elif self.queryset.model == Subscription:
             return 'subscriptions'
+        elif self.queryset.model == BillingLog:
+            return 'billing'
 
     def get_result(self):
         if self.modifier is not None:
