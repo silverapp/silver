@@ -63,6 +63,16 @@ class Plan(models.Model):
                   'customer to this plan.',
         verbose_name='Trial days'
     )
+    generate_documents_on_trial_end = models.BooleanField(
+        default=True,
+        help_text="If this is set to True, then billing documents will be generated when the "
+                  "subscription trial ends, instead of waiting for the end of the billing cycle."
+    )
+    separate_cycles_during_trial = models.BooleanField(
+        default=False,
+        help_text="If this is set to True, then the trial period cycle will be split if it spans "
+                  "across multiple billing intervals."
+    )
 
     metered_features = models.ManyToManyField(
         'MeteredFeature', blank=True,
