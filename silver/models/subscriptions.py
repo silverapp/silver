@@ -20,6 +20,7 @@ from decimal import Decimal
 
 from annoying.functions import get_object_or_None
 from dateutil import rrule
+from django.conf import settings
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from annoying.fields import JSONField
 from model_utils import Choices
@@ -36,7 +37,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from .billing_entities import Customer
 from .documents import DocumentEntry
-from silver.utils import next_month, prev_month
+from silver.utils.dates import ONE_DAY, next_month, prev_month, relativedelta
 from silver.validators import validate_reference
 
 
@@ -91,23 +92,22 @@ class MeteredFeatureUnitsLog(models.Model):
                           ' You can edit that one.' % self.metered_feature
                 raise ValidationError(err_msg)
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         if not self.id:
             if not self.start_date:
                 self.start_date = self.subscription.bucket_start_date()
             if not self.end_date:
                 self.end_date = self.subscription.bucket_end_date()
-            super(MeteredFeatureUnitsLog, self).save(force_insert, force_update,
-                                                     using, update_fields)
+            super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
-        if self.id:
+        else:
             update_fields = []
             for field in self._meta.fields:
                 if field.name != 'metered_feature' and field.name != 'id':
                     update_fields.append(field.name)
-            super(MeteredFeatureUnitsLog, self).save(
-                update_fields=update_fields)
+            kwargs['update_fields'] = kwargs.get('update_fields', update_fields)
+
+            super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return unicode(self.metered_feature.name)
@@ -197,15 +197,49 @@ class Subscription(models.Model):
         if errors:
             raise ValidationError(errors)
 
-    def _current_start_date(self, reference_date=None, ignore_trial=None,
-                            granulate=None):
+    @property
+    def provider(self):
+        return self.plan.provider
+
+    def _get_aligned_start_date_after_date(self, reference_date, interval_type,
+                                           bymonth=None, byweekday=None, bymonthday=None):
+        return list(
+            rrule.rrule(interval_type,
+                        count=1,  # align the cycle to the given rules as quickly as possible
+                        bymonth=bymonth,
+                        bymonthday=bymonthday,
+                        byweekday=byweekday,
+                        dtstart=reference_date)
+        )[-1].date()
+
+    def _get_last_start_date_within_range(self, range_start, range_end,
+                                          interval_type, interval_count,
+                                          bymonth=None, byweekday=None, bymonthday=None):
+        # we try to obtain a start date aligned to the given rules
+        aligned_start_date = self._get_aligned_start_date_after_date(
+            reference_date=range_start,
+            interval_type=interval_type,
+            bymonth=bymonth,
+            bymonthday=bymonthday,
+            byweekday=byweekday,
+        )
+        relative_start_date = range_start if aligned_start_date > range_end else aligned_start_date
+
+        dates = list(
+            rrule.rrule(interval_type,
+                        dtstart=relative_start_date,
+                        interval=interval_count,
+                        until=range_end)
+        )
+
+        return aligned_start_date if not dates else dates[-1].date()
+
+    def _cycle_start_date(self, reference_date=None, ignore_trial=None, granulate=None):
         ignore_trial_default = False
         granulate_default = False
 
         ignore_trial = ignore_trial_default or ignore_trial
         granulate = granulate_default or granulate
-
-        interval_count = 1 if granulate else self.plan.interval_count
 
         if reference_date is None:
             reference_date = timezone.now().date()
@@ -213,127 +247,107 @@ class Subscription(models.Model):
         if not self.start_date or reference_date < self.start_date:
             return None
 
-        if (ignore_trial or not self.trial_end) \
-                or self.trial_end >= reference_date:
-            relative_start_date = self.start_date
-        else:
-            relative_start_date = self.trial_end + timedelta(days=1)
-
-        # we calculate a fake (intermediary) start date depending on the
-        # interval type, for the purposes of alignment to a specific day
-        bymonth = bymonthday = byweekday = None
+        rules = {
+            'interval_type': self._INTERVALS_CODES[self.plan.interval],
+            'interval_count': 1 if granulate else self.plan.interval_count,
+        }
         if self.plan.interval == self.plan.INTERVALS.MONTH:
-            bymonthday = 1  # first day of the month
+            rules['bymonthday'] = 1  # first day of the month
         elif self.plan.interval == self.plan.INTERVALS.WEEK:
-            byweekday = 0  # first day of the week (Monday)
+            rules['byweekday'] = 0  # first day of the week (Monday)
         elif self.plan.interval == self.plan.INTERVALS.YEAR:
             # first day of the first month (1 Jan)
-            bymonth = 1
-            bymonthday = 1
+            rules['bymonth'] = 1
+            rules['bymonthday'] = 1
 
-        fake_initial_date = list(
-            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                        count=1,
-                        bymonth=bymonth,
-                        bymonthday=bymonthday,
-                        byweekday=byweekday,
-                        dtstart=relative_start_date)
-        )[-1].date()
-
-        if fake_initial_date > reference_date:
-            fake_initial_date = relative_start_date
-
-        dates = list(
-            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                        dtstart=fake_initial_date,
-                        interval=interval_count,
-                        until=reference_date)
+        start_date_ignoring_trial = self._get_last_start_date_within_range(
+            range_start=self.start_date,
+            range_end=reference_date,
+            **rules
         )
+        if ignore_trial or not self.trial_end:
+            return start_date_ignoring_trial
+        else:  # Trial period is considered
+            if self.trial_end < reference_date:  # Trial period ended
+                # The day after the trial ended can be a start date (once, right after trial ended)
+                date_after_trial_end = self.trial_end + ONE_DAY
 
-        return fake_initial_date if not dates else dates[-1].date()
+                return max(date_after_trial_end, start_date_ignoring_trial)
+            else:  # Trial is still ongoing
+                if self.plan.separate_cycles_during_trial:
+                    # The trial period is split into cycles according to the rules defined above
+                    return start_date_ignoring_trial
+                else:
+                    # Otherwise, the start date of the trial period is the subscription start date
+                    return self.start_date
 
-    def _current_end_date(self, reference_date=None, ignore_trial=None,
-                          granulate=None):
+    def _cycle_end_date(self, reference_date=None, ignore_trial=None, granulate=None):
         ignore_trial_default = False
         granulate_default = False
 
-        ignore_trial = ignore_trial_default or ignore_trial
-        granulate = granulate_default or granulate
+        ignore_trial = ignore_trial or ignore_trial_default
+        granulate = granulate or granulate_default
 
         if reference_date is None:
             reference_date = timezone.now().date()
 
-        end_date = None
-        _current_start_date = self._current_start_date(reference_date,
-                                                       ignore_trial, granulate)
+        real_cycle_start_date = self._cycle_start_date(reference_date, ignore_trial, granulate)
 
         # we need a current start date in order to compute a current end date
-        if not _current_start_date:
+        if not real_cycle_start_date:
             return None
 
-        # we calculate a fake (intermediary) end date depending on the interval
-        # type, for the purposes of alignment to a specific day
-        bymonth = bymonthday = byweekday = None
-        count = 1
-        interval_count = 1
-        if self.plan.interval == self.plan.INTERVALS.MONTH and\
-           _current_start_date.day != 1:
-            bymonthday = 1  # first day of the month
-        elif self.plan.interval == self.plan.INTERVALS.WEEK and\
-                _current_start_date.weekday() != 0:
-            byweekday = 0  # first day of the week (Monday)
-        elif (self.plan.interval == self.plan.INTERVALS.YEAR and
-              _current_start_date.month != 1 and _current_start_date.day != 1):
-            # first day of the first month (1 Jan)
-            bymonth = 1
-            bymonthday = 1
-        else:
-            count = 2
-            if not granulate:
-                interval_count = self.plan.interval_count
+        # during trial and trial is billed as a whole
+        if self.on_trial(reference_date) and not self.plan.separate_cycles_during_trial:
+            return min(self.trial_end, (self.ended_at or datetime.max.date()))
 
-        fake_end_date = list(
-            rrule.rrule(self._INTERVALS_CODES[self.plan.interval],
-                        interval=interval_count,
-                        count=count,
-                        bymonth=bymonth,
-                        bymonthday=bymonthday,
-                        byweekday=byweekday,
-                        dtstart=_current_start_date)
-        )[-1].date() - timedelta(days=1)
+        if self.plan.interval == self.plan.INTERVALS.YEAR:
+            relative_delta = {'years': self.plan.interval_count}
+        elif self.plan.interval == self.plan.INTERVALS.MONTH:
+            relative_delta = {'months': self.plan.interval_count}
+        elif self.plan.interval == self.plan.INTERVALS.WEEK:
+            relative_delta = {'weeks': self.plan.interval_count}
+        else:  # plan.INTERVALS.DAY
+            relative_delta = {'days': self.plan.interval_count}
 
-        # if the trial_end date is set and we're not ignoring it
-        if self.trial_end and not ignore_trial:
-            # if the fake_end_date is past the trial_end date
-            if (fake_end_date and
-                    fake_end_date > self.trial_end >= reference_date):
-                fake_end_date = self.trial_end
+        maximum_cycle_end_date = real_cycle_start_date + relativedelta(**relative_delta) - ONE_DAY
 
-        # check if the fake_end_date is not past the ended_at date
-        if fake_end_date:
-            if self.ended_at:
-                if self.ended_at < fake_end_date:
-                    end_date = self.ended_at
-            else:
-                end_date = fake_end_date
-            return end_date
-        return self.ended_at or None
+        # We know that the cycle end_date is the day before the next cycle start_date,
+        # therefore we check if the cycle start_date for our maximum cycle end_date is the same
+        # as the initial cycle start_date.
+        while True:
+            reference_cycle_start_date = self._cycle_start_date(maximum_cycle_end_date,
+                                                                ignore_trial, granulate)
+            # it means the cycle end_date we got is the right one
+            if reference_cycle_start_date == real_cycle_start_date:
+                return min(maximum_cycle_end_date, (self.ended_at or datetime.max.date()))
+            elif reference_cycle_start_date < real_cycle_start_date:
+                # This should never happen in normal conditions
+                return None
+
+            maximum_cycle_end_date = reference_cycle_start_date - ONE_DAY
 
     @property
-    def current_start_date(self):
-        return self._current_start_date(ignore_trial=True, granulate=False)
+    def _ignore_trial_end(self):
+        return not self.plan.generate_documents_on_trial_end
 
-    @property
-    def current_end_date(self):
-        return self._current_end_date(ignore_trial=True, granulate=False)
+    def cycle_start_date(self, reference_date=None):
+        return self._cycle_start_date(ignore_trial=self._ignore_trial_end,
+                                      granulate=False,
+                                      reference_date=reference_date)
+
+    def cycle_end_date(self, reference_date=None):
+        return self._cycle_end_date(ignore_trial=self._ignore_trial_end,
+                                    granulate=False,
+                                    reference_date=reference_date)
 
     def bucket_start_date(self, reference_date=None):
-        return self._current_start_date(reference_date=reference_date,
-                                        ignore_trial=False, granulate=True)
+        return self._cycle_start_date(reference_date=reference_date,
+                                      ignore_trial=False, granulate=True)
 
     def bucket_end_date(self, reference_date=None):
-        return self._current_end_date(reference_date=reference_date,
-                                      ignore_trial=False, granulate=True)
+        return self._cycle_end_date(reference_date=reference_date,
+                                    ignore_trial=False, granulate=True)
 
     def updateable_buckets(self):
         if self.state in ['ended', 'inactive']:
@@ -349,7 +363,7 @@ class Subscription(models.Model):
         while (timezone.now() - generate_after <
                 datetime.combine(start_date, datetime.min.time()).replace(
                     tzinfo=timezone.get_current_timezone())):
-            end_date = start_date - timedelta(days=1)
+            end_date = start_date - ONE_DAY
             start_date = self.bucket_start_date(end_date)
             if start_date is None:
                 return buckets
@@ -389,137 +403,69 @@ class Subscription(models.Model):
             'interval_end': interval_end.strftime('%Y-%m-%d')
         })
 
-    def should_be_billed(self, date):
+    @property
+    def billed_up_to_dates(self):
+        last_billing_log = self.last_billing_log
+
+        return {
+            'metered_features_billed_up_to': last_billing_log.metered_features_billed_up_to,
+            'plan_billed_up_to': last_billing_log.plan_billed_up_to
+        } if last_billing_log else {
+            'metered_features_billed_up_to': self.start_date - ONE_DAY,
+            'plan_billed_up_to': self.start_date - ONE_DAY
+        }
+
+    def should_be_billed(self, reference_date):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
 
-        if date < self.start_date:
-            msg = 'Billing date has to be >= than subscription\'s start date.'
+        if reference_date < self.start_date:
             return False
 
         generate_after = timedelta(seconds=self.plan.generate_after)
-        ONE_DAY = timedelta(days=1)
 
         if self.state == self.STATES.CANCELED:
-            if date >= (self.cancel_date + generate_after):
-                if self._has_existing_customer_with_consolidated_billing:
-                    if self.cancel_date.day == 1:
-                        # If the subscription was canceled at
-                        # `end_of_billing_cycle` the cancel day will be set as
-                        # the first day of the next month (see
-                        # `Subscription.cancel()`)
-                        # Also, if it was canceled `now`, in the 1st day of the
-                        # month, it should be billed too
-                        interval_end = self.cancel_date
-                    else:
-                        # If cancel_date.day != 1 => it was definitely canceled
-                        # `now` (remember that the cancel_date is set
-                        # automatically as the first day of the next month) =>
-                        # if the customer has consolidated billing it should
-                        # be billed only the next month => interval_end is taken
-                        # as the end of month when it was canceled
-                        interval_end = list(
-                            rrule.rrule(
-                                rrule.MONTHLY,
-                                count=1,
-                                bymonthday=-1,
-                                dtstart=self.cancel_date)
-                        )[-1].date()
-                else:
-                    # The customer either does not have consolidated billing
-                    # or it does not have any other active subscriptions
-                    # => it should be billed now since billing date >= cancel_date
-                    return True
-            else:
+            if reference_date < (self.cancel_date + generate_after):
                 # date < cancel_date => don't charge the subscription
                 return False
 
-            result = (date >= interval_end + ONE_DAY + generate_after)
-            if result is True:
-                self._log_should_be_billed_result(date, interval_end)
+            if not self._has_existing_customer_with_consolidated_billing:
+                # The customer either does not have consolidated billing
+                # or it does not have any other active subscriptions
+                # => it should be billed now since billing date >= cancel_date
+                return True
 
-            return result
-
-        if self.is_billed_first_time:
-            if not self.trial_end:
-                # The subscription does not have a trial => it should
-                # be billed right after being activated. However, if the
-                # customer has consolidated billing and he has subscriptions
-                # the subscription should be billed only at the next
-                # billing cycle
-                if self._has_existing_customer_with_consolidated_billing:
-                    interval_end = self.bucket_end_date(
-                        reference_date=self.start_date
-                    )
-                else:
-                    # The customer either does not have consolidated billing
-                    # or it does not have any other active subscriptions
-                    # => it should be billed right now, after starting the
-                    # subscription
-                    return True
+            if self.cancel_date.day == 1:
+                # If the subscription was canceled at
+                # `end_of_billing_cycle` the cancel day will be set as
+                # the first day of the next month (see
+                # `Subscription.cancel()`)
+                # Also, if it was canceled `now`, in the 1st day of the
+                # month, it should be billed too
+                interval_end = self.cancel_date
             else:
-                if self._has_existing_customer_with_consolidated_billing:
-                    # Is billed first time and has consolidated billing => it
-                    # should be billed only next month no matter if the trial
-                    # spans over multiple months or not
+                # If cancel_date.day != 1 => it was definitely canceled
+                # `now` (remember that the cancel_date is set
+                # automatically as the first day of the next month) =>
+                # if the customer has consolidated billing it should
+                # be billed only the next month => interval_end is taken
+                # as the end of month when it was canceled
+                interval_end = list(
+                    rrule.rrule(
+                        rrule.MONTHLY,
+                        count=1,
+                        bymonthday=-1,
+                        dtstart=self.cancel_date)
+                )[-1].date()
 
-                    # Get the end of the month when the subscription was
-                    # activated
-                    interval_end = list(
-                        rrule.rrule(
-                            rrule.MONTHLY,
-                            count=1,
-                            bymonthday=-1,
-                            dtstart=self.start_date)
-                    )[-1].date()
-                else:
-                    # The customer does not have consolidated billing =>
-                    # the subscription should be billed after trial_end
-                    # or if the trial spans over multiple months at the end of
-                    # first month. The date (either the end of the month or
-                    # trial_end given by Subscription.bucket_end_date.
-                    interval_end = self.bucket_end_date(
-                        reference_date=self.start_date
-                    )
-        else:
-            last_billing_date = self.last_billing_date
-            if self.on_trial(last_billing_date):
-                if self._has_existing_customer_with_consolidated_billing:
-                    # If the customer has consolidated billing the subscription
-                    # should be charged only next month
+            should_be_billed = (reference_date >= interval_end + ONE_DAY + generate_after)
+            if should_be_billed:
+                self._log_should_be_billed_result(reference_date, interval_end)
 
-                    # Get the end of the month when it was last billed
-                    interval_end = list(
-                        rrule.rrule(
-                            rrule.MONTHLY,
-                            count=1,
-                            bymonthday=-1,
-                            dtstart=last_billing_date)
-                    )[-1].date()
-                else:
-                    # If at the last billing the subscription was on trial
-                    # => trial_end could be either this month or sometimes in
-                    # the future => if the customer does not have consolidated
-                    # billing it should be billed either after the trial_end (if
-                    # trial_end is this month or at the end of the month.
-                    # trial_end or end of the month is returned by
-                    # `Subscription.bucket_end_date`
-                    interval_end = self.bucket_end_date(
-                        reference_date=last_billing_date
-                    )
-            else:
-                # last time it was billed the subscription was not on trial
-                # => it should be billed at the beginning of the next month
-                # => get the end of the bucket
-                interval_end = self.bucket_end_date(
-                    reference_date=last_billing_date
-                )
+            return should_be_billed
 
-        result = (date >= interval_end + ONE_DAY + generate_after)
-        if result is True:
-            self._log_should_be_billed_result(date, interval_end)
-
-        return result
+        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
+        return plan_billed_up_to < reference_date
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):
@@ -532,6 +478,10 @@ class Subscription(models.Model):
     @property
     def is_billed_first_time(self):
         return self.billing_log_entries.all().count() == 0
+
+    @property
+    def last_billing_log(self):
+        return self.billing_log_entries.last()
 
     @property
     def last_billing_date(self):
@@ -581,7 +531,6 @@ class Subscription(models.Model):
         bed = self.bucket_end_date()
 
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
-            ONE_DAY = timedelta(days=1)
             if self.is_on_trial:
                 bucket_after_trial = self.bucket_end_date(
                     reference_date=self.trial_end + ONE_DAY)
@@ -589,7 +538,7 @@ class Subscription(models.Model):
                 # should be one day after the end of the prorated paid period.
                 self.cancel_date = bucket_after_trial + ONE_DAY
             else:
-                self.cancel_date = self.current_end_date + ONE_DAY
+                self.cancel_date = self.cycle_end_date() + ONE_DAY
         elif when == self.CANCEL_OPTIONS.NOW:
             for metered_feature in self.plan.metered_features.all():
                 log = MeteredFeatureUnitsLog.objects.filter(
@@ -648,242 +597,6 @@ class Subscription(models.Model):
             'value_state': value_state
         })
 
-    def add_total_value_to_document(self, billing_date, invoice=None,
-                                    proforma=None):
-        """
-        Adds the total value of the subscription (value(plan) + value(consumed
-        metered features)) to the document.
-        """
-
-        ONE_DAY = timedelta(days=1)
-
-        total = Decimal('0.00')
-
-        if self.is_billed_first_time:
-            if not self.trial_end:  # has no trial
-                if billing_date.month in [self.start_date.month,
-                                          next_month(self.start_date)]:
-                    self._log_value_state('first time, without trial')
-
-                    # The same month or the next one as the start_date
-
-                    # Generate first invoice, when the subscription starts
-                    # => add the prorated value of the plan for the current month
-                    end_date = self._get_interval_end_date(date=self.start_date)
-                    total += self._add_plan_value(start_date=self.start_date,
-                                                  end_date=end_date,
-                                                  invoice=invoice, proforma=proforma)
-
-                    if (self.state == self.STATES.CANCELED and
-                        self.cancel_date.month == self.start_date.month and
-                            self.cancel_date == billing_date.month):
-                        # It was canceled the same month it started, with `now`
-                        # option and since it got here (by permissions of
-                        # Subscription.should_be_billed) => the customer does
-                        # not have consolidated billing => add the mfs as this
-                        # is the last subscription of the customer and (s)he
-                        # is probably leaving the service.
-                        total += self._add_mfs(start_date=self.start_date,
-                                               end_date=end_date,
-                                               invoice=invoice, proforma=proforma)
-
-                    if billing_date.month == next_month(self.start_date):
-                        # If it gets here => a new subscription, with no trial
-                        # and the customer has other subscriptions => it's
-                        # an old customer.
-                        # Add consumed mfs from last month
-                        total += self._add_mfs(start_date=self.start_date,
-                                               end_date=end_date,
-                                               invoice=invoice, proforma=proforma)
-
-                        if self.state == self.STATES.ACTIVE:
-                            # If the subscription is still active, add the
-                            # plan's value for the month ahead
-                            bsd = self.bucket_start_date(
-                                reference_date=billing_date)
-                            bed = self.bucket_end_date(
-                                reference_date=billing_date)
-                            total += self._add_plan_value(
-                                start_date=bsd, end_date=bed,
-                                invoice=invoice, proforma=proforma)
-            elif self.on_trial(billing_date):
-                self._log_value_state('first time, on trial')
-                # Next month after the subscription has started with trial
-                # spanning over >=2 months
-                end_date = self._get_interval_end_date(date=self.start_date)
-                self._add_trial_value(start_date=self.start_date,
-                                      end_date=end_date,
-                                      invoice=invoice, proforma=proforma)
-            else:
-                self._log_value_state('first time, after trial')
-                # Billed first time, right after trial end
-
-                # Is billed right after trial in the same month as start_date
-                # => add the trial value and the prorated value for the rest
-                # of the month
-
-                # Add the value of the plan + the value of the consumed mfs
-                # during the trial
-                end_date = self._get_interval_end_date(date=self.start_date)
-                self._add_trial_value(start_date=self.start_date,
-                                      end_date=end_date,
-                                      invoice=invoice, proforma=proforma)
-
-                first_day_after_trial = self.trial_end + ONE_DAY
-                # If it got here (by permission of `should_be_billed()`
-                # => it has to be either ACTIVE or CANCELED
-                end_date = None
-                if self.state == self.STATES.ACTIVE:
-                    # Add the value for the rest of the month if the
-                    # subscription is still active
-                    end_date = self.bucket_end_date(
-                        reference_date=first_day_after_trial)
-                elif self.state == self.STATES.CANCELED:
-                    # The subscription was canceled after the trial, during
-                    # the prorated period of the month => add the value
-                    # only between trial_end -> cancel_date
-                    if self.cancel_date >= first_day_after_trial:
-                        end_date = self.cancel_date
-
-                if first_day_after_trial.month == self.trial_end.month:
-                    # Add the prorated value of the plan between
-                    # trial_end -> end_of_month only if the first day after
-                    # trial belongs to the same month as the trial end.
-                    # Exception e.g.: trial_end = 31.08.2015.
-                    # trial_end + ONE_DAY = 1.09.2015 => don't add any prorated
-                    # value.
-
-                    if (self.state == self.STATES.ACTIVE or
-                        (self.state == self.STATES.CANCELED and
-                         self.cancel_date >= self.trial_end)):
-                        # Add the prorated plan value for trial_end -> end_of_month
-                        # if the subscription is active or if it was canceled
-                        # between trial_end -> end_of_month.
-                        # note: it could have been canceled before trial_end
-                        # and in that case the value does not have to be added
-                        total += self._add_plan_value(start_date=first_day_after_trial,
-                                                      end_date=end_date,
-                                                      invoice=invoice, proforma=proforma)
-
-                        if billing_date.month == next_month(self.start_date):
-                            # It's the next month after the subscription start
-                            # and there was a prorated period between trial_end ->
-                            # end_of_month => add the consumed metered features
-                            # from that period.
-                            total += self._add_mfs(start_date=first_day_after_trial,
-                                                   end_date=end_date,
-                                                   invoice=invoice, proforma=proforma)
-
-                if (self.state == self.STATES.ACTIVE and
-                        billing_date.month == next_month(self.start_date)):
-                    # It's billed next month after the start date and it is
-                    # still active => add the prorated value for the next month
-                    bsd = self.bucket_start_date(reference_date=billing_date)
-                    bed = self.bucket_end_date(reference_date=billing_date)
-                    total += self._add_plan_value(start_date=bsd, end_date=bed,
-                                                  invoice=invoice, proforma=proforma)
-        else:
-            last_billing_date = self.last_billing_date
-            if (self.trial_end and
-                (self.trial_end.month == billing_date.month or
-                 self.trial_end.month == prev_month(billing_date)) and
-                    last_billing_date < self.trial_end):
-                self._log_value_state('billed before, with trial')
-                # It has/had a trial which ends this month or it ended last
-                # month and it has been billed before
-                # => expect the following items:
-                #   * the remaining trial value since last billing
-                #   * the value of the prorated subscription
-                #   * the value of the subscription ahead
-                # note: it will get here only after the trial has ended
-                # We test if trial_end was this month or the previous one.
-
-                # Add trial value
-                # The end_date will be either the normal end_date of the
-                # bucket or the cancel_date (if the subscription is canceled)
-                bsd = self.bucket_start_date(reference_date=last_billing_date)
-                bed = self.bucket_end_date(reference_date=last_billing_date)
-                if self.state == self.STATES.CANCELED:
-                    if bsd <= self.cancel_date <= bed:
-                        # Was scheduled for canceling sometimes during the
-                        # trial period
-                        bed = self.cancel_date
-
-                self._add_trial_value(start_date=bsd, end_date=bed,
-                                      invoice=invoice, proforma=proforma)
-
-                # Add the plan's value for the period after the trial
-                # The end_date will be either the normal end_date of the
-                # bucket or the cancel_date (if the subscription is canceled)
-                first_day_after_trial = self.trial_end + ONE_DAY
-
-                if first_day_after_trial.month == self.trial_end.month:
-                    # The same month as the trial end => add prorated value of the
-                    # subscription between first_day_after_trial and end of the
-                    # month
-                    bsd = self.bucket_start_date(
-                        reference_date=first_day_after_trial)
-                    bed = self.bucket_end_date(
-                        reference_date=first_day_after_trial)
-                    if self.state == self.STATES.CANCELED:
-                        if bsd <= self.cancel_date <= bed:
-                            bed = self.cancel_date
-
-                    if self.state == self.STATES.ACTIVE or self.cancel_date >= self.trial_end:
-                        # Add the prorated value only if the subscription is still
-                        # active or it was canceled during the period right after
-                        # the trial. If it was canceled during the trial, skip
-                        # adding the mfs, as there was no active period after
-                        # trial_end
-                        total += self._add_plan_value(start_date=bsd, end_date=bed,
-                                                      invoice=invoice, proforma=proforma)
-
-                        if billing_date.month == next_month(first_day_after_trial):
-                            # If there was a period of paid subscription between
-                            # trial_end -> last_month_end=> add the consumed mfs
-                            # for that period.
-                            # Note: the bsd and bed that were previously
-                            # computed are being used
-                            total += self._add_mfs(start_date=bsd, end_date=bed,
-                                                   invoice=invoice, proforma=proforma)
-
-                # The subscription was not canceled and we bill it the
-                # next month after the trial end => add the value of the
-                # subscription for the next month
-                if (self.state == self.STATES.ACTIVE and
-                        billing_date.month == next_month(self.trial_end)):
-                    # It's the next month after the trial end => add the value
-                    # for the month ahead
-                    bsd = self.bucket_start_date(reference_date=billing_date)
-                    bed = self.bucket_end_date(reference_date=billing_date)
-                    total += self._add_plan_value(start_date=bsd, end_date=bed,
-                                                  invoice=invoice, proforma=proforma)
-
-            else:
-                self._log_value_state('billed before, normal')
-                # This is the normal case of a subscription which was billed
-                # sometimes at the beginning of last month or it's the next
-                # month after the trial_end of a subscription whose customer
-                # does not have consolidated billing => the subscription was
-                # billed after trial_end.
-
-                # Add mfs for the last month or part of month
-                bsd = self.bucket_start_date(reference_date=last_billing_date)
-                bed = self.bucket_end_date(reference_date=last_billing_date)
-                total += self._add_mfs(start_date=bsd, end_date=bed,
-                                       invoice=invoice, proforma=proforma)
-
-                if self.state == self.STATES.ACTIVE:
-                    # Add the plan's value for the month ahead
-                    bsd = self.bucket_start_date(reference_date=billing_date)
-                    bed = self.bucket_end_date(reference_date=billing_date)
-
-                    total += self._add_plan_value(start_date=bsd, end_date=bed,
-                                                  invoice=invoice, proforma=proforma)
-
-        BillingLog.objects.create(subscription=self, invoice=invoice, total=total,
-                                  proforma=proforma, billing_date=billing_date)
-
     def _add_plan_trial(self, start_date, end_date, invoice=None,
                         proforma=None):
         """
@@ -932,6 +645,8 @@ class Subscription(models.Model):
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date
         )
+
+        return Decimal("0.00")
 
     def _get_consumed_units_from_total_included_in_trial(self, metered_feature,
                                                          consumed_units):
@@ -1011,6 +726,8 @@ class Subscription(models.Model):
             'context': 'metered-feature-trial'
         })
 
+        total = Decimal("0.00")
+
         # Add all the metered features consumed during the trial period
         for metered_feature in self.plan.metered_features.all():
             context.update({'metered_feature': metered_feature,
@@ -1078,14 +795,16 @@ class Subscription(models.Model):
                     description_template_path, context
                 )
 
-                DocumentEntry.objects.create(
+                total += DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma,
                     description=description, unit=unit,
                     quantity=charged_units, prorated=prorated,
                     unit_price=metered_feature.price_per_unit,
                     product_code=metered_feature.product_code,
                     start_date=start_date, end_date=end_date
-                )
+                ).total
+
+        return total
 
     def _add_plan_value(self, start_date, end_date, invoice=None,
                         proforma=None):
@@ -1113,16 +832,12 @@ class Subscription(models.Model):
 
         unit = self._entry_unit(context)
 
-        mfs_total = Decimal('0.00')
-
-        mf = DocumentEntry.objects.create(
+        return DocumentEntry.objects.create(
             invoice=invoice, proforma=proforma, description=description,
             unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
             product_code=self.plan.product_code, prorated=prorated,
             start_date=start_date, end_date=end_date
-        )
-
-        return mfs_total + mf.total
+        ).total
 
     def _get_consumed_units(self, metered_feature, proration_percent,
                             start_date, end_date):
@@ -1253,6 +968,12 @@ class BillingLog(models.Model):
                                  related_name='billing_log_entries')
     billing_date = models.DateField(
         help_text="The date when the invoice/proforma was issued."
+    )
+    plan_billed_up_to = models.DateField(
+        help_text="The date up to which the plan base amount has been billed."
+    )
+    metered_features_billed_up_to = models.DateField(
+        help_text="The date up to which the metered features have been billed."
     )
     total = models.DecimalField(
         decimal_places=2, max_digits=12,

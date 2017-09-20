@@ -15,10 +15,12 @@
 
 import datetime as dt
 import logging
+from decimal import Decimal
 
 from django.utils import timezone
 
-from silver.models import Customer, Subscription, Proforma, Invoice, Provider
+from silver.models import Customer, Subscription, Proforma, Invoice, Provider, BillingLog
+from silver.utils.dates import ONE_DAY
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +91,7 @@ class DocumentsGenerator(object):
             'customer': document.customer.id
         })
 
-    def _generate_for_user_with_consolidated_billing(self, customer,
-                                                     billing_date,
-                                                     force_generate):
-        """
-        Generates the billing documents for all the subscriptions of a customer
-        who uses consolidated billing.
-        """
-
+    def get_subscriptions_prepared_for_billing(self, customer, billing_date, force_generate):
         # Select all the active or canceled subscriptions
         subs_to_bill = []
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
@@ -104,130 +99,164 @@ class DocumentsGenerator(object):
         for subscription in customer.subscriptions.filter(**criteria):
             if subscription.should_be_billed(billing_date):
                 subs_to_bill.append(subscription)
-                if (force_generate and subscription.state == Subscription.STATES.ACTIVE):
+
+                if force_generate and subscription.state == Subscription.STATES.ACTIVE:
                     subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                     subscription.save()
+
             elif force_generate and subscription.state == Subscription.STATES.CANCELED:
                 subs_to_bill.append(subscription)
+
             elif force_generate and subscription.state == Subscription.STATES.ACTIVE:
                 subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
                 subscription.save()
                 subs_to_bill.append(subscription)
 
-        # For each provider there will be one invoice or proforma. The cache
-        # is necessary as a certain customer might have more than one
-        # subscription => all the subscriptions that belong to the same
-        # provider will be added on the same invoice/proforma
-        # => they are "cached".
-        cached_documents = {}
-        for subscription in subs_to_bill:
+        return subs_to_bill
+
+    def _bill_subscription_into_document(self, subscription, billing_date, document=None):
+        if not document:
+            document = self._create_document(subscription, billing_date)
+
+        self._log_subscription_billing(document, subscription)
+
+        kwargs = subscription.billed_up_to_dates
+
+        kwargs.update({
+            'billing_date': billing_date,
+            'subscription': subscription,
+            subscription.provider.flow: document,
+        })
+        self.add_subscription_cycles_to_document(**kwargs)
+
+        if subscription.state == Subscription.STATES.CANCELED:
+            subscription.end()
+            subscription.save()
+
+        return document
+
+    def _generate_for_user_with_consolidated_billing(self, customer, billing_date, force_generate):
+        """
+        Generates the billing documents for all the subscriptions of a customer
+        who uses consolidated billing.
+        """
+
+        # For each provider there will be one invoice or proforma. The cache is necessary as a
+        # certain customer might have more than one subscription
+        # => all the subscriptions belonging to the same provider will be added to the same document
+
+        existing_provider_documents = {}
+        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date,
+                                                                        force_generate):
             provider = subscription.plan.provider
-            if provider in cached_documents:
-                # The BillingDocument was created beforehand, now just extract it
-                # and add the new entries to the document.
-                document = cached_documents[provider]
-            else:
-                # A BillingDocument instance does not exist for this provider
-                # => create one
-                document = self._create_document(provider, customer,
-                                                 subscription, billing_date)
-                cached_documents[provider] = document
 
-            args = {
-                'billing_date': billing_date,
-                provider.flow: document,
-            }
+            existing_document = existing_provider_documents.get(provider)
 
-            self._log_subscription_billing(document, subscription)
+            existing_provider_documents[provider] = self._bill_subscription_into_document(
+                subscription, billing_date, document=existing_document
+            )
 
-            subscription.add_total_value_to_document(**args)
-
-            if subscription.state == Subscription.STATES.CANCELED:
-                subscription.end()
-                subscription.save()
-
-        for provider, document in cached_documents.iteritems():
+        for provider, document in existing_provider_documents.items():
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
-    def _generate_for_user_without_consolidated_billing(self, customer,
-                                                        billing_date,
+    def _generate_for_user_without_consolidated_billing(self, customer, billing_date,
                                                         force_generate):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
         """
 
-        # The user does not use consolidated_billing => add each
-        # subscription on a separate document (Invoice/Proforma)
-        subs_to_bill = []
-        criteria = {'state__in': [Subscription.STATES.ACTIVE,
-                                  Subscription.STATES.CANCELED]}
-        for subscription in customer.subscriptions.filter(**criteria):
-            if subscription.should_be_billed(billing_date):
-                subs_to_bill.append(subscription)
-                if (force_generate and subscription.state == Subscription.STATES.ACTIVE):
-                    subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
-                    subscription.save()
-            elif force_generate and subscription.state == Subscription.STATES.CANCELED:
-                subs_to_bill.append(subscription)
-            elif force_generate and subscription.state == Subscription.STATES.ACTIVE:
-                subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
-                subscription.save()
-                subs_to_bill.append(subscription)
-
-        for subscription in subs_to_bill:
+        # The user does not use consolidated_billing => add each subscription to a separate document
+        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date,
+                                                                        force_generate):
             provider = subscription.plan.provider
-            document = self._create_document(provider, customer,
-                                             subscription, billing_date)
 
-            args = {
-                'billing_date': billing_date,
-                provider.flow: document,
-            }
-
-            self._log_subscription_billing(document, subscription)
-
-            subscription.add_total_value_to_document(**args)
-
-            if subscription.state == Subscription.STATES.CANCELED:
-                subscription.end()
-                subscription.save()
+            document = self._bill_subscription_into_document(subscription, billing_date)
 
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
-    def _generate_for_single_subscription(self, subscription=None,
-                                          billing_date=None):
+    def _generate_for_single_subscription(self, subscription=None, billing_date=None):
         """
         Generates the billing documents corresponding to a single subscription.
-        Used when a subscription is ended with `when`=`now`
+        Usually used when a subscription is ended with `when`=`now`.
         """
 
         billing_date = billing_date or timezone.now().date()
 
-        provider = subscription.plan.provider
-        customer = subscription.customer
+        provider = subscription.provider
 
-        document = self._create_document(provider, customer, subscription,
-                                         billing_date)
-        args = {
-            'billing_date': billing_date,
-            provider.flow: document,
-        }
-
-        self._log_subscription_billing(document, subscription)
-
-        subscription.add_total_value_to_document(**args)
-
-        if subscription.state == Subscription.STATES.CANCELED:
-            subscription.end()
-            subscription.save()
+        document = self._bill_subscription_into_document(subscription, billing_date)
 
         if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
             document.issue()
 
-    def _create_document(self, provider, customer, subscription, billing_date):
+    def add_subscription_cycles_to_document(self, billing_date, metered_features_billed_up_to,
+                                            plan_billed_up_to, subscription,
+                                            proforma=None, invoice=None):
+        relative_start_date = metered_features_billed_up_to + ONE_DAY
+        plan_now_billed_up_to = plan_billed_up_to
+        metered_features_now_billed_up_to = metered_features_billed_up_to
+        total = Decimal("0.00")
+
+        while relative_start_date <= billing_date:
+            relative_end_date = subscription.cycle_end_date(
+                reference_date=relative_start_date
+            )
+
+            # This cycle decision, based on cancel_date, should be moved into `cycle_start_date` and
+            # `cycle_end_date`
+            if subscription.cancel_date:
+                relative_end_date = min(subscription.cancel_date, relative_end_date)
+
+            # Bill the plan amount
+            if plan_billed_up_to < relative_start_date:
+                if subscription.on_trial(relative_start_date):
+                    total += subscription._add_plan_trial(start_date=relative_start_date,
+                                                          end_date=relative_end_date,
+                                                          invoice=invoice, proforma=proforma)
+                else:
+                    total += subscription._add_plan_value(relative_start_date, relative_end_date,
+                                                          proforma=proforma, invoice=invoice)
+
+                plan_now_billed_up_to = relative_end_date
+
+            # Bill the metered features
+            if relative_end_date < billing_date:
+                if subscription.on_trial(relative_start_date):
+                    total += subscription._add_mfs_for_trial(start_date=relative_start_date,
+                                                             end_date=relative_end_date,
+                                                             invoice=invoice, proforma=proforma)
+                else:
+                    total += subscription._add_mfs(relative_start_date, relative_end_date,
+                                                   proforma=proforma, invoice=invoice)
+
+                metered_features_now_billed_up_to = relative_end_date
+
+            # Obtain a start date for the next iteration (cycle)
+            relative_start_date = subscription.cycle_start_date(
+                reference_date=relative_end_date + ONE_DAY
+            )
+
+            if relative_end_date == subscription.cancel_date:
+                break
+
+            if not relative_start_date:
+                # There was no cycle for the given billing date
+                break
+
+        BillingLog.objects.create(subscription=subscription,
+                                  invoice=invoice, proforma=proforma,
+                                  total=total,
+                                  billing_date=billing_date,
+                                  metered_features_billed_up_to=metered_features_now_billed_up_to,
+                                  plan_billed_up_to=plan_now_billed_up_to)
+
+    def _create_document(self, subscription, billing_date):
+        provider = subscription.provider
+        customer = subscription.customer
+
         DocumentModel = (Proforma if provider.flow == provider.FLOWS.PROFORMA
                          else Invoice)
 
