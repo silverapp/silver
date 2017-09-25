@@ -39,7 +39,8 @@ class MeteredFeaturesFilter(FilterSet):
 
 
 class SubscriptionFilter(FilterSet):
-    plan = CharFilter(name='plan__name', lookup_expr='iexact')
+    plan = CharFilter(name='plan__id', lookup_expr='iexact')
+    provider = CharFilter(name='plan__provider__id', lookup_expr='iexact')
     reference = MultipleCharFilter(name='reference', lookup_expr='iexact')
 
     class Meta:

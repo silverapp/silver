@@ -97,10 +97,11 @@ class BillingDocumentManager(models.Manager):
         queryset = queryset.select_related('customer', 'provider', 'related_document')
 
         if self.model.kind == 'Invoice':
-            queryset = queryset.prefetch_related('invoice_entries__product_code')
+            queryset = queryset.prefetch_related('invoice_entries', 'invoice_entries__product_code')
 
         if self.model.kind == 'Proforma':
-            queryset = queryset.prefetch_related('proforma_entries__product_code',
+            queryset = queryset.prefetch_related('proforma_entries',
+                                                 'proforma_entries__product_code',
                                                  'proforma_entries__invoice')
         return queryset
 

@@ -22,6 +22,8 @@ from silver.views import (pay_transaction_view, complete_payment_view,
                           InvoiceAutocomplete, ProformaAutocomplete,
                           PaymentMethodAutocomplete)
 
+from django.conf import settings
+
 admin.autodiscover()
 
 urlpatterns = [
@@ -43,3 +45,10 @@ urlpatterns = [
     url(r'^autocomplete/payment-method/$',
         PaymentMethodAutocomplete.as_view(), name='autocomplete-payment-method'),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+
+    urlpatterns = [
+                      url(r'^__debug__/', include(debug_toolbar.urls)),
+                  ] + urlpatterns

@@ -2,7 +2,10 @@
 
 <script>
     {% block jquery %}
-        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans'
+        //var endpoint = '/stats/documents/?result_type=amount&granulation_paid_date=day&granulations_customer=True'
+        var endpoint = '/stats/subscriptions/?result_type=estimated_income&modifier=include_unused_plans&granulation_plan=True'
+        /* not working anymore ---- var endpoint = '/stats/documents/?result_type=paid_date&modifier=average&granulation_paid_date=day' */
+
         var labels = []
         var datasets = []
         customer_list = []
@@ -12,7 +15,9 @@
                 url: endpoint,
                 success: function(data){
                     var plan_count = data.length
-                    labels = data.map(function (entry) {return entry.granulations.plan.name})
+                    labels = data.map(function (entry) {
+                        return entry.granulations[Object.keys(entry.granulations)[Object.keys(
+                            entry.granulations).length - 1]].value})
 
                     data.forEach(function (entry, index) {
                         entry.values.forEach(function (subscription) {
@@ -46,6 +51,13 @@
             function setStackedChart(){
                 var ctx = document.getElementById("canvas").getContext("2d");
                 var total = 0;
+                var count = 0;
+                objects_number = 0;
+                var tools;
+
+                //var canvas = document.getElementById('canvas');
+                //canvas.width = window.innerWidth;
+                ctx.height = window.innerHeight * 10;
 
                 chart = {
                     type: 'bar',
@@ -77,18 +89,24 @@
                             callbacks: {
                                  afterTitle: function() {
                                     total = 0;
+                                    count = 0;
+                                    objects_number = 0;
                                 },
                                 label: function(tooltipItem, data) {
-                                    var corporation = data.datasets[tooltipItem.datasetIndex].label;
+                                    var customer = data.datasets[tooltipItem.datasetIndex].label;
                                     var valor = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
                                     total += valor;
+                                    objects_number = objects_number + 1;
                                     if (valor>0)
                                     {
-                                        return corporation + ": $" + valor.toString();
+                                        //console.log(tooltipItem)
+                                        count = count + 1
+                                        return customer + ": $" + valor.toString();
                                     }
                                 },
                                 footer: function() {
-                                    return "TOTAL: $" + total.toString();
+                                    console.log(objects_number)
+                                    return "TOTAL: $" + total.toString() + "  AVERAGE: $" + (total/count).toString()
                                 }
                             }
                         },
@@ -117,7 +135,7 @@
     {% block content %}
 
         <div>
-            <canvas id="canvas" height="300%"></canvas>
+            <canvas id="canvas" height="200%"></canvas>
         </div>
 
     {% endblock content %}

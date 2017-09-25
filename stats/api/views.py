@@ -5,7 +5,7 @@ from rest_framework import generics, permissions, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from silver.api.filters import TransactionFilter, SubscriptionFilter, DocumentFilter
+from silver.api.filters import TransactionFilter, SubscriptionFilter, DocumentFilter, InvoiceFilter
 from silver.models import Transaction, Subscription, Invoice, BillingLog
 from silver.utils.decorators import remember_last_query_params
 from stats.api.serializers import TransactionStatsSerializer
@@ -29,15 +29,24 @@ class SubscriptionStats(generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
+    #overrided method => overrided filter_queryset too
     def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        granulations_list = []
+
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
         modifier = query_params.get('modifier', None)
-        # start_date = query_params.get('start_date')
-        # end_date = query_params.get('end_date')
 
-        queryset = self.queryset.filter(plan__provider=1)
-        stats = Stats(queryset, result_type, modifier, [])
+        if query_params.get('granulation_plan', None) is not None:
+            granulations_list.append({'name': 'plan',
+                                      'value': None})
+        if query_params.get('granulation_customer', None) is not None:
+            granulations_list.append({'name': 'customer',
+                                      'value': None})
+
+        stats = Stats(queryset, result_type, modifier, granulations_list)
 
         return Response(data=stats.validate())
 
@@ -45,41 +54,29 @@ class SubscriptionStats(generics.ListAPIView):
 class DocumentStats(generics.ListAPIView):
     queryset = Invoice.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
-    # filter_backends = (filters.DjangoFilterBackend,)
-    # filter_class = DocumentFilter
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = InvoiceFilter
 
     def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
         granulations_list = []
 
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
         modifier = query_params.get('modifier', None)
-        if query_params.get('granulations_issue_date', None) is not None:
+
+        if query_params.get('granulation_issue_date', None) is not None:
+
             granulations_list.append({'name': 'issue_date',
-                                      'value': query_params.get('granulations_issue_date')})
-        if query_params.get('granulations_currency', None) is not None:
-            granulations_list.append({'name': 'currency', 'value': None})
+                                      'value': query_params.get('granulation_issue_date')})
+        if query_params.get('granulation_paid_date', None) is not None:
+            granulations_list.append({'name': 'paid_date',
+                                      'value': query_params.get('granulation_paid_date')})
+        if query_params.get('granulation_customer', None) is not None:
+            granulations_list.append({'name': 'customer',
+                                      'value': None})
 
-        queryset = self.queryset.exclude(issue_date__isnull=True)
-        stats = Stats(queryset, result_type, modifier, granulations_list)
-
-        return Response(data=stats.validate())
-
-
-class BillingStats(generics.ListAPIView):
-    queryset = BillingLog.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def list(self, request, *args, **kwargs):
-        granulations_list = []
-
-        query_params = self.request.query_params
-        result_type = query_params.get('result_type')
-        modifier = query_params.get('modifier', None)
-        granulations_list.append({'name': 'billing_date',
-                                 'value': query_params.get('granulations_issue_date')})
-
-        queryset = self.queryset.exclude(billing_date__isnull=True)
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
         return Response(data=stats.validate())
@@ -97,9 +94,9 @@ class TransactionStats(generics.ListAPIView):
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
         modifier = query_params.get('modifier', None)
-        if query_params.get('granulations_issue_date', None) is not None:
+        if query_params.get('granulations_created_at', None) is not None:
             granulations_list.append({'name': 'created_at',
-                                      'value': query_params.get('granulations_issue_date')})
+                                      'value': query_params.get('granulations_created_at')})
         if query_params.get('granulations_currency', None) is not None:
             granulations_list.append({'name': 'currency', 'value': None})
 
