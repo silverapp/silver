@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='plan',
-            name='prebill_plan_amount',
+            name='prebill_plan',
             field=models.BooleanField(default=True,
                                       help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
         ),
