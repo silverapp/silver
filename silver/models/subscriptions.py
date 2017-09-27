@@ -276,7 +276,7 @@ class Subscription(models.Model):
 
                 return max(date_after_trial_end, start_date_ignoring_trial)
             else:  # Trial is still ongoing
-                if granulate or self.plan.separate_cycles_during_trial:
+                if granulate or self.separate_cycles_during_trial:
                     # The trial period is split into cycles according to the rules defined above
                     return start_date_ignoring_trial
                 else:
@@ -300,7 +300,7 @@ class Subscription(models.Model):
             return None
 
         # during trial and trial cycle is not separated into intervals
-        if self.on_trial(reference_date) and not (self.plan.separate_cycles_during_trial or
+        if self.on_trial(reference_date) and not (self.separate_cycles_during_trial or
                                                   granulate):
             return min(self.trial_end, (self.ended_at or datetime.max.date()))
 
@@ -331,8 +331,29 @@ class Subscription(models.Model):
             maximum_cycle_end_date = reference_cycle_start_date - ONE_DAY
 
     @property
+    def prebill_plan(self):
+        if self.plan.prebill_plan is not None:
+            return self.plan.prebill_plan
+
+        return self.provider.prebill_plan
+
+    @property
+    def separate_cycles_during_trial(self):
+        if self.plan.separate_cycles_during_trial is not None:
+            return self.plan.separate_cycles_during_trial
+
+        return self.provider.separate_cycles_during_trial
+
+    @property
+    def generate_documents_on_trial_end(self):
+        if self.plan.generate_documents_on_trial_end is not None:
+            return self.plan.generate_documents_on_trial_end
+
+        return self.provider.generate_documents_on_trial_end
+
+    @property
     def _ignore_trial_end(self):
-        return not self.plan.generate_documents_on_trial_end
+        return not self.generate_documents_on_trial_end
 
     def cycle_start_date(self, reference_date=None):
         return self._cycle_start_date(ignore_trial=self._ignore_trial_end,
@@ -437,7 +458,7 @@ class Subscription(models.Model):
 
         plan_billed_up_to = datetime.combine(self.billed_up_to_dates['plan_billed_up_to'],
                                              datetime.min.time())
-        prebill_plan = self.plan.prebill_plan
+        prebill_plan = self.prebill_plan
         earliest_generate_date = datetime.combine(cycle_start_date,
                                                   datetime.min.time()) - generate_after
 

@@ -81,6 +81,21 @@ class Provider(BaseBillingEntity):
         default=DOCUMENT_DEFAULT_STATE.draft,
         help_text="The default state of the auto-generated documents."
     )
+    generate_documents_on_trial_end = models.BooleanField(
+        default=True,
+        help_text="If this is set to True, then billing documents will be generated when the "
+                  "subscription trial ends, instead of waiting for the end of the billing cycle."
+    )
+    separate_cycles_during_trial = models.BooleanField(
+        default=False,
+        help_text="If this is set to True, then the trial period cycle will be split if it spans "
+                  "across multiple billing intervals."
+    )
+    prebill_plan = models.BooleanField(
+        default=True,
+        help_text="If this is set to True, then the plan base amount will be billed at the"
+                  "beginning of the billing cycle rather than after the end."
+    )
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)

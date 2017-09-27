@@ -63,18 +63,15 @@ class Plan(models.Model):
                   'customer to this plan.',
         verbose_name='Trial days'
     )
-    generate_documents_on_trial_end = models.BooleanField(
-        default=True,
+    generate_documents_on_trial_end = models.NullBooleanField(
         help_text="If this is set to True, then billing documents will be generated when the "
                   "subscription trial ends, instead of waiting for the end of the billing cycle."
     )
-    separate_cycles_during_trial = models.BooleanField(
-        default=False,
+    separate_cycles_during_trial = models.NullBooleanField(
         help_text="If this is set to True, then the trial period cycle will be split if it spans "
                   "across multiple billing intervals."
     )
-    prebill_plan = models.BooleanField(
-        default=True,
+    prebill_plan = models.NullBooleanField(
         help_text="If this is set to True, then the plan base amount will be billed at the"
                   "beginning of the billing cycle rather than after the end."
     )
