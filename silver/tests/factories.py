@@ -136,7 +136,7 @@ class SubscriptionFactory(factory.django.DjangoModelFactory):
     customer = factory.SubFactory(CustomerFactory)
     start_date = timezone.now().date()
     trial_end = factory.LazyAttribute(
-        lambda obj: obj.start_date + datetime.timedelta(days=obj.plan.trial_period_days)
+        lambda obj: obj.start_date + datetime.timedelta(days=obj.plan.trial_period_days - 1)
         if obj.plan.trial_period_days else None)
     reference = factory.Sequence(lambda n: "{}".format(n))
     meta = factory.Sequence(lambda n: {"something": [n, n + 1]})

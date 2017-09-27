@@ -84,5 +84,11 @@ class Migration(migrations.Migration):
             name='payment_processor',
             field=models.CharField(choices=[(b'manual', b'manual'), (b'failing_void', b'failing_void'), (b'triggered', b'triggered')], max_length=256),
         ),
+        migrations.AddField(
+            model_name='plan',
+            name='prebill_plan_amount',
+            field=models.BooleanField(default=True,
+                                      help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
+        ),
         migrations.RunPython(fill_billing_log_billed_up_to_fields, migrations.RunPython.noop)
     ]

@@ -477,16 +477,16 @@ class TestSubscriptionShouldBeBilled(TestCase):
             start_date=datetime.date(2015, 8, 10),
             cancel_date=datetime.date(2015, 8, 22)
         )
-        correct_billing_date = datetime.date(2015, 9, 1)
-        incorrect_billing_date = datetime.date(2015, 8, 23)
+        billing_date_1 = datetime.date(2015, 9, 1)
+        billing_date_2 = datetime.date(2015, 8, 23)
 
         true_property = PropertyMock(return_value=True)
         with patch.multiple(
             Subscription,
             _has_existing_customer_with_consolidated_billing=true_property
         ):
-            assert subscription.should_be_billed(correct_billing_date) is True
-            assert subscription.should_be_billed(incorrect_billing_date) is False
+            assert subscription.should_be_billed(billing_date_1) is True
+            assert subscription.should_be_billed(billing_date_2) is True
 
     def test_canceled_sub_wa_consolidated_billing(self):
         plan = PlanFactory.create(generate_after=120)
@@ -682,7 +682,9 @@ class TestSubscriptionShouldBeBilled(TestCase):
             assert subscription.should_be_billed(incorrect_billing_date) is False
 
     def test_already_billed_sub_wa_cb_on_trial_last_billing_date(self):
-        plan = PlanFactory.create(generate_after=100)
+        plan = PlanFactory.create(generate_after=100,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
         subscription = SubscriptionFactory.create(
             plan=plan,
             state=Subscription.STATES.ACTIVE,
@@ -712,7 +714,9 @@ class TestSubscriptionShouldBeBilled(TestCase):
             assert subscription.should_be_billed(incorrect_billing_date_1) is False
 
     def test_already_billed_sub_wa_cb(self):
-        plan = PlanFactory.create(generate_after=100)
+        plan = PlanFactory.create(generate_after=100,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
         subscription = SubscriptionFactory.create(
             plan=plan,
             state=Subscription.STATES.ACTIVE,

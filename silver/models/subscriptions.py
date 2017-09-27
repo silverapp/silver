@@ -223,6 +223,7 @@ class Subscription(models.Model):
             bymonthday=bymonthday,
             byweekday=byweekday,
         )
+
         relative_start_date = range_start if aligned_start_date > range_end else aligned_start_date
 
         dates = list(
@@ -265,6 +266,7 @@ class Subscription(models.Model):
             range_end=reference_date,
             **rules
         )
+
         if ignore_trial or not self.trial_end:
             return start_date_ignoring_trial
         else:  # Trial period is considered
@@ -274,7 +276,7 @@ class Subscription(models.Model):
 
                 return max(date_after_trial_end, start_date_ignoring_trial)
             else:  # Trial is still ongoing
-                if self.plan.separate_cycles_during_trial:
+                if granulate or self.plan.separate_cycles_during_trial:
                     # The trial period is split into cycles according to the rules defined above
                     return start_date_ignoring_trial
                 else:
@@ -297,8 +299,9 @@ class Subscription(models.Model):
         if not real_cycle_start_date:
             return None
 
-        # during trial and trial is billed as a whole
-        if self.on_trial(reference_date) and not self.plan.separate_cycles_during_trial:
+        # during trial and trial cycle is not separated into intervals
+        if self.on_trial(reference_date) and not (self.plan.separate_cycles_during_trial or
+                                                  granulate):
             return min(self.trial_end, (self.ended_at or datetime.max.date()))
 
         if self.plan.interval == self.plan.INTERVALS.YEAR:
@@ -322,7 +325,7 @@ class Subscription(models.Model):
             if reference_cycle_start_date == real_cycle_start_date:
                 return min(maximum_cycle_end_date, (self.ended_at or datetime.max.date()))
             elif reference_cycle_start_date < real_cycle_start_date:
-                # This should never happen in normal conditions
+                # This should never happen in normal conditions, but it may stop infinite looping
                 return None
 
             maximum_cycle_end_date = reference_cycle_start_date - ONE_DAY
@@ -419,9 +422,6 @@ class Subscription(models.Model):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
 
-        if reference_date < self.start_date:
-            return False
-
         generate_after = timedelta(seconds=self.plan.generate_after)
 
         if self.state == self.STATES.CANCELED:
@@ -429,43 +429,27 @@ class Subscription(models.Model):
                 # date < cancel_date => don't charge the subscription
                 return False
 
-            if not self._has_existing_customer_with_consolidated_billing:
-                # The customer either does not have consolidated billing
-                # or it does not have any other active subscriptions
-                # => it should be billed now since billing date >= cancel_date
-                return True
+            return True
 
-            if self.cancel_date.day == 1:
-                # If the subscription was canceled at
-                # `end_of_billing_cycle` the cancel day will be set as
-                # the first day of the next month (see
-                # `Subscription.cancel()`)
-                # Also, if it was canceled `now`, in the 1st day of the
-                # month, it should be billed too
-                interval_end = self.cancel_date
-            else:
-                # If cancel_date.day != 1 => it was definitely canceled
-                # `now` (remember that the cancel_date is set
-                # automatically as the first day of the next month) =>
-                # if the customer has consolidated billing it should
-                # be billed only the next month => interval_end is taken
-                # as the end of month when it was canceled
-                interval_end = list(
-                    rrule.rrule(
-                        rrule.MONTHLY,
-                        count=1,
-                        bymonthday=-1,
-                        dtstart=self.cancel_date)
-                )[-1].date()
+        cycle_start_date = self.cycle_start_date(reference_date)
+        if not cycle_start_date:
+            return False
 
-            should_be_billed = (reference_date >= interval_end + ONE_DAY + generate_after)
-            if should_be_billed:
-                self._log_should_be_billed_result(reference_date, interval_end)
+        plan_billed_up_to = datetime.combine(self.billed_up_to_dates['plan_billed_up_to'],
+                                             datetime.min.time())
+        prebill_plan_amount = self.plan.prebill_plan_amount
+        earliest_generate_date = datetime.combine(cycle_start_date,
+                                                  datetime.min.time()) - generate_after
 
-            return should_be_billed
+        if prebill_plan_amount:
+            return plan_billed_up_to < earliest_generate_date
 
-        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
-        return plan_billed_up_to < reference_date
+        # wait until the cycle that is going to be billed ends:
+        billed_cycle_end_date = datetime.combine(
+            self.cycle_end_date(plan_billed_up_to.date() + ONE_DAY),
+            datetime.min.time()
+        )
+        return billed_cycle_end_date < earliest_generate_date
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):
@@ -481,7 +465,7 @@ class Subscription(models.Model):
 
     @property
     def last_billing_log(self):
-        return self.billing_log_entries.last()
+        return self.billing_log_entries.order_by('billing_date').last()
 
     @property
     def last_billing_date(self):

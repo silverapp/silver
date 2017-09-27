@@ -59,7 +59,8 @@ class DocumentsGenerator(object):
                                force_generate=force_generate)
         else:
             self._generate_for_single_subscription(subscription=subscription,
-                                                   billing_date=billing_date)
+                                                   billing_date=billing_date,
+                                                   force_generate=force_generate)
 
     def _generate_all(self, billing_date=None, customers=None,
                       force_generate=False):
@@ -177,7 +178,8 @@ class DocumentsGenerator(object):
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
-    def _generate_for_single_subscription(self, subscription=None, billing_date=None):
+    def _generate_for_single_subscription(self, subscription=None, billing_date=None,
+                                          force_generate=False):
         """
         Generates the billing documents corresponding to a single subscription.
         Usually used when a subscription is ended with `when`=`now`.
@@ -186,6 +188,9 @@ class DocumentsGenerator(object):
         billing_date = billing_date or timezone.now().date()
 
         provider = subscription.provider
+
+        if not subscription.should_be_billed(billing_date) or force_generate:
+            return
 
         document = self._bill_subscription_into_document(subscription, billing_date)
 
@@ -198,12 +203,26 @@ class DocumentsGenerator(object):
         relative_start_date = metered_features_billed_up_to + ONE_DAY
         plan_now_billed_up_to = plan_billed_up_to
         metered_features_now_billed_up_to = metered_features_billed_up_to
+
+        prebill_plan_amount = subscription.plan.prebill_plan_amount
+
         total = Decimal("0.00")
 
-        while relative_start_date <= billing_date:
-            relative_end_date = subscription.cycle_end_date(
+        cycle_end_date = subscription.cycle_end_date(billing_date)
+
+        while relative_start_date <= cycle_end_date:
+            relative_end_date = subscription.bucket_end_date(
                 reference_date=relative_start_date
             )
+
+            if not relative_end_date:
+                # There was no cycle for the given billing date
+                break
+
+            # This is here in order to separate the trial entries from the paid ones
+            if (subscription.trial_end and
+                    relative_start_date <= subscription.trial_end <= relative_end_date):
+                relative_end_date = subscription.trial_end
 
             # This cycle decision, based on cancel_date, should be moved into `cycle_start_date` and
             # `cycle_end_date`
@@ -211,7 +230,8 @@ class DocumentsGenerator(object):
                 relative_end_date = min(subscription.cancel_date, relative_end_date)
 
             # Bill the plan amount
-            if plan_billed_up_to < relative_start_date:
+            if ((prebill_plan_amount and plan_billed_up_to < relative_start_date) or
+                    (not prebill_plan_amount and relative_end_date < billing_date)):
                 if subscription.on_trial(relative_start_date):
                     total += subscription._add_plan_trial(start_date=relative_start_date,
                                                           end_date=relative_end_date,
@@ -219,7 +239,6 @@ class DocumentsGenerator(object):
                 else:
                     total += subscription._add_plan_value(relative_start_date, relative_end_date,
                                                           proforma=proforma, invoice=invoice)
-
                 plan_now_billed_up_to = relative_end_date
 
             # Bill the metered features
@@ -235,15 +254,9 @@ class DocumentsGenerator(object):
                 metered_features_now_billed_up_to = relative_end_date
 
             # Obtain a start date for the next iteration (cycle)
-            relative_start_date = subscription.cycle_start_date(
-                reference_date=relative_end_date + ONE_DAY
-            )
+            relative_start_date = relative_end_date + ONE_DAY
 
             if relative_end_date == subscription.cancel_date:
-                break
-
-            if not relative_start_date:
-                # There was no cycle for the given billing date
                 break
 
         BillingLog.objects.create(subscription=subscription,

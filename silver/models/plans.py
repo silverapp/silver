@@ -73,7 +73,11 @@ class Plan(models.Model):
         help_text="If this is set to True, then the trial period cycle will be split if it spans "
                   "across multiple billing intervals."
     )
-
+    prebill_plan_amount = models.BooleanField(
+        default=True,
+        help_text="If this is set to True, then the plan base amount will be billed at the"
+                  "beginning of the billing cycle rather than after the end."
+    )
     metered_features = models.ManyToManyField(
         'MeteredFeature', blank=True,
         help_text="A list of the plan's metered features."
