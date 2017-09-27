@@ -70,14 +70,32 @@ class Migration(migrations.Migration):
             preserve_default=False,
         ),
         migrations.AddField(
+            model_name='provider',
+            name='generate_documents_on_trial_end',
+            field=models.BooleanField(default=True,
+                                      help_text=b'If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
+        ),
+        migrations.AddField(
+            model_name='provider',
+            name='prebill_plan',
+            field=models.BooleanField(default=True,
+                                      help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
+        ),
+        migrations.AddField(
+            model_name='provider',
+            name='separate_cycles_during_trial',
+            field=models.BooleanField(default=False,
+                                      help_text=b'If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
+        ),
+        migrations.AddField(
             model_name='plan',
             name='generate_documents_on_trial_end',
-            field=models.BooleanField(default=True, help_text=b'If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
+            field=models.NullBooleanField(help_text=b'If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
         ),
         migrations.AddField(
             model_name='plan',
             name='separate_cycles_during_trial',
-            field=models.BooleanField(default=False, help_text=b'If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
+            field=models.NullBooleanField(help_text=b'If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
         ),
         migrations.AlterField(
             model_name='paymentmethod',
@@ -87,8 +105,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='plan',
             name='prebill_plan',
-            field=models.BooleanField(default=True,
-                                      help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
+            field=models.NullBooleanField(help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
         ),
         migrations.RunPython(fill_billing_log_billed_up_to_fields, migrations.RunPython.noop)
     ]

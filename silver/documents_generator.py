@@ -192,7 +192,7 @@ class DocumentsGenerator(object):
         plan_now_billed_up_to = plan_billed_up_to
         metered_features_now_billed_up_to = metered_features_billed_up_to
 
-        prebill_plan = subscription.plan.prebill_plan
+        prebill_plan = subscription.prebill_plan
 
         total = Decimal("0.00")
 
