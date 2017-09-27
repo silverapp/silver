@@ -1624,7 +1624,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_subscription_with_separate_cycles_during_trial(self):
         separate_cycles_during_trial = True
-        prebill_plan_amount = False
+        prebill_plan = False
         generate_documents_on_trial_end = False
 
         metered_feature = MeteredFeatureFactory(
@@ -1637,7 +1637,7 @@ class TestInvoiceGenerationCommand(TestCase):
                                   amount=Decimal('200.00'),
                                   separate_cycles_during_trial=separate_cycles_during_trial,
                                   generate_documents_on_trial_end=generate_documents_on_trial_end,
-                                  prebill_plan_amount=prebill_plan_amount,
+                                  prebill_plan=prebill_plan,
                                   metered_features=[metered_feature])
 
         subscription = SubscriptionFactory.create(plan=plan, start_date=dt.date(2015, 1, 25))

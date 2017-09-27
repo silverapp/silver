@@ -192,7 +192,7 @@ class DocumentsGenerator(object):
         plan_now_billed_up_to = plan_billed_up_to
         metered_features_now_billed_up_to = metered_features_billed_up_to
 
-        prebill_plan_amount = subscription.plan.prebill_plan_amount
+        prebill_plan = subscription.plan.prebill_plan
 
         total = Decimal("0.00")
 
@@ -218,8 +218,8 @@ class DocumentsGenerator(object):
                 relative_end_date = min(subscription.cancel_date, relative_end_date)
 
             # Bill the plan amount
-            if ((prebill_plan_amount and plan_billed_up_to < relative_start_date) or
-                    (not prebill_plan_amount and relative_end_date < billing_date)):
+            if ((prebill_plan and plan_billed_up_to < relative_start_date) or
+                    (not prebill_plan and relative_end_date < billing_date)):
                 if subscription.on_trial(relative_start_date):
                     total += subscription._add_plan_trial(start_date=relative_start_date,
                                                           end_date=relative_end_date,

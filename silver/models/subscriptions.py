@@ -437,11 +437,11 @@ class Subscription(models.Model):
 
         plan_billed_up_to = datetime.combine(self.billed_up_to_dates['plan_billed_up_to'],
                                              datetime.min.time())
-        prebill_plan_amount = self.plan.prebill_plan_amount
+        prebill_plan = self.plan.prebill_plan
         earliest_generate_date = datetime.combine(cycle_start_date,
                                                   datetime.min.time()) - generate_after
 
-        if prebill_plan_amount:
+        if prebill_plan:
             return plan_billed_up_to < earliest_generate_date
 
         # wait until the cycle that is going to be billed ends:
