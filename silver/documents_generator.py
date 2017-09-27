@@ -196,9 +196,13 @@ class DocumentsGenerator(object):
 
         total = Decimal("0.00")
 
-        cycle_end_date = subscription.cycle_end_date(billing_date)
+        last_cycle_end_date = subscription.cycle_end_date(billing_date)
 
-        while relative_start_date <= cycle_end_date:
+        # We iterate through each cycle (multiple bucket cycles can be contained within a billing
+        # cycle) and add the entries to the document
+        # relative_start_date and relative_end_date define the cycle that is billed within the
+        # loop's iteration
+        while relative_start_date <= last_cycle_end_date:
             relative_end_date = subscription.bucket_end_date(
                 reference_date=relative_start_date
             )
@@ -217,9 +221,15 @@ class DocumentsGenerator(object):
             if subscription.cancel_date:
                 relative_end_date = min(subscription.cancel_date, relative_end_date)
 
+            # If the plan is prebilled we can only bill it if the cycle we are billing hasn't been
+            # billed before;
+            # If the plan is not prebilled we can only bill it if the cycle we are billing has ended
+            # before the billing date.
+            should_bill_plan = ((prebill_plan and plan_billed_up_to < relative_start_date) or
+                                (not prebill_plan and relative_end_date < billing_date))
+
             # Bill the plan amount
-            if ((prebill_plan and plan_billed_up_to < relative_start_date) or
-                    (not prebill_plan and relative_end_date < billing_date)):
+            if should_bill_plan:
                 if subscription.on_trial(relative_start_date):
                     total += subscription._add_plan_trial(start_date=relative_start_date,
                                                           end_date=relative_end_date,
@@ -229,8 +239,12 @@ class DocumentsGenerator(object):
                                                           proforma=proforma, invoice=invoice)
                 plan_now_billed_up_to = relative_end_date
 
+            # Only bill metered features if the cycle the metered features belong to has ended
+            # before the billing date.
+            should_bill_metered_features = relative_end_date < billing_date
+
             # Bill the metered features
-            if relative_end_date < billing_date:
+            if should_bill_metered_features:
                 if subscription.on_trial(relative_start_date):
                     total += subscription._add_mfs_for_trial(start_date=relative_start_date,
                                                              end_date=relative_end_date,
