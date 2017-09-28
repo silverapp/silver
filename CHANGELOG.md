@@ -1,7 +1,7 @@
 # Changelog
 
-## 0.3.1 (2017-09-28)
-*Version 0.3.0 was published with errors.*
+## 0.3.2 (2017-09-28)
+*Version 0.3.0 and 0.3.1 were published with errors.*
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Celery and Redis are no longer a requirement, as the django commands and celery tasks
 that are supposed to be run periodically now have equivalents in both versions.
