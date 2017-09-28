@@ -46,10 +46,6 @@ http://docs.python.org/2/distutils/sourcedist.html
 import os
 from setuptools import setup, find_packages
 
-import versioneer
-
-from silver import __version__ as version
-
 
 install_requires = [line.strip()
                     for line in open("requirements/common.txt").readlines()
@@ -64,7 +60,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version=version,
+    version='0.3.1',
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',
