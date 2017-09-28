@@ -59,7 +59,28 @@ Configuration
 
 For the complete API reference, check the project's wiki: <https://github.com/silverapp/silver/wiki>.
 
-To run Silver automatically, you will have to setup a cron which calls the ``generate_documents`` Django command.
+To run Silver automatically you have two choices, although we really recommend the first one. You can either:
+
+* Use Celery (4.x) and setup a celery-beat for the following tasks (recommended):
+
+  * silver.tasks.generate_documents
+  * silver.tasks.generate_pdfs
+  * silver.tasks.execute_transactions (if making use of silver transactions)
+  * silver.tasks.fetch_transactions_status (if making use of silver transactions, for which the payment processor doesn't offer callbacks)
+
+  Requirements:
+  Celery-once is used to ensure that tasks are not queued more than once, so you can call them as often as you'd like.
+  Redis is required by celery-once, so if you prefer not to use redis, you will have to write your own tasks.
+
+* Setup CRONs which call the following Django commands (e.g. ``./manage.py generate_documents``):
+
+  * generate_documents
+  * generate_pdfs
+  * execute_transactions (if making use of silver transactions)
+  * fetch_transactions_status (if making use of silver transactions, for which the payment processor doesn't offer callbacks)
+
+  You'll have to make sure that each of these commands is not run more than once at a time.
+
 
 For creating the PDF templates, Silver uses the built-in templating engine of
 Django <https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language>. 
