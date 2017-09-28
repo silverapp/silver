@@ -47,24 +47,6 @@ def test_generate_pdfs_task(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_generate_pdfs_task_lock_not_owned(monkeypatch):
-    issued_invoice = InvoiceFactory.create()
-    issued_invoice.issue()
-
-    issued_proforma = ProformaFactory.create()
-    issued_proforma.issue()
-
-    lock_acquire = MagicMock(acquire=lambda *args, **kwargs: False)
-    lock_mock = MagicMock(return_value=lock_acquire)
-    monkeypatch.setattr('silver.tasks.redis.lock', lock_mock)
-
-    with patch('silver.tasks.group') as group_mock:
-        generate_pdfs()
-
-        assert not group_mock.called
-
-
-@pytest.mark.django_db
 def test_generate_pdf_task(settings, tmpdir, monkeypatch):
     settings.MEDIA_ROOT = tmpdir.strpath
 

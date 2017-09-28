@@ -12,3 +12,4 @@ simplejson==3.8.0
 pep8==1.7.0
 Faker==0.7.17
 celery[redis]
+celery-once==1.2.0
