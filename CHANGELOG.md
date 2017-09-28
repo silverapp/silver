@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.3.0 (2017-09-28)
+## 0.3.1 (2017-09-28)
+*Version 0.3.0 was published with errors.*
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Celery and Redis are no longer a requirement, as the django commands and celery tasks
 that are supposed to be run periodically now have equivalents in both versions.
@@ -19,6 +20,7 @@ fields was made through a migration, but it's possible that certain billing cycl
 might be off. Make sure to double check the next wave of automatically generated documents. **(WARNING)**
 - A clear example of behavior change is that generating a canceled subscription's invoice will no longer wait
 for the next months invoices to be generated even if the customer has consolidated billing.
+- Removed versioneer. Going back to good old manual versioning.
 
 ## 0.2.16 (2017-08-23)
 *Version 0.2.15 was published with errors.*

@@ -10,6 +10,3 @@ graft silver
 global-exclude *.orig *.pyc *.log *.swp
 prune silver/tests/coverage
 prune silver/.ropeproject
-
-include versioneer.py
-include silver/_version.py
