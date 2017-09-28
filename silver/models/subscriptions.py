@@ -37,7 +37,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from .billing_entities import Customer
 from .documents import DocumentEntry
-from silver.utils.dates import ONE_DAY, next_month, prev_month, relativedelta
+from silver.utils.dates import ONE_DAY, relativedelta
 from silver.validators import validate_reference
 
 

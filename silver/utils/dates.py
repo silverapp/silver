@@ -20,12 +20,12 @@ ONE_MONTH = relativedelta(months=1)
 
 
 def next_month(date):
-    return (date + ONE_MONTH).month
+    return date + ONE_MONTH
 
 
 def last_day_of_month(date):
-    return next_month(date) - ONE_DAY
+    return date + relativedelta(day=31)
 
 
 def prev_month(date):
-    return (date - ONE_MONTH).month
+    return date - ONE_MONTH
