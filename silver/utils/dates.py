@@ -23,6 +23,10 @@ def next_month(date):
     return date + ONE_MONTH
 
 
+def first_day_of_month(date):
+    return date + relativedelta(day=1)
+
+
 def last_day_of_month(date):
     return date + relativedelta(day=31)
 
