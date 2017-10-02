@@ -85,6 +85,14 @@ class Plan(models.Model):
                   'before generating the invoice. This can be used to allow '
                   'systems to finish updating feature counters.'
     )
+    cycle_billing_duration = models.DurationField(
+        null=True, blank=True,
+        help_text="This can be used to ensure that the billing date doesn't pass a certain date.\n"
+                  "For example if this field is set to 2 days, for a monthly subscription, the "
+                  "billing date will never surpass the 2nd day of the month. Billing documents can "
+                  "still be generated after that day during the billing cycle, but their billing "
+                  "date will appear to be the end of the cycle billing duration."
+    )
     enabled = models.BooleanField(default=True,
                                   help_text='Whether to accept subscriptions.')
     private = models.BooleanField(default=False,

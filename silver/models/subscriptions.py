@@ -338,6 +338,13 @@ class Subscription(models.Model):
         return self.provider.prebill_plan
 
     @property
+    def cycle_billing_duration(self):
+        if self.plan.cycle_billing_duration is not None:
+            return self.plan.cycle_billing_duration
+
+        return self.provider.cycle_billing_duration
+
+    @property
     def separate_cycles_during_trial(self):
         if self.plan.separate_cycles_during_trial is not None:
             return self.plan.separate_cycles_during_trial
