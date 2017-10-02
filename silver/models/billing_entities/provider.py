@@ -96,6 +96,14 @@ class Provider(BaseBillingEntity):
         help_text="If this is set to True, then the plan base amount will be billed at the"
                   "beginning of the billing cycle rather than after the end."
     )
+    cycle_billing_duration = models.DurationField(
+        null=True, blank=True,
+        help_text="This can be used to ensure that the billing date doesn't pass a certain date.\n"
+                  "For example if this field is set to 2 days, for a monthly subscription, the "
+                  "billing date will never surpass the 2nd day of the month. Billing documents can "
+                  "still be generated after that day during the billing cycle, but their billing "
+                  "date will appear be the end of the cycle billing duration."
+    )
 
     def __init__(self, *args, **kwargs):
         super(Provider, self).__init__(*args, **kwargs)
