@@ -102,7 +102,7 @@ class Provider(BaseBillingEntity):
                   "For example if this field is set to 2 days, for a monthly subscription, the "
                   "billing date will never surpass the 2nd day of the month. Billing documents can "
                   "still be generated after that day during the billing cycle, but their billing "
-                  "date will appear be the end of the cycle billing duration."
+                  "date will appear to be the end of the cycle billing duration."
     )
 
     def __init__(self, *args, **kwargs):
