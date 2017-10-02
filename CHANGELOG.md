@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.5 (2017-10-02)
+- Added some missing fields to Provider and Plan in admin.
+
 ## 0.3.4 (2017-10-02)
 - Fixed execute_transactions task name.
 
