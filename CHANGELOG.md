@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.4 (2017-10-02)
+- Fixed execute_transactions task name.
+
 ## 0.3.3 (2017-10-02)
 - Added 'cycle_billing_duration' field to the Provider and Plan model, with both fields being optional,
 and the Plan one having priority over the Provider one. This field can be used to ensure that the billing
