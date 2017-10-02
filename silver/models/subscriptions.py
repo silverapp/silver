@@ -21,6 +21,7 @@ from decimal import Decimal
 from annoying.functions import get_object_or_None
 from dateutil import rrule
 from django.conf import settings
+from django.utils.timezone import utc
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from annoying.fields import JSONField
 from model_utils import Choices
@@ -37,7 +38,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from .billing_entities import Customer
 from .documents import DocumentEntry
-from silver.utils.dates import ONE_DAY, relativedelta
+from silver.utils.dates import ONE_DAY, relativedelta, first_day_of_month
 from silver.validators import validate_reference
 
 
@@ -446,38 +447,59 @@ class Subscription(models.Model):
             'plan_billed_up_to': self.start_date - ONE_DAY
         }
 
-    def should_be_billed(self, reference_date):
+    def should_be_billed(self, billing_date, generate_documents_datetime=None):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
 
-        generate_after = timedelta(seconds=self.plan.generate_after)
+        if not generate_documents_datetime:
+            generate_documents_datetime = timezone.now()
 
-        if self.state == self.STATES.CANCELED:
-            if reference_date < (self.cancel_date + generate_after):
-                # date < cancel_date => don't charge the subscription
+        if self.cycle_billing_duration:
+            if self.start_date > first_day_of_month(billing_date) + self.cycle_billing_duration:
+                # There was nothing to bill on the last day of the first cycle billing duration
                 return False
 
-            return True
+            # We need the full cycle here (ignoring trial ends)
+            cycle_start_datetime_ignoring_trial = self._cycle_start_date(billing_date,
+                                                                         ignore_trial=False)
+            latest_possible_billing_datetime = (
+                cycle_start_datetime_ignoring_trial + self.cycle_billing_duration
+            )
 
-        cycle_start_date = self.cycle_start_date(reference_date)
+            billing_date = min(billing_date, latest_possible_billing_datetime)
+
+        if billing_date > generate_documents_datetime.date():
+            return False
+
+        cycle_start_date = self.cycle_start_date(billing_date)
+
         if not cycle_start_date:
             return False
 
-        plan_billed_up_to = datetime.combine(self.billed_up_to_dates['plan_billed_up_to'],
-                                             datetime.min.time())
-        prebill_plan = self.prebill_plan
-        earliest_generate_date = datetime.combine(cycle_start_date,
-                                                  datetime.min.time()) - generate_after
+        if self.state == self.STATES.CANCELED:
+            if billing_date <= self.cancel_date:
+                return False
 
-        if prebill_plan:
-            return plan_billed_up_to < earliest_generate_date
+            cycle_start_date = self.cancel_date + ONE_DAY
+
+        cycle_start_datetime = datetime.combine(cycle_start_date,
+                                                datetime.min.time()).replace(tzinfo=utc)
+
+        generate_after = timedelta(seconds=self.plan.generate_after)
+
+        if generate_documents_datetime < cycle_start_datetime + generate_after:
+            return False
+
+        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
+
+        # We want to bill the subscription if the plan hasn't been billed for this cycle or
+        # if the subscription has been canceled and the plan won't be billed for this cycle.
+        if self.prebill_plan or self.state == self.STATES.CANCELED:
+            return plan_billed_up_to < cycle_start_date
 
         # wait until the cycle that is going to be billed ends:
-        billed_cycle_end_date = datetime.combine(
-            self.cycle_end_date(plan_billed_up_to.date() + ONE_DAY),
-            datetime.min.time()
-        )
-        return billed_cycle_end_date < earliest_generate_date
+        billed_cycle_end_date = self.cycle_end_date(plan_billed_up_to + ONE_DAY)
+        return billed_cycle_end_date < cycle_start_date
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):

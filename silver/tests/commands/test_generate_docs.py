@@ -20,10 +20,9 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.six import StringIO
 from mock import patch, PropertyMock, MagicMock
-from annoying.functions import get_object_or_None
 
-from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
-                           Customer, Plan, BillingLog, MeteredFeatureUnitsLog)
+from silver.models import (Proforma, DocumentEntry, Invoice, Subscription, Customer, Plan,
+                           BillingLog)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
@@ -1571,6 +1570,12 @@ class TestInvoiceGenerationCommand(TestCase):
         call_command('generate_docs', date=generate_docs_date('2015-01-06'),
                      subscription=subscription.pk, stdout=self.output)
 
+        assert Subscription.objects.filter(state='ended').count() == 0
+
+        # the date after the cancel date
+        call_command('generate_docs', date=generate_docs_date('2015-01-07'),
+                     subscription=subscription.pk, stdout=self.output)
+
         assert Subscription.objects.filter(state='ended').count() == 1
 
         assert Proforma.objects.all().count() == 1
@@ -1587,8 +1592,6 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total == Decimal('0.0000')
 
     def test_gen_active_and_canceled_selection(self):
-        billing_date = generate_docs_date('2015-02-09')
-
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'))
@@ -1600,27 +1603,25 @@ class TestInvoiceGenerationCommand(TestCase):
             subscription.activate()
             subscription.save()
 
-        with patch('silver.models.subscriptions.timezone') as mocked_timezone:
-            mocked_timezone.now.return_value.date.return_value = dt.date(2015, 1, 29)
+        cancel_date = dt.date(2015, 1, 29)
 
-            for subscription in Subscription.objects.all()[2:5]:
-                subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
-                subscription.save()
+        for subscription in Subscription.objects.all()[2:5]:
+            subscription.cancel(when=Subscription.CANCEL_OPTIONS.NOW)
+            subscription.cancel_date = cancel_date
+            subscription.save()
 
-            call_command('generate_docs', billing_date=billing_date, stdout=self.output)
+        call_command('generate_docs', billing_date=cancel_date, stdout=self.output)
+        # Expect 2 Proformas from the active subs
+        assert Proforma.objects.all().count() == 2
+        assert Subscription.objects.filter(state='ended').count() == 0
 
-            # Expect 5 Proformas (2 active Subs, 3 canceled)
-            assert Proforma.objects.all().count() == 5
-            assert Invoice.objects.all().count() == 0
+        call_command('generate_docs', billing_date=cancel_date + ONE_DAY, stdout=self.output)
 
-            assert Subscription.objects.filter(state='ended').count() == 3
+        # Expect 5 Proformas (2 active Subs, 3 canceled)
+        assert Proforma.objects.all().count() == 5
+        assert Invoice.objects.all().count() == 0
 
-            Proforma.objects.all().delete()
-
-            call_command('generate_docs', billing_date=billing_date, stdout=self.output)
-
-            # Expect 2 Proformas (2 active Subs, 3 ended)
-            assert Proforma.objects.all().count() == 2
+        assert Subscription.objects.filter(state='ended').count() == 3
 
     def test_subscription_with_separate_cycles_during_trial(self):
         separate_cycles_during_trial = True
@@ -1891,3 +1892,29 @@ class TestInvoiceGenerationCommand(TestCase):
 
         call_command('generate_docs', date=generate_docs_date('2015-02-10'), stdout=self.output)
         assert Proforma.objects.all().count() == 3
+
+    def test_subscription_cycle_billing_duration(self):
+        plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, trial_period_days=15,
+                                  amount=Decimal('200.00'),
+                                  cycle_billing_duration=dt.timedelta(days=5))
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=dt.date(2015, 1, 25))
+        subscription.activate()
+        subscription.save()
+        subscription.customer.sales_tax_percent = None
+        subscription.customer.save()
+
+        call_command('generate_docs', date=generate_docs_date('2015-01-25'), stdout=self.output)
+
+        assert Proforma.objects.all().count() == 0
+
+        billing_date = dt.date(2015, 2, 1)
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+
+        billing_log = BillingLog.objects.filter(subscription=subscription).last()
+
+        assert billing_log.billing_date == billing_date
