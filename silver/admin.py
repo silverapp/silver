@@ -102,7 +102,9 @@ class PlanForm(forms.ModelForm):
         model = Plan
         fields = ('provider', 'name', 'product_code', 'interval',
                   'interval_count', 'amount', 'currency', 'trial_period_days',
-                  'generate_after', 'metered_features', 'enabled', 'private')
+                  'generate_documents_on_trial_end', 'separate_cycles_during_trial', 'prebill_plan',
+                  'cycle_billing_duration', 'generate_after', 'metered_features', 'enabled',
+                  'private')
 
     def clean(self):
         metered_features = self.cleaned_data.get('metered_features')
@@ -321,8 +323,9 @@ class ProviderAdmin(LiveModelAdmin):
     fields = ['company', 'name', 'email', 'address_1', 'address_2', 'city',
               'state', 'zip_code', 'country', 'flow', 'invoice_series',
               'invoice_starting_number', 'proforma_series',
-              'proforma_starting_number', 'default_document_state', 'extra',
-              'meta']
+              'proforma_starting_number', 'default_document_state',
+              'generate_documents_on_trial_end', 'separate_cycles_during_trial', 'prebill_plan',
+              'cycle_billing_duration', 'extra', 'meta']
     list_display = ['__unicode__', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
