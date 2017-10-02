@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.3 (2017-10-02)
+- Added 'cycle_billing_duration' field to the Provider and Plan model, with both fields being optional,
+and the Plan one having priority over the Provider one. This field can be used to ensure that the billing
+date doesn't pass a certain date. Billing documents can still be generated after that day during the billing
+cycle, but their billing date will appear to be the end of the cycle billing duration.
+```
+V-----------billing cycle--------------V
+[===============|=================|====]
+^-cycle billing-^                 ^
+|---duration----|            billing date
+                ^
+    last possible billing date
+
+Generating after the <last possible billing date> during this <billing cycle>
+is possible but will use the <last possible billing date> as the <billing date>.
+```
+- Added a `created_at` field to BillingLog.
+- Display `plan_billed_up_to`, `metered_features_billed_up_to` and `created_at` BillingLog fields in admin.
+- Fixed `generate_after` field not being properly considered when generating documents.
+- Fixed being able to generate documents for a canceled subscription during the cancel_date day.
+The right behavior is generating the documents after the cancel_date.
+
 ## 0.3.2 (2017-09-28)
 *Version 0.3.0 and 0.3.1 were published with errors.*
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
