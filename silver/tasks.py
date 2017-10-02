@@ -100,7 +100,7 @@ def execute_transaction(transaction_id):
 
 
 @shared_task(ignore_result=True)
-def fetch_transactions_status(transaction_ids=None):
+def execute_transactions(transaction_ids=None):
     executable_transactions = Transaction.objects.filter(state=Transaction.States.Initial)
 
     if transaction_ids:
