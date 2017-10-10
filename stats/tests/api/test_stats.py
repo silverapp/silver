@@ -19,17 +19,7 @@ def test_stats_subscriptions_correct_url(api_client):
 @pytest.mark.django_db
 def test_stats_documents_correct_url(api_client):
     url = reverse('document_stats')
-    response = api_client.get(url, {'result_type': 'count',
-                                    'granulations_issue_date': 'month',
-                                    'granulations_currency': True})
-    assert response.status_code == status.HTTP_200_OK
-
-
-@pytest.mark.django_db
-def test_stats_billing_correct_url(api_client):
-    url = reverse('billing_stats')
     response = api_client.get(url, {'result_type': 'amount',
-                                    'modifier': 'average',
                                     'granulations_issue_date': 'month',
                                     'granulations_currency': True})
     assert response.status_code == status.HTTP_200_OK
@@ -39,78 +29,68 @@ def test_stats_billing_correct_url(api_client):
 def test_stats_transactions_correct_url(api_client):
     url = reverse('transaction_stats')
     response = api_client.get(url, {'result_type': 'amount',
-                                    'modifier': 'average',
-                                    'granulations_issue_date': 'month',
+                                    'granulations_issue_date': 'year',
                                     'granulations_currency': True})
     assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.django_db
-def test_stats_subscription_view_is_correct(api_client, create_subscription_and_billing_log):
+def test_stats_subscription_view_is_correct(api_client, create_subscription):
     url = reverse('subscription_stats')
     response = api_client.get(url, {'result_type': 'estimated_income',
-                                    'modifier': 'include_unused_plans'})
-    stats = Stats(Subscription.objects.all(), 'estimated_income', 'include_unused_plans', [])
-    print stats.validate()
-    print response.data
+                                    'granulation_plan': True,
+                                    'granulation_customer': True})
 
-    assert response.data == [
-        {
-            'granulations': {
-                'plan': {'name': u'Oxygen', 'id': 3}},
-            'values': [
-                {'estimated_income': Decimal('500.00'), 'subscription_id': 3,
-                 'customer_name': u'FirstN\xe1me2 LastN\xe1me2'},
-                {'estimated_income': Decimal('400.00'), 'subscription_id': 2,
-                 'customer_name': u'FirstN\xe1me1 LastN\xe1me1'},
-                {'estimated_income': Decimal('300.00'), 'subscription_id': 1,
-                 'customer_name': u'FirstN\xe1me0 LastN\xe1me0'}
-            ]},
-        {
-            'granulations':
-                {'plan': {'name': u'Hydrogen', 'id': 4}},
-            'values': [
-                {'estimated_income': Decimal('0.00'), 'subscription_id': 4,
-                 'customer_name': u'FirstN\xe1me3 LastN\xe1me3'},
-                {'estimated_income': Decimal('0.00'), 'subscription_id': 5,
-                 'customer_name': u'FirstN\xe1me4 LastN\xe1me4'},
-                {'estimated_income': Decimal('0.00'), 'subscription_id': 6,
-                 'customer_name': u'FirstN\xe1me5 LastN\xe1me5'}
-                ]}
-    ]
+    assert response.data == [{'currency': u'USD', 'values': [{'total': Decimal('65.00'), 'id': 3}],
+                              'plan': u'Enterprise', 'customer_name': u'Harry Potter'},
+                             {'currency': u'USD', 'values': [{'total': Decimal('105.00'), 'id': 5}],
+                              'plan': u'Hydrogen', 'customer_name': u'Harry Potter'},
+                             {'currency': u'RON', 'values': [{'total': Decimal('25.00'), 'id': 1},
+                                                             {'total': Decimal('145.00'), 'id': 7}],
+                              'plan': u'Oxygen', 'customer_name': u'Harry Potter'},
+                             {'currency': u'USD', 'values': [{'total': Decimal('125.00'), 'id': 6}],
+                              'plan': u'Enterprise', 'customer_name': u'Ron Weasley'},
+                             {'currency': u'USD', 'values': [{'total': Decimal('45.00'), 'id': 2}],
+                              'plan': u'Hydrogen', 'customer_name': u'Ron Weasley'},
+                             {'currency': u'RON', 'values': [{'total': Decimal('85.00'), 'id': 4}],
+                              'plan': u'Oxygen', 'customer_name': u'Ron Weasley'}
+                             ]
 
 
 @pytest.mark.django_db
 def test_stats_document_view_is_correct(api_client, create_document):
     url = reverse('document_stats')
-    response = api_client.get(url, {'result_type': 'count',
-                                    'granulations_issue_date': 'month',
-                                    'granulations_currency': True})
-
-    assert response.data == [('1496275200', 'RON', 2), ('1498867200', 'RON', 2),
-                             ('1501545600', 'RON', 1)]
-
-
-@pytest.mark.django_db
-def test_stats_billing_view_is_correct(api_client, create_subscription_and_billing_log):
-    url = reverse('billing_stats')
     response = api_client.get(url, {'result_type': 'amount',
-                                    'modifier': 'average',
-                                    'granulations_issue_date': 'month',
-                                    'granulations_currency': True})
+                                    'granulation_issue_date': 'month',
+                                    'granulation_customer': True})
 
-    assert response.data == [('1498867200', Decimal('700.00')), ('1501545600', Decimal('450.00')),
-                             ('1504224000', Decimal('300.00'))]
+    assert response.data == [
+        {'currency': u'RON', 'issue_date': '2017 Aug', 'values': [{'total': Decimal('101.00'), 'id': 1}],
+         'customer_name': u'Harry Potter'},
+        {'currency': u'RON', 'issue_date': '2017 Aug', 'values': [{'total': 0, 'id': 2},
+                                                                  {'total': Decimal('202.00'), 'id': 3}],
+         'customer_name': u'Ron Weasley'},
+        {'currency': u'RON', 'issue_date': '2017 Jul', 'values': [{'total': Decimal('303.00'), 'id': 4}],
+         'customer_name': u'Ron Weasley'}
+    ]
 
 
 @pytest.mark.django_db
 def test_stats_transaction_view_is_correct(api_client, create_transaction):
     url = reverse('transaction_stats')
     response = api_client.get(url, {'result_type': 'amount',
-                                    'modifier': 'average',
-                                    'granulations_issue_date': 'month',
-                                    'granulations_currency': True})
+                                    'granulation_created_at': 'month',
+                                    'granulation_customer': True})
 
-    assert response.data == \
-        [('1496275200', 'RON', Decimal('8321.00')), ('1498867200', 'RON', Decimal('6821.00')),
-         ('1501545600', 'RON', Decimal('4821.00'))]
+    # granulation_list = [{'name': 'created_at', 'value': 'month'}, {'name': 'customer', 'value': None}]
+    # stats = Stats(Transaction.objects.all(), 'amount', None, granulation_list)
+
+    assert response.data == [
+        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('20.00'), 'id': 3}],
+         'customer_name': u'Hermione Granger'},
+        {'currency': u'RON', 'created_at': '2017 Sep', 'values': [{'total': Decimal('10.00'), 'id': 1}],
+         'customer_name': u'Hermione Granger'},
+        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('15.00'), 'id': 2},
+                                                                  {'total': Decimal('20.00'), 'id': 4}],
+         'customer_name': u'Ron Weasley'}
+    ]
