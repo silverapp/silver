@@ -1,16 +1,11 @@
-from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 from rest_framework import generics, permissions, filters
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from silver.api.filters import TransactionFilter, SubscriptionFilter, DocumentFilter, InvoiceFilter
-from silver.models import Transaction, Subscription, Invoice, BillingLog
-from silver.utils.decorators import remember_last_query_params
-from stats.api.serializers import TransactionStatsSerializer
+from silver.api.filters import TransactionFilter, SubscriptionFilter, InvoiceFilter
+from silver.models import Transaction, Subscription, Invoice
 from stats.stats import Stats
-from datetime import datetime, timedelta
 
 
 class ChartsView(View):
@@ -29,7 +24,6 @@ class SubscriptionStats(generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
-    #overrided method => overrided filter_queryset too
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -89,18 +83,26 @@ class TransactionStats(generics.ListAPIView):
     filter_class = TransactionFilter
 
     def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
         granulations_list = []
 
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
         modifier = query_params.get('modifier', None)
-        if query_params.get('granulations_created_at', None) is not None:
-            granulations_list.append({'name': 'created_at',
-                                      'value': query_params.get('granulations_created_at')})
-        if query_params.get('granulations_currency', None) is not None:
-            granulations_list.append({'name': 'currency', 'value': None})
 
-        stats = Stats(self.queryset, result_type, modifier, granulations_list)
+        if query_params.get('granulation_created_at', None) is not None:
+
+            granulations_list.append({'name': 'created_at',
+                                      'value': query_params.get('granulation_created_at')})
+        if query_params.get('granulation_updated_at', None) is not None:
+            granulations_list.append({'name': 'updated_at',
+                                      'value': query_params.get('granulation_updated_at')})
+        if query_params.get('granulation_customer', None) is not None:
+            granulations_list.append({'name': 'customer',
+                                      'value': None})
+
+        stats = Stats(queryset, result_type, modifier, granulations_list)
 
         return Response(data=stats.validate())
 
