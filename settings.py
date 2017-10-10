@@ -22,7 +22,7 @@ These settings are used by the ``manage.py`` command.
 
 """
 
-DEBUG = False
+DEBUG = True
 
 SITE_ID = 1
 
@@ -63,8 +63,9 @@ EXTERNAL_APPS = [
 INTERNAL_APPS = [
     'silver',
     'stats',
-    # 'silver_payu',
-    # 'silver_braintree'
+    # 'payu',
+    'silver_payu',
+    'silver_braintree'
 ]
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
@@ -165,7 +166,9 @@ PAYMENT_PROCESSORS = {
     'wire': {
         'class': 'silver.payment_processors.manual.ManualProcessor'
     },
-
+    'manual': {
+        'class': 'silver.payment_processors.manual.ManualProcessor'
+    },
     'wire_triggered': {
         'class': 'silver.payment_processors.manual.ManualProcessor'
     },
