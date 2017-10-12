@@ -1,5 +1,10 @@
 from django.shortcuts import render
-from django.views import View
+
+try:
+    from django.views import View
+except ImportError:
+    from django.views.generic import View
+
 from rest_framework import generics, permissions, filters
 from rest_framework.response import Response
 
