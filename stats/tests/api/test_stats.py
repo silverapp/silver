@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 import pytest
-from django.urls import reverse
-from rest_framework import status
+try:
+    from django.urls import reverse
+except ImportError:
+    from django.core.urlresolvers import reverse
 
-from silver.models import Subscription, Transaction, Invoice, BillingLog
-from stats.stats import Stats
+from rest_framework import status
 
 
 @pytest.mark.django_db
