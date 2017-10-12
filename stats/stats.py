@@ -159,7 +159,8 @@ class Stats(object):
         return switcher.get(argument, "none")
 
     def _get_time_granulations(self, document, granulation_arguments, granulation_field):
-        if 'time_granulation_interval' in granulation_arguments and 'time_granulation_interval' is not None:
+        if 'time_granulation_interval' in granulation_arguments \
+                and 'time_granulation_interval' is not None:
             if granulation_arguments['time_granulation_interval'] == 'year':
                 return str(getattr(document, granulation_field).year)
             elif granulation_arguments['time_granulation_interval'] == 'month':
@@ -195,20 +196,24 @@ class Stats(object):
         else:
             return namedtuple("group_by", ["currency"])
 
-    def get_stats_data(self, granulation_arguments, customer_name, currency, amount, granulation_value, id, key, doc):
+    def get_stats_data(self, granulation_arguments, customer_name, currency, amount,
+                       granulation_value, id, key, doc):
         name_tuple = self._name_tuple(granulation_arguments)
         if 'granulation_field' in granulation_arguments:
             if 'additional_granulation_field' in granulation_arguments:
-                item = name_tuple(granulation=granulation_value, name=customer_name, currency=currency)
-                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name, amount, id)
-
+                item = name_tuple(granulation=granulation_value, name=customer_name,
+                                  currency=currency)
+                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
+                                             amount, id)
             else:
                 item = name_tuple(granulation=granulation_value, currency=currency)
-                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name, amount, id)
+                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
+                                             amount, id)
 
         elif 'additional_granulation_field' in granulation_arguments:
             item = name_tuple(name=customer_name, currency=currency)
-            key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name, amount, id)
+            key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
+                                         amount, id)
 
         return key
 
@@ -244,12 +249,13 @@ class Stats(object):
         for document in queryset.exclude(**filter_field):
             customer_name = document.customer.first_name + " " + document.customer.last_name
             if 'time_granulation_interval' in granulation_arguments:
-                granulation_value = self._get_time_granulations(document, granulation_arguments, granulation_field)
+                granulation_value = self._get_time_granulations(document, granulation_arguments,
+                                                                granulation_field)
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency, document.total,
-                                      granulation_value, document.id, key, doc)
+            key = self.get_stats_data(granulation_arguments, customer_name, document.currency,
+                                      document.total, granulation_value, document.id, key, doc)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
@@ -269,12 +275,13 @@ class Stats(object):
         for document in queryset.exclude(paid_date__isnull=True):
             customer_name = document.customer.first_name + " " + document.customer.last_name
             if 'time_granulation_interval' in granulation_arguments:
-                granulation_value = self._get_time_granulations(document, granulation_arguments, granulation_field)
+                granulation_value = self._get_time_granulations(document, granulation_arguments,
+                                                                granulation_field)
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency, None, granulation_value,
-                                      document.id, key, doc)
+            key = self.get_stats_data(granulation_arguments, customer_name, document.currency, None,
+                                      granulation_value, document.id, key, doc)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
@@ -284,8 +291,8 @@ class Stats(object):
         stats_list = []
         doc = dict()
         key = None
-        group_by = ['plan_id', 'plan__currency', 'customer__first_name', 'customer__last_name', 'subscription_amount',
-                    'id', 'plan__name']
+        group_by = ['plan_id', 'plan__currency', 'customer__first_name', 'customer__last_name',
+                    'subscription_amount', 'id', 'plan__name']
         granulation_arguments = self.get_granulations()
 
         if 'granulation_field' in granulation_arguments:
@@ -307,16 +314,18 @@ class Stats(object):
             values(*group_by)
 
         for subscription in subscriptions:
-            customer_name = subscription['customer__first_name'] + " " + subscription['customer__last_name']
+            customer_name = subscription['customer__first_name'] + " " + \
+                            subscription['customer__last_name']
 
             if 'granulation_field' in granulation_arguments:
                 granulation_value = subscription['plan__name']
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, subscription['plan__currency'],
-                                      subscription['subscription_amount'], granulation_value, subscription['id'],
-                                      key, doc)
+            key = self.get_stats_data(granulation_arguments, customer_name,
+                                      subscription['plan__currency'],
+                                      subscription['subscription_amount'], granulation_value,
+                                      subscription['id'], key, doc)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
@@ -353,14 +362,16 @@ class Stats(object):
 
         queryset = queryset.exclude(**filter_field)
         for document in queryset:
-            customer_name = document.invoice.customer.first_name + " " + document.invoice.customer.last_name
+            customer_name = document.invoice.customer.first_name + " " + \
+                            document.invoice.customer.last_name
             if 'time_granulation_interval' in granulation_arguments:
-                granulation_value = self._get_time_granulations(document, granulation_arguments, granulation_field)
+                granulation_value = self._get_time_granulations(document, granulation_arguments,
+                                                                granulation_field)
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency, document.amount,
-                                      granulation_value, document.id, key, doc)
+            key = self.get_stats_data(granulation_arguments, customer_name, document.currency,
+                                      document.amount, granulation_value, document.id, key, doc)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 

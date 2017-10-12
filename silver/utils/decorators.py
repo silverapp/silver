@@ -86,7 +86,7 @@ def remember_last_query_params(url_name, query_params):
         """
         if not params:
             return url
-        if not url: # handle None
+        if not url:     # handle None
             url = ""
         url_parts = list(urlparse.urlparse(url))
         # http://docs.python.org/library/urlparse.html#urlparse.urlparse, part 4 == params
@@ -101,7 +101,7 @@ def remember_last_query_params(url_name, query_params):
 
             request = args[0]
 
-            key_prefix =  url_name + "_"
+            key_prefix = url_name + "_"
 
             if is_query_params_specified(request, query_params):
                 for query_param in query_params:
@@ -110,7 +110,8 @@ def remember_last_query_params(url_name, query_params):
             else:
                 last_params = params_from_last_time(request, key_prefix, query_params)
                 if last_params and last_params != {}:
-                    current_url = "%s?%s" % (request.META.get("PATH_INFO"), request.META.get("QUERY_STRING"))
+                    current_url = "%s?%s" % (request.META.get("PATH_INFO"),
+                                             request.META.get("QUERY_STRING"))
                     new_url = update_url(current_url, last_params)
                     return HttpResponseRedirect(new_url)
 

@@ -65,12 +65,15 @@ def test_stats_document_view_is_correct(api_client, create_document):
                                     'granulation_customer': True})
 
     assert response.data == [
-        {'currency': u'RON', 'issue_date': '2017 Aug', 'values': [{'total': Decimal('101.00'), 'id': 1}],
+        {'currency': u'RON', 'issue_date': '2017 Aug', 'values': [{'total': Decimal('101.00'),
+                                                                   'id': 1}],
          'customer_name': u'Harry Potter'},
         {'currency': u'RON', 'issue_date': '2017 Aug', 'values': [{'total': 0, 'id': 2},
-                                                                  {'total': Decimal('202.00'), 'id': 3}],
+                                                                  {'total': Decimal('202.00'),
+                                                                   'id': 3}],
          'customer_name': u'Ron Weasley'},
-        {'currency': u'RON', 'issue_date': '2017 Jul', 'values': [{'total': Decimal('303.00'), 'id': 4}],
+        {'currency': u'RON', 'issue_date': '2017 Jul', 'values': [{'total': Decimal('303.00'),
+                                                                   'id': 4}],
          'customer_name': u'Ron Weasley'}
     ]
 
@@ -82,15 +85,16 @@ def test_stats_transaction_view_is_correct(api_client, create_transaction):
                                     'granulation_created_at': 'month',
                                     'granulation_customer': True})
 
-    # granulation_list = [{'name': 'created_at', 'value': 'month'}, {'name': 'customer', 'value': None}]
-    # stats = Stats(Transaction.objects.all(), 'amount', None, granulation_list)
-
     assert response.data == [
-        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('20.00'), 'id': 3}],
+        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('20.00'),
+                                                                   'id': 3}],
          'customer_name': u'Hermione Granger'},
-        {'currency': u'RON', 'created_at': '2017 Sep', 'values': [{'total': Decimal('10.00'), 'id': 1}],
+        {'currency': u'RON', 'created_at': '2017 Sep', 'values': [{'total': Decimal('10.00'),
+                                                                   'id': 1}],
          'customer_name': u'Hermione Granger'},
-        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('15.00'), 'id': 2},
-                                                                  {'total': Decimal('20.00'), 'id': 4}],
+        {'currency': u'RON', 'created_at': '2017 Jul', 'values': [{'total': Decimal('15.00'),
+                                                                   'id': 2},
+                                                                  {'total': Decimal('20.00'),
+                                                                   'id': 4}],
          'customer_name': u'Ron Weasley'}
     ]

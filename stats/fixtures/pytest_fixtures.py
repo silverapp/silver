@@ -12,6 +12,7 @@ from silver.tests.factories import TransactionFactory, InvoiceFactory, DocumentE
 
 UserModel = get_user_model()
 
+
 @pytest.fixture()
 def user():
     return UserModel.objects.create_superuser(
@@ -44,9 +45,12 @@ def create_document_entry():
 def create_plan():
     plans_list = []
     provider = ProviderFactory.create(name='Presslabs')
-    plans_list.append(PlanFactory.create(name='Oxygen', amount=150, currency='RON', provider=provider, generate_after=120))
-    plans_list.append(PlanFactory.create(name='Hydrogen', amount=499, currency='USD', provider=provider, generate_after=120))
-    plans_list.append(PlanFactory.create(name='Enterprise', amount=1999, currency='USD', provider=provider, generate_after=120))
+    plans_list.append(PlanFactory.create(name='Oxygen', amount=150, currency='RON',
+                                         provider=provider, generate_after=120))
+    plans_list.append(PlanFactory.create(name='Hydrogen', amount=499, currency='USD',
+                                         provider=provider, generate_after=120))
+    plans_list.append(PlanFactory.create(name='Enterprise', amount=1999, currency='USD',
+                                         provider=provider, generate_after=120))
     return plans_list
 
 
@@ -103,8 +107,9 @@ def create_transaction():
     entries = create_document_entry()
     customers = create_customer()
 
-    invoice = InvoiceFactory.create(invoice_entries=[entries[1], entries[2]], state=Invoice.STATES.ISSUED,
-                                    proforma=None, customer=customers[2])
+    invoice = InvoiceFactory.create(invoice_entries=[entries[1], entries[2]],
+                                    state=Invoice.STATES.ISSUED, proforma=None,
+                                    customer=customers[2])
     TransactionFactory.create(state=Transaction.States.Settled, invoice=invoice,
                               payment_method__customer=invoice.customer, proforma=None,
                               created_at=test_date, amount=test_amount)

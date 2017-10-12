@@ -105,7 +105,3 @@ class TransactionStats(generics.ListAPIView):
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
         return Response(data=stats.validate())
-
-
-
-
