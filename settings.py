@@ -64,8 +64,8 @@ INTERNAL_APPS = [
     'silver',
     'stats',
     # 'payu',
-    'silver_payu',
-    'silver_braintree'
+    # 'silver_payu',
+    # 'silver_braintree'
 ]
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
