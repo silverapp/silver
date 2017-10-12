@@ -112,9 +112,9 @@ class Stats(object):
         granulation_arguments = {}
         for granulation in self.granulations:
             name = granulation['name']
-            if ((self.queryset.model == Transaction and name in ['created_at', 'updated_at'])
-                or (self.queryset.model == Invoice and name in ['issue_date', 'paid_date'])
-                    or (self.queryset.model == Subscription and name == 'plan')):
+            if ((self.queryset.model == Transaction and name in ['created_at', 'updated_at']) or
+                    (self.queryset.model == Invoice and name in ['issue_date', 'paid_date']) or
+                    (self.queryset.model == Subscription and name == 'plan')):
                 granulation_arguments['granulation_field'] = name
                 if granulation['value'] is not None:
                     granulation_arguments['time_granulation_interval'] = granulation['value']
