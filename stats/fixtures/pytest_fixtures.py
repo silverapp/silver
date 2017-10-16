@@ -56,23 +56,37 @@ def create_plan():
 
 @pytest.fixture()
 def create_subscription():
-    test_date = datetime(2017, 9, 11, 10, 56, 24, 898509, pytz.UTC)
+    test_date = datetime(2017, 1, 11, 10, 56, 24, 898509, pytz.UTC)
     test_amount = 10
     customers = create_customer()
     plans = create_plan()
 
-    for i in range(7):
-        subscription = SubscriptionFactory.create(
-            plan=plans[i % 3],
-            state=Subscription.STATES.ACTIVE,
-            customer=customers[i % 2]
-        )
-        BillingLog.objects.create(subscription=subscription, billing_date=test_date,
-                                  total=test_amount)
-        BillingLog.objects.create(subscription=subscription, billing_date=test_date + timedelta(3),
-                                  total=test_amount + 5)
-        test_amount = test_amount + 10
-        test_date = test_date + timedelta(-10)
+    subscription = SubscriptionFactory.create(plan=plans[0], state=Subscription.STATES.ACTIVE,
+                                              customer=customers[0])
+    BillingLog.objects.create(subscription=subscription, billing_date=test_date, total=test_amount,
+                              plan_billed_up_to=test_date, metered_features_billed_up_to=test_date)
+    test_amount += 10
+    test_date += timedelta(20)
+
+    subscription = SubscriptionFactory.create(plan=plans[1], state=Subscription.STATES.ACTIVE,
+                                              customer=customers[0])
+    BillingLog.objects.create(subscription=subscription, billing_date=test_date, total=test_amount,
+                              plan_billed_up_to=test_date, metered_features_billed_up_to=test_date)
+
+    subscription = SubscriptionFactory.create(plan=plans[0], state=Subscription.STATES.ACTIVE,
+                                              customer=customers[1])
+    BillingLog.objects.create(subscription=subscription, billing_date=test_date, total=test_amount,
+                              plan_billed_up_to=test_date, metered_features_billed_up_to=test_date)
+    BillingLog.objects.create(subscription=subscription, billing_date=test_date, total=test_amount,
+                              plan_billed_up_to=test_date, metered_features_billed_up_to=test_date)
+
+    test_amount += 10
+    test_date += timedelta(20)
+
+    subscription = SubscriptionFactory.create(plan=plans[2], state=Subscription.STATES.ACTIVE,
+                                              customer=customers[1])
+    BillingLog.objects.create(subscription=subscription, billing_date=test_date, total=test_amount,
+                              plan_billed_up_to=test_date, metered_features_billed_up_to=test_date)
 
 
 @pytest.fixture()
@@ -82,21 +96,17 @@ def create_document():
 
     test_date = datetime(2017, 9, 11, 10, 56, 24, 898509, pytz.UTC)
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[1]],
-                          state=Invoice.STATES.ISSUED, proforma=None,
+    InvoiceFactory.create(invoice_entries=[entries[1]], state=Invoice.STATES.ISSUED, proforma=None,
                           issue_date=test_date, customer=customers[0])
 
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[0]],
-                          state=Invoice.STATES.ISSUED, proforma=None,
+    InvoiceFactory.create(invoice_entries=[entries[0]], state=Invoice.STATES.ISSUED, proforma=None,
                           issue_date=test_date, customer=customers[1])
-    InvoiceFactory.create(invoice_entries=[entries[0]],
-                          state=Invoice.STATES.ISSUED, proforma=None,
+    InvoiceFactory.create(invoice_entries=[entries[0]], state=Invoice.STATES.ISSUED, proforma=None,
                           issue_date=test_date + timedelta(-4), customer=customers[1])
 
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[2]],
-                          state=Invoice.STATES.ISSUED, proforma=None,
+    InvoiceFactory.create(invoice_entries=[entries[2]], state=Invoice.STATES.ISSUED, proforma=None,
                           issue_date=test_date, customer=customers[1])
 
 

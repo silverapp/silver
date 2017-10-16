@@ -1,11 +1,5 @@
-from decimal import Decimal
-
 from silver.models import Transaction, Invoice, Proforma, Subscription, Plan, BillingLog
 from datetime import datetime
-
-from django.db.models.functions import Coalesce
-from django.db.models import Sum, DecimalField, Subquery, OuterRef
-from django.db.models import ExpressionWrapper
 
 from collections import namedtuple
 
@@ -313,7 +307,7 @@ class Stats(object):
 
         return stats_list
 
-    def subscriptions_estimated_income_include_unused_plans(self, queryset):
+    def billing_log_total_include_unused_plans(self, queryset):
         stats_list = self.billing_log_total(queryset)
         for i in Plan.objects.exclude(subscription__isnull=False).distinct().filter(id=1):
             data = {'granulations': {
