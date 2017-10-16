@@ -8,8 +8,8 @@ except ImportError:
 from rest_framework import generics, permissions, filters
 from rest_framework.response import Response
 
-from silver.api.filters import TransactionFilter, SubscriptionFilter, InvoiceFilter
-from silver.models import Transaction, Subscription, Invoice
+from silver.api.filters import TransactionFilter, InvoiceFilter
+from silver.models import Transaction, Invoice, BillingLog
 from stats.stats import Stats
 
 
@@ -23,11 +23,9 @@ class ChartsJsView(View):
         return render(request, 'charts_js.html', {})
 
 
-class SubscriptionStats(generics.ListAPIView):
-    queryset = Subscription.objects.all()
+class BillingLogStats(generics.ListAPIView):
+    queryset = BillingLog.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_class = SubscriptionFilter
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

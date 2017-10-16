@@ -52,8 +52,8 @@ class Stats(object):
                 }
             }
         },
-        'subscriptions': {
-            'estimated_income': {
+        'billing_log': {
+            'total': {
                 'modifiers': ['include_unused_plans', None],
                 'granulations': {
                     'plan': [],
@@ -114,7 +114,7 @@ class Stats(object):
             name = granulation['name']
             if ((self.queryset.model == Transaction and name in ['created_at', 'updated_at']) or
                     (self.queryset.model == Invoice and name in ['issue_date', 'paid_date']) or
-                    (self.queryset.model == Subscription and name == 'plan')):
+                    (self.queryset.model == BillingLog and name == 'plan')):
                 granulation_arguments['granulation_field'] = name
                 if granulation['value'] is not None:
                     granulation_arguments['time_granulation_interval'] = granulation['value']
@@ -172,7 +172,8 @@ class Stats(object):
                     getattr(document, granulation_field).day)
                 return str(getattr(document, granulation_field).year) + ' ' + day
 
-    def _add_item_to_list(self, item, key, doc, granulation_arguments, customer_name, amount, id):
+    def _add_item_to_list(self, item, doc, granulation_arguments, customer_name, amount, id,
+                          additional_field):
         search_document = doc.get(item, [])
 
         details = {'id': id}
@@ -180,10 +181,10 @@ class Stats(object):
             details['total'] = amount
         if 'additional_granulation_field' not in granulation_arguments:
             details['customer_name'] = customer_name
+        if additional_field is not None:
+            details[next(iter(additional_field))] = additional_field[next(iter(additional_field))]
 
         doc[item] = search_document + [details]
-
-        return key
 
     def _name_tuple(self, granulation_arguments):
         if 'granulation_field' in granulation_arguments:
@@ -197,25 +198,23 @@ class Stats(object):
             return namedtuple("group_by", ["currency"])
 
     def get_stats_data(self, granulation_arguments, customer_name, currency, amount,
-                       granulation_value, id, key, doc):
+                       granulation_value, id, doc, additional_field):
         name_tuple = self._name_tuple(granulation_arguments)
         if 'granulation_field' in granulation_arguments:
             if 'additional_granulation_field' in granulation_arguments:
                 item = name_tuple(granulation=granulation_value, name=customer_name,
                                   currency=currency)
-                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
-                                             amount, id)
+                self._add_item_to_list(item, doc, granulation_arguments, customer_name, amount, id,
+                                       additional_field)
             else:
                 item = name_tuple(granulation=granulation_value, currency=currency)
-                key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
-                                             amount, id)
+                self._add_item_to_list(item, doc, granulation_arguments, customer_name, amount, id,
+                                       additional_field)
 
         elif 'additional_granulation_field' in granulation_arguments:
             item = name_tuple(name=customer_name, currency=currency)
-            key = self._add_item_to_list(item, key, doc, granulation_arguments, customer_name,
-                                         amount, id)
-
-        return key
+            self._add_item_to_list(item, doc, granulation_arguments, customer_name, amount, id,
+                                   additional_field)
 
     def _serialize_result(self, doc, stats_list, granulation_field, granulation_arguments):
         for key in sorted(doc.keys()):
@@ -233,7 +232,6 @@ class Stats(object):
     def documents_amount(self, queryset):
         stats_list = []
         doc = dict()
-        key = None
         granulation_arguments = self.get_granulations()
 
         if 'granulation_field' in granulation_arguments:
@@ -254,8 +252,8 @@ class Stats(object):
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency,
-                                      document.total, granulation_value, document.id, key, doc)
+            self.get_stats_data(granulation_arguments, customer_name, document.currency,
+                                document.total, granulation_value, document.id, doc, None)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
@@ -264,7 +262,6 @@ class Stats(object):
     def documents_paid_date(self, queryset):
         stats_list = []
         doc = dict()
-        key = None
         granulation_arguments = self.get_granulations()
 
         if 'granulation_field' in granulation_arguments:
@@ -280,19 +277,16 @@ class Stats(object):
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency, None,
-                                      granulation_value, document.id, key, doc)
+            self.get_stats_data(granulation_arguments, customer_name, document.currency, None,
+                                granulation_value, document.id, doc, None)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
         return stats_list
 
-    def subscriptions_estimated_income(self, queryset):
+    def billing_log_total(self, queryset):
         stats_list = []
         doc = dict()
-        key = None
-        group_by = ['plan_id', 'plan__currency', 'customer__first_name', 'customer__last_name',
-                    'subscription_amount', 'id', 'plan__name']
         granulation_arguments = self.get_granulations()
 
         if 'granulation_field' in granulation_arguments:
@@ -300,39 +294,27 @@ class Stats(object):
         else:
             granulation_field = None
 
-        entries = BillingLog.objects.filter(subscription_id=OuterRef('pk')) \
-            .order_by() \
-            .values('subscription_id') \
-            .annotate(sum=Sum('total')) \
-            .values('sum')
-
-        subscriptions = queryset.annotate(
-            subscription_amount=Coalesce(ExpressionWrapper(
-                Subquery(entries),
-                output_field=DecimalField(decimal_places=2)
-            ), Decimal('0.00'))).\
-            values(*group_by)
-
-        for subscription in subscriptions:
-            customer_name = subscription['customer__first_name'] + " " + \
-                            subscription['customer__last_name']
+        for document in queryset:
+            customer_name = document.subscription.customer.first_name + " " + \
+                            document.subscription.customer.last_name
 
             if 'granulation_field' in granulation_arguments:
-                granulation_value = subscription['plan__name']
+                granulation_value = document.subscription.plan.name
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name,
-                                      subscription['plan__currency'],
-                                      subscription['subscription_amount'], granulation_value,
-                                      subscription['id'], key, doc)
+            additional_field = {"billing_date": document.billing_date}
+
+            self.get_stats_data(granulation_arguments, customer_name,
+                                document.subscription.plan.currency, document.total,
+                                granulation_value, document.subscription.id, doc, additional_field)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
         return stats_list
 
     def subscriptions_estimated_income_include_unused_plans(self, queryset):
-        stats_list = self.subscriptions_estimated_income(queryset)
+        stats_list = self.billing_log_total(queryset)
         for i in Plan.objects.exclude(subscription__isnull=False).distinct().filter(id=1):
             data = {'granulations': {
                 'plan': {
@@ -347,7 +329,6 @@ class Stats(object):
     def transactions_amount(self, queryset):
         stats_list = []
         doc = dict()
-        key = None
         granulation_arguments = self.get_granulations()
 
         if 'granulation_field' in granulation_arguments:
@@ -370,8 +351,8 @@ class Stats(object):
             else:
                 granulation_value = None
 
-            key = self.get_stats_data(granulation_arguments, customer_name, document.currency,
-                                      document.amount, granulation_value, document.id, key, doc)
+            self.get_stats_data(granulation_arguments, customer_name, document.currency,
+                                document.amount, granulation_value, document.id, doc, None)
 
         self._serialize_result(doc, stats_list, granulation_field, granulation_arguments)
 
@@ -382,8 +363,8 @@ class Stats(object):
             return 'transactions'
         elif self.queryset.model == Invoice or self.queryset.model == Proforma:
             return 'documents'
-        elif self.queryset.model == Subscription:
-            return 'subscriptions'
+        elif self.queryset.model == BillingLog:
+            return 'billing_log'
 
     def get_result(self):
         if self.modifier is not None:
