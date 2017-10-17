@@ -106,4 +106,4 @@ def execute_transactions(transaction_ids=None):
     if transaction_ids:
         executable_transactions = executable_transactions.filter(pk__in=transaction_ids)
 
-    group(fetch_transaction_status.s(transaction.id) for transaction in executable_transactions)()
+    group(execute_transaction.s(transaction.id) for transaction in executable_transactions)()
