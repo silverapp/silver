@@ -108,7 +108,7 @@ class PlanFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: faker.name())
     interval = Plan.INTERVALS.MONTH
-    interval_count = factory.Sequence(lambda n: n)
+    interval_count = 1
     amount = factory.Sequence(lambda n: n)
     currency = 'USD'
     generate_after = factory.Sequence(lambda n: n)

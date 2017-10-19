@@ -34,18 +34,16 @@ class BillingLogStats(generics.ListAPIView):
 
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
-        modifier = query_params.get('modifier', None)
+        modifier = query_params.get('modifier')
 
-        if query_params.get('granulation_plan', None) is not None:
-            granulations_list.append({'name': 'plan',
-                                      'value': None})
-        if query_params.get('granulation_customer', None) is not None:
-            granulations_list.append({'name': 'customer',
-                                      'value': None})
+        for url_parameter, url_parameter_values in request.GET.lists():
+            if url_parameter != 'result_type' and url_parameter != 'modifier':
+                granulations_list.append({'name': url_parameter[12:],
+                                          'value': url_parameter_values[0]})
 
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
-        return Response(data=stats.validate())
+        return Response(data=stats.get_result())
 
 
 class DocumentStats(generics.ListAPIView):
@@ -61,22 +59,16 @@ class DocumentStats(generics.ListAPIView):
 
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
-        modifier = query_params.get('modifier', None)
+        modifier = query_params.get('modifier')
 
-        if query_params.get('granulation_issue_date', None) is not None:
-
-            granulations_list.append({'name': 'issue_date',
-                                      'value': query_params.get('granulation_issue_date')})
-        if query_params.get('granulation_paid_date', None) is not None:
-            granulations_list.append({'name': 'paid_date',
-                                      'value': query_params.get('granulation_paid_date')})
-        if query_params.get('granulation_customer', None) is not None:
-            granulations_list.append({'name': 'customer',
-                                      'value': None})
+        for url_parameter, url_parameter_values in request.GET.lists():
+            if url_parameter != 'result_type' and url_parameter != 'modifier':
+                granulations_list.append({'name': url_parameter[12:],
+                                          'value': url_parameter_values[0]})
 
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
-        return Response(data=stats.validate())
+        return Response(data=stats.get_result())
 
 
 class TransactionStats(generics.ListAPIView):
@@ -92,19 +84,13 @@ class TransactionStats(generics.ListAPIView):
 
         query_params = self.request.query_params
         result_type = query_params.get('result_type')
-        modifier = query_params.get('modifier', None)
+        modifier = query_params.get('modifier')
 
-        if query_params.get('granulation_created_at', None) is not None:
-
-            granulations_list.append({'name': 'created_at',
-                                      'value': query_params.get('granulation_created_at')})
-        if query_params.get('granulation_updated_at', None) is not None:
-            granulations_list.append({'name': 'updated_at',
-                                      'value': query_params.get('granulation_updated_at')})
-        if query_params.get('granulation_customer', None) is not None:
-            granulations_list.append({'name': 'customer',
-                                      'value': None})
+        for url_parameter, url_parameter_values in request.GET.lists():
+            if url_parameter != 'result_type' and url_parameter != 'modifier':
+                granulations_list.append({'name': url_parameter[12:],
+                                          'value': url_parameter_values[0]})
 
         stats = Stats(queryset, result_type, modifier, granulations_list)
 
-        return Response(data=stats.validate())
+        return Response(data=stats.get_result())
