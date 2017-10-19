@@ -22,7 +22,7 @@ These settings are used by the ``manage.py`` command.
 
 """
 
-DEBUG = True
+DEBUG = False
 
 SITE_ID = 1
 
@@ -63,9 +63,6 @@ EXTERNAL_APPS = [
 INTERNAL_APPS = [
     'silver',
     'stats',
-    # 'payu',
-    # 'silver_payu',
-    # 'silver_braintree'
 ]
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
@@ -121,6 +118,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
+PAYMENT_PROCESSORS = {
+    'manual': {
+        'class': 'silver.payment_processors.manual.ManualProcessor'
+    },
+}
+
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
@@ -162,33 +165,6 @@ LOGGING['formatters']['verbose'] = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-PAYMENT_PROCESSORS = {
-    'wire': {
-        'class': 'silver.payment_processors.manual.ManualProcessor'
-    },
-    'manual': {
-        'class': 'silver.payment_processors.manual.ManualProcessor'
-    },
-    'wire_triggered': {
-        'class': 'silver.payment_processors.manual.ManualProcessor'
-    },
-
-    'payu_triggered': {
-        'class': 'silver_payu.payment_processors.PayUTriggered'}, 'payu_manual': {
-        'class': 'silver_payu.payment_processors.PayUManual'}, 'braintree_manual': {
-        'class': 'silver_braintree.payment_processors.BraintreeTriggered',
-        'setup_data': {
-            'environment': None,
-            'merchant_id': "merchant_id",
-            'public_key': "public_key",
-            'private_key': "private_key"}, }, 'braintree_triggered': {
-        'class': 'silver_braintree.payment_processors.BraintreeTriggeredRecurring',
-        'setup_data': {
-            'environment': None,
-            'merchant_id': "merchant_id",
-            'public_key': "public_key",
-            'private_key': "private_key"}, },
-}
 
 PAYMENT_METHOD_SECRET = b'YOUR_FERNET_KEY_HERE'  # Fernet.generate_key()
 
