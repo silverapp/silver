@@ -183,11 +183,11 @@ class Stats(object):
         if 'time_granulation_interval' in self.granulations \
                 and 'time_granulation_interval' is not None:
             if self.granulations['time_granulation_interval'] == 'year':
-                return getattr(document, granulation_field).strftime('%Y')
+                return getattr(document, granulation_field).strftime('%s')
             elif self.granulations['time_granulation_interval'] == 'month':
-                return getattr(document, granulation_field).strftime('%b %Y')
+                return getattr(document, granulation_field).strftime('%s')
             elif self.granulations['time_granulation_interval'] == 'day':
-                return getattr(document, granulation_field).strftime('%d %b %Y')
+                return getattr(document, granulation_field).strftime('%s')
 
     def documents_amount(self, queryset):
         granulated_stats = dict()
@@ -269,7 +269,7 @@ class Stats(object):
             stats_details = {
                 "id": billing_log.subscription.id,
                 "total": billing_log.total,
-                "billing_date": billing_log.billing_date.strftime('%m/%d/%Y')
+                "billing_date": billing_log.billing_date.isoformat()
             }
             if 'additional_granulation_field' not in self.granulations:
                 stats_details['customer'] = customer_name
