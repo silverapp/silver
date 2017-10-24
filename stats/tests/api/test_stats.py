@@ -24,7 +24,7 @@ def test_stats_transactions_correct_url(api_client):
 
 
 @pytest.mark.django_db
-def test_stats_billing_log_view_is_correct(api_client, create_subscription):
+def test_stats_billing_log_view_is_correct(api_client, subscriptions):
     url = reverse('billing_log_stats')
     response = api_client.get(url, {
         'result_type': 'total',
@@ -83,7 +83,7 @@ def test_stats_billing_log_view_is_correct(api_client, create_subscription):
 
 
 @pytest.mark.django_db
-def test_stats_document_view_is_correct(api_client, create_document):
+def test_stats_document_view_is_correct(api_client, documents):
     url = reverse('document_stats')
     response = api_client.get(url, {
         'result_type': 'amount',
@@ -127,7 +127,7 @@ def test_stats_document_view_is_correct(api_client, create_document):
 
 
 @pytest.mark.django_db
-def test_stats_transaction_view_is_correct(api_client, create_transaction):
+def test_stats_transaction_view_is_correct(api_client, transactions):
     url = reverse('transaction_stats')
     response = api_client.get(url, {
         'result_type': 'amount',

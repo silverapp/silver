@@ -83,7 +83,6 @@ TEMPLATES = [
             PROJECT_ROOT + '/payment_processors/templates/',
             PROJECT_ROOT + '/templates/',
             PROJECT_ROOT + '/silver/templates/',
-            PROJECT_ROOT + '/stats/templates/',
         ],
         'OPTIONS': {
             'context_processors': (
@@ -105,10 +104,6 @@ MEDIA_URL = '/app_media/'
 STATIC_ROOT = PROJECT_ROOT + '/app_static/'
 STATIC_URL = '/app_static/'
 
-STATICFILES_DIRS = [
-    os.path.join(PROJECT_ROOT, "static")
-]
-
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -117,12 +112,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
-
-PAYMENT_PROCESSORS = {
-    'manual': {
-        'class': 'silver.payment_processors.manual.ManualProcessor'
-    },
-}
 
 SECRET_KEY = 'secret'
 
@@ -165,6 +154,11 @@ LOGGING['formatters']['verbose'] = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+PAYMENT_PROCESSORS = {
+    'manual': {
+        'class': 'silver.payment_processors.manual.ManualProcessor'
+    },
+}
 
 PAYMENT_METHOD_SECRET = b'YOUR_FERNET_KEY_HERE'  # Fernet.generate_key()
 

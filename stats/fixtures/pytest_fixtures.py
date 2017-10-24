@@ -26,7 +26,8 @@ def api_client(user):
     return client
 
 
-def create_customer():
+@pytest.fixture()
+def customers():
     customers_list = []
     customers_list.append(CustomerFactory.create(first_name='Harry', last_name='Potter'))
     customers_list.append(CustomerFactory.create(first_name='Ron', last_name='Weasley'))
@@ -34,7 +35,8 @@ def create_customer():
     return customers_list
 
 
-def create_document_entry():
+@pytest.fixture()
+def document_entries():
     entries_list = []
     entries_list.append(DocumentEntryFactory(quantity=2, unit_price=100))
     entries_list.append(DocumentEntryFactory(quantity=1, unit_price=100))
@@ -42,7 +44,8 @@ def create_document_entry():
     return entries_list
 
 
-def create_plan():
+@pytest.fixture()
+def plans():
     plans_list = []
     provider = ProviderFactory.create(name='Presslabs')
     plans_list.append(PlanFactory.create(name='Oxygen', amount=150, currency='RON',
@@ -55,11 +58,9 @@ def create_plan():
 
 
 @pytest.fixture()
-def create_subscription():
+def subscriptions(customers, plans):
     test_date = datetime(2017, 1, 11, 10, 56, 24, 898509, pytz.UTC)
     test_amount = 10
-    customers = create_customer()
-    plans = create_plan()
 
     subscription = SubscriptionFactory.create(plan=plans[0], state=Subscription.STATES.ACTIVE,
                                               customer=customers[0])
@@ -90,34 +91,31 @@ def create_subscription():
 
 
 @pytest.fixture()
-def create_document():
-    customers = create_customer()
-    entries = create_document_entry()
+def documents(customers, document_entries):
 
     test_date = datetime(2017, 9, 11, 10, 56, 24, 898509, pytz.UTC)
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[1]], state=Invoice.STATES.ISSUED, proforma=None,
-                          issue_date=test_date, customer=customers[0])
+    InvoiceFactory.create(invoice_entries=[document_entries[1]], state=Invoice.STATES.ISSUED,
+                          proforma=None, issue_date=test_date, customer=customers[0])
 
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[0]], state=Invoice.STATES.ISSUED, proforma=None,
-                          issue_date=test_date, customer=customers[1])
-    InvoiceFactory.create(invoice_entries=[entries[0]], state=Invoice.STATES.ISSUED, proforma=None,
-                          issue_date=test_date + timedelta(-4), customer=customers[1])
+    InvoiceFactory.create(invoice_entries=[document_entries[0]], state=Invoice.STATES.ISSUED,
+                          proforma=None, issue_date=test_date, customer=customers[1])
+    InvoiceFactory.create(invoice_entries=[document_entries[0]], state=Invoice.STATES.ISSUED,
+                          proforma=None, issue_date=test_date + timedelta(-4),
+                          customer=customers[1])
 
     test_date = test_date + timedelta(-15)
-    InvoiceFactory.create(invoice_entries=[entries[2]], state=Invoice.STATES.ISSUED, proforma=None,
-                          issue_date=test_date, customer=customers[1])
+    InvoiceFactory.create(invoice_entries=[document_entries[2]], state=Invoice.STATES.ISSUED,
+                          proforma=None, issue_date=test_date, customer=customers[1])
 
 
 @pytest.fixture()
-def create_transaction():
+def transactions(customers, document_entries):
     test_date = datetime(2017, 9, 11, 10, 56, 24, 898509, pytz.UTC)
     test_amount = 10
-    entries = create_document_entry()
-    customers = create_customer()
 
-    invoice = InvoiceFactory.create(invoice_entries=[entries[1], entries[2]],
+    invoice = InvoiceFactory.create(invoice_entries=[document_entries[1], document_entries[2]],
                                     state=Invoice.STATES.ISSUED, proforma=None,
                                     customer=customers[2])
     TransactionFactory.create(state=Transaction.States.Settled, invoice=invoice,
@@ -126,20 +124,23 @@ def create_transaction():
     test_date = test_date + timedelta(-50)
     test_amount = test_amount + 5
 
-    invoice = InvoiceFactory.create(invoice_entries=[entries[2]], state=Invoice.STATES.ISSUED,
-                                    proforma=None, customer=customers[1])
+    invoice = InvoiceFactory.create(invoice_entries=[document_entries[2]],
+                                    state=Invoice.STATES.ISSUED, proforma=None,
+                                    customer=customers[1])
     TransactionFactory.create(state=Transaction.States.Settled, invoice=invoice,
                               payment_method__customer=invoice.customer, proforma=None,
                               created_at=test_date, amount=test_amount)
     test_amount = test_amount + 5
 
-    invoice = InvoiceFactory.create(invoice_entries=[entries[1]], state=Invoice.STATES.ISSUED,
+    invoice = InvoiceFactory.create(invoice_entries=[document_entries[1]],
+                                    state=Invoice.STATES.ISSUED,
                                     proforma=None, customer=customers[2])
     TransactionFactory.create(state=Transaction.States.Settled, invoice=invoice,
                               payment_method__customer=invoice.customer, proforma=None,
                               created_at=test_date, amount=test_amount)
 
-    invoice = InvoiceFactory.create(invoice_entries=[entries[2]], state=Invoice.STATES.ISSUED,
+    invoice = InvoiceFactory.create(invoice_entries=[document_entries[2]],
+                                    state=Invoice.STATES.ISSUED,
                                     proforma=None, customer=customers[1])
     TransactionFactory.create(state=Transaction.States.Settled, invoice=invoice,
                               payment_method__customer=invoice.customer, proforma=None,
