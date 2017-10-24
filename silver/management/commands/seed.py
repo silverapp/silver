@@ -18,7 +18,6 @@ from datetime import timedelta, datetime, date
 
 import pytz
 from decimal import Decimal
-from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from silver.models import Transaction, Invoice, BillingLog
@@ -67,21 +66,15 @@ class Command(BaseCommand):
                                       total=plan.amount,
                                       metered_features_billed_up_to=test_date.date(),
                                       plan_billed_up_to=test_date.date() + timedelta(10))
-            BillingLog.objects.create(subscription=subscription, billing_date=test_date.date() +
-                                                                              timedelta(10),
-                                      total=plan.amount,
+            BillingLog.objects.create(subscription=subscription, total=plan.amount,
+                                      billing_date=test_date.date() + timedelta(10),
                                       metered_features_billed_up_to=test_date.date() + timedelta(5),
                                       plan_billed_up_to=test_date.date() + timedelta(10))
-            BillingLog.objects.create(subscription=subscription, billing_date=test_date.date() +
-                                                                              timedelta(15),
-                                      total=plan.amount,
+            BillingLog.objects.create(subscription=subscription, total=plan.amount,
+                                      billing_date=test_date.date() + timedelta(15),
                                       metered_features_billed_up_to=test_date.date() +
-                                                                    timedelta(20),
+                                      timedelta(20),
                                       plan_billed_up_to=test_date.date() + timedelta(11))
-
-            # call_command('generate_docs',
-            #              '--date=%s' % test_date.date(),
-            #              '--subscription=%s' % subscription.id)
 
             entry = DocumentEntryFactory()
             InvoiceFactory.create(invoice_entries=[entry], issue_date=test_date.date())

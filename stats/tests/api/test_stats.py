@@ -65,17 +65,20 @@ def test_stats_billing_log_view_is_correct(api_client, create_subscription):
         },
         {
             'currency': u'RON',
-            'values': [{
-                'total': Decimal('20.00'),
-                'billing_date': '01/31/2017',
-                'id': 3
-            },
-            {
-                'total': Decimal('20.00'),
-                'billing_date': '01/31/2017', 'id': 3
-            }],
+            'values': [
+                {
+                    'total': Decimal('20.00'),
+                    'billing_date': '01/31/2017',
+                    'id': 3
+                },
+                {
+                    'total': Decimal('20.00'),
+                    'billing_date': '01/31/2017', 'id': 3
+                }
+            ],
             'plan': u'Oxygen',
-            'customer_name': u'Ron Weasley'}
+            'customer_name': u'Ron Weasley'
+        }
     ]
 
 
@@ -100,14 +103,16 @@ def test_stats_document_view_is_correct(api_client, create_document):
         {
             'currency': u'RON',
             'issue_date': 'Aug 2017',
-            'values': [{
-                'total': 0,
-                'id': 2
-            },
-            {
-                'total': Decimal('202.00'),
-                'id': 3
-            }],
+            'values': [
+                {
+                    'total': 0,
+                    'id': 2
+                },
+                {
+                    'total': Decimal('202.00'),
+                    'id': 3
+                }
+            ],
             'customer_name': u'Ron Weasley'
         },
         {
@@ -152,14 +157,16 @@ def test_stats_transaction_view_is_correct(api_client, create_transaction):
         {
             'currency': u'RON',
             'created_at': 'Jul 2017',
-            'values': [{
-                'total': Decimal('15.00'),
-                'id': 2
-            },
-            {
-                'total': Decimal('20.00'),
-                'id': 4
-            }],
+            'values': [
+                {
+                    'total': Decimal('15.00'),
+                    'id': 2
+                },
+                {
+                    'total': Decimal('20.00'),
+                    'id': 4
+                }
+            ],
             'customer_name': u'Ron Weasley'
         }
     ]
