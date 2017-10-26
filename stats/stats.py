@@ -66,7 +66,7 @@ class Stats(object):
 
     def validate(self):
         if self.queryset.model != Transaction and self.queryset.model != Invoice \
-                and self.queryset.model != Subscription and self.queryset.model != BillingLog:
+                and self.queryset.model != BillingLog:
             raise ValueError('Invalid model')
         if self.result_type is None:
             raise ValueError('A result type is required')
