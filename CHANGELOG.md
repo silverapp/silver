@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.7 (2017-10-27)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Old PDFs are no longer deleted on PDF regeneration **(WARNING)**
+
 ## 0.3.6 (2017-10-17)
 - Fixed execute_transactions task name.
 
