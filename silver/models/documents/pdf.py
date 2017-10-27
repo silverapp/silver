@@ -54,10 +54,6 @@ class PDF(Model):
 
         pdf_content = ContentFile(pdf_file_object)
 
-        # delete old pdf version
-        if self.pdf_file:
-            self.pdf_file.delete()
-
         self.pdf_file.save(filename, pdf_content, True)
 
     def mark_as_dirty(self):
