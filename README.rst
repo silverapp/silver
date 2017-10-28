@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver?ref=badge_shield)
+
 silver 
 ======
 
@@ -153,3 +155,7 @@ You are highly encouraged to contribute with code, tests, documentation or just
 sharing experience.
 
 Please see CONTRIBUTING.md for a short guide on how to get started with Silver contributions.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver?ref=badge_large)
