@@ -18,7 +18,7 @@ from django_filters.fields import Lookup
 
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
                            Plan, Invoice, Proforma, Transaction, PaymentMethod,
-                           BillingDocumentBase)
+                           BillingDocumentBase, BillingLog)
 
 
 class MultipleCharFilter(CharFilter):
@@ -105,7 +105,8 @@ class BillingDocumentFilter(FilterSet):
     provider_name = CharFilter(name='provider__name', lookup_expr='icontains')
     provider_company = CharFilter(name='provider__company',
                                   lookup_expr='icontains')
-    issue_date = DateFilter(name='issue_date', lookup_expr='iexact')
+    issue_date_min = DateFilter(name='issue_date', lookup_expr='gte')
+    issue_date_max = DateFilter(name='issue_date', lookup_expr='lte')
     due_date = DateFilter(name='due_date', lookup_expr='iexact')
     paid_date = DateFilter(name='due_date', lookup_expr='iexact')
     cancel_date = DateFilter(name='cancel_date', lookup_expr='iexact')
@@ -121,8 +122,8 @@ class BillingDocumentFilter(FilterSet):
     class Meta:
         model = BillingDocumentBase
         fields = ['id', 'state', 'number', 'customer_name', 'customer_company',
-                  'provider_name', 'provider_company', 'issue_date', 'due_date',
-                  'paid_date', 'cancel_date', 'currency', 'sales_tax_name',
+                  'provider_name', 'provider_company', 'issue_date_min', 'issue_date_max',
+                  'due_date', 'paid_date', 'cancel_date', 'currency', 'sales_tax_name',
                   'is_overdue']
 
 
@@ -152,13 +153,35 @@ class TransactionFilter(FilterSet):
     state = CharFilter(name='state')
     min_amount = NumberFilter(name='amount', lookup_expr='gte')
     max_amount = NumberFilter(name='amount', lookup_expr='lte')
+    created_at_min = DateFilter(name='created_at', lookup_expr='gte')
+    created_at_max = DateFilter(name='created_at', lookup_expr='lte')
     currency = CharFilter(name='currency', lookup_expr='iexact')
     disabled = BooleanFilter(name='disabled')
 
     class Meta:
         model = Transaction
-        fields = ['payment_method', 'state', 'min_amount', 'max_amount',
-                  'currency', 'disabled']
+        fields = ['payment_method', 'state', 'min_amount', 'max_amount', 'created_at_min',
+                  'created_at_max', 'currency', 'disabled']
+
+
+class BillingLogFilter(FilterSet):
+    billing_date_min = DateFilter(name='billing_date', lookup_expr='gte')
+    billing_date_max = DateFilter(name='billing_date', lookup_expr='lte')
+
+    plan_billed_up_to_min = DateFilter(name='plan_billed_up_to', lookup_expr='gte')
+    plan_billed_up_to_max = DateFilter(name='plan_billed_up_to', lookup_expr='lte')
+
+    total_min = NumberFilter(name='total', lookup_expr='gte')
+    total_max = NumberFilter(name='total', lookup_expr='lte')
+
+    created_at_min = DateFilter(name='created_at', lookup_expr='gte')
+    created_at_max = DateFilter(name='created_at', lookup_expr='lte')
+
+    class Meta:
+        model = BillingLog
+        fields = ['billing_date_min', 'billing_date_max', 'plan_billed_up_to_min',
+                  'plan_billed_up_to_max', 'total_min', 'total_max', 'created_at_min',
+                  'created_at_max']
 
 
 class PaymentMethodFilter(FilterSet):
