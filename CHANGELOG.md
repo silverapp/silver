@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.9 (2017-11-01)
+- Fixed updateable_buckets end_date not being the bucket_end_date for a canceled subscription.
+
 ## 0.3.8 (2017-11-01)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Fixed not being able to create Metered Feature Units Logs through the API if the subscription
