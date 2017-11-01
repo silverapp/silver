@@ -129,6 +129,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'error': u'Cannot activate subscription from canceled state.'
         }
 
+    @freeze_time('2017-02-05')
     def test_cancel_subscription(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
@@ -144,6 +145,10 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {'state': Subscription.STATES.CANCELED}
 
+        subscription = Subscription.objects.get(pk=subscription.pk)
+        assert subscription.state == Subscription.STATES.CANCELED
+        assert subscription.cancel_date == datetime.date(2017, 2, 28)
+
     def test_cancel_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
 
@@ -158,6 +163,8 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.data == {
             'error': u'Cannot cancel subscription from inactive state.'
         }
+
+        assert subscription.state == Subscription.STATES.INACTIVE
 
     def test_end_subscription(self):
         subscription = SubscriptionFactory.create()

@@ -574,13 +574,9 @@ class Subscription(models.Model):
 
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
-                bucket_after_trial = self.bucket_end_date(
-                    reference_date=self.trial_end + ONE_DAY)
-                # After trial_end comes a prorated paid period. The cancel_date
-                # should be one day after the end of the prorated paid period.
-                self.cancel_date = bucket_after_trial + ONE_DAY
+                self.cancel_date = self.bucket_end_date(reference_date=self.trial_end)
             else:
-                self.cancel_date = self.cycle_end_date() + ONE_DAY
+                self.cancel_date = self.cycle_end_date()
         elif when == self.CANCEL_OPTIONS.NOW:
             for metered_feature in self.plan.metered_features.all():
                 log = MeteredFeatureUnitsLog.objects.filter(
