@@ -70,6 +70,9 @@ setup(
     author_email='ping@presslabs.com',
     url='http://www.presslabs.com/silver/',
     packages=find_packages(),
+    extras_require={
+        'dev': 'Faker'
+    },
     include_package_data=True,
     install_requires=install_requires,
     classifiers=[
