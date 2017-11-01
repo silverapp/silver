@@ -1,8 +1,14 @@
 # Changelog
 
+## 0.3.8 (2017-11-01)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Fixed not being able to create Metered Feature Units Logs through the API if the subscription
+is canceled but not past the cancel_date.
+- Updateable buckets past the subscription cancel date are no longer valid. **(WARNING)**
+
 ## 0.3.7 (2017-10-27)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
-- Old PDFs are no longer deleted on PDF regeneration **(WARNING)**
+- Old PDFs are no longer deleted on PDF regeneration. **(WARNING)**
 
 ## 0.3.6 (2017-10-17)
 - Fixed execute_transactions task name.
