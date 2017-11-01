@@ -375,6 +375,39 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.data == {'count': 179}
 
     @freeze_time('2017-01-01')
+    def test_create_subscription_mf_units_log_with_sub_canceled_now(self):
+        subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
+                                                  start_date=datetime.date(2016, 1, 1),
+                                                  cancel_date=datetime.date(2017, 1, 1))
+        metered_feature = MeteredFeatureFactory.create()
+        subscription.plan.metered_features.add(metered_feature)
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        date = str(datetime.date.today())
+
+        response = self.client.patch(url, json.dumps({
+            "count": 150,
+            "date": date,
+            "update_type": "absolute"
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 150}
+
+        response = self.client.patch(url, json.dumps({
+            "count": 29,
+            "date": date,
+            "update_type": "relative"
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 179}
+
+    @freeze_time('2017-01-01')
     def test_create_subscription_mf_units_log_with_sub_canceled_before(self):
         subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
                                                   start_date=datetime.date(2016, 1, 1),
