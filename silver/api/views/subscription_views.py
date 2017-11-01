@@ -237,8 +237,9 @@ class MeteredFeatureUnitsLogDetail(APIView):
             return Response({"detail": "Metered Feature Not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        if subscription.state != 'active':
-            return Response({"detail": "Subscription is not active."},
+        if subscription.state not in [subscription.STATES.ACTIVE,
+                                      subscription.STATES.CANCELED]:
+            return Response({"detail": "Subscription is %s." % subscription.state},
                             status=status.HTTP_403_FORBIDDEN)
 
         required_fields = ['date', 'count', 'update_type']
@@ -287,7 +288,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
                 if i['start_date'] == bsd and i['end_date'] == bed),
             None)
 
-        if interval is None:
+        if not interval:
             return Response({"detail": "Date is out of bounds."},
                             status=status.HTTP_400_BAD_REQUEST)
 

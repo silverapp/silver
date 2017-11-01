@@ -382,13 +382,23 @@ class Subscription(models.Model):
                                     ignore_trial=False, granulate=True)
 
     def updateable_buckets(self):
+        buckets = []
+
         if self.state in ['ended', 'inactive']:
-            return None
-        buckets = list()
+            return buckets
+
         start_date = self.bucket_start_date()
         end_date = self.bucket_end_date()
+
         if start_date is None or end_date is None:
             return buckets
+
+        if self.state == self.STATES.CANCELED:
+            if self.cancel_date < start_date:
+                return buckets
+            if self.cancel_date < end_date:
+                end_date = self.cancel_date
+
         buckets.append({'start_date': start_date, 'end_date': end_date})
 
         generate_after = timedelta(seconds=self.plan.generate_after)

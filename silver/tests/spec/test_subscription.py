@@ -16,6 +16,7 @@
 import datetime
 import json
 
+from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
@@ -302,7 +303,7 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data == {u'detail': u'Not found.'}
 
-    def test_create_subscription_mf_units_log(self):
+    def test_create_subscription_mf_units_log_active_sub(self):
         subscription = SubscriptionFactory.create()
         metered_feature = MeteredFeatureFactory.create()
 
@@ -336,6 +337,67 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {'count': 179}
 
+    @freeze_time('2017-01-01')
+    def test_create_subscription_mf_units_log_sub_canceled_at_end_of_month(self):
+        subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
+                                                  start_date=datetime.date(2016, 1, 1),
+                                                  cancel_date=datetime.date(2017, 1, 31))
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        date = str(datetime.date.today())
+
+        response = self.client.patch(url, json.dumps({
+            "count": 150,
+            "date": date,
+            "update_type": "absolute"
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 150}
+
+        response = self.client.patch(url, json.dumps({
+            "count": 29,
+            "date": date,
+            "update_type": "relative"
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data == {'count': 179}
+
+    @freeze_time('2017-01-01')
+    def test_create_subscription_mf_units_log_with_sub_canceled_before(self):
+        subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
+                                                  start_date=datetime.date(2016, 1, 1),
+                                                  cancel_date=datetime.date(2016, 12, 31))
+        metered_feature = MeteredFeatureFactory.create()
+        subscription.plan.metered_features.add(metered_feature)
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        date = str(datetime.date.today())
+
+        response = self.client.patch(url, json.dumps({
+            "count": 150,
+            "date": date,
+            "update_type": "absolute"
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {"detail": "Date is out of bounds."}
+
     def test_create_subscription_mf_units_log_with_unexisting_mf(self):
         subscription = SubscriptionFactory.create()
 
@@ -352,7 +414,7 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data == {'detail': 'Metered Feature Not found.'}
 
-    def test_create_subscription_mf_units_log_with_unactivated_sub(self):
+    def test_create_subscription_mf_units_log_with_inactive_sub(self):
         subscription = SubscriptionFactory.create()
         metered_feature = MeteredFeatureFactory.create()
         subscription.plan.metered_features.add(metered_feature)
@@ -365,7 +427,22 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.patch(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {'detail': 'Subscription is not active.'}
+        assert response.data == {'detail': 'Subscription is inactive.'}
+
+    def test_create_subscription_mf_units_log_with_ended_sub(self):
+        subscription = SubscriptionFactory.create(state=Subscription.STATES.ENDED)
+        metered_feature = MeteredFeatureFactory.create()
+        subscription.plan.metered_features.add(metered_feature)
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        response = self.client.patch(url)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data == {'detail': 'Subscription is ended.'}
 
     def test_create_subscription_mf_units_log_with_invalid_date(self):
         subscription = SubscriptionFactory.create()

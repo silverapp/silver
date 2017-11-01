@@ -16,6 +16,7 @@
 import datetime
 
 from django.test import TestCase
+from freezegun import freeze_time
 from mock import patch, PropertyMock, MagicMock
 
 from silver.models import Plan, Subscription, BillingLog
@@ -736,3 +737,60 @@ class TestSubscriptionShouldBeBilled(TestCase):
         assert subscription.should_be_billed(incorrect_billing_date_1) is False
         assert subscription.should_be_billed(incorrect_billing_date_2) is False
         assert subscription.should_be_billed(incorrect_billing_date_3) is False
+
+    @freeze_time('2015-01-01')
+    def test_updateable_buckets_active_subscription(self):
+        plan = PlanFactory.create(generate_after=24 * 60,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2015, 1, 1)
+        )
+        assert subscription.updateable_buckets() == [
+            {'start_date': datetime.date(2015, 1, 1), 'end_date': datetime.date(2015, 1, 31)},
+        ]
+
+    @freeze_time('2015-01-01')
+    def test_updateable_buckets_2_months_active_subscription(self):
+        plan = PlanFactory.create(generate_after=24 * 60,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.ACTIVE,
+            start_date=datetime.date(2014, 1, 1)
+        )
+        assert subscription.updateable_buckets() == [
+            {'start_date': datetime.date(2015, 1, 1), 'end_date': datetime.date(2015, 1, 31)},
+            {'start_date': datetime.date(2014, 12, 1), 'end_date': datetime.date(2014, 12, 31)},
+        ]
+
+    @freeze_time('2015-01-01')
+    def test_updateable_buckets_2_months_canceled_subscription_at_end_of_month(self):
+        plan = PlanFactory.create(generate_after=24 * 60,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            start_date=datetime.date(2015, 1, 1),
+            cancel_date=datetime.date(2015, 1, 31)
+        )
+        assert subscription.updateable_buckets() == [
+            {'start_date': datetime.date(2015, 1, 1), 'end_date': datetime.date(2015, 1, 31)},
+        ]
+
+    @freeze_time('2015-01-01')
+    def test_updateable_buckets_2_months_canceled_subscription_last_month(self):
+        plan = PlanFactory.create(generate_after=24 * 60,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            start_date=datetime.date(2014, 1, 1),
+            cancel_date=datetime.date(2014, 12, 31)
+        )
+        assert subscription.updateable_buckets() == []
