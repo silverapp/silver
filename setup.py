@@ -60,7 +60,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version='0.3.9',
+    version='0.3.10',
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',
@@ -70,6 +70,9 @@ setup(
     author_email='ping@presslabs.com',
     url='http://www.presslabs.com/silver/',
     packages=find_packages(),
+    extras_require={
+        'dev': 'Faker'
+    },
     include_package_data=True,
     install_requires=install_requires,
     classifiers=[

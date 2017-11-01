@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.10 (2017-11-01)
+- Fixed subscription end of billing cycle cancel date.
+- Added development requirements via `setup.py`.
+
 ## 0.3.9 (2017-11-01)
 - Fixed updateable_buckets end_date not being the bucket_end_date for a canceled subscription.
 
