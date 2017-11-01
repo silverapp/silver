@@ -396,8 +396,6 @@ class Subscription(models.Model):
         if self.state == self.STATES.CANCELED:
             if self.cancel_date < start_date:
                 return buckets
-            if self.cancel_date < end_date:
-                end_date = self.cancel_date
 
         buckets.append({'start_date': start_date, 'end_date': end_date})
 
