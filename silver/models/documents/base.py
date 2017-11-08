@@ -14,6 +14,7 @@
 
 
 import logging
+from decimal import Decimal
 from datetime import datetime, timedelta
 
 import pytz
@@ -159,7 +160,14 @@ class BillingDocumentBase(models.Model):
                      verbose_name="State",
                      help_text='The state the invoice is in.')
 
+    _total = models.DecimalField(max_digits=19, decimal_places=2,
+                                 null=True, blank=True)
+    _total_in_transaction_currency = models.DecimalField(max_digits=19,
+                                                         decimal_places=2,
+                                                         null=True, blank=True)
+
     _last_state = None
+    _document_entries = None
 
     class Meta:
         abstract = True
@@ -169,6 +177,26 @@ class BillingDocumentBase(models.Model):
     def __init__(self, *args, **kwargs):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
         self._last_state = self.state
+
+    def _get_entries(self):
+        if not self._document_entries:
+            entries = []
+            if self.kind == 'Invoice':
+                entries = self.invoice_entries.all()
+            elif self.kind == 'Proforma':
+                entries = self.proforma_entries.all()
+
+            self._document_entries = entries
+
+        return self._document_entries
+
+    def compute_total_in_transaction_currency(self):
+        return sum([Decimal(entry.total_in_transaction_currency)
+                    for entry in self._get_entries()])
+
+    def compute_total(self):
+        return sum([Decimal(entry.total)
+                    for entry in self._get_entries()])
 
     def mark_for_generation(self):
         self.pdf.mark_as_dirty()
@@ -208,6 +236,8 @@ class BillingDocumentBase(models.Model):
             self.number = self._generate_number()
 
         self.archived_customer = self.customer.get_archivable_field_values()
+        self._total = self.compute_total()
+        self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
 
     @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):

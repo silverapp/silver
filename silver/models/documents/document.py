@@ -28,6 +28,9 @@ class Document(models.Model):
 
     @property
     def total(self):
+        if self._total is not None:
+            return self._total
+
         entries = self._get_entries()
         entries_total = [Decimal(entry.total) for entry in entries]
 
@@ -35,9 +38,13 @@ class Document(models.Model):
 
     @property
     def total_in_transaction_currency(self):
+        if self._total_in_transaction_currency is not None:
+            return self._total_in_transaction_currency
+
         entries = self._get_entries()
         entries_total = [Decimal(entry.total_in_transaction_currency)
                          for entry in entries]
+
         return sum(entries_total)
 
     series = models.CharField(max_length=20, blank=True, null=True)
@@ -55,6 +62,12 @@ class Document(models.Model):
     transaction_currency = models.CharField(max_length=4)
     state = models.CharField(max_length=10)
     pdf = models.ForeignKey('PDF', null=True)
+
+    _total = models.DecimalField(max_digits=19, decimal_places=2,
+                                 null=True, blank=True)
+    _total_in_transaction_currency = models.DecimalField(max_digits=19,
+                                                         decimal_places=2,
+                                                         null=True, blank=True)
 
     class Meta:
         managed = False

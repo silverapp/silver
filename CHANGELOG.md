@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.13 (2017-11-08)
+- Add `_total` and `_total_in_transaction_currency` to document base.
+
 ## 0.3.12 (2017-11-08)
 - Optimize document view queries (30% speed improvement).
 
