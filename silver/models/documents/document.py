@@ -22,10 +22,14 @@ from .entries import DocumentEntry
 class Document(models.Model):
     kind = models.CharField(max_length=40)
 
+    def __init__(self, *args, **kwargs):
+        self._entries = None
+        super(Document, self).__init__(*args, **kwargs)
+
     @property
     def total(self):
         entries = self._get_entries()
-        entries_total = [Decimal(entry.total) for entry in entries.all()]
+        entries_total = [Decimal(entry.total) for entry in entries]
 
         return sum(entries_total)
 
@@ -33,7 +37,7 @@ class Document(models.Model):
     def total_in_transaction_currency(self):
         entries = self._get_entries()
         entries_total = [Decimal(entry.total_in_transaction_currency)
-                         for entry in entries.all()]
+                         for entry in entries]
         return sum(entries_total)
 
     series = models.CharField(max_length=20, blank=True, null=True)
@@ -56,11 +60,13 @@ class Document(models.Model):
         managed = False
 
     def _get_entries(self):
-        data = {
-            'invoice_id': self.id
-        } if self.kind == 'invoice' else {
-            'proforma_id': self.id
-        }
+        if self._entries is None:
+            data = {
+                'invoice_id': self.id
+            } if self.kind == 'invoice' else {
+                'proforma_id': self.id
+            }
 
-        return DocumentEntry.objects.filter(**data)\
-            .select_related('invoice', 'proforma')
+            self._entries = list(DocumentEntry.objects.filter(**data) \
+                            .select_related('invoice', 'proforma').all())
+        return self._entries

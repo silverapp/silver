@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.11 (2017-11-08)
+    - Optimize document view queries (37% speed improvement).
+
 ## 0.3.10 (2017-11-01)
 - Fixed subscription end of billing cycle cancel date.
 - Added development requirements via `setup.py`.

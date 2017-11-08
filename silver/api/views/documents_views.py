@@ -345,4 +345,4 @@ class DocumentList(ListAPIView):
     ordering = ('-due_date', '-number')
 
     def get_queryset(self):
-        return Document.objects.all().select_related('provider', 'customer')
+        return Document.objects.all().select_related('customer', 'provider')
