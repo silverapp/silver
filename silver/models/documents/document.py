@@ -28,7 +28,7 @@ class Document(models.Model):
 
     @property
     def total(self):
-        if self._total:
+        if self._total is not None:
             return self._total
 
         entries = self._get_entries()
@@ -38,7 +38,7 @@ class Document(models.Model):
 
     @property
     def total_in_transaction_currency(self):
-        if self._total_in_transaction_currency:
+        if self._total_in_transaction_currency is not None:
             return self._total_in_transaction_currency
 
         entries = self._get_entries()
