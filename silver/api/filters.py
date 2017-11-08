@@ -124,6 +124,7 @@ class BillingDocumentFilter(FilterSet):
 
 
 class DocumentFilter(FilterSet):
+    id = NumberFilter(name='id', lookup_expr='iexact')
     state = MultipleCharFilter(name='state', lookup_expr='iexact')
     number = NumberFilter(name='number', lookup_expr='iexact')
     customer = NumberFilter(name='customer__pk', lookup_expr='iexact')
@@ -143,7 +144,7 @@ class DocumentFilter(FilterSet):
 
     class Meta:
         model = Document
-        fields = ['state', 'number', 'customer_name', 'customer_company',
+        fields = ['id', 'state', 'number', 'customer_name', 'customer_company',
                   'provider_name', 'provider_company', 'issue_date', 'due_date',
                   'paid_date', 'cancel_date', 'currency', 'sales_tax_name']
 

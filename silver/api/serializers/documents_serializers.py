@@ -63,9 +63,15 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
         transactions = None
 
         if document.kind == 'invoice':
-            transactions = Transaction.objects.filter(invoice_id=document.id)
+            transactions = Transaction.objects.filter(invoice_id=document.id)\
+                                              .select_related('payment_method')
         elif document.kind == 'proforma':
-            transactions = Transaction.objects.filter(proforma_id=document.id)
+            transactions = Transaction.objects.filter(proforma_id=document.id)\
+                                              .select_related('payment_method')
+
+        for transaction in transactions:
+            transaction.payment_method.customer = document.customer
+            transaction.provider = document.provider
 
         return TransactionSerializer(transactions, many=True,
                                      context=self.context).data
