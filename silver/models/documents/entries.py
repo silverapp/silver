@@ -74,17 +74,17 @@ class DocumentEntry(models.Model):
 
     @property
     def total_before_tax_in_transaction_currency(self):
-        result = self.total_before_tax * self.document.transaction_xe_rate
+        result = self.total_before_tax * (self.document.transaction_xe_rate or 1)
         return result.quantize(Decimal('0.00'))
 
     @property
     def unit_price_in_transaction_currency(self):
-        result = Decimal(self.unit_price) * self.document.transaction_xe_rate
+        result = Decimal(self.unit_price) * (self.document.transaction_xe_rate or 1)
         return result.quantize(Decimal('0.0000'))
 
     @property
     def tax_value_in_transaction_currency(self):
-        result = self.tax_value * self.document.transaction_xe_rate
+        result = self.tax_value * (self.document.transaction_xe_rate or 1)
         return result.quantize(Decimal('0.00'))
 
     def clone(self):

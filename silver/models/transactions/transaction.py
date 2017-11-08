@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 
 class Transaction(models.Model):
+    _provider = None
+
     amount = models.DecimalField(
         decimal_places=2, max_digits=12,
         validators=[MinValueValidator(Decimal('0.00'))]
@@ -275,7 +277,11 @@ class Transaction(models.Model):
 
     @property
     def provider(self):
-        return self.document.provider
+        return self._provider or self.document.provider
+
+    @provider.setter
+    def provider(self, provider):
+        self._provider = provider
 
     @property
     def payment_processor(self):

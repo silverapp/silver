@@ -67,6 +67,6 @@ class Document(models.Model):
                 'proforma_id': self.id
             }
 
-            self._entries = list(DocumentEntry.objects.filter(**data) \
-                            .select_related('invoice', 'proforma').all())
+            self._entries = list(DocumentEntry.objects.filter(**data)
+                                 .select_related('invoice', 'proforma').all())
         return self._entries
