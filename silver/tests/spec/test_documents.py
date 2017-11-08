@@ -25,7 +25,7 @@ from rest_framework.test import APITestCase
 
 from silver.tests.factories import (ProformaFactory, AdminUserFactory,
                                     InvoiceFactory, TransactionFactory,
-                                    PaymentMethodFactory)
+                                    PaymentMethodFactory, DocumentEntryFactory)
 from silver.tests.fixtures import PAYMENT_PROCESSORS
 
 
@@ -98,7 +98,8 @@ class TestDocumentEndpoints(APITestCase):
             One proforma, one invoice, without related documents
         """
         proforma = ProformaFactory.create()
-        invoice = InvoiceFactory.create()
+        invoice_entries = DocumentEntryFactory.create_batch(3)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
         invoice.issue()
         payment_method = PaymentMethodFactory.create(customer=invoice.customer)
         transaction = TransactionFactory.create(payment_method=payment_method,
@@ -111,7 +112,7 @@ class TestDocumentEndpoints(APITestCase):
             response = self.client.get(url)
 
         # ^ there's a bug where specifying format='json' doesn't work
-        response_data = json.loads(json.dumps(response.data))
+        response_data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response_data), 2)
