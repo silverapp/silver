@@ -1,7 +1,10 @@
 # Changelog
 
+## 0.3.12 (2017-11-08)
+- Optimize document view queries (30% speed improvement).
+
 ## 0.3.11 (2017-11-08)
-    - Optimize document view queries (37% speed improvement).
+- Optimize document view queries (37% speed improvement).
 
 ## 0.3.10 (2017-11-01)
 - Fixed subscription end of billing cycle cancel date.
