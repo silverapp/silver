@@ -14,6 +14,7 @@
 
 
 import logging
+from decimal import Decimal
 from datetime import datetime, timedelta
 
 import pytz
@@ -159,6 +160,12 @@ class BillingDocumentBase(models.Model):
                      verbose_name="State",
                      help_text='The state the invoice is in.')
 
+    _total = models.DecimalField(max_digits=19, decimal_places=2,
+                                 null=True, blank=True)
+    _total_in_transaction_currency = models.DecimalField(max_digits=19,
+                                                         decimal_places=2,
+                                                         null=True, blank=True)
+
     _last_state = None
 
     class Meta:
@@ -169,6 +176,27 @@ class BillingDocumentBase(models.Model):
     def __init__(self, *args, **kwargs):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
         self._last_state = self.state
+        self._entries = None
+
+    def _get_entries(self):
+        if self._entries:
+            return self._entries
+
+        entries = []
+        if self.kind == 'Invoice':
+            entries = self.invoice_entries.all()
+        elif self.kind == 'Proforma':
+            entries = self.proforma_entries.all()
+
+        self.entries = entries
+
+    def compute_total_in_transaction_currency(self):
+        return sum([Decimal(entry.total_in_transaction_currency)
+                    for entry in self._get_entries()])
+
+    def compute_total(self):
+        return sum([Decimal(entry.total)
+                    for entry in self._get_entries()])
 
     def mark_for_generation(self):
         self.pdf.mark_as_dirty()
