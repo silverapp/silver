@@ -14,8 +14,8 @@ class InvoiceListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()\
-        .select_related('proforma')\
-        .prefetch_related('transaction_set')
+        .select_related('related_document')\
+        .prefetch_related('invoice_transactions')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = InvoiceFilter
 
@@ -205,8 +205,8 @@ class ProformaListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()\
-        .select_related('invoice')\
-        .prefetch_related('transaction_set')
+        .select_related('related_document')\
+        .prefetch_related('proforma_transactions')
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = ProformaFilter
 
@@ -265,10 +265,10 @@ class ProformaInvoiceRetrieveCreate(APIView):
             return Response({"detail": "Proforma not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        if not proforma.invoice:
+        if not proforma.related_document:
             proforma.create_invoice()
 
-        serializer = InvoiceSerializer(proforma.invoice,
+        serializer = InvoiceSerializer(proforma.related_document,
                                        context={'request': request})
         return Response(serializer.data)
 
@@ -281,7 +281,7 @@ class ProformaInvoiceRetrieveCreate(APIView):
             return Response({"detail": "Proforma not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        serializer = InvoiceSerializer(proforma.invoice,
+        serializer = InvoiceSerializer(proforma.related_document,
                                        context={'request': request})
         return Response(serializer.data)
 

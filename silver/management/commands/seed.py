@@ -34,7 +34,7 @@ class Command(BaseCommand):
 
         invoice = InvoiceFactory.create(invoice_entries=[DocumentEntryFactory.create()],
                                         state=Invoice.STATES.ISSUED,
-                                        proforma=None)
+                                        related_document=None)
         TransactionFactory.create(state=Transaction.States.Settled,
                                   invoice=invoice,
                                   payment_method__customer=invoice.customer,
@@ -42,13 +42,13 @@ class Command(BaseCommand):
         InvoiceFactory.create_batch(size=3,
                                     invoice_entries=[DocumentEntryFactory.create()],
                                     state=Invoice.STATES.PAID,
-                                    proforma=None)
+                                    related_document=None)
         InvoiceFactory.create_batch(size=3,
                                     invoice_entries=[DocumentEntryFactory.create()],
                                     state=Invoice.STATES.DRAFT,
-                                    proforma=None)
+                                    related_document=None)
 
         InvoiceFactory.create_batch(size=3,
                                     invoice_entries=[DocumentEntryFactory.create()],
                                     state=Invoice.STATES.CANCELED,
-                                    proforma=None)
+                                    related_document=None)

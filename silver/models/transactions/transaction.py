@@ -79,8 +79,10 @@ class Transaction(models.Model):
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 
-    proforma = models.ForeignKey("Proforma", null=True, blank=True)
-    invoice = models.ForeignKey("Invoice", null=True, blank=True)
+    proforma = models.ForeignKey("Proforma", null=True, blank=True,
+                                 related_name='proforma_transactions')
+    invoice = models.ForeignKey("Invoice", null=True, blank=True,
+                                related_name='invoice_transactions')
     payment_method = models.ForeignKey('PaymentMethod')
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
@@ -178,13 +180,13 @@ class Transaction(models.Model):
             )
 
         if self.invoice and self.proforma:
-            if self.invoice.proforma != self.proforma:
+            if self.invoice.related_document != self.proforma:
                 raise ValidationError('Invoice and proforma are not related.')
         else:
             if self.invoice:
-                self.proforma = self.invoice.proforma
+                self.proforma = self.invoice.related_document
             else:
-                self.invoice = self.proforma.invoice
+                self.invoice = self.proforma.related_document
 
         if document.customer != self.customer:
             raise ValidationError(

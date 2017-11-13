@@ -198,7 +198,7 @@ def create_transactions_for_issued_documents(payment_method):
     transactions = []
 
     for document in chain(
-        Proforma.objects.filter(invoice=None, customer=customer,
+        Proforma.objects.filter(related_document=None, customer=customer,
                                 state=Proforma.STATES.ISSUED),
         Invoice.objects.filter(state=Invoice.STATES.ISSUED, customer=customer)
     ):

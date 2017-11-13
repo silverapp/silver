@@ -519,17 +519,17 @@ class TestProformaEndpoints(APITestCase):
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/%s/' % proforma.invoice.pk
+            'invoice': 'http://testserver/invoices/%s/' % proforma.related_document.pk
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
         invoice = Invoice.objects.all()[0]
-        assert proforma.invoice == invoice
-        assert invoice.proforma == proforma
+        assert proforma.related_document == invoice
+        assert invoice.related_document == proforma
 
-        invoice = get_object_or_None(Invoice, proforma=proforma)
+        invoice = get_object_or_None(Invoice, related_document=proforma)
 
     def test_pay_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -552,17 +552,17 @@ class TestProformaEndpoints(APITestCase):
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/%s/' % proforma.invoice.pk
+            'invoice': 'http://testserver/invoices/%s/' % proforma.related_document.pk
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
                    for item in mandatory_content.iteritems())
 
         invoice = Invoice.objects.all()[0]
-        assert proforma.invoice == invoice
-        assert invoice.proforma == proforma
+        assert proforma.related_document == invoice
+        assert invoice.related_document == proforma
 
-        invoice = get_object_or_None(Invoice, proforma=proforma)
+        invoice = get_object_or_None(Invoice, related_document=proforma)
 
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()

@@ -69,6 +69,10 @@ def documents_pdf_path(document, filename):
 
 
 class BillingDocumentQuerySet(models.QuerySet):
+    def create(self, **kwargs):
+        obj = super(BillingDocumentQuerySet, self).create(**kwargs)
+        return obj
+
     def due_this_month(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
@@ -96,14 +100,14 @@ class BillingDocumentQuerySet(models.QuerySet):
 
 class BillingDocumentManager(models.Manager):
     def get_queryset(self):
-        queryset = super(BillingDocumentManager, self).get_queryset()
-        queryset = queryset.select_related('customer', 'provider')
-        if (self.model.kind == 'Invoice'):
-            queryset = queryset.prefetch_related('invoice_entries__product_code')
-        if (self.model.kind == 'Proforma'):
-            queryset = queryset.prefetch_related('proforma_entries__product_code',
-                                                 'proforma_entries__invoice')
-        return queryset
+        return super(BillingDocumentManager, self).get_queryset() \
+                                                  .select_related('customer', 'provider',
+                                                                  'related_document')
+
+
+def get_billing_documents_kinds():
+    return ((subclass.__name__.lower(), subclass.__name__)
+            for subclass in BillingDocumentBase.__subclasses__())
 
 
 class BillingDocumentBase(models.Model):
@@ -121,6 +125,10 @@ class BillingDocumentBase(models.Model):
         (STATES.PAID, _('Paid')),
         (STATES.CANCELED, _('Canceled'))
     )
+
+    kind = models.CharField(get_billing_documents_kinds, max_length=8, db_index=True)
+    related_document = models.ForeignKey('self', blank=True, null=True,
+                                         related_name='related_proforma')
 
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
@@ -170,20 +178,27 @@ class BillingDocumentBase(models.Model):
     _document_entries = None
 
     class Meta:
-        abstract = True
-        unique_together = ('provider', 'series', 'number')
+        unique_together = ('kind', 'provider', 'series', 'number')
         ordering = ('-issue_date', 'series', '-number')
 
     def __init__(self, *args, **kwargs):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
+
+        if not self.kind:
+            self.kind = self.__class__.__name__.lower()
+        else:
+            for subclass in BillingDocumentBase.__subclasses__():
+                if subclass.__name__.lower() == self.kind:
+                    self.__class__ = subclass
+
         self._last_state = self.state
 
     def _get_entries(self):
         if not self._document_entries:
             entries = []
-            if self.kind == 'Invoice':
+            if self.kind == 'invoice':
                 entries = self.invoice_entries.all()
-            elif self.kind == 'Proforma':
+            elif self.kind == 'proforma':
                 entries = self.proforma_entries.all()
 
             self._document_entries = entries
@@ -432,10 +447,6 @@ class BillingDocumentBase(models.Model):
             if document_type_name.lower() == 'proforma':
                 entry.proforma = self
             yield(entry)
-
-    @property
-    def transactions(self):
-        return self.transaction_set.all()
 
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)
