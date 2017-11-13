@@ -20,15 +20,21 @@ from django.apps import apps
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
-from .base import BillingDocumentBase
+from .base import BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
 from silver.models.billing_entities import Provider
 
 
-class Invoice(BillingDocumentBase):
-    proforma = models.ForeignKey('Proforma', blank=True, null=True,
-                                 related_name='related_invoice')
+class InvoiceManager(BillingDocumentManager):
+    def get_queryset(self):
+        queryset = super(BillingDocumentManager, self).get_queryset()
+        return queryset.filter(kind='invoice').prefetch_related('invoice_entries__product_code')
 
-    kind = 'Invoice'
+
+class Invoice(BillingDocumentBase):
+    objects = InvoiceManager.from_queryset(BillingDocumentQuerySet)()
+
+    class Meta:
+        proxy = True
 
     def __init__(self, *args, **kwargs):
         super(Invoice, self).__init__(*args, **kwargs)
@@ -38,6 +44,10 @@ class Invoice(BillingDocumentBase):
 
         customer_field = self._meta.get_field("customer")
         customer_field.related_name = "invoices"
+
+    @property
+    def transactions(self):
+        return self.invoice_transactions.all()
 
     @transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
                 target=BillingDocumentBase.STATES.ISSUED)
@@ -58,10 +68,6 @@ class Invoice(BillingDocumentBase):
             return ''
 
     @property
-    def related_document(self):
-        return self.proforma
-
-    @property
     def entries(self):
         return self.invoice_entries.all()
 
@@ -80,7 +86,7 @@ def post_invoice_save(sender, instance, created=False, **kwargs):
 
     Transaction = apps.get_model('silver.Transaction')
     invoice = instance
-    proforma = invoice.proforma
+    proforma = invoice.related_document
 
     if proforma:
         Transaction.objects.filter(proforma=proforma).update(invoice=invoice)

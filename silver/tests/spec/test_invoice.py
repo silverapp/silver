@@ -193,7 +193,7 @@ class TestInvoiceEndpoints(APITestCase):
                                         if invoice.transaction_xe_rate else None),
                 "transaction_xe_date": invoice.transaction_xe_date,
                 "state": "issued",
-                "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
+                "proforma": "http://testserver/proformas/%s/" % invoice.related_document.pk,
                 "invoice_entries": [],
                 "pdf_url": invoice.pdf.url,
                 "total": 0

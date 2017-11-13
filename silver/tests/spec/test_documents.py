@@ -127,8 +127,8 @@ class TestDocumentEndpoints(APITestCase):
             One proforma with a related invoice, one invoice
         """
         proforma = ProformaFactory.create()
-        invoice1 = InvoiceFactory.create(proforma=proforma)
-        proforma.invoice = invoice1
+        invoice1 = InvoiceFactory.create(related_document=proforma)
+        proforma.related_document = invoice1
         proforma.save()
 
         invoice2 = InvoiceFactory.create()

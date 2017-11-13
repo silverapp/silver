@@ -1001,9 +1001,9 @@ class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
                                      related_name='billing_log_entries')
     invoice = models.ForeignKey('Invoice', null=True, blank=True,
-                                related_name='billing_log_entries')
+                                related_name='invoice_billing_logs')
     proforma = models.ForeignKey('Proforma', null=True, blank=True,
-                                 related_name='billing_log_entries')
+                                 related_name='proforma_billing_logs')
     billing_date = models.DateField(
         help_text="The date when the invoice/proforma was issued."
     )

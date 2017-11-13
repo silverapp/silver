@@ -55,7 +55,7 @@ class TestDocumentsTransactions(TestCase):
         invoice.issue()
 
         transactions = Transaction.objects.filter(
-            invoice=invoice, proforma=invoice.proforma
+            invoice=invoice, proforma=invoice.related_document
         )
         self.assertEqual(len(transactions), 1)
 
@@ -76,7 +76,7 @@ class TestDocumentsTransactions(TestCase):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
-                invoice=invoice, proforma=invoice.proforma
+                invoice=invoice, proforma=invoice.related_document
             )
             self.assertEqual(len(transactions), 0)
 
@@ -96,7 +96,7 @@ class TestDocumentsTransactions(TestCase):
             invoice.issue()
 
             transactions = Transaction.objects.filter(
-                invoice=invoice, proforma=invoice.proforma
+                invoice=invoice, proforma=invoice.related_document
             )
             self.assertEqual(len(transactions), 0)
 
@@ -147,7 +147,7 @@ class TestDocumentsTransactions(TestCase):
             self.assertEqual(mock_execute.call_count, 0)
 
     def test_no_transaction_creation_at_invoice_creation_from_proforma(self):
-        proforma = ProformaFactory.create(invoice=None)
+        proforma = ProformaFactory.create(related_document=None)
 
         customer = proforma.customer
         PaymentMethodFactory.create(
@@ -169,7 +169,7 @@ class TestDocumentsTransactions(TestCase):
         self.assertEqual(transaction.invoice, invoice)
 
     def test_no_transaction_creation_at_proforma_pay(self):
-        proforma = ProformaFactory.create(invoice=None)
+        proforma = ProformaFactory.create(related_document=None)
 
         customer = proforma.customer
         PaymentMethodFactory.create(
@@ -181,7 +181,7 @@ class TestDocumentsTransactions(TestCase):
         proforma.issue()
         proforma.pay()
 
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         self.assertEqual(len(Transaction.objects.filter(proforma=proforma)), 1)
 
@@ -189,7 +189,7 @@ class TestDocumentsTransactions(TestCase):
         self.assertEqual(transaction.invoice, invoice)
 
     def test_no_transaction_settle_with_only_related_proforma(self):
-        proforma = ProformaFactory.create(invoice=None)
+        proforma = ProformaFactory.create(related_document=None)
 
         customer = proforma.customer
         PaymentMethodFactory.create(
@@ -209,7 +209,7 @@ class TestDocumentsTransactions(TestCase):
 
         self.assertEqual(proforma.state, proforma.STATES.PAID)
 
-        invoice = proforma.invoice
+        invoice = proforma.related_document
         self.assertEqual(invoice.state, invoice.STATES.PAID)
 
         self.assertEqual(list(proforma.transactions),
@@ -237,4 +237,4 @@ class TestDocumentsTransactions(TestCase):
         proforma = transaction.proforma
         invoice = transaction.invoice
 
-        self.assertEqual(proforma.invoice, invoice)
+        self.assertEqual(proforma.related_document, invoice)

@@ -31,11 +31,11 @@ class TestInvoice(TestCase):
         proforma.issue()
         proforma.create_invoice()
 
-        assert proforma.invoice.state == Invoice.STATES.ISSUED
+        assert proforma.related_document.state == Invoice.STATES.ISSUED
 
-        proforma.invoice.pay()
+        proforma.related_document.pay()
 
-        assert proforma.invoice.state == Invoice.STATES.PAID
+        assert proforma.related_document.state == Invoice.STATES.PAID
         assert proforma.state == Proforma.STATES.PAID
 
     def test_clone_invoice_into_draft(self):
@@ -51,7 +51,7 @@ class TestInvoice(TestCase):
         assert clone.state == Invoice.STATES.DRAFT
         assert clone.paid_date is None
         assert clone.issue_date is None
-        assert clone.proforma is None
+        assert clone.related_document is None
         assert (clone.series != invoice.series or
                 clone.number != invoice.number)
         assert clone.sales_tax_percent == invoice.sales_tax_percent
@@ -84,12 +84,12 @@ class TestInvoice(TestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
 
-        if not proforma.invoice:
+        if not proforma.related_document:
             proforma.create_invoice()
 
-        proforma.invoice.cancel()
+        proforma.related_document.cancel()
 
-        assert proforma.invoice.state == proforma.state == Invoice.STATES.CANCELED
+        assert proforma.related_document.state == proforma.state == Invoice.STATES.CANCELED
 
     def _get_decimal_places(self, number):
         return max(0, -number.as_tuple().exponent)

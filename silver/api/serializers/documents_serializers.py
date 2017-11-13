@@ -105,7 +105,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('archived_provider', 'archived_customer', 'total',
                             'total_in_transaction_currency')
         extra_kwargs = {
-            'transaction_currency': {'required': False}
+            'transaction_currency': {'required': False},
+            'proforma': {'source': 'related_document', 'view_name': 'proforma-detail'}
         }
 
     def create(self, validated_data):
@@ -174,7 +175,8 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('archived_provider', 'archived_customer', 'total',
                             'total_in_transaction_currency')
         extra_kwargs = {
-            'transaction_currency': {'required': False}
+            'transaction_currency': {'required': False},
+            'invoice': {'source': 'related_document', 'view_name': 'invoice-detail'}
         }
 
     def create(self, validated_data):

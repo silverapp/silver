@@ -94,7 +94,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         payment_method_url = reverse('payment-method-detail',
                                      kwargs={'customer_pk': customer.pk,
@@ -231,7 +231,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -270,7 +270,7 @@ class TestTransactionEndpoint(APITestCase):
                                           transaction_xe_rate=Decimal('0.25'),
                                           proforma_entries=entries)
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0) + timedelta(minutes=30)
         url = reverse('payment-method-transaction-list',
@@ -312,7 +312,7 @@ class TestTransactionEndpoint(APITestCase):
                                           state=Proforma.STATES.ISSUED,
                                           issue_date=timezone.now().date())
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -349,7 +349,7 @@ class TestTransactionEndpoint(APITestCase):
                                           state=Proforma.STATES.ISSUED,
                                           issue_date=timezone.now().date())
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -410,8 +410,8 @@ class TestTransactionEndpoint(APITestCase):
         transaction = TransactionFactory.create(payment_method=payment_method)
 
         proforma = ProformaFactory.create(state='issued')
-        invoice = InvoiceFactory.create(proforma=proforma, state='issued')
-        proforma.invoice = invoice
+        invoice = InvoiceFactory.create(related_document=proforma, state='issued')
+        proforma.related_document = invoice
         proforma.save()
 
         invoice_url = reverse('invoice-detail', args=[invoice.pk])
