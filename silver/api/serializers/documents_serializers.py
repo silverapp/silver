@@ -52,7 +52,7 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
     """
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     url = DocumentUrl(proforma_view_name='proforma-detail',
                       invoice_view_name='invoice-detail', )
 
