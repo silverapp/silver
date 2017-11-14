@@ -578,7 +578,7 @@ class DueDateFilter(SimpleListFilter):
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'customer', 'state',
                     'provider', 'issue_date', 'due_date', 'paid_date',
-                    'cancel_date', tax, 'total', 'transaction_total']
+                    'cancel_date', tax, 'total', 'transaction_total', 'get_related_document']
 
     list_filter = ('provider__company', 'state', 'customer', DueDateFilter)
 
@@ -598,8 +598,8 @@ class BillingDocumentAdmin(ModelAdmin):
               'due_date', 'paid_date', 'cancel_date',
               ('sales_tax_name', 'sales_tax_percent'), 'currency',
               ('transaction_currency', 'transaction_xe_rate'),
-              'transaction_xe_date', 'state', 'total', )
-    readonly_fields = ('state', 'total')
+              'transaction_xe_date', 'state', 'total', 'related_document')
+    readonly_fields = ('state', 'total', 'related_document')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents',
                'mark_pdf_for_generation']
@@ -767,20 +767,17 @@ class BillingDocumentAdmin(ModelAdmin):
 
     download_selected_documents.short_description = 'Download selected documents'
 
+    def get_related_document(self, obj):
+        return obj.related_document.admin_change_url if obj.related_document else None
+    get_related_document.short_description = 'Related document'
+    get_related_document.allow_tags = True
+
 
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
     list_display = BillingDocumentAdmin.list_display + [
-        'invoice_pdf', 'related_proforma'
+        'invoice_pdf',
     ]
-    list_display_links = BillingDocumentAdmin.list_display_links
-    search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('related_proforma', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + (
-        'related_proforma',
-    )
-    inlines = BillingDocumentAdmin.inlines
-    actions = BillingDocumentAdmin.actions
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
@@ -818,24 +815,12 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def _model_name(self):
         return "Invoice"
 
-    def related_proforma(self, obj):
-        return obj.proforma.admin_change_url if obj.proforma else 'None'
-    related_proforma.short_description = 'Related proforma'
-    related_proforma.allow_tags = True
-
 
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
     list_display = BillingDocumentAdmin.list_display + [
-        'proforma_pdf', 'related_invoice'
+        'proforma_pdf',
     ]
-    list_display_links = BillingDocumentAdmin.list_display_links
-    search_fields = BillingDocumentAdmin.search_fields
-    fields = BillingDocumentAdmin.fields + ('related_invoice', )
-    readonly_fields = BillingDocumentAdmin.readonly_fields + (
-        'related_invoice',
-    )
-    inlines = BillingDocumentAdmin.inlines
     actions = BillingDocumentAdmin.actions + ['create_invoice']
 
     def issue(self, request, queryset):
@@ -877,11 +862,6 @@ class ProformaAdmin(BillingDocumentAdmin):
     @property
     def _model_name(self):
         return "Proforma"
-
-    def related_invoice(self, obj):
-        return obj.invoice.admin_change_url if obj.invoice else None
-    related_invoice.short_description = 'Related invoice'
-    related_invoice.allow_tags = True
 
 
 class TransactionForm(forms.ModelForm):
