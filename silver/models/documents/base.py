@@ -128,7 +128,7 @@ class BillingDocumentBase(models.Model):
 
     kind = models.CharField(get_billing_documents_kinds, max_length=8, db_index=True)
     related_document = models.ForeignKey('self', blank=True, null=True,
-                                         related_name='related_proforma')
+                                         related_name='reverse_related_document')
 
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
