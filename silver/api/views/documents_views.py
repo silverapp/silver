@@ -365,7 +365,6 @@ class DocumentList(ListAPIView):
         return (invoices | proformas).select_related('customer', 'provider', 'pdf')
 
 
-
 class PDFRetrieve(generics.RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     queryset = PDF.objects.all()
