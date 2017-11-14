@@ -108,10 +108,9 @@ urlpatterns = [
         name='proforma-invoice'),
     url(r'^proformas/(?P<proforma_id>\d+).pdf$',
         silver_views.proforma_pdf, name='proforma-pdf'),
-
-    url(r'^pdfs/(?P<pdf_id>\d+)$',
-        silver_views.pdf, name='pdf'),
-
+    url(r'^pdf/(?P<pdf_pk>[0-9]+)/$',
+        documents_views.PDFRetrieve.as_view(),
+        name='pdf'),
     url(r'^documents/$',
         documents_views.DocumentList.as_view(), name='document-list')
 ]

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from billing_entities import Customer, Provider
-from documents import Proforma, Invoice, BillingDocumentBase, DocumentEntry
+from documents import Proforma, Invoice, BillingDocumentBase, DocumentEntry, PDF
 from plans import Plan, MeteredFeature
 from product_codes import ProductCode
 from subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog

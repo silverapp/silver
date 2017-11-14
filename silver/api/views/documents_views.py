@@ -1,5 +1,7 @@
 import django
 from django.db.models import Q
+from django.http import HttpResponseRedirect
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, filters, status
 from rest_framework.generics import get_object_or_404, ListAPIView
@@ -9,7 +11,7 @@ from rest_framework.views import APIView
 from silver.api.filters import InvoiceFilter, ProformaFilter, BillingDocumentFilter
 from silver.api.serializers.documents_serializers import InvoiceSerializer, \
     DocumentEntrySerializer, ProformaSerializer, DocumentSerializer
-from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma
+from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma, PDF
 
 
 class InvoiceListCreate(generics.ListCreateAPIView):
@@ -361,3 +363,14 @@ class DocumentList(ListAPIView):
             .prefetch_related('proforma_transactions__payment_method')
 
         return (invoices | proformas).select_related('customer', 'provider', 'pdf')
+
+
+
+class PDFRetrieve(generics.RetrieveAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = PDF.objects.all()
+    lookup_url_kwarg = 'pdf_pk'
+
+    def get(self, *args, **kwargs):
+        pdf = self.get_object()
+        return HttpResponseRedirect(pdf.url)

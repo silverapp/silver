@@ -50,4 +50,8 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        return reverse('pdf', kwargs={'pdf_id': obj.pdf.id}, request=request) if obj.pdf else None
+        if obj.pdf is None:
+            return None
+
+        return self.reverse(view_name, kwargs={'pdf_pk': obj.pdf.pk},
+                            request=request, format=format)
