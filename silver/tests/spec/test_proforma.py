@@ -79,7 +79,7 @@ class TestProformaEndpoints(APITestCase):
             "transaction_xe_rate": (str(proforma.transaction_xe_rate)
                                     if proforma.transaction_xe_rate else None),
             "transaction_xe_date": proforma.transaction_xe_date,
-            "pdf_url": None,
+            "pdf_url": "http://testserver/pdfs/%s/" % proforma.pdf.pk if proforma.pdf else None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],
@@ -155,7 +155,7 @@ class TestProformaEndpoints(APITestCase):
             "transaction_xe_rate": ("%.4f" % proforma.transaction_xe_rate
                                     if proforma.transaction_xe_rate else None),
             "transaction_xe_date": proforma.transaction_xe_date,
-            "pdf_url": None,
+            "pdf_url": "http://testserver/pdfs/%s/" % proforma.pdf.pk if proforma.pdf else None,
             "state": "draft",
             "invoice": None,
             "proforma_entries": [],

@@ -85,7 +85,7 @@ class TestInvoiceEndpoints(APITestCase):
             "state": invoice.state,
             "proforma": None,
             "invoice_entries": [],
-            "pdf_url": None,
+            "pdf_url": "http://testserver/pdfs/%s/" % invoice.pdf.pk if invoice.pdf else None,
             "total": invoice.total,
             "total_in_transaction_currency": invoice.total,
             "transactions": []
@@ -195,7 +195,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "state": "issued",
                 "proforma": "http://testserver/proformas/%s/" % invoice.related_document.pk,
                 "invoice_entries": [],
-                "pdf_url": None,
+                "pdf_url": "http://testserver/pdfs/%s/" % invoice.pdf.pk if invoice.pdf else None,
                 "total": 0
             }
             for field in expected_response:
