@@ -86,7 +86,7 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
@@ -156,7 +156,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
