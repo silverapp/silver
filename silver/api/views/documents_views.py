@@ -1,3 +1,5 @@
+import django
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, filters, status
 from rest_framework.generics import get_object_or_404, ListAPIView
@@ -345,6 +347,12 @@ class DocumentList(ListAPIView):
     ordering = ('-due_date', '-number')
 
     def get_queryset(self):
+        django_version = django.get_version().split('.')
+        if django_version[0] == '1' and int(django_version[1]) < 11:
+            return BillingDocumentBase.objects.filter(
+                Q(kind='invoice') | Q(kind='proforma', related_document=None)
+            ).select_related('customer', 'provider', 'pdf')
+
         invoices = BillingDocumentBase.objects \
             .filter(kind='invoice') \
             .prefetch_related('invoice_transactions__payment_method')
