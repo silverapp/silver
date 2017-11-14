@@ -195,13 +195,7 @@ class BillingDocumentBase(models.Model):
 
     def _get_entries(self):
         if not self._document_entries:
-            entries = []
-            if self.kind == 'invoice':
-                entries = self.invoice_entries.all()
-            elif self.kind == 'proforma':
-                entries = self.proforma_entries.all()
-
-            self._document_entries = entries
+            self._document_entries = getattr(self, self.kind + '_entries').all()
 
         return self._document_entries
 
@@ -539,6 +533,9 @@ class BillingDocumentBase(models.Model):
 
     @property
     def total(self):
+        if self._total is not None:
+            return self._total
+
         return sum([entry.total for entry in self.entries])
 
     @property
@@ -551,6 +548,9 @@ class BillingDocumentBase(models.Model):
 
     @property
     def total_in_transaction_currency(self):
+        if self._total_in_transaction_currency is not None:
+            return self._total_in_transaction_currency
+
         return sum([entry.total_in_transaction_currency
                     for entry in self.entries])
 

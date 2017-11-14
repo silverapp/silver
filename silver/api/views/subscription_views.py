@@ -3,7 +3,8 @@ from decimal import Decimal
 
 from annoying.functions import get_object_or_None
 from django.utils import timezone
-from rest_framework import generics, permissions, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -23,7 +24,7 @@ class MeteredFeatureList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = MeteredFeaturesFilter
 
 
@@ -40,7 +41,7 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
     def get_queryset(self):

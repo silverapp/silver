@@ -3,8 +3,7 @@ from rest_framework import serializers
 # from silver.api.serializers import PDFUrl
 from silver.api.serializers.common import CustomerUrl, PDFUrl
 from silver.api.serializers.transaction_serializers import TransactionSerializer
-from silver.models import DocumentEntry, Customer, Transaction, Invoice, Proforma
-from silver.models.documents import Document
+from silver.models import DocumentEntry, Customer, Invoice, Proforma, BillingDocumentBase
 
 
 class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
@@ -60,16 +59,15 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
     transactions = serializers.SerializerMethodField()
 
     def get_transactions(self, document):
-        transactions = None
-
         if document.kind == 'invoice':
-            transactions = Transaction.objects.filter(invoice_id=document.id)\
-                                              .select_related('payment_method')
+            transactions = document.invoice_transactions.all()
         elif document.kind == 'proforma':
-            transactions = Transaction.objects.filter(proforma_id=document.id)\
-                                              .select_related('payment_method')
+            transactions = document.proforma_transactions.all()
+        else:
+            return []
 
         for transaction in transactions:
+            # This is done to avoid prefetching already prefetched resources
             transaction.payment_method.customer = document.customer
             transaction.provider = document.provider
 
@@ -77,7 +75,7 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
                                      context=self.context).data
 
     class Meta:
-        model = Document
+        model = BillingDocumentBase
         fields = ('id', 'url', 'kind', 'series', 'number', 'provider',
                   'customer', 'due_date', 'issue_date', 'paid_date',
                   'cancel_date', 'sales_tax_name', 'sales_tax_percent',
