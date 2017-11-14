@@ -195,7 +195,7 @@ class TestInvoiceEndpoints(APITestCase):
                 "state": "issued",
                 "proforma": "http://testserver/proformas/%s/" % invoice.related_document.pk,
                 "invoice_entries": [],
-                "pdf_url": invoice.pdf.url,
+                "pdf_url": None,
                 "total": 0
             }
             for field in expected_response:
