@@ -19,7 +19,6 @@ from django_filters.fields import Lookup
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
                            Plan, Invoice, Proforma, Transaction, PaymentMethod,
                            BillingDocumentBase)
-from silver.models.documents.document import Document
 
 
 class MultipleCharFilter(CharFilter):
@@ -117,36 +116,11 @@ class BillingDocumentFilter(FilterSet):
         return queryset.not_overdue()
 
     class Meta:
-        fields = ['state', 'number', 'customer_name', 'customer_company',
+        model = BillingDocumentBase
+        fields = ['id', 'state', 'number', 'customer_name', 'customer_company',
                   'provider_name', 'provider_company', 'issue_date', 'due_date',
                   'paid_date', 'cancel_date', 'currency', 'sales_tax_name',
                   'is_overdue']
-
-
-class DocumentFilter(FilterSet):
-    id = NumberFilter(name='id', lookup_expr='iexact')
-    state = MultipleCharFilter(name='state', lookup_expr='iexact')
-    number = NumberFilter(name='number', lookup_expr='iexact')
-    customer = NumberFilter(name='customer__pk', lookup_expr='iexact')
-    customer_name = CharFilter(name='customer__name', lookup_expr='icontains')
-    customer_company = CharFilter(name='customer__company',
-                                  lookup_expr='icontains')
-    provider_name = CharFilter(name='provider__name', lookup_expr='icontains')
-    provider_company = CharFilter(name='provider__company',
-                                  lookup_expr='icontains')
-    issue_date = DateFilter(name='issue_date', lookup_expr='iexact')
-    due_date = DateFilter(name='due_date', lookup_expr='iexact')
-    paid_date = DateFilter(name='due_date', lookup_expr='iexact')
-    cancel_date = DateFilter(name='cancel_date', lookup_expr='iexact')
-    currency = MultipleCharFilter(name='currency', lookup_expr='icontains')
-    sales_tax_name = MultipleCharFilter(name='sales_tax_name',
-                                        lookup_expr='icontains')
-
-    class Meta:
-        model = Document
-        fields = ['id', 'state', 'number', 'customer_name', 'customer_company',
-                  'provider_name', 'provider_company', 'issue_date', 'due_date',
-                  'paid_date', 'cancel_date', 'currency', 'sales_tax_name']
 
 
 class InvoiceFilter(BillingDocumentFilter):

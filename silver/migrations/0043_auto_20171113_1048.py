@@ -41,10 +41,10 @@ def move_documents_to_billing_document(apps, schema_editor):
             for field in fields_to_move:
                 setattr(new_proforma, field, getattr(old_invoice.proforma, field))
 
-            new_proforma.save()
+            new_proforma.save(using=db_alias)
 
             new_invoice.related_document = new_proforma
-            new_invoice.save()
+            new_invoice.save(using=db_alias)
 
 
 class Migration(migrations.Migration):
@@ -163,7 +163,6 @@ class Migration(migrations.Migration):
             ],
             options={
                 'proxy': True,
-                'indexes': [],
             },
             bases=('silver.billingdocumentbase',),
         ),
@@ -173,8 +172,11 @@ class Migration(migrations.Migration):
             ],
             options={
                 'proxy': True,
-                'indexes': [],
             },
             bases=('silver.billingdocumentbase',),
         ),
+        migrations.RunSQL(
+            sql="DROP VIEW IF EXISTS silver_document;",
+            reverse_sql=""
+        )
     ]

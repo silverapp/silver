@@ -1,5 +1,6 @@
 from django.http import Http404
-from rest_framework import generics, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions
 from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.api.filters import CustomerFilter, ProviderFilter
@@ -12,7 +13,7 @@ class CustomerList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = CustomerFilter
 
 
@@ -33,7 +34,7 @@ class ProviderListCreate(ListBulkCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = ProviderFilter
 
 

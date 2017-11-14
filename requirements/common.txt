@@ -3,7 +3,7 @@
 # DON'T do it the file will be parsed on deploy
 
 django<2.0
-djangorestframework<3.7
+djangorestframework==3.6.3
 pycountry>=16.11.08
 django-fsm>=2.3.0
 django-filter==1.0.4

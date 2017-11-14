@@ -1,5 +1,6 @@
 from annoying.functions import get_object_or_None
-from rest_framework import generics, permissions, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
@@ -14,7 +15,7 @@ class PlanList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PlanSerializer
     queryset = Plan.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = PlanFilter
 
 

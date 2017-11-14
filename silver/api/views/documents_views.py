@@ -1,13 +1,13 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, filters, status
 from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from silver.api.filters import InvoiceFilter, ProformaFilter, DocumentFilter
+from silver.api.filters import InvoiceFilter, ProformaFilter, BillingDocumentFilter
 from silver.api.serializers.documents_serializers import InvoiceSerializer, \
     DocumentEntrySerializer, ProformaSerializer, DocumentSerializer
 from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma
-from silver.models.documents import Document
 
 
 class InvoiceListCreate(generics.ListCreateAPIView):
@@ -16,7 +16,7 @@ class InvoiceListCreate(generics.ListCreateAPIView):
     queryset = Invoice.objects.all()\
         .select_related('related_document')\
         .prefetch_related('invoice_transactions')
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = InvoiceFilter
 
 
@@ -207,7 +207,7 @@ class ProformaListCreate(generics.ListCreateAPIView):
     queryset = Proforma.objects.all()\
         .select_related('related_document')\
         .prefetch_related('proforma_transactions')
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = ProformaFilter
 
 
@@ -339,10 +339,17 @@ class ProformaStateHandler(APIView):
 class DocumentList(ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentSerializer
-    filter_class = DocumentFilter
-    filter_backends = (filters.OrderingFilter, filters.DjangoFilterBackend)
+    filter_class = BillingDocumentFilter
+    filter_backends = (filters.OrderingFilter, DjangoFilterBackend)
     ordering_fields = ('due_date', )
     ordering = ('-due_date', '-number')
 
     def get_queryset(self):
-        return Document.objects.all().select_related('customer', 'provider', 'pdf')
+        invoices = BillingDocumentBase.objects \
+            .filter(kind='invoice') \
+            .prefetch_related('invoice_transactions__payment_method')
+        proformas = BillingDocumentBase.objects \
+            .filter(kind='proforma', related_document=None) \
+            .prefetch_related('proforma_transactions__payment_method')
+
+        return (invoices | proformas).select_related('customer', 'provider', 'pdf')

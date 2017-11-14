@@ -192,6 +192,11 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
             for invoice_entry in extracted:
                 self.invoice_entries.add(invoice_entry)
 
+        if self.state != 'draft':
+            self._total = self.compute_total()
+            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.save()
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -233,6 +238,11 @@ class ProformaFactory(factory.django.DjangoModelFactory):
             # A list of groups were passed in, use them
             for proforma_entry in extracted:
                 self.proforma_entries.add(proforma_entry)
+
+        if self.state != 'draft':
+            self._total = self.compute_total()
+            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.save()
 
 
 class DocumentEntryFactory(factory.django.DjangoModelFactory):
