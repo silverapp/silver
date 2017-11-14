@@ -69,10 +69,6 @@ def documents_pdf_path(document, filename):
 
 
 class BillingDocumentQuerySet(models.QuerySet):
-    def create(self, **kwargs):
-        obj = super(BillingDocumentQuerySet, self).create(**kwargs)
-        return obj
-
     def due_this_month(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
