@@ -24,10 +24,15 @@ from django.http import Http404, HttpResponseRedirect
 
 from silver.models.payment_methods import PaymentMethod
 from silver.models.transactions import Transaction
-from silver.models.documents import Proforma, Invoice
+from silver.models.documents import Proforma, Invoice, PDF
 from silver.models.transactions.codes import FAIL_CODES
 from silver.payment_processors import get_instance
 from silver.utils.decorators import get_transaction_from_token
+
+
+def pdf(request, pdf_id):
+    pdf = get_object_or_404(PDF, id=pdf_id)
+    return HttpResponseRedirect(pdf.url)
 
 
 @login_required
