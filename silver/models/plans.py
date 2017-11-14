@@ -23,7 +23,14 @@ from silver.utils.international import currencies
 from silver.utils.models import UnsavedForeignKey
 
 
+class PlanManager(models.Manager):
+    def get_queryset(self):
+        return super(PlanManager, self).get_queryset().select_related('product_code__value')
+
+
 class Plan(models.Model):
+    objects = PlanManager()
+
     class INTERVALS(object):
         DAY = 'day'
         WEEK = 'week'
