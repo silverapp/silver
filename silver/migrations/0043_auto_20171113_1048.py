@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                 ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='silver.Customer')),
                 ('pdf', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='silver.PDF')),
                 ('provider', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='silver.Provider')),
-                ('related_document', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='related_proforma', to='silver.BillingDocumentBase')),
+                ('related_document', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='reverse_related_document', to='silver.BillingDocumentBase')),
             ],
             options={
                 'ordering': ('-issue_date', 'series', '-number'),
