@@ -25,7 +25,7 @@ from silver.utils.models import UnsavedForeignKey
 
 class PlanManager(models.Manager):
     def get_queryset(self):
-        return super(PlanManager, self).get_queryset().select_related('product_code__value')
+        return super(PlanManager, self).get_queryset().select_related('product_code')
 
 
 class Plan(models.Model):
