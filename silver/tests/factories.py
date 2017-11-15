@@ -239,7 +239,7 @@ class ProformaFactory(factory.django.DjangoModelFactory):
             for proforma_entry in extracted:
                 self.proforma_entries.add(proforma_entry)
 
-        if self.state != 'draft':
+        if self.state != Proforma.STATES.DRAFT:
             self._total = self.compute_total()
             self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
             self.save()
