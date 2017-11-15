@@ -604,6 +604,12 @@ class BillingDocumentAdmin(ModelAdmin):
     actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents',
                'mark_pdf_for_generation']
 
+    def get_queryset(self, request):
+        return super(BillingDocumentAdmin, self).get_queryset(request) \
+                                                .select_related('related_document',
+                                                                'customer',
+                                                                'provider',
+                                                                'pdf')
     @property
     def _model(self):
         raise NotImplementedError
