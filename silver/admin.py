@@ -932,6 +932,11 @@ class TransactionAdmin(ModelAdmin):
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
     ordering = ['-created_at']
 
+    def get_queryset(self, request):
+        return super(TransactionAdmin, self).get_queryset(request) \
+                                            .select_related('payment_method__customer',
+                                                            'invoice', 'proforma')
+
     def get_readonly_fields(self, request, instance=None):
         if instance:
             return self.form.Meta.readonly_fields + self.form.Meta.create_only_fields
