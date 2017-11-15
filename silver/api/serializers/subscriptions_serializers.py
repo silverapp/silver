@@ -39,7 +39,7 @@ class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
 
 class SubscriptionUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        kwargs = {'customer_pk': obj.customer.pk, 'subscription_pk': obj.pk}
+        kwargs = {'customer_pk': obj.customer_id, 'subscription_pk': obj.pk}
         return reverse(view_name, kwargs=kwargs, request=request,
                        format=format)
 
@@ -52,8 +52,6 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
     meta = JSONField(required=False)
-    customer = CustomerUrl(view_name='customer-detail',
-                           queryset=Customer.objects.all())
 
     class Meta:
         model = Subscription
@@ -61,6 +59,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
                   'ended_at', 'state', 'reference', 'updateable_buckets',
                   'meta', 'description')
         read_only_fields = ('state', 'updateable_buckets')
+        extra_kwargs = {'customer': {'lookup_url_kwarg': 'customer_pk'}}
 
     def validate(self, attrs):
         attrs = super(SubscriptionSerializer, self).validate(attrs)
