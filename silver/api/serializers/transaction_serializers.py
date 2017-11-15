@@ -64,7 +64,9 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
                             'cancel_code')
         updateable_fields = ('valid_until', 'success_url', 'failed_url')
         extra_kwargs = {'amount': {'required': False},
-                        'currency': {'required': False}}
+                        'currency': {'required': False},
+                        'invoice': {'view_name': 'invoice-detail'},
+                        'proforma': {'view_name': 'proforma-detail'}}
 
     def validate(self, attrs):
         attrs = super(TransactionSerializer, self).validate(attrs)

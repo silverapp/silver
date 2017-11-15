@@ -79,10 +79,11 @@ class Transaction(models.Model):
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 
-    proforma = models.ForeignKey("Proforma", null=True, blank=True,
+    proforma = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
                                  related_name='proforma_transactions')
-    invoice = models.ForeignKey("Invoice", null=True, blank=True,
+    invoice = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
                                 related_name='invoice_transactions')
+
     payment_method = models.ForeignKey('PaymentMethod')
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)

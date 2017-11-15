@@ -30,6 +30,18 @@ def move_documents_to_billing_document(apps, schema_editor):
             setattr(new_proforma, field, getattr(old_proforma, field))
         new_proforma.save(using=db_alias)
 
+        for transaction in old_proforma.old_proforma_transactions.all():
+            transaction.proforma = new_proforma
+            transaction.save()
+
+        for entry in old_proforma.old_proforma_entries.all():
+            entry.proforma = new_proforma
+            entry.save()
+
+        for log in old_proforma.old_proforma_logs.all():
+            log.proforma = new_proforma
+            log.save()
+
     for old_invoice in OldInvoiceModel.objects.using(db_alias).all():
         new_invoice = BillingDocumentBase(kind='invoice')
         for field in fields_to_move:
@@ -45,6 +57,23 @@ def move_documents_to_billing_document(apps, schema_editor):
 
             new_invoice.related_document = new_proforma
             new_invoice.save(using=db_alias)
+        else:
+            new_proforma = None
+
+        for transaction in old_invoice.old_invoice_transactions.all():
+            transaction.invoice = new_invoice
+            transaction.proforma = new_proforma
+            transaction.save()
+
+        for entry in old_invoice.old_invoice_entries.all():
+            entry.invoice = new_invoice
+            entry.proforma = new_proforma
+            entry.save()
+
+        for log in old_invoice.old_invoice_logs.all():
+            log.invoice = new_invoice
+            log.proforma = new_proforma
+            log.save()
 
 
 class Migration(migrations.Migration):
@@ -85,8 +114,128 @@ class Migration(migrations.Migration):
                 'ordering': ('-issue_date', 'series', '-number'),
             },
         ),
+
+        migrations.RenameField(
+            model_name='billinglog',
+            old_name='invoice',
+            new_name='invoice_old'
+        ),
+        migrations.RenameField(
+            model_name='billinglog',
+            old_name='proforma',
+            new_name='proforma_old'
+        ),
+        migrations.AlterField(
+            model_name='billinglog',
+            name='invoice_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_invoice_logs', to='silver.Invoice'),
+        ),
+        migrations.AlterField(
+            model_name='billinglog',
+            name='proforma_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_proforma_logs', to='silver.Proforma'),
+        ),
+        migrations.AddField(
+            model_name='billinglog',
+            name='invoice',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='invoice_billing_logs', to='silver.BillingDocumentBase'),
+        ),
+        migrations.AddField(
+            model_name='billinglog',
+            name='proforma',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='proforma_billing_logs', to='silver.BillingDocumentBase'),
+        ),
+
+        migrations.RenameField(
+            model_name='documententry',
+            old_name='invoice',
+            new_name='invoice_old'
+        ),
+        migrations.RenameField(
+            model_name='documententry',
+            old_name='proforma',
+            new_name='proforma_old'
+        ),
+        migrations.AlterField(
+            model_name='documententry',
+            name='invoice_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_invoice_entries', to='silver.Invoice'),
+        ),
+        migrations.AlterField(
+            model_name='documententry',
+            name='proforma_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_proforma_entries', to='silver.Proforma'),
+        ),
+        migrations.AddField(
+            model_name='documententry',
+            name='invoice',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='invoice_entries', to='silver.BillingDocumentBase'),
+        ),
+        migrations.AddField(
+            model_name='documententry',
+            name='proforma',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='proforma_entries', to='silver.BillingDocumentBase'),
+        ),
+
+        migrations.RenameField(
+            model_name='transaction',
+            old_name='invoice',
+            new_name='invoice_old'
+        ),
+        migrations.RenameField(
+            model_name='transaction',
+            old_name='proforma',
+            new_name='proforma_old'
+        ),
+        migrations.AlterField(
+            model_name='transaction',
+            name='invoice_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_invoice_transactions', to='silver.Invoice'),
+        ),
+        migrations.AlterField(
+            model_name='transaction',
+            name='proforma_old',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='old_proforma_transactions', to='silver.Proforma'),
+        ),
+        migrations.AddField(
+            model_name='transaction',
+            name='invoice',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='invoice_transactions', to='silver.BillingDocumentBase'),
+        ),
+        migrations.AddField(
+            model_name='transaction',
+            name='proforma',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='proforma_transactions', to='silver.BillingDocumentBase'),
+        ),
+
         migrations.RunPython(move_documents_to_billing_document,
                              migrations.RunPython.noop),
+
+        migrations.RemoveField(
+            model_name='billinglog',
+            name='invoice_old',
+        ),
+        migrations.RemoveField(
+            model_name='billinglog',
+            name='proforma_old',
+        ),
+        migrations.RemoveField(
+            model_name='documententry',
+            name='invoice_old',
+        ),
+        migrations.RemoveField(
+            model_name='documententry',
+            name='proforma_old',
+        ),
+        migrations.RemoveField(
+            model_name='transaction',
+            name='invoice_old',
+        ),
+        migrations.RemoveField(
+            model_name='transaction',
+            name='proforma_old',
+        ),
+
         migrations.AlterUniqueTogether(
             name='invoice',
             unique_together=set([]),
@@ -126,26 +275,6 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='proforma',
             name='provider',
-        ),
-        migrations.AlterField(
-            model_name='billinglog',
-            name='invoice',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='invoice_billing_logs', to='silver.Invoice'),
-        ),
-        migrations.AlterField(
-            model_name='billinglog',
-            name='proforma',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='proforma_billing_logs', to='silver.Proforma'),
-        ),
-        migrations.AlterField(
-            model_name='transaction',
-            name='invoice',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='invoice_transactions', to='silver.Invoice'),
-        ),
-        migrations.AlterField(
-            model_name='transaction',
-            name='proforma',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='proforma_transactions', to='silver.Proforma'),
         ),
         migrations.DeleteModel(
             name='Invoice',
