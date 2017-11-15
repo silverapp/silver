@@ -1,5 +1,13 @@
 # Changelog
 
+
+## 0.4 (2017-11-15)
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**
+- Invoice and Proforma are now Proxy models of the BillingDocumentBase model, which is no longer
+abstract. This allows for an easier aggregation in the /documents API endpoint. Both models should
+still be usable as before and BillingDocumentBase instances should automatically be assigned
+their concrete class, depending on their `kind` field. **(BREAKING)**
+
 ## 0.3.13 (2017-11-08)
 - Add `_total` and `_total_in_transaction_currency` to document base.
 
