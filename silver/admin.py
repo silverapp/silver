@@ -773,11 +773,16 @@ class BillingDocumentAdmin(ModelAdmin):
     get_related_document.allow_tags = True
 
 
+class InvoiceDocumentEntryInline(DocumentEntryInline):
+    fk_name = 'invoice'
+
+
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
     list_display = BillingDocumentAdmin.list_display + [
         'invoice_pdf',
     ]
+    inlines = [InvoiceDocumentEntryInline]
 
     def issue(self, request, queryset):
         self.perform_action(request, queryset, 'issue')
@@ -816,11 +821,16 @@ class InvoiceAdmin(BillingDocumentAdmin):
         return "Invoice"
 
 
+class ProformaDocumentEntryInline(DocumentEntryInline):
+    fk_name = 'proforma'
+
+
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
     list_display = BillingDocumentAdmin.list_display + [
         'proforma_pdf',
     ]
+    inlines = [ProformaDocumentEntryInline]
     actions = BillingDocumentAdmin.actions + ['create_invoice']
 
     def issue(self, request, queryset):

@@ -30,9 +30,9 @@ class DocumentEntry(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
-    invoice = models.ForeignKey('Invoice', related_name='invoice_entries',
+    invoice = models.ForeignKey('BillingDocumentBase', related_name='invoice_entries',
                                 blank=True, null=True)
-    proforma = models.ForeignKey('Proforma', related_name='proforma_entries',
+    proforma = models.ForeignKey('BillingDocumentBase', related_name='proforma_entries',
                                  blank=True, null=True)
 
     class Meta:
