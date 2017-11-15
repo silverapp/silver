@@ -94,8 +94,10 @@ class PlanFilter(FilterSet):
 
 
 class BillingDocumentFilter(FilterSet):
+    id = NumberFilter(name='id', lookup_expr='iexact')
     state = MultipleCharFilter(name='state', lookup_expr='iexact')
     number = NumberFilter(name='number', lookup_expr='iexact')
+    customer = NumberFilter(name='customer__pk', lookup_expr='iexact')
     customer_name = CharFilter(name='customer__name', lookup_expr='icontains')
     customer_company = CharFilter(name='customer__company',
                                   lookup_expr='icontains')

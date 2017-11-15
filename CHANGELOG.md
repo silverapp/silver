@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.4.1 (2017-11-15)
+Add deleted customer and id filters on document list endpoint.
 
 ## 0.4 (2017-11-15)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
