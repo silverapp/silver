@@ -1,6 +1,6 @@
 import uuid
 
-from django_xhtml2pdf.utils import generate_pdf_template_object
+from xhtml2pdf import pisa
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -8,6 +8,8 @@ from django.db import transaction
 from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
+
+from silver.utils.pdf import fetch_resources
 
 
 def get_storage():
@@ -37,7 +39,11 @@ class PDF(Model):
     def generate(self, template, context, upload=True):
         pdf_file_object = HttpResponse(content_type='application/pdf')
 
-        generate_pdf_template_object(template, pdf_file_object, context)
+        html = template.render(context)
+        pisa.pisaDocument(src=html.encode("UTF-8"),
+                          dest=pdf_file_object,
+                          encoding='UTF-8',
+                          link_callback=fetch_resources)
 
         if not pdf_file_object:
             return

@@ -15,13 +15,14 @@ django-model-utils
 django-annoying
 pytz
 PyJWT
+
 # python-dev is required for xhtml2pdf to work
-xhtml2pdf
-django-xhtml2pdf
+git+https://github.com/xhtml2pdf/xhtml2pdf.git@3cb029f2cc#egg=xhtml2
+
 pyvat
 PyPDF2
 furl
-html5lib==0.999
+html5lib==1.0b8
 cryptography==1.9
 sqlparse==0.2.2
 django-autocomplete-light==3.2.9
