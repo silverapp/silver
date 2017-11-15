@@ -30,15 +30,15 @@ def move_documents_to_billing_document(apps, schema_editor):
             setattr(new_proforma, field, getattr(old_proforma, field))
         new_proforma.save(using=db_alias)
 
-        for transaction in old_proforma.old_proforma_transactions:
+        for transaction in old_proforma.old_proforma_transactions.all():
             transaction.proforma = new_proforma
             transaction.save()
 
-        for entry in old_proforma.old_proforma_entries:
+        for entry in old_proforma.old_proforma_entries.all():
             entry.proforma = new_proforma
             entry.save()
 
-        for log in old_proforma.old_proforma_logs:
+        for log in old_proforma.old_proforma_logs.all():
             log.proforma = new_proforma
             log.save()
 
@@ -60,17 +60,17 @@ def move_documents_to_billing_document(apps, schema_editor):
         else:
             new_proforma = None
 
-        for transaction in old_invoice.old_invoice_transactions:
+        for transaction in old_invoice.old_invoice_transactions.all():
             transaction.invoice = new_invoice
             transaction.proforma = new_proforma
             transaction.save()
 
-        for entry in old_invoice.old_invoice_entries:
+        for entry in old_invoice.old_invoice_entries.all():
             entry.invoice = new_invoice
             entry.proforma = new_proforma
             entry.save()
 
-        for log in old_invoice.old_invoice_logs:
+        for log in old_invoice.old_invoice_logs.all():
             log.invoice = new_invoice
             log.proforma = new_proforma
             log.save()
