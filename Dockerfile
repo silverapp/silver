@@ -26,6 +26,7 @@ RUN set -ex \
         zlib \
         ca-certificates wget \
         openssl \
+        git \
         openssl-dev \
         libffi-dev \
         zlib-dev \
