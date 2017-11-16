@@ -519,17 +519,18 @@ class Subscription(models.Model):
 
     @property
     def is_billed_first_time(self):
-        return self.billing_log_entries.all().count() == 0
+        return self.billing_logs.all().count() == 0
 
     @property
     def last_billing_log(self):
-        return self.billing_log_entries.order_by('billing_date').last()
+        return self.billing_logs.order_by('billing_date').last()
 
     @property
     def last_billing_date(self):
+        # ToDo: Improve this when dropping Django 1.8 support
         try:
-            return self.billing_log_entries.all()[:1].get().billing_date
-        except BillingLog.DoesNotExist:
+            return self.billing_logs.all()[0].billing_date
+        except (BillingLog.DoesNotExist, IndexError):
             # It should never get here.
             return None
 
@@ -723,7 +724,7 @@ class Subscription(models.Model):
             # spans over 2 months and the subscription has been already billed
             # once => this month it is still on trial but it only
             # has remaining = consumed_last_cycle - included_during_trial
-            last_log_entry = self.billing_log_entries.all()[0]
+            last_log_entry = self.billing_logs.all()[0]
             if last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
                     product_code=metered_feature.product_code)
@@ -999,7 +1000,7 @@ class Subscription(models.Model):
 
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
-                                     related_name='billing_log_entries')
+                                     related_name='billing_logs')
     invoice = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
                                 related_name='invoice_billing_logs')
     proforma = models.ForeignKey('BillingDocumentBase', null=True, blank=True,

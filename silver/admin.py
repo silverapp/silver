@@ -199,6 +199,10 @@ class SubscriptionAdmin(ModelAdmin):
                      'customer__company', 'plan__name', 'meta']
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
 
+    def get_queryset(self, request):
+        return super(SubscriptionAdmin, self).get_queryset(request) \
+                                             .prefetch_related('billing_logs')
+
     def perform_action(self, request, action, queryset):
         try:
             method = getattr(Subscription, action)
@@ -610,6 +614,7 @@ class BillingDocumentAdmin(ModelAdmin):
                                                                 'customer',
                                                                 'provider',
                                                                 'pdf')
+
     @property
     def _model(self):
         raise NotImplementedError
