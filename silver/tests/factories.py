@@ -25,7 +25,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription, Invoice, ProductCode,
+                           Subscription, Invoice, ProductCode, PDF,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
                            Transaction, PaymentMethod)
 from silver.tests.fixtures import manual_processor
@@ -319,3 +319,8 @@ class TransactionFactory(factory.django.DjangoModelFactory):
             invoice.save()
 
         return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)
+
+
+class PDFFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PDF

@@ -2,6 +2,8 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 from rest_framework.relations import HyperlinkedRelatedField
 
+from django.conf import settings
+
 from silver.api.serializers.product_codes_serializer import ProductCodeRelatedField
 from silver.models import MeteredFeature
 
@@ -50,8 +52,11 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        if obj.pdf is None:
+        if not (obj.pdf and obj.pdf.url):
             return None
+
+        if getattr(settings, 'SILVER_SHOW_PDF_STORAGE_URL', True):
+            return request.build_absolute_uri(obj.pdf.url)
 
         return self.reverse(view_name, kwargs={'pdf_pk': obj.pdf.pk},
                             request=request, format=format)
