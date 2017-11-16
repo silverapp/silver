@@ -84,7 +84,7 @@ class TestDocumentEndpoints(APITestCase):
             u'transaction_currency': document.transaction_currency,
             u'state': document.state,
             u'total': document.total,
-            u'pdf_url': (u'http://testserver/pdfs/%s/' % document.pdf.pk) if document.pdf else None,
+            u'pdf_url': None,
             u'transactions': transactions,
             u'total_in_transaction_currency': document.total_in_transaction_currency
         }
