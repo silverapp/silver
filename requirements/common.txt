@@ -17,7 +17,8 @@ pytz
 PyJWT
 
 # python-dev is required for xhtml2pdf to work
-xhtml2pdf==0.2b1
+# custom working xhtml2 version
+https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip
 
 pyvat
 PyPDF2
