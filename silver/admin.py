@@ -199,6 +199,10 @@ class SubscriptionAdmin(ModelAdmin):
                      'customer__company', 'plan__name', 'meta']
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
 
+    def get_queryset(self, request):
+        return super(SubscriptionAdmin, self).get_queryset(request) \
+                                             .prefetch_related('billing_logs')
+
     def perform_action(self, request, action, queryset):
         try:
             method = getattr(Subscription, action)
@@ -604,6 +608,13 @@ class BillingDocumentAdmin(ModelAdmin):
     actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents',
                'mark_pdf_for_generation']
 
+    def get_queryset(self, request):
+        return super(BillingDocumentAdmin, self).get_queryset(request) \
+                                                .select_related('related_document',
+                                                                'customer',
+                                                                'provider',
+                                                                'pdf')
+
     @property
     def _model(self):
         raise NotImplementedError
@@ -931,6 +942,11 @@ class TransactionAdmin(ModelAdmin):
                    'payment_method__payment_processor')
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
     ordering = ['-created_at']
+
+    def get_queryset(self, request):
+        return super(TransactionAdmin, self).get_queryset(request) \
+                                            .select_related('payment_method__customer',
+                                                            'invoice', 'proforma')
 
     def get_readonly_fields(self, request, instance=None):
         if instance:

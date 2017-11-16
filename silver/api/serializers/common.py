@@ -23,7 +23,7 @@ class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'payment_method_id': str(lookup_value),
-                  'customer_pk': obj.customer.pk}
+                  'customer_pk': obj.customer_id}
         return self.reverse(view_name, kwargs=kwargs,
                             request=request, format=format)
 

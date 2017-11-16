@@ -14,7 +14,7 @@ class PlanList(generics.ListCreateAPIView):
 
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PlanSerializer
-    queryset = Plan.objects.all()
+    queryset = Plan.objects.all().prefetch_related('metered_features')
     filter_backends = (DjangoFilterBackend,)
     filter_class = PlanFilter
 
