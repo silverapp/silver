@@ -2,7 +2,12 @@
 
 ## 0.4.4 (2017-11-17)
 - Use a custom working xhtml2pdf version for pdf generation
-
+- Add `SILVER_SHOW_PDF_STORAGE_URL` option. If `False`, `pdf_url` for document
+  endpoints, will display an url to a view that will redirect to the actual
+  document url. This is a small optimization in case you are using external
+  document storages (like S3 or Google Storage), because it can take up to 1-2
+  seconds for them to generate secrets token for secured urls. By default it is
+  `True` which mean that the old behaviour is still up.
 
 ## 0.4.3 (2017-11-16)
 - Reduce query numbers for some API endpoints (`/plans`,
