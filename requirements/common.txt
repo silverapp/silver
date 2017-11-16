@@ -17,12 +17,12 @@ pytz
 PyJWT
 
 # python-dev is required for xhtml2pdf to work
-git+https://github.com/xhtml2pdf/xhtml2pdf.git@3cb029f2cc#egg=xhtml2
+xhtml2pdf==0.2b1
 
 pyvat
 PyPDF2
 furl
-html5lib==1.0b8
+
 cryptography==1.9
 sqlparse==0.2.2
 django-autocomplete-light==3.2.9
