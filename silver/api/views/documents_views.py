@@ -366,7 +366,7 @@ class DocumentList(ListAPIView):
 
 
 class PDFRetrieve(generics.RetrieveAPIView):
-    permission_classes = (permissions.IsStaff,)
+    permission_classes = (permissions.IsAdminUser,)
     queryset = PDF.objects.all()
     lookup_url_kwarg = 'pdf_pk'
 
