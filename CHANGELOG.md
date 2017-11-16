@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 (2017-11-16)
+- Remove django-xhtml2pdf
+- Adapt pdf generation for Django 1.8 and 1.11
+
 ## 0.4.1 (2017-11-15)
 Add deleted customer and id filters on document list endpoint.
 

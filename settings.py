@@ -55,7 +55,6 @@ EXTERNAL_APPS = [
     'django_fsm',
     'rest_framework',
     'django_filters',
-    'django_xhtml2pdf',
 
     # Dev tools
     # 'django_extensions',

@@ -4,6 +4,8 @@ from mock import patch, call, MagicMock
 from silver.tasks import generate_pdfs, generate_pdf
 from silver.tests.factories import InvoiceFactory, ProformaFactory
 
+from silver.utils.pdf import fetch_resources
+
 
 @pytest.mark.django_db
 def test_generate_pdfs_task(monkeypatch):
@@ -47,7 +49,10 @@ def test_generate_pdfs_task(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_generate_pdf_task(settings, tmpdir, monkeypatch):
+@patch('silver.models.documents.base.BillingDocumentBase.get_template')
+@patch('silver.models.documents.pdf.HttpResponse')
+def test_generate_pdf_task(mock_http_response, mock_get_template, settings,
+                           tmpdir, monkeypatch):
     settings.MEDIA_ROOT = tmpdir.strpath
 
     invoice = InvoiceFactory.create()
@@ -55,10 +60,10 @@ def test_generate_pdf_task(settings, tmpdir, monkeypatch):
 
     assert invoice.pdf.dirty
 
-    generate_pdf_mock = MagicMock()
+    pisa_document_mock = MagicMock()
 
-    monkeypatch.setattr('silver.models.documents.pdf.generate_pdf_template_object',
-                        generate_pdf_mock)
+    monkeypatch.setattr('silver.models.documents.pdf.pisa.pisaDocument',
+                        pisa_document_mock)
 
     generate_pdf(invoice.id, invoice.kind)
 
@@ -70,4 +75,8 @@ def test_generate_pdf_task(settings, tmpdir, monkeypatch):
 
     assert invoice.pdf.url == settings.MEDIA_URL + invoice.get_pdf_upload_path()
 
-    assert generate_pdf_mock.call_count == 1
+    assert pisa_document_mock.call_count == 1
+    pisa_document_mock.assert_called_once_with(src=mock_get_template().render().encode('UTF-8'),
+                                               dest=mock_http_response(),
+                                               encoding='UTF-8',
+                                               link_callback=fetch_resources)
