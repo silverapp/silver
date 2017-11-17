@@ -1,10 +1,13 @@
 # Changelog
 
-## 0.4.2 (2017-11-16)
+## 0.4.4 (2017-11-17)
+- Use a custom working xhtml2pdf version for pdf generation
+
+## 0.4.3 (2017-11-16)
 - Reduce query numbers for some API endpoints (`/plans`,
   `/customers/subscriptions`) and admin
 
-## 0.4.1 (2017-11-16)
+## 0.4.2 (2017-11-16)
 - Remove django-xhtml2pdf
 - Adapt pdf generation for Django 1.8 and 1.11
 
