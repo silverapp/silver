@@ -85,7 +85,7 @@ class TestInvoiceEndpoints(APITestCase):
             "state": invoice.state,
             "proforma": None,
             "invoice_entries": [],
-            "pdf_url": "http://testserver/pdfs/%s/" % invoice.pdf.pk if invoice.pdf else None,
+            "pdf_url": None,
             "total": invoice.total,
             "total_in_transaction_currency": invoice.total,
             "transactions": []
