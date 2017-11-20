@@ -22,6 +22,7 @@ from rest_framework.test import APITestCase
 
 from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
                                     ProductCodeFactory)
+from silver.tests.utils import build_absolute_test_url
 
 
 class TestMeteredFeatureEndpoint(APITestCase):
@@ -116,7 +117,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
 
         response = self.client.get(url)
 
-        full_url = "http://testserver" + url
+        full_url = build_absolute_test_url(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response._headers['link'] == \

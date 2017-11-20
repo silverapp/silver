@@ -14,8 +14,7 @@
 # limitations under the License.
 
 
-from django.core import serializers
-import simplejson as json
+import json
 import pytest
 from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
@@ -23,6 +22,7 @@ from rest_framework import status
 
 from silver.models import Provider
 from silver.tests.factories import ProviderFactory, AdminUserFactory
+from silver.tests.utils import build_absolute_test_url
 
 
 class TestProviderEndpoints(APITestCase):
@@ -215,9 +215,11 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.get(url)
 
         assert response.status_code == 200
+
+        self_url = build_absolute_test_url(url)
         expected = {
             'id': provider.pk,
-            'url': 'http://testserver/providers/%s/' % provider.pk,
+            'url': self_url,
             'name': provider.name,
             'company': provider.company,
             'flow': provider.flow,
@@ -250,7 +252,6 @@ class TestProviderEndpoints(APITestCase):
         url = reverse('provider-detail', kwargs={'pk': provider.pk})
         new_data = {
             'id': provider.pk,
-            'url': 'http://testserver/providers/%s/' % provider.pk,
             'name': 'TestProvider',
             'company': 'TheNewCompany',
             'email': 'a@a.com',
@@ -269,9 +270,11 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.put(url, data=new_data)
 
         assert response.status_code == status.HTTP_200_OK
+
+        self_url = build_absolute_test_url(url)
         assert response.data == {
             'id': provider.pk,
-            'url': 'http://testserver/providers/%s/' % provider.pk,
+            'url': self_url,
             'name': new_data['name'],
             'company': new_data['company'],
             'flow': provider.flow,
@@ -307,7 +310,6 @@ class TestProviderEndpoints(APITestCase):
         url = reverse('provider-detail', kwargs={'pk': provider.pk})
         new_data = {
             'id': provider.pk,
-            'url': 'http://testserver/providers/%s/' % provider.pk,
             'email': 'a@a.com',
             'address_1': 'address',
             'city': 'City',
@@ -345,9 +347,11 @@ class TestProviderEndpoints(APITestCase):
         response = self.client.patch(url, data=new_data)
 
         assert response.status_code == 200
+
+        self_url = build_absolute_test_url(url)
         assert response.data == {
             'id': provider.pk,
-            'url': 'http://testserver/providers/%s/' % provider.pk,
+            'url': self_url,
             'name': provider.name,
             'company': new_data['company'],
             'flow': new_data['flow'],

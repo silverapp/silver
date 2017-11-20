@@ -29,6 +29,7 @@ from silver.models import Invoice, Proforma, PDF
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, ProformaFactory,
                                     SubscriptionFactory)
+from silver.tests.utils import build_absolute_test_url
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -45,9 +46,12 @@ class TestProformaEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('proforma-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': "",
             'number': "",
             'currency': 'RON',
@@ -65,8 +69,8 @@ class TestProformaEndpoints(APITestCase):
             "id": response.data["id"],
             "series": "ProformaSeries",
             "number": None,
-            "provider": "http://testserver/providers/%s/" % provider.pk,
-            "customer": "http://testserver/customers/%s/" % customer.pk,
+            "provider": provider_url,
+            "customer": customer_url,
             "archived_provider": '{}',
             "archived_customer": '{}',
             "due_date": None,
@@ -95,9 +99,12 @@ class TestProformaEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('proforma-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': None,
             'number': None,
             'currency': 'RON',
@@ -145,13 +152,18 @@ class TestProformaEndpoints(APITestCase):
             mocked_settings.SILVER_SHOW_PDF_STORAGE_URL = show_pdf_storage_url
             response = self.client.get(url)
 
+            provider_url = build_absolute_test_url(reverse('provider-detail',
+                                                           [proforma.provider.pk]))
+            customer_url = build_absolute_test_url(reverse('customer-detail',
+                                                           [proforma.customer.pk]))
+
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, {
                 "id": proforma.pk,
                 "series": "ProformaSeries",
                 "number": proforma.number,
-                "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
-                "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
+                "provider": provider_url,
+                "customer": customer_url,
                 "archived_provider": '{}',
                 "archived_customer": '{}',
                 "due_date": None,
@@ -490,12 +502,14 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create(provider=provider, customer=customer)
         proforma.issue()
 
+        invoices_count = Invoice.objects.count()
+
         url = reverse('proforma-state', kwargs={'pk': proforma.pk})
         data = {'state': 'issued'}
         response = self.client.put(url, data=json.dumps(data), content_type='application/json')
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert response.data == {'detail': 'A proforma can be issued only if it is in draft state.'}
-        assert Invoice.objects.count() == 0
+        assert Invoice.objects.count() == invoices_count
 
     def test_issue_proforma_when_in_paid_state(self):
         provider = ProviderFactory.create()
@@ -524,12 +538,15 @@ class TestProformaEndpoints(APITestCase):
         proforma.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
+
+        invoice_url = build_absolute_test_url(reverse('invoice-detail',
+                                                      [proforma.related_document.pk]))
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': timezone.now().date().strftime('%Y-%m-%d'),
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/%s/' % proforma.related_document.pk
+            'invoice': invoice_url
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
@@ -538,8 +555,6 @@ class TestProformaEndpoints(APITestCase):
         invoice = Invoice.objects.all()[0]
         assert proforma.related_document == invoice
         assert invoice.related_document == proforma
-
-        invoice = get_object_or_None(Invoice, related_document=proforma)
 
     def test_pay_proforma_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -557,12 +572,15 @@ class TestProformaEndpoints(APITestCase):
         proforma.refresh_from_db()
         assert response.status_code == status.HTTP_200_OK
         due_date = timezone.now().date() + timedelta(days=PAYMENT_DUE_DAYS)
+
+        invoice_url = build_absolute_test_url(reverse('invoice-detail',
+                                                      [proforma.related_document.pk]))
         mandatory_content = {
             'issue_date': timezone.now().date().strftime('%Y-%m-%d'),
             'due_date': due_date.strftime('%Y-%m-%d'),
             'paid_date': '2014-05-05',
             'state': 'paid',
-            'invoice': 'http://testserver/invoices/%s/' % proforma.related_document.pk
+            'invoice': invoice_url
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
@@ -571,8 +589,6 @@ class TestProformaEndpoints(APITestCase):
         invoice = Invoice.objects.all()[0]
         assert proforma.related_document == invoice
         assert invoice.related_document == proforma
-
-        invoice = get_object_or_None(Invoice, related_document=proforma)
 
     def test_pay_proforma_when_in_draft_state(self):
         provider = ProviderFactory.create()
