@@ -22,6 +22,7 @@ from rest_framework.test import APITestCase
 
 from silver.models import Customer
 from silver.tests.factories import AdminUserFactory, CustomerFactory
+from silver.tests.utils import build_absolute_test_url
 
 
 class TestCustomerEndpoints(APITestCase):
@@ -49,8 +50,10 @@ class TestCustomerEndpoints(APITestCase):
             "payment_due_days": 5,
             "consolidated_billing": False,
             "meta": {'water': ['plants', '5']},
-            "payment_methods": u'http://testserver/customers/1/payment_methods/',
-            "transactions": u'http://testserver/customers/1/transactions/'
+            "payment_methods": build_absolute_test_url(reverse('payment-method-list',
+                                                               kwargs={'customer_pk': 1})),
+            "transactions": build_absolute_test_url(reverse('transaction-list',
+                                                            kwargs={'customer_pk': 1}))
         }
 
     def test_create_post_customer(self):

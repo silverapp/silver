@@ -23,6 +23,7 @@ from silver.api.serializers.payment_methods_serializers import PaymentMethodSeri
 from silver.tests.factories import PaymentMethodFactory
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    ManualProcessor)
+from silver.tests.utils import build_absolute_test_url
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
@@ -41,21 +42,24 @@ class TestPaymentMethodSerializer(TestCase):
             'request': request
         })
 
-        self_url_skelet = 'http://testserver/customers/{}/payment_methods/{}/'
-        transactions_url_skelet = "http://testserver/customers/{}/payment_methods/{}/transactions/"
-        customer_url_skelet = 'http://testserver/customers/{}/'
+        self_url = build_absolute_test_url(url)
+        transactions_url = build_absolute_test_url(
+            reverse('payment-method-transaction-list',
+                    [payment_method.pk, payment_method.customer.pk])
+        )
+        customer_url = build_absolute_test_url(
+            reverse('customer-detail', [payment_method.customer.pk])
+        )
         expected_data = OrderedDict([
-            ('url', self_url_skelet.format(payment_method.customer.pk,
-                                           payment_method.pk)),
-            ('transactions', transactions_url_skelet.format(payment_method.customer.pk,
-                                                            payment_method.pk)),
-            ('customer', customer_url_skelet.format(payment_method.customer.pk)),
+            ('url', self_url),
+            ('transactions', transactions_url),
+            ('customer', customer_url),
             ('payment_processor_name', manual_processor),
             ('payment_processor', OrderedDict([
                 ("type", ManualProcessor.type),
                 ("name", manual_processor),
                 ("allowed_currencies", []),
-                ("url", "http://testserver/payment_processors/manual/")
+                ("url", build_absolute_test_url(reverse('payment-processor-detail', ['manual'])))
             ])),
             ('added_at', payment_method.added_at),
             ('verified', False),

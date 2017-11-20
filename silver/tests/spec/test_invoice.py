@@ -33,7 +33,7 @@ from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
                                     SubscriptionFactory, TransactionFactory,
                                     PaymentMethodFactory)
-
+from silver.tests.utils import build_absolute_test_url
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -49,9 +49,12 @@ class TestInvoiceEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': "",
             'number': "",
             'currency': 'RON',
@@ -68,8 +71,8 @@ class TestInvoiceEndpoints(APITestCase):
             "id": response.data["id"],
             "series": invoice.series,
             "number": invoice.number,
-            "provider": "http://testserver/providers/%s/" % provider.pk,
-            "customer": "http://testserver/customers/%s/" % customer.pk,
+            "provider": provider_url,
+            "customer": customer_url,
             "archived_provider": '{}',
             "archived_customer": '{}',
             "due_date": None,
@@ -97,9 +100,12 @@ class TestInvoiceEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': None,
             'number': None,
             'currency': 'RON',
@@ -151,23 +157,29 @@ class TestInvoiceEndpoints(APITestCase):
                                  Transaction.States.Refunded,
                                  Transaction.States.Failed]
             ]
+
         expected_transactions = [{
             "id": str(transaction.uuid),
-            "url": "http://testserver/customers/%s/transactions/%s/" %
-                   (invoice.customer.pk, transaction.uuid),
-            "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
-            "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
+            "url": build_absolute_test_url(reverse('transaction-detail',
+                                                   [transaction.customer.pk, transaction.uuid])),
+            "customer": build_absolute_test_url(reverse('customer-detail',
+                                                        [transaction.customer.id])),
+            "provider": build_absolute_test_url(reverse('provider-detail',
+                                                        [transaction.provider.id])),
             "amount": "%s.00" % str(transaction.amount),
             "currency": "USD",
             "state": transaction.state,
-            "proforma": "http://testserver/proformas/%s/" % transaction.proforma.pk,
-            "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
+            "proforma": build_absolute_test_url(reverse('proforma-detail',
+                                                        [transaction.proforma.id])),
+            "invoice": build_absolute_test_url(reverse('invoice-detail',
+                                                       [transaction.invoice.id])),
             "can_be_consumed": transaction.can_be_consumed,
             "payment_processor": transaction.payment_processor,
-            "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
-                              (invoice.customer.pk, transaction.payment_method.pk),
-            "pay_url": "http://testserver/pay/token/"
-                       if transaction.state == Transaction.States.Initial else None,
+            "payment_method": build_absolute_test_url(reverse('payment-method-detail',
+                                                              [transaction.customer.pk,
+                                                               transaction.payment_method.pk])),
+            "pay_url": (build_absolute_test_url(reverse('payment', ['token']))
+                        if transaction.state == Transaction.States.Initial else None),
         } for transaction in transactions]
 
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
@@ -186,8 +198,10 @@ class TestInvoiceEndpoints(APITestCase):
                     "id": invoice.pk,
                     "series": "InvoiceSeries",
                     "number": 1,
-                    "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
-                    "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
+                    "provider": build_absolute_test_url(reverse('provider-detail',
+                                                                [invoice.provider.pk])),
+                    "customer": build_absolute_test_url(reverse('customer-detail',
+                                                                [invoice.customer.pk])),
                     "archived_provider": '{}',
                     "archived_customer": '{}',
                     "due_date": None,
@@ -202,7 +216,8 @@ class TestInvoiceEndpoints(APITestCase):
                                             if invoice.transaction_xe_rate else None),
                     "transaction_xe_date": invoice.transaction_xe_date,
                     "state": "issued",
-                    "proforma": "http://testserver/proformas/%s/" % invoice.related_document.pk,
+                    "proforma": build_absolute_test_url(reverse('proforma-detail',
+                                                                [invoice.related_document.pk])),
                     "invoice_entries": [],
                     "pdf_url": pdf_url,
                     "total": 0

@@ -19,6 +19,7 @@ from rest_framework.test import APITestCase
 
 from silver.tests.factories import AdminUserFactory
 from silver.tests.fixtures import PAYMENT_PROCESSORS
+from silver.tests.utils import build_absolute_test_url
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
@@ -37,7 +38,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
                 "name": "triggered",
                 "type": "triggered",
                 "allowed_currencies": ['RON', 'USD'],
-                "url": "http://testserver/payment_processors/triggered/"
+                "url": build_absolute_test_url(reverse('payment-processor-detail', ['triggered']))
             },
             response.data
         )
@@ -46,7 +47,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
                 "name": "manual",
                 "type": "manual",
                 "allowed_currencies": [],
-                "url": "http://testserver/payment_processors/manual/"
+                "url": build_absolute_test_url(reverse('payment-processor-detail', ['manual']))
             },
             response.data
         )
@@ -62,7 +63,7 @@ class TestPaymentProcessorsEndpoints(APITestCase):
             'name': u'manual',
             'type': u'manual',
             'allowed_currencies': [],
-            'url': 'http://testserver/payment_processors/manual/',
+            'url': build_absolute_test_url(reverse('payment-processor-detail', ['manual']))
         })
 
     def test_payment_processors_detail_not_found(self):

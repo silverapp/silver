@@ -169,7 +169,6 @@ class PaymentMethod(models.Model):
         previous_instance = kwargs.pop('previous_instance', None)
 
         super(PaymentMethod, self).full_clean(*args, **kwargs)
-
         self.clean_with_previous_instance(previous_instance)
 
         # this assumes that nobody calls clean and then modifies this object
