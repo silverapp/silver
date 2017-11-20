@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.4.4 (2017-11-17)
+## 0.4.4 (2017-11-20)
+- Fixed some tests that were behaving differently when run inside a parent application.
 - Use a custom working xhtml2pdf version for pdf generation
 - Add `SILVER_SHOW_PDF_STORAGE_URL` option. If `False`, `pdf_url` for document
   endpoints, will display an url to a view that will redirect to the actual
