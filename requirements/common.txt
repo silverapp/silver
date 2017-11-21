@@ -1,7 +1,3 @@
-# DON'T place inline comments with actual requirements
-# dependency==x.x  # we really need this
-# DON'T do it the file will be parsed on deploy
-
 django<2.0
 djangorestframework==3.6.3
 pycountry>=16.11.08
@@ -18,7 +14,7 @@ PyJWT
 
 # python-dev is required for xhtml2pdf to work
 # custom working xhtml2 version
-https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip
+https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip#egg=xhtml2pdf
 
 pyvat
 PyPDF2
