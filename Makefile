@@ -13,6 +13,6 @@ build:
 	echo "No need to build something. You may try 'make dependencies'."
 
 lint:
-	pep8 --max-line-length=100 --exclude=migrations,urls.py .
+	pep8 --max-line-length=100 --exclude=migrations,urls.py,setup.py .
 
 .PHONY: test full-test build lint run
