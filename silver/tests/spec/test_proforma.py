@@ -17,6 +17,7 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 
+from mock import patch
 from django.utils import timezone
 from django.conf import settings
 from rest_framework import status
@@ -24,7 +25,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from annoying.functions import get_object_or_None
 
-from silver.models import Invoice, Proforma
+from silver.models import Invoice, Proforma, PDF
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, ProformaFactory,
                                     SubscriptionFactory)
@@ -128,41 +129,50 @@ class TestProformaEndpoints(APITestCase):
 
         assert response.status_code == status.HTTP_200_OK
 
-    def test_get_proforma(self):
+    @patch('silver.api.serializers.common.settings')
+    def test_get_proforma(self, mocked_settings):
         ProformaFactory.reset_sequence(1)
-        proforma = ProformaFactory.create()
+
+        upload_path = '%s/documents/' % settings.MEDIA_ROOT
+        proforma = ProformaFactory.create(pdf=PDF.objects.create(upload_path=upload_path))
+        proforma.generate_pdf()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
-        response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-            "id": proforma.pk,
-            "series": "ProformaSeries",
-            "number": proforma.number,
-            "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
-            "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
-            "archived_provider": '{}',
-            "archived_customer": '{}',
-            "due_date": None,
-            "issue_date": None,
-            "paid_date": None,
-            "cancel_date": None,
-            "sales_tax_name": "VAT",
-            "sales_tax_percent": '1.00',
-            "currency": "RON",
-            "transaction_currency": proforma.transaction_currency,
-            "transaction_xe_rate": ("%.4f" % proforma.transaction_xe_rate
-                                    if proforma.transaction_xe_rate else None),
-            "transaction_xe_date": proforma.transaction_xe_date,
-            "pdf_url": None,
-            "state": "draft",
-            "invoice": None,
-            "proforma_entries": [],
-            "total": 0,
-            "total_in_transaction_currency": 0,
-            "transactions": []
-        })
+        for show_pdf_storage_url, pdf_url in [
+                (True, "http://testserver%s" % proforma.pdf.url),
+                (False, "http://testserver/pdfs/%s/" % proforma.pk)]:
+            mocked_settings.SILVER_SHOW_PDF_STORAGE_URL = show_pdf_storage_url
+            response = self.client.get(url)
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data, {
+                "id": proforma.pk,
+                "series": "ProformaSeries",
+                "number": proforma.number,
+                "provider": "http://testserver/providers/%s/" % proforma.provider.pk,
+                "customer": "http://testserver/customers/%s/" % proforma.customer.pk,
+                "archived_provider": '{}',
+                "archived_customer": '{}',
+                "due_date": None,
+                "issue_date": None,
+                "paid_date": None,
+                "cancel_date": None,
+                "sales_tax_name": "VAT",
+                "sales_tax_percent": '1.00',
+                "currency": "RON",
+                "transaction_currency": proforma.transaction_currency,
+                "transaction_xe_rate": ("%.4f" % proforma.transaction_xe_rate
+                                        if proforma.transaction_xe_rate else None),
+                "transaction_xe_date": proforma.transaction_xe_date,
+                "pdf_url": pdf_url,
+                "state": "draft",
+                "invoice": None,
+                "proforma_entries": [],
+                "total": 0,
+                "total_in_transaction_currency": 0,
+                "transactions": []
+            })
 
     def test_delete_proforma(self):
         url = reverse('proforma-detail', kwargs={'pk': 1})
