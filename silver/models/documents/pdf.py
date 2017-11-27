@@ -1,5 +1,12 @@
 import uuid
 
+import os
+import pdfkit
+import urlparse
+
+import tempfile
+from django.test import override_settings
+from furl import furl
 from xhtml2pdf import pisa
 
 from django.conf import settings
@@ -36,14 +43,52 @@ class PDF(Model):
     def url(self):
         return self.pdf_file.url if self.pdf_file else None
 
-    def generate(self, template, context, upload=True):
-        pdf_file_object = HttpResponse(content_type='application/pdf')
+    def generate(self, html=None, template=None, context=None, upload=True):
+        options = {
+            'page-size': 'A4',
+            'encoding': 'UTF-8',
+        }
+        options.update(getattr(settings, "SILVER_PDF_OPTIONS", {}))
 
-        html = template.render(context)
-        pisa.pisaDocument(src=html.encode("UTF-8"),
-                          dest=pdf_file_object,
-                          encoding='UTF-8',
-                          link_callback=fetch_resources)
+        if html:
+            pdf_file_object = pdfkit.from_string(html, False, options=options)
+        else:
+            static_url, media_url = settings.STATIC_URL, settings.MEDIA_URL
+            if hasattr(settings, 'SITE_URL'):
+                if not furl(settings.SITE_URL).scheme:
+                    raise RuntimeError('settings.SITE_URL must contain a scheme.')
+
+                static_url = furl(settings.SITE_URL).add(path=static_url).url
+                media_url = furl(settings.SITE_URL).add(path=media_url).url
+
+            try:
+                with override_settings(STATIC_URL=static_url, MEDIA_URL=media_url), \
+                        tempfile.NamedTemporaryFile(suffix='.html', delete=False) as header_html, \
+                        tempfile.NamedTemporaryFile(suffix='.html', delete=False) as footer_html:
+                    print(static_url, media_url)
+                    context['render'] = 'content'
+                    html = template.render(context)
+                    print html, '=' * 20
+
+                    context['render'] = 'header'
+                    header_html.write(template.render(context).encode('utf-8'))
+                    print template.render(context).encode('utf-8'), '=' * 20
+
+                    context['render'] = 'footer'
+                    footer_html.write(template.render(context).encode('utf-8'))
+                    print template.render(context).encode('utf-8'), '=' * 20
+
+                    options['margin-top'] = '50mm'
+                    options['disable-smart-shrinking'] = ''
+                    options['header-html'] = header_html.name
+                    options['footer-html'] = footer_html.name
+
+                    pdf_file_object = pdfkit.from_string(html, False, options=options)
+            finally:
+                # Ensure temporary header and footer files are deleted after rendering the PDF
+                print(options['header-html'])
+                os.remove(options['header-html'])
+                os.remove(options['footer-html'])
 
         if not pdf_file_object:
             return

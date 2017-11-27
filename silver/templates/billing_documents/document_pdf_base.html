@@ -4,6 +4,7 @@
 <head>
     <title>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}</title>
     <style type="text/css">
+        {% block style %}
         @page {
             size: a4;
             margin: 2cm;
@@ -43,6 +44,7 @@
 
         html {
             font-family: open-sans;
+            background-color: white;
         }
 
         body {
@@ -101,9 +103,32 @@
             padding-right: 5pt;
             text-align: right;
         }
+        {% endblock %}
     </style>
+    <script>
+        function subst() {
+            var vars={};
+            var x=document.location.search.substring(1).split('&');
+            for (var i in x) {
+                var z=x[i].split('=',2);
+                vars[z[0]] = unescape(z[1]);
+            }
+            var x = ['frompage','topage','page','webpage','section','subsection','subsubsection'];
+            for (var i in x) {
+                var y = document.getElementsByClassName(x[i]);
+                for (var j=0; j<y.length; ++j) {
+                    y[j].textContent = vars[x[i]];
+                }
+            }
+        }
+        {% block script %}
+        {% endblock %}
+    </script>
 </head>
+
 <body>
+{% if render == 'header' %}
+{% block header %}
 <div id="header">
     <table>
         <tr>
@@ -134,7 +159,11 @@
     </table>
     <hr color="#86ba49" size="0.5mm">
 </div>
+{% endblock %}
+{% endif %}
 
+{% if render == 'content' %}
+{% block content %}
 <div id="content">
     <table id="parties">
         <tr>
@@ -234,37 +263,45 @@
         <hr color="#86ba49" size="0.5mm">
         <tbody>
             {% for entry in entries %}
-                <tr>
-                    <td class="index">
-                        {{ forloop.counter }}
-                    </td>
-                    <td class="description">
-                        {{ entry.description }}
-                    </td>
-                    <td class="unit">
-                        {{ entry.unit }}
-                    </td>
-                    <td class="count">
-                        {{ entry.quantity|floatformat:-2 }}
-                    </td>
-                    <td class="unit_price">
-                        {{ entry.unit_price|floatformat:2 }} {{ document.currency }}
-                    </td>
-                    <td class="price">
-                        {{ entry.total|floatformat:2 }} {{ document.currency }}
-                    </td>
-                </tr>
+            <tr>
+                <td class="index">
+                    {{ forloop.counter }}
+                </td>
+                <td class="description">
+                    {{ entry.description }}
+                </td>
+                <td class="unit">
+                    {{ entry.unit }}
+                </td>
+                <td class="count">
+                    {{ entry.quantity|floatformat:-2 }}
+                </td>
+                <td class="unit_price">
+                    {{ entry.unit_price|floatformat:2 }} {{ document.currency }}
+                </td>
+                <td class="price">
+                    {{ entry.total|floatformat:2 }} {{ document.currency }}
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
-                    <td colspan="5" class="total">Total</td>
-                    <td class="total_amount">
-                        {{ document.total|floatformat:2 }} {{ document.currency }}
-                    </td>
+                <td colspan="5" class="total">Total</td>
+                <td class="total_amount">
+                    {{ document.total|floatformat:2 }} {{ document.currency }}
+                </td>
             </tr>
         </tfoot>
     </table>
 </div>
+{% endblock %}
+{% endif %}
+
+{% if render == 'footer' %}
+{% block footer %}
+<p>Page <span class="page"></span> of <span class="to-page"></span></p>
+{% endblock %}
+{% endif %}
 </body>
 </html>
