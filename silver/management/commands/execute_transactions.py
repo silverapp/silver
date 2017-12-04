@@ -55,7 +55,7 @@ class Command(BaseCommand):
                 payment_processor = transaction.payment_method.get_payment_processor()
                 if payment_processor.type != PaymentProcessorTypes.Triggered:
                     continue
-                payment_processor.execute_transaction(transaction)
+                payment_processor.process_transaction(transaction)
             except Exception:
                 logger.error('Encountered exception while executing transaction '
                              'with id=%s.', transaction.id, exc_info=True)

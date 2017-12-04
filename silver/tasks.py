@@ -93,7 +93,7 @@ def execute_transaction(transaction_id):
     if payment_processor.type != PaymentProcessorTypes.Triggered:
         return
 
-    payment_processor.execute_transaction(transaction)
+    payment_processor.process_transaction(transaction)
 
 
 @shared_task(ignore_result=True)

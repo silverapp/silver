@@ -17,6 +17,7 @@ import os
 
 from django.contrib.admin.templatetags.admin_list import items_for_result
 from django.utils.deconstruct import deconstructible
+from django_fsm import TransitionNotAllowed
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +56,29 @@ class BaseActionableProcessor(object):
 
         raise NotImplementedError
 
+    def process_transaction(self, transaction):
+        """
+            Receives an initial transaction.
+            Makes sure the transaction hasn't been processed before and calls the
+            execute_transaction method.
+
+            :return: True on success, False on failure.
+        """
+        try:
+            transaction.process()
+            transaction.save()
+        except TransitionNotAllowed:
+            logger.exception("Couldn't process transaction with pk %d." % transaction.pk)
+
+            return False
+
+        return self.execute_transaction(transaction)
+
     def execute_transaction(self, transaction):
         """
             Creates a real transaction based on the given transaction.
-
-            Should only be called for initial transactions that belong to the
-            payment processor where this is implemented.
+            The transaction is a pending transaction that hasn't been processed before.
+            Usually you want to use the process_transaction method instead.
 
             :return: True on success, False on failure.
         """

@@ -1040,7 +1040,7 @@ class TransactionAdmin(ModelAdmin):
                 payment_processor = transaction.payment_method.get_payment_processor()
                 if payment_processor.type != PaymentProcessorTypes.Triggered:
                     continue
-                payment_processor.execute_transaction(transaction)
+                payment_processor.process_transaction(transaction)
             except Exception:
                 failed_count += 1
                 logger.error('Encountered exception while executing transaction '
