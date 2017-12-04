@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5 (2017-12-04)
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**
+- Implementations of payment processors don't have to call the `process` method on the transaction
+anymore. A new method called `process_transaction` has been added for actionable PaymentProcessors
+which tries to call the transaction `process` method. This has been done to avoid a case of duplicate
+transactions. **(BREAKING)**
+
 ## 0.4.4 (2017-11-20)
 - Fixed some tests that were behaving differently when run inside a parent application.
 - Use a custom working xhtml2pdf version for pdf generation
