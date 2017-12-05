@@ -147,8 +147,9 @@ class TestProformaEndpoints(APITestCase):
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
 
         for show_pdf_storage_url, pdf_url in [
-                (True, "http://testserver%s" % proforma.pdf.url),
-                (False, "http://testserver/pdfs/%s/" % proforma.pk)]:
+            (True, build_absolute_test_url(proforma.pdf.url)),
+            (False, build_absolute_test_url(reverse('pdf', args=[proforma.pdf.pk])))
+        ]:
             mocked_settings.SILVER_SHOW_PDF_STORAGE_URL = show_pdf_storage_url
             response = self.client.get(url)
 
