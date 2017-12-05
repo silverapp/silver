@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import logging
-import os
 
-from django.contrib.admin.templatetags.admin_list import items_for_result
-from django.utils.deconstruct import deconstructible
 from django_fsm import TransitionNotAllowed
 
 logger = logging.getLogger(__name__)
