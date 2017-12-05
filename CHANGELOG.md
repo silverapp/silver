@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1 (2017-12-04)
+- Pin html5lib to 1.0b8 since this is a stable version working with xhtml2pdf
+
 ## 0.5 (2017-12-04)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
 - Implementations of payment processors don't have to call the `process` method on the transaction
