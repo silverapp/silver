@@ -72,7 +72,15 @@ class Customer(BaseBillingEntity):
     )
 
     def __init__(self, *args, **kwargs):
+        archived_name = None
+        if 'name' in kwargs:
+            archived_name = kwargs.pop('name')
+
         super(Customer, self).__init__(*args, **kwargs)
+
+        if archived_name:
+            self.first_name, self.last_name = archived_name.split()
+
         company_field = self._meta.get_field("company")
         company_field.help_text = "The company to which the bill is issued."
 
