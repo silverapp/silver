@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2 (2017-12-28)
+- Small admin interface improvements for payment methods and transactions
+- Solved archived customer bug. In some cases, the `name` attribute of an
+  archived customer could be pass to the BillingEntity contructor,
+  resulting in a 500 error (since BillingEntity) doesn't have a `name` argument.
+- Fix DocumentAutocomplete bug. DocumentAutocomplete would fail if a `-` is
+  pressent in query.
+
 ## 0.5.1 (2017-12-04)
 - Pin html5lib to 1.0b8 since this is a stable version working with xhtml2pdf
 

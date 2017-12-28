@@ -108,7 +108,7 @@ class DocumentAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             q = self.q.rsplit('-')
             if len(q) == 2:
-                query = (Q(series=q[0]), Q(number=q[1]))
+                query = (Q(series=q[0]) | Q(number=q[1]))
             else:
                 query = (Q(series__istartswith=self.q) |
                          Q(number__istartswith=self.q) |
