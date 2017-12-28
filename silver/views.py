@@ -139,7 +139,7 @@ class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
         if not (self.request.user.is_authenticated() and self.request.user.is_staff):
             raise Http404
 
-        queryset = PaymentMethod.objects.all()
+        queryset = PaymentMethod.objects.exclude(canceled=True)
 
         if self.q:
             query = (Q(customer__first_name__istartswith=self.q) |
