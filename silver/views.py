@@ -108,7 +108,7 @@ class DocumentAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             q = self.q.rsplit('-')
             if len(q) == 2:
-                query = (Q(series=q[0]), Q(number=q[1]))
+                query = (Q(series=q[0]) | Q(number=q[1]))
             else:
                 query = (Q(series__istartswith=self.q) |
                          Q(number__istartswith=self.q) |
@@ -139,7 +139,7 @@ class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
         if not (self.request.user.is_authenticated() and self.request.user.is_staff):
             raise Http404
 
-        queryset = PaymentMethod.objects.all()
+        queryset = PaymentMethod.objects.exclude(canceled=True)
 
         if self.q:
             query = (Q(customer__first_name__istartswith=self.q) |
