@@ -184,8 +184,9 @@ class PaymentMethod(models.Model):
         return {}
 
     def __unicode__(self):
-        return u'{} - {}'.format(self.customer,
-                                 self.get_payment_processor_display())
+        return u'{} - {} - {}'.format(self.customer,
+                                      self.get_payment_processor_display(),
+                                      self.pk)
 
 
 def create_transactions_for_issued_documents(payment_method):
