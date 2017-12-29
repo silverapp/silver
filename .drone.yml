@@ -55,20 +55,25 @@ pipeline:
       - rm -rf /drone/src/presslabs-org/wp-content/root/silver/docs/*
       - mv compiled_docs/* /drone/src/presslabs-org/wp-content/root/silver/docs
       - rm -rf compiled_docs/
+    when:
+      branch: master
 
   update-presslabs-org:
     image: appleboy/drone-git-push
     branch: prod
-    group: docs
+    group: publish
     commit: true
     path: /drone/src/presslabs-org
     commit_message: "[docs] Update silver docs"
     remote: git@github.com:/Presslabs/presslabs-org.git
     secrets:
       - GIT_PUSH_SSH_KEY
+    when:
+      branch: master
 
   publish-docker:
     image: plugins/docker
+    group: publish
     repo: presslabs/silver
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
