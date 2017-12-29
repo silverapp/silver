@@ -1,12 +1,36 @@
-matrix:
-  DJANGO_VERSION:
-    - <1.9
-    - <2.0
+clone:
+  default:
+    image: plugins/git
+    recursive: true
+    group: clone
+    submodule_update_remote: true
+    submodule_override:
+       docs-theme: https://github.com/PressLabs/docs-theme.git
+
+  presslabs-org:
+    image: alpine/git
+    group: clone
+    commands:
+      # write the ssh key to disk
+      - mkdir /root/.ssh
+      - echo -n "$GIT_PUSH_SSH_KEY" > /root/.ssh/id_rsa
+      - chmod 600 /root/.ssh/id_rsa
+
+      # add github to known hosts
+      - touch /root/.ssh/known_hosts
+      - chmod 600 /root/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+
+      # clone presslabs-org
+      - git clone -b prod git@github.com:/PressLabs/presslabs-org.git /drone/src/presslabs-org
+    secrets:
+      - GIT_PUSH_SSH_KEY
 
 pipeline:
   test:
     image: presslabs/silver
     pull: true
+    group: build
     environment:
       - SILVER_DB_ENGINE=django.db.backends.mysql
       - SILVER_DB_NAME=test_db
@@ -20,8 +44,36 @@ pipeline:
       - make lint
       - make test
 
+  build-docs:
+    image: jobandtalent/mkdocs
+    group: build
+    commands:
+      - cd docs/
+      - mkdocs build --clean
+      - for i in $(ls | grep -v compiled_docs); do rm -rf $i; done
+      - mkdir -p /drone/src/presslabs-org/wp-content/root/silver/docs
+      - rm -rf /drone/src/presslabs-org/wp-content/root/silver/docs/*
+      - mv compiled_docs/* /drone/src/presslabs-org/wp-content/root/silver/docs
+      - rm -rf compiled_docs/
+    when:
+      branch: master
+
+  update-presslabs-org:
+    image: appleboy/drone-git-push
+    branch: prod
+    group: publish
+    commit: true
+    path: /drone/src/presslabs-org
+    commit_message: "[docs] Update silver docs"
+    remote: git@github.com:/Presslabs/presslabs-org.git
+    secrets:
+      - GIT_PUSH_SSH_KEY
+    when:
+      branch: master
+
   publish-docker:
     image: plugins/docker
+    group: publish
     repo: presslabs/silver
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
@@ -41,3 +93,8 @@ services:
       - MYSQL_PASSWORD=silver
   redis:
     image: redis:3-alpine
+
+matrix:
+  DJANGO_VERSION:
+    - <1.9
+    - <2.0
