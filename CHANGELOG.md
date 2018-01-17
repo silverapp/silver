@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.3 (2018-01-09)
+- Increase phone number limits to 32, since there are a lot of phone formats.
+
 ## 0.5.2 (2017-12-28)
 - Small admin interface improvements for payment methods and transactions
 - Solved archived customer bug. In some cases, the `name` attribute of an
