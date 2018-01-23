@@ -55,10 +55,12 @@ Don't forget to migrate your database
 
 
 Configuration
------
+-------------
 
 For the complete API reference, check the project's wiki: <https://github.com/silverapp/silver/wiki>.
 
+Automated tasks
+~~~~~~~~~~~~~~~
 To run Silver automatically you have two choices, although we really recommend the first one. You can either:
 
 * Use Celery (4.x) and setup a celery-beat for the following tasks (recommended):
@@ -80,8 +82,9 @@ To run Silver automatically you have two choices, although we really recommend t
   * fetch_transactions_status (if making use of silver transactions, for which the payment processor doesn't offer callbacks)
 
   You'll have to make sure that each of these commands is not run more than once at a time.
-
-
+  
+Billing documents templates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 For creating the PDF templates, Silver uses the built-in templating engine of
 Django <https://docs.djangoproject.com/en/1.8/topics/templates/#the-django-template-language>. 
 The template variables that are available in the context of the template are:
@@ -114,13 +117,48 @@ your settings file. Example for storing the PDFs on S3:
             'calling_format': 'boto.s3.connection.OrdinaryCallingFormat'
         }
     )
+    
+Payment Processors settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Other available settings:
+Here's an example for how the PAYMENT_PROCESSORS Django setting should look like, for the Braintree payment processor, from <https://github.com/silverapp/silver-braintree>:
+
+.. code-block:: python
+
+    # put this in your settings.py
+    braintree_setup_data = {
+        'environment': braintree.Environment.Production,
+        'merchant_id': BRAINTREE_MERCHANT_ID,
+        'public_key': BRAINTREE_PUBLIC_KEY,
+        'private_key': BRAINTREE_PRIVATE_KEY
+    }
+
+    PAYMENT_PROCESSORS = {
+        'braintree_triggered': {
+            'class': 'silver_braintree.payment_processors.BraintreeTriggered',
+            'setup_data': braintree_setup_data,
+        },
+        'braintree_recurring': {
+            'class': 'silver_braintree.payment_processors.BraintreeTriggeredRecurring',
+            'setup_data': braintree_setup_data,
+        }
+
+Current available payment processors for Silver are:
+
+    * Braintree <https://github.com/silverapp/silver-braintree>
+    * PayU RO <https://github.com/silverapp/silver-payu>
+
+Other available settings
+~~~~~~~~~~~~~~~~~~~~~~~~
 
     * ``SILVER_DEFAULT_DUE_DAYS`` - the default number of days until an invoice is due for payment.
     * ``SILVER_DOCUMENT_PREFIX`` - it gets prepended to the path of the saved files.
       The default path of the documents is ``{prefix}{company}/{doc_type}/{date}/{filename}``
+    * ``SILVER_PAYMENT_TOKEN_EXPIRATION`` - decides for how long the `pay_url` of a transaction is available, before it needs to be reobtained
+    * ``SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS`` - automatically create transactions when a billing document is issued, for recurring payment methods
 
+Other features
+~~~~~~~~~~~~~~
 
 To add REST hooks to Silver you can install and configure the following packages:
 
