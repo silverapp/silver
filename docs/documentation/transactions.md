@@ -114,7 +114,7 @@ POST /customers/<customer_id>/transactions/
 * `amount`: Can be omitted, in which case the amount will be the remaining amount of the billing document to be paid. Otherwise it must be lower or equal to the remaining amount of the billing document to be paid.
 * `currency`: Can be omitted, in which case the `transaction_currency` of the billing document will be used. If specified it must be the same as the `transaction_currency` of the billing document, so it can only be used as a safety measure.
 * `invoice` and `proforma`: Only one of these must be specified for the transaction to be created. If both are specified, they must be related.
-* `valid_until`: Can be omitted. If specified it decides when the `pay_url` of the transaction will become unavailable to the customer.
+* `valid_until`: Can be omitted. If specified, the transaction cannot be paid by the customer past that date.
 
 ##### Response
 ```json
