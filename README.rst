@@ -1,7 +1,20 @@
 silver 
 ======
 
-Django automated billing with an API
+==================
+Welcome to Silver
+==================
+
+
+Silver is a Django automated billing with an API.
+
+Silver was developed by the awesome engineering team at Presslabs_, 
+a Managed WordPress Hosting provider.
+
+For more open-source projects, check `Presslabs Code`_. 
+
+.. _Presslabs: https://www.presslabs.com/
+.. _`Presslabs Code`: https://www.presslabs.org/
 
 .. list-table::
 
@@ -57,7 +70,9 @@ Don't forget to migrate your database
 Configuration
 -------------
 
-For the complete API reference, check the project's wiki: <https://github.com/silverapp/silver/wiki>.
+For the complete API reference, check the project's documentation_.
+
+.. _documentation: https://www.presslabs.com/https://www.presslabs.org/silver/docs/.
 
 Automated tasks
 ~~~~~~~~~~~~~~~
