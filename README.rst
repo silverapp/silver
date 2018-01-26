@@ -1,6 +1,11 @@
 silver 
 ======
 
+==================
+Welcome to Silver
+==================
+
+
 Silver is a Django automated billing with an API.
 
 Silver was developed by the awesome engineering team at Presslabs_, 
