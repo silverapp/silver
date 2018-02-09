@@ -68,6 +68,7 @@ class Stats(object):
         if self.queryset.model != Transaction and self.queryset.model != Invoice \
                 and self.queryset.model != BillingLog:
             raise ValueError('Invalid model')
+
         if self.result_type is None:
             raise ValueError('A result type is required')
 
@@ -301,8 +302,8 @@ class Stats(object):
             granulation_field = None
 
         for transaction in queryset:
-            customer_name = transaction.invoice.customer.first_name + " " + \
-                            transaction.invoice.customer.last_name
+            customer_name = transaction.customer.first_name + " " + \
+                            transaction.customer.last_name
             if 'time_granulation_interval' in self.granulations:
                 granulation_value = self._get_time_granulations(transaction,
                                                                 granulation_field)
