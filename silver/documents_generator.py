@@ -194,7 +194,8 @@ class DocumentsGenerator(object):
 
         prebill_plan = subscription.prebill_plan
 
-        total = Decimal("0.00")
+        plan_amount = Decimal('0.00')
+        metered_features_amount = Decimal('0.00')
 
         last_cycle_end_date = subscription.cycle_end_date(billing_date)
 
@@ -231,12 +232,13 @@ class DocumentsGenerator(object):
             # Bill the plan amount
             if should_bill_plan:
                 if subscription.on_trial(relative_start_date):
-                    total += subscription._add_plan_trial(start_date=relative_start_date,
-                                                          end_date=relative_end_date,
-                                                          invoice=invoice, proforma=proforma)
+                    plan_amount += subscription._add_plan_trial(start_date=relative_start_date,
+                                                                end_date=relative_end_date,
+                                                                invoice=invoice, proforma=proforma)
                 else:
-                    total += subscription._add_plan_value(relative_start_date, relative_end_date,
-                                                          proforma=proforma, invoice=invoice)
+                    plan_amount += subscription._add_plan_value(start_date=relative_start_date,
+                                                                end_date=relative_end_date,
+                                                                proforma=proforma, invoice=invoice)
                 plan_now_billed_up_to = relative_end_date
 
             # Only bill metered features if the cycle the metered features belong to has ended
@@ -246,12 +248,15 @@ class DocumentsGenerator(object):
             # Bill the metered features
             if should_bill_metered_features:
                 if subscription.on_trial(relative_start_date):
-                    total += subscription._add_mfs_for_trial(start_date=relative_start_date,
-                                                             end_date=relative_end_date,
-                                                             invoice=invoice, proforma=proforma)
+                    metered_features_amount += subscription._add_mfs_for_trial(
+                        start_date=relative_start_date, end_date=relative_end_date,
+                        invoice=invoice, proforma=proforma
+                    )
                 else:
-                    total += subscription._add_mfs(relative_start_date, relative_end_date,
-                                                   proforma=proforma, invoice=invoice)
+                    metered_features_amount += subscription._add_mfs(
+                        start_date=relative_start_date, end_date=relative_end_date,
+                        proforma=proforma, invoice=invoice
+                    )
 
                 metered_features_now_billed_up_to = relative_end_date
 
@@ -263,7 +268,9 @@ class DocumentsGenerator(object):
 
         BillingLog.objects.create(subscription=subscription,
                                   invoice=invoice, proforma=proforma,
-                                  total=total,
+                                  total=plan_amount + metered_features_amount,
+                                  plan_amount=plan_amount,
+                                  metered_features_amount=metered_features_amount,
                                   billing_date=billing_date,
                                   metered_features_billed_up_to=metered_features_now_billed_up_to,
                                   plan_billed_up_to=plan_now_billed_up_to)
