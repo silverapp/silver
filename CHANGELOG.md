@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.4 (2018-02-14)
+- Also store plan and metered feature amounts separately in Billing Logs.
+
 ## 0.5.3 (2018-01-09)
 - Increase phone number limits to 32, since there are a lot of phone formats.
 
