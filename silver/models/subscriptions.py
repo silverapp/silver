@@ -1018,6 +1018,14 @@ class BillingLog(models.Model):
         decimal_places=2, max_digits=12,
         null=True, blank=True
     )
+    plan_amount = models.DecimalField(
+        decimal_places=2, max_digits=12,
+        null=True, blank=True
+    )
+    metered_features_amount = models.DecimalField(
+        decimal_places=2, max_digits=12,
+        null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=timezone.now)
 
     class Meta:
