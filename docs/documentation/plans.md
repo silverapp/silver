@@ -25,33 +25,33 @@ POST /plans
 ```
 ```json
 {
-    '<b>name</b>': 'Hydrogen',
-    '<b>interval</b>': 'month',
-    '<b>interval_count</b>': 1,
-    '<b>amount</b>': 150,
-    '<b>currency</b>': 'USD',
-    'trial_period_days': 15,
-    'metered_features': [
+    "name": "Hydrogen",
+    "interval": "month",
+    "interval_count": 1,
+    "amount": 150,
+    "currency": "USD",
+    "trial_period_days": 15,
+    "metered_features": [
         {
-            'name': 'Page Views',
-            'unit': '100k',
-            'price_per_unit': 0.01,
-            'included_units': 2.5,
-            'product_code': 'existing_pc_2'
+            "name": "Page Views",
+            "unit": "100k",
+            "price_per_unit": 0.01,
+            "included_units": 2.5,
+            "product_code": "existing_pc_2"
         },
         {
-            'name': 'VIP Support',
-            'price_per_unit': 49.99,
-            'included_units': 1,
-            'product_code': 'non-existing_pc'
+            "name": "VIP Support",
+            "price_per_unit": 49.99,
+            "included_units": 1,
+            "product_code": "non-existing_pc"
         }
     ],
-    'due_days': 10,
-    '<b>generate_after</b>': 86400,
-    '<b>product_code</b>': 'hyd_3g432556g',
-    'enabled': true,
-    'private': false,
-    '<b>provider</b>': 'www.example.com/providers/2/'
+    "due_days": 10,
+    "generate_after": 86400,
+    "product_code": "hyd_3g432556g",
+    "enabled": true,
+    "private": false,
+    "provider": "www.example.com/providers/2/"
 }
 ```
 
