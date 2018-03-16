@@ -20,8 +20,10 @@ GET /plans?enabled=True&private=False
 ```
 
 ##### Create a plan
-<pre>
+```
 POST /plans
+```
+```json
 {
     '<b>name</b>': 'Hydrogen',
     '<b>interval</b>': 'month',
@@ -51,7 +53,7 @@ POST /plans
     'private': false,
     '<b>provider</b>': 'www.example.com/providers/2/'
 }
-</pre>
+```
 
 ##### Retrieve a plan
 ```
@@ -81,8 +83,10 @@ GET /plans/:id/metered-features
 
 ##### Create a metered feature
 
-`POST /metered-features/`
-<pre>
+```
+POST /metered-features/
+```
+```json
 {
   "name": "Random Metered Feature",
   "<b>unit</b>": "pounds",
@@ -90,4 +94,4 @@ GET /plans/:id/metered-features
   "<b>included_units</b>": "2",
   "<b>product_code</b>": "Code"
 }
-</pre>
+```
