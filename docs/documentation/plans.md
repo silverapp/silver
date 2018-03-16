@@ -89,9 +89,9 @@ POST /metered-features/
 ```json
 {
   "name": "Random Metered Feature",
-  "<b>unit</b>": "pounds",
-  "<b>price_per_unit</b>": "100",
-  "<b>included_units</b>": "2",
-  "<b>product_code</b>": "Code"
+  "unit": "pounds",
+  "price_per_unit": "100",
+  "included_units": "2",
+  "product_code": "Code"
 }
 ```
