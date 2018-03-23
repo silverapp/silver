@@ -1,3 +1,7 @@
+---
+title: Payments in Silver
+description: An overview of what is a Payment in Silver, listing a customer's payments or retrieving a specific one, as well as creating and transitioning one.
+---
 For resource definition check out [Resources](Resources#payment) page.
 
 1. [List a customer's Payments](#list-a-customers-payments)
