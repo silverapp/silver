@@ -1,3 +1,7 @@
+---
+title: Silver resources
+description: Here is a list of all the resources available in Silver, as well as how they interact. All their parameters and methods are described in detail, for a better understanding of their functionality.
+---
 Resources:
 
 1. [Plan](#plan)
