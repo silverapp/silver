@@ -29,7 +29,7 @@ Available filters: `type`
 ]
 </pre>
 
-##### Retrieve a specific Payment Method
+##### Retrieve a specific Payment Processor
 
 ```
 GET /providers/<provider_id>/payment_processors/<payment_processor_id>/
