@@ -1,3 +1,7 @@
+---
+title: Silver's API
+description: Here is an overview of the Silver's API. You can find useful information about how to paginate the results and iterate through the entire collection.
+---
 General API specification.
 
 ##### Listing
