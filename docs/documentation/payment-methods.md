@@ -1,3 +1,7 @@
+---
+title: Payment Methods in Silver
+description: Detailed explanations of what is a Payment Method in Silver, how to retrieve and create one, as well as what does transitioning a Payment method means.
+---
 For resource definition check out [Resources](Resources#payment-method) page.
 
 1. [List all customer's payment methods](#list-all-payment-methods)
