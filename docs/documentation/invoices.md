@@ -1,3 +1,7 @@
+---
+title: Invoices
+description: Detailed explanations of what is an Invoice in Silver, how to create, delete and update one, as well as what does the process of paying an invoice involves.
+---
 For resource definition check out [Resources](Resources#invoice) page.
 
 1. [List all invoices](#list-all-invoices)
