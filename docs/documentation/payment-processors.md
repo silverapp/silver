@@ -1,3 +1,7 @@
+---
+title: Payment Processors in Silver
+description: Detailed explanations of what is a Payment Processor in Silver, as well as how to list a provider's Payment Processors and how to retrieve a specific one.
+---
 For resource definition check out [Resources](Resources#payment-processor) page.
 
 1. [List a Provider's Payment Processors](#list-a-providers-payment-processors)
