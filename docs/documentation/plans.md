@@ -1,3 +1,7 @@
+---
+title: Plans in Silver
+description: Here you will find what is a Plan in Silver, how to retrieve, update or disable one, as well as what are a plan's metered features and how to create them.
+---
 For resource definition check out [Resources](Resources#plan) page.
 
 1. [Retrieve all plans](#list-all-plans)
