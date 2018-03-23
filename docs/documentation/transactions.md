@@ -1,3 +1,7 @@
+---
+title: Transactions in silver
+description: Detailed explanations of what is a Transaction in Silver, how to list all transactions or a specific one, as well as what does creating a transaction involves.
+---
 For resource definition check out [Resources](Resources#transactions) page.
 
 1. [List all transactions](#list-all-transactions)
