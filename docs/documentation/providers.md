@@ -1,3 +1,7 @@
+---
+title: Providers in Silver
+description: An overview of Providers in Silver, with details regarding listing all providers or a specific one, as well as how to create, update or delete one.
+---
 For resource definition check out [Resources](Resources#provider)  page.
 
 1. [List all providers](#list-all-providers)
