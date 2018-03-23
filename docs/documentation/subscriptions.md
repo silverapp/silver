@@ -1,3 +1,7 @@
+---
+title: Subscriptions in Silver
+description: An overview of what is a Subscription in Silver, how to list a customer's subscriptions, as well as the basic operations it supports, like create, activate, cancel and more.
+---
 For resource definition check out [Resources](Resources#subscription) page.
 
 1. [List a customer's subscriptions](#listing-a-customers-subscriptions)
