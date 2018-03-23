@@ -1,6 +1,6 @@
 ---
 title: Managing customers
-description: A walk-through Silver's management of customers: how to retrieve a customer, filtering options, as well as create, update or delete operations.
+description: A walk-through Silver's management of customers on how to retrieve a customer, filtering options, as well as create, update or delete operations.
 ---
 For resource definition check out [Resources](Resources#customer) page.
 
