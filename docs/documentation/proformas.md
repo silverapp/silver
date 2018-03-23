@@ -1,3 +1,7 @@
+---
+title: Proformas in Silver
+description: Detailed explanations of what is a Proforma in Silver, how to create, delete and update one, as well as how to add entries. Also, it is explained the process of issueing and paying proformas.
+---
 For resource definition check out [Resources](Resources#proforma) page.
 
 1. [List all proformas](#list-all-proformas)
