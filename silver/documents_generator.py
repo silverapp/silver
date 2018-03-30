@@ -286,6 +286,7 @@ class DocumentsGenerator(object):
         due_date = billing_date + payment_due_days
         document = DocumentModel.objects.create(provider=provider,
                                                 customer=customer,
-                                                due_date=due_date)
+                                                due_date=due_date,
+                                                currency=subscription.plan.currency)
 
         return document

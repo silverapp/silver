@@ -76,11 +76,13 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=Decimal('0.00'),
             price_per_unit=mf_price)
+        currency = 'EUR'
         plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
                                   interval_count=1, generate_after=120,
                                   enabled=True, amount=Decimal('200.00'),
                                   trial_period_days=24,
-                                  metered_features=[metered_feature])
+                                  metered_features=[metered_feature],
+                                  currency=currency)
         start_date = dt.date(2015, 5, 20)
 
         # Create the prorated subscription
@@ -132,6 +134,7 @@ class TestInvoiceGenerationCommand(TestCase):
         prorated_plan_value = Decimal(18 / 30.0).quantize(Decimal('0.0000')) * plan.amount
         consumed_mfs_value = (consumed_1 + consumed_2) * mf_price
         assert proforma.total == prorated_plan_value + consumed_mfs_value
+        assert proforma.currency == currency
 
     def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
@@ -145,10 +148,12 @@ class TestInvoiceGenerationCommand(TestCase):
         customer = CustomerFactory.create(consolidated_billing=False)
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
         plan_price = Decimal('200.00')
+        currency = 'RON'
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
-                                  metered_features=[metered_feature])
+                                  metered_features=[metered_feature],
+                                  currency=currency)
         start_date = dt.date(2014, 1, 1)
 
         # Create 3 subscriptions for the same customer
@@ -184,6 +189,7 @@ class TestInvoiceGenerationCommand(TestCase):
         for proforma in Proforma.objects.all():
             entries = proforma.proforma_entries.all()
             assert entries.count() == 2  # Plan for current month, Metered features for last month
+            assert proforma.currency == currency
 
             for entry in entries:
                 if entry.product_code == plan.product_code:
@@ -227,6 +233,7 @@ class TestInvoiceGenerationCommand(TestCase):
             # plan for february
             # plan for march
             assert entries.count() == 3
+            assert proforma.currency == 'USD'
 
             for entry in entries:
                 assert entry.quantity == 1
