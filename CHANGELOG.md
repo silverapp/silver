@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.5 (2018-03-30)
+- Make sure to use the plan currency when generating documents.
+
 ## 0.5.4 (2018-02-14)
 - Also store plan and metered feature amounts separately in Billing Logs.
 
