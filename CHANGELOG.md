@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.6 (2018-04-25)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Dropped Django 1.8 support, meaning only Django 1.11 is currently supported. **(WARNING)**
+- PDF generate method will no longer mark the `PDF` object as clean if the file is not saved
+  (through the `upload` method) **(WARNING)**
+- Fixed a potential bug, involving the same `PDF` object and multiple threads, where the `PDF`
+  `mark_as_dirty` method would fail to work properly.
+
 
 ## 0.5.5 (2018-03-30)
 - Make sure to use the plan currency when generating documents.
