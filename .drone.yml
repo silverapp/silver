@@ -27,6 +27,7 @@ clone:
       - GIT_PUSH_SSH_KEY
     when:
       branch: master
+      event: push
 
 pipeline:
   test:
@@ -60,6 +61,7 @@ pipeline:
       - rm -rf compiled_docs/
     when:
       branch: master
+      event: push
 
   update-presslabs-org:
     image: appleboy/drone-git-push
@@ -73,6 +75,7 @@ pipeline:
       - GIT_PUSH_SSH_KEY
     when:
       branch: master
+      event: push
 
   publish-docker:
     image: plugins/docker
