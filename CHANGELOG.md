@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Dropped Django 1.8 support, meaning only Django 1.11 is currently supported. **(WARNING)**
+
 ## 0.5.5 (2018-03-30)
 - Make sure to use the plan currency when generating documents.
 
