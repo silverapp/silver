@@ -82,7 +82,6 @@ setup(
     ],
     classifiers=[
         'Environment :: Web Environment',
-        'Framework :: Django :: 1.8',
         'Framework :: Django :: 1.11',
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
