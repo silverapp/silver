@@ -26,7 +26,7 @@ from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
                                     TransactionFactory)
 from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
                                    triggered_processor, failing_void_processor)
-from silver.tests.spec.util.api_get_assert import APIGetAssert
+from silver.tests.api.utils.api_get_assert import APIGetAssert
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

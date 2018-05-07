@@ -1,8 +1,12 @@
 # Changelog
 
 ## Unrealeased changes
+_Nothing yet_
+
+## 0.6.1 (2018-05-08)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Subscription's meta field now defaults to an empty dict. **(WARNING)**
+- Added cancel_date to SubscriptionSerializer.
 
 ## 0.6 (2018-04-25)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
