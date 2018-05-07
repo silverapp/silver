@@ -1,5 +1,9 @@
 # Changelog
 
+## Unrealeased changes
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Subscription's meta field now defaults to an empty dict. **(WARNING)**
+
 ## 0.6 (2018-04-25)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Dropped Django 1.8 support, meaning only Django 1.11 is currently supported. **(WARNING)**
