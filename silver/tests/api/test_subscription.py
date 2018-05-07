@@ -22,6 +22,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from silver.models import Subscription
+from silver.tests.api.specs.subscription import spec_subscription
 from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     PlanFactory, SubscriptionFactory,
                                     MeteredFeatureFactory)
@@ -32,7 +33,7 @@ class TestSubscriptionEndpoint(APITestCase):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
 
-    def test_create_post_subscription(self):
+    def test_create_subscription(self):
         plan = PlanFactory.create()
         customer = CustomerFactory.create()
 
@@ -45,9 +46,13 @@ class TestSubscriptionEndpoint(APITestCase):
             "trial_end": '2014-12-07',
             "start_date": '2014-11-19'
         }), content_type='application/json')
+
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_create_post_subscription_reference(self):
+        subscription = Subscription.objects.get(id=response.data['id'])
+        assert response.data == spec_subscription(subscription)
+
+    def test_create_subscription_reference(self):
         plan = PlanFactory.create()
         customer = CustomerFactory.create()
 
@@ -65,6 +70,9 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         assert response.data["reference"] == test_reference
+
+        subscription = Subscription.objects.get(id=response.data['id'])
+        assert response.data == spec_subscription(subscription)
 
     def test_create_post_subscription_description(self):
         plan = PlanFactory.create()
@@ -84,6 +92,9 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_201_CREATED
 
         assert response.data["description"] == test_description
+
+        subscription = Subscription.objects.get(id=response.data['id'])
+        assert response.data == spec_subscription(subscription)
 
     def test_create_post_subscription_with_invalid_trial_end(self):
         plan = PlanFactory.create()
@@ -261,6 +272,10 @@ class TestSubscriptionEndpoint(APITestCase):
              '<' + full_url + '?page=1>; rel="first", ' +
              '<' + full_url + '?page=2> rel="last"')
 
+        for subscription_data in response.data:
+            subscription = Subscription.objects.get(id=subscription_data['id'])
+            assert subscription_data == spec_subscription(subscription)
+
     def test_get_subscription_list_reference_filter(self):
         customer = CustomerFactory.create()
         subscriptions = SubscriptionFactory.create_batch(3, customer=customer)
@@ -287,6 +302,10 @@ class TestSubscriptionEndpoint(APITestCase):
         assert len(response.data) == 2
         assert response.status_code == status.HTTP_200_OK
 
+        for subscription_data in response.data:
+            subscription = Subscription.objects.get(id=subscription_data['id'])
+            assert subscription_data == spec_subscription(subscription)
+
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
 
@@ -297,7 +316,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data != []
+        assert response.data == spec_subscription(subscription, detail=True)
 
     def test_get_subscription_detail_unexisting(self):
         customer = CustomerFactory.create()

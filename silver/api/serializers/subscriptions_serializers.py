@@ -55,9 +55,8 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date',
-                  'ended_at', 'state', 'reference', 'updateable_buckets',
-                  'meta', 'description')
+        fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date', 'cancel_date',
+                  'ended_at', 'state', 'reference', 'updateable_buckets', 'meta', 'description')
         read_only_fields = ('state', 'updateable_buckets')
         extra_kwargs = {'customer': {'lookup_url_kwarg': 'customer_pk'}}
 
