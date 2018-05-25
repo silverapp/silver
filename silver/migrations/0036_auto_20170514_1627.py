@@ -95,7 +95,7 @@ class Migration(migrations.Migration):
             sql="""
                 DROP VIEW IF EXISTS silver_document;
                 CREATE VIEW silver_document AS SELECT
-                    'invoice' AS `kind`, id, series, number, issue_date, due_date,
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     proforma_id as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
@@ -103,7 +103,7 @@ class Migration(migrations.Migration):
                     FROM silver_invoice
                 UNION
                 SELECT
-                    'proforma' AS `kind`, id, series, number, issue_date, due_date,
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     NULL as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
@@ -113,7 +113,7 @@ class Migration(migrations.Migration):
             reverse_sql="""
                 DROP VIEW IF EXISTS silver_document;
                 CREATE VIEW silver_document AS SELECT
-                    'invoice' AS `kind`, id, series, number, issue_date, due_date,
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     proforma_id as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,
@@ -121,7 +121,7 @@ class Migration(migrations.Migration):
                     FROM silver_invoice
                 UNION
                 SELECT
-                    'proforma' AS `kind`, id, series, number, issue_date, due_date,
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     NULL as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,
