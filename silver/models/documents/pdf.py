@@ -3,6 +3,7 @@ import uuid
 from xhtml2pdf import pisa
 
 from django.conf import settings
+from django.template import loader, Context, RequestContext
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
@@ -39,12 +40,13 @@ class PDF(Model):
 
     def generate(self, template, context, upload=True):
         pdf_file_object = HttpResponse(content_type='application/pdf')
+        pdf_file_object['Content-Disposition'] = 'attachment; filename="report.pdf"'
 
         html = template.render(context)
-        pisa.pisaDocument(src=html.encode("UTF-8"),
-                          dest=pdf_file_object,
-                          encoding='UTF-8',
-                          link_callback=fetch_resources)
+        pisa.pisaDocument(html,
+                        dest=pdf_file_object, 
+                        encoding='UTF-8',
+                        link_callback=fetch_resources)
 
         if not pdf_file_object:
             return
@@ -52,12 +54,11 @@ class PDF(Model):
         if upload:
             self.upload(pdf_file_object=pdf_file_object, filename=context['filename'])
 
-        return pdf_file_object
-
+        return pdf_file_object    
+   
     def upload(self, pdf_file_object, filename):
         # the PDF's upload_path attribute needs to be set before calling this method
-
-        pdf_content = ContentFile(pdf_file_object)
+        pdf_content = ContentFile(str(pdf_file_object))
 
         with transaction.atomic():
             self.pdf_file.save(filename, pdf_content, True)

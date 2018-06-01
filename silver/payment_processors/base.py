@@ -96,7 +96,7 @@ class PaymentProcessorBase(object):
         return self.name
 
     def __unicode__(self):
-        return unicode(self.name)
+        return str(self.name,'utf-8')
 
     def __str__(self):
         return str(self.name)

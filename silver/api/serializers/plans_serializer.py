@@ -29,7 +29,7 @@ class PlanSerializer(serializers.HyperlinkedModelSerializer):
 
         try:
             Plan.validate_metered_features(metered_features)
-        except ValidationError, e:
+        except ValidationError as e:
             raise serializers.ValidationError(str(e)[3:-2])
 
         return value

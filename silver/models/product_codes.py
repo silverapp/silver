@@ -19,4 +19,4 @@ class ProductCode(models.Model):
     value = models.CharField(max_length=128, unique=True)
 
     def __unicode__(self):
-        return unicode(self.value)
+        return str(self.value,'utf-8')

@@ -16,7 +16,6 @@
 import logging
 import argparse
 from datetime import datetime as dt
-from types import StringType
 
 from django.core.management.base import BaseCommand
 from django.utils import translation

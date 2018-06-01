@@ -9,25 +9,26 @@ class UnsupportedMediaPathException(Exception):
 
 def fetch_resources(uri, rel):
     """
-    Callback to allow xhtml2pdf/reportlab to retrieve Images,Stylesheets, etc.
-    `uri` is the href attribute from the html link element.
-    `rel` gives a relative path, but it's not used here.
+    Convert HTML URIs to absolute system paths so xhtml2pdf can access those
+    resources
     """
-    if settings.MEDIA_URL and uri.startswith(settings.MEDIA_URL):
-        path = os.path.join(settings.MEDIA_ROOT,
-                            uri.replace(settings.MEDIA_URL, ""))
-    elif settings.STATIC_URL and uri.startswith(settings.STATIC_URL):
-        path = os.path.join(settings.STATIC_ROOT,
-                            uri.replace(settings.STATIC_URL, ""))
-        if not os.path.exists(path):
-            for d in settings.STATICFILES_DIRS:
-                path = os.path.join(d, uri.replace(settings.STATIC_URL, ""))
-                if os.path.exists(path):
-                    break
-    elif uri.startswith("http://") or uri.startswith("https://"):
-        path = uri
-    else:
-        raise UnsupportedMediaPathException('media urls must start with %s or %s' % (
-            settings.MEDIA_URL, settings.STATIC_URL))
+    # use short variable names
+    sUrl = settings.STATIC_URL      # Typically /static/
+    sRoot = settings.STATIC_ROOT    # Typically /home/userX/project_static/
+    mUrl = settings.MEDIA_URL       # Typically /static/media/
+    mRoot = settings.MEDIA_ROOT     # Typically /home/userX/project_static/media/
 
+    # convert URIs to absolute system paths
+    if uri.startswith(mUrl):
+        path = os.path.join(mRoot, uri.replace(mUrl, ""))
+    elif uri.startswith(sUrl):
+        path = os.path.join(sRoot, uri.replace(sUrl, ""))
+    else:
+        return uri  # handle absolute uri (ie: http://some.tld/foo.png)
+
+    # make sure that file exists
+    if not os.path.isfile(path):
+            raise Exception(
+                'media URI must start with %s or %s' % (sUrl, mUrl)
+            )
     return path
