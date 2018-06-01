@@ -63,6 +63,7 @@ EXTERNAL_APPS = [
 INTERNAL_APPS = [
     'silver',
 ]
+WSGI_APPLICATION = 'silver.wsgi.application'
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 
@@ -103,14 +104,15 @@ MEDIA_URL = '/app_media/'
 STATIC_ROOT = PROJECT_ROOT + '/app_static/'
 STATIC_URL = '/app_static/'
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 SECRET_KEY = 'secret'
 
