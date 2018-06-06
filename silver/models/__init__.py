@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from billing_entities import Customer, Provider
-from documents import Proforma, Invoice, BillingDocumentBase, DocumentEntry, PDF
-from plans import Plan, MeteredFeature
-from product_codes import ProductCode
-from subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog
-from payment_methods import PaymentMethod
-from transactions import Transaction
+from .billing_entities import Customer, Provider
+from .documents import Proforma, Invoice, BillingDocumentBase, DocumentEntry, PDF
+from .plans import Plan, MeteredFeature
+from .product_codes import ProductCode
+from .subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog
+from .payment_methods import PaymentMethod
+from .transactions import Transaction

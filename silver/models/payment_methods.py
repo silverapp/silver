@@ -50,7 +50,7 @@ class PaymentMethod(models.Model):
 
     payment_processor = models.CharField(choices=PaymentProcessors.as_choices(),
                                          blank=False, null=False, max_length=256)
-    customer = models.ForeignKey(Customer)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     added_at = models.DateTimeField(default=timezone.now)
     data = JSONField(blank=True, null=True, default={})
 

@@ -232,6 +232,7 @@ class TestInvoiceEndpoints(APITestCase):
                 self.assertEqual(len(response.data["transactions"]),
                                  len(expected_transactions))
 
+                
                 for actual_transaction in response.data["transactions"]:
                     expected_transaction = [
                         transaction for transaction in expected_transactions if
@@ -239,7 +240,13 @@ class TestInvoiceEndpoints(APITestCase):
                     ]
                     self.assertTrue(expected_transaction)
                     expected_transaction = expected_transaction[0]
-
+                    print("--------------\n")
+                    print(field)
+                    print("--------------\n")
+                    print(expected_transaction)
+                    print("--------------\n")
+                    print(actual_transaction)
+                    print("--------------\n")
                     self.assertEqual(
                         expected_transaction[field], actual_transaction[field],
                         msg=("Expected %s, actual %s for field %s" % (
@@ -497,7 +504,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -520,7 +527,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -547,7 +554,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
@@ -603,7 +610,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -629,7 +636,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -682,7 +689,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -709,7 +716,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()

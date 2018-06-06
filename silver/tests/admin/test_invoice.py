@@ -16,7 +16,7 @@ from itertools import cycle
 from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase, Client
 from django_fsm import TransitionNotAllowed
 from mock import MagicMock, patch
@@ -71,7 +71,7 @@ class InvoiceAdminTestCase(TestCase):
                     user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(invoice).pk,
                     object_id=invoice.pk,
-                    object_repr=unicode(invoice),
+                    object_repr=str(invoice),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.capitalize().replace('_', ' ')
