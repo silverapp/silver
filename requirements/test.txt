@@ -1,4 +1,5 @@
 -r common.txt
+-r optionals.txt
 
 mock==1.0.1
 flake8==2.4.1
@@ -10,5 +11,3 @@ pytest-django==3.1.2
 factory-boy==2.5.2
 pep8==1.7.0
 Faker==0.7.17
-celery[redis]
-celery-once==1.2.0
