@@ -48,6 +48,11 @@ class PaymentProcessorBase(object):
         self.name = name
 
     def get_view(self, transaction, request, **kwargs):
+        assert self.transaction_view_class, 'You must specify a `transaction_view_class` ' \
+                                            'attribute for the {} class.'.format(
+                                                self.__class__.__name__
+                                            )
+
         kwargs.update({
             'form': self.get_form(transaction, request),
             'template': self.get_template(transaction),
@@ -84,14 +89,16 @@ class PaymentProcessorBase(object):
 
     def handle_transaction_response(self, transaction, request):
         """
-            This method should update the transaction status after the first
-            HTTP response from the payment gateway.
+            :param transaction: A Silver Transaction object.
+            :param request: A Django request object. It should contain POST (or GET) data about the
+            transaction, which will be used update the Silver Transaction.
 
-            Update transaction's state to Pending or Failed.
+            This method should update the transaction info (external reference, state ...) after the
+            first HTTP response from the payment gateway.
 
-            It's called by complete_payment_view.
+            It will automatically be called by the `complete_payment_view`.
 
-            If not needed, one can pass it.
+            If not needed, one can `pass` it or just `return`.
         """
 
         raise NotImplementedError

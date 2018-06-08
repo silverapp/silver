@@ -76,9 +76,15 @@ class BaseActionableProcessor(object):
 
     def execute_transaction(self, transaction):
         """
-            Creates a real transaction based on the given transaction.
-            The transaction is a pending transaction that hasn't been processed before.
-            Usually you want to use the process_transaction method instead.
+            :param transaction: A Silver Transaction object in pending state, that hasn't been
+            executed before.
+
+            Creates a real, external transaction based on the given Silver transaction.
+
+            Warning: You should never call this method directly! Use the `process_transaction`
+                     method instead, which will call this method.
+                     However, if you need to call it directly, make sure the transaction hasn't been
+                     executed before.
 
             :return: True on success, False on failure.
         """

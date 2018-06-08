@@ -39,7 +39,14 @@ def get_payment_url(transaction, request):
     return reverse('payment', kwargs=kwargs, request=request)
 
 
-def get_payment_complete_url(transaction, request):
+def get_payment_complete_url(transaction, request=None):
+    """
+        :param transaction: A Silver Transaction object.
+        :param request: A Django request object from the PaymentProcessor's transaction_view_class.
+                        Will be used to obtain the final return_url.
+        :return: The url where the customer should be redirected when the transaction operation is
+                 finished.
+    """
     kwargs = {'token': _get_jwt_token(transaction)}
     url = furl(reverse('payment-complete', kwargs=kwargs, request=request))
 
