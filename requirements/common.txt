@@ -1,27 +1,35 @@
-django<2.0
-djangorestframework==3.6.3
-pycountry>=16.11.08
-django-fsm>=2.3.0
-django-filter==1.0.4
-djangorestframework-bulk<0.3
-django-livefield
-django-jsonfield==1.0.1
-python-dateutil
-django-model-utils
-django-annoying
-pytz
-PyJWT
+# Please update the date when you decide a package's version
+# NOT_LATEST means a newer is version available, but it was decided not to update
+# UNMAINTAINED means the package owner is no longer maintaining it
 
-# python-dev is required for xhtml2pdf to work
-# custom working xhtml2 version
-html5lib==1.0b8
-https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip#egg=xhtml2pdf
+# Core
+Django>=1.11,<2.0  # NOT_LATEST ----------------------------------------------- (checked 2018-06-07)
+sqlparse>=0.2,<0.3  # (required for some old migrations) ----------------------- (bumped 2018-06-07)
 
-pyvat
-PyPDF2
-furl
+# Django Utils
+django-fsm>=2.3,<2.7  # -------------------------------------------------------- (bumped 2018-06-07)
+django-filter>=1.0.4,<1.2  # --------------------------------------------------- (bumped 2018-06-07)
+django-livefield>=2.8,<3.1  # -------------------------------------------------- (bumped 2018-06-07)
+django-jsonfield==1.0.1  # ---------------------------------------------------- (checked 2018-06-07)
+django-model-utils>=3.0,<3.2  # ------------------------------------------------ (bumped 2018-06-07)
+django-annoying>=0.10,<0.11  # (various Django helpers) ------------------------ (bumped 2018-06-07)
+django-autocomplete-light>=3.2,<3.3  # ----------------------------------------- (bumped 2018-06-07)
 
-cryptography==2.1.3
-sqlparse==0.2.2
-django-autocomplete-light==3.2.9
-celery[redis]
+# API
+djangorestframework>=3.6.3,<3.9  # --------------------------------------------- (bumped 2018-06-07)
+djangorestframework-bulk<0.3  # ----------------------------------------------- (checked 2018-06-07)
+
+# I18n
+pycountry>=16.11.08  # --------------------------------------------------------- (bumped 2018-06-07)
+pytz>=2018,<2019  # ------------------------------------------------------------ (bumped 2018-06-07)
+python-dateutil>=2.6,<2.8  # --------------------------------------------------- (bumped 2018-06-07)
+pyvat>=1.3,<1.4  # ------------------------------------------------------------- (bumped 2018-06-07)
+
+# Crypto
+cryptography>=1.9,<2.3  # ------------------------------------------------------ (bumped 2018-06-07)
+PyJWT>=1.5,<1.7  # ------------------------------------------------------------- (bumped 2018-06-07)
+
+# Other
+furl  # (URL parsing and manipulation) ----------------------------------------- (bumped 2018-06-07)
+xhtml2pdf>=0.2,<0.3  # (PDF rendering, python-dev is required) ----------------- (bumped 2018-06-07)
+PyPDF2>=1.26,<2  # (PDF manipulation) ------------------------------------------ (bumped 2018-06-07)
