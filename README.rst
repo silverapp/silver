@@ -72,7 +72,7 @@ Configuration
 
 For the complete API reference, check the project's documentation_.
 
-.. _documentation: https://www.presslabs.com/https://www.presslabs.org/silver/docs/.
+.. _documentation: https://www.presslabs.org/silver/docs/.
 
 Automated tasks
 ~~~~~~~~~~~~~~~
