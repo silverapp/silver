@@ -738,6 +738,77 @@ class TestSubscriptionShouldBeBilled(TestCase):
         assert subscription.should_be_billed(incorrect_billing_date_2) is False
         assert subscription.should_be_billed(incorrect_billing_date_3) is False
 
+    def test_canceled_sub_with_billed_plan_but_not_metered_features_1(self):
+        plan = PlanFactory.create(generate_after=100,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1)
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            start_date=datetime.date(2015, 1, 1),
+            cancel_date=datetime.date(2018, 1, 20)
+        )
+
+        billing_log = BillingLog.objects.create(
+            subscription=subscription,
+            billing_date=datetime.date(2015, 9, 2),
+            plan_billed_up_to=datetime.date(2018, 1, 31),
+            metered_features_billed_up_to=datetime.date(2017, 12, 31)
+        )
+
+        correct_billing_date_1 = subscription.cancel_date + datetime.timedelta(days=1)
+        correct_billing_date_2 = datetime.date(2018, 2, 1)
+        incorrect_billing_date = correct_billing_date_1 - datetime.timedelta(days=1)
+
+        assert \
+            billing_log.metered_features_billed_up_to \
+            < incorrect_billing_date \
+            <= subscription.cancel_date \
+            < correct_billing_date_1 \
+            < billing_log.plan_billed_up_to \
+            < correct_billing_date_2 \
+
+        assert subscription.should_be_billed(correct_billing_date_1)
+        assert subscription.should_be_billed(correct_billing_date_2)
+        assert not subscription.should_be_billed(incorrect_billing_date)
+
+    def test_canceled_sub_with_billed_plan_but_not_metered_features_2(self):
+        # Like previous test, but this time there's cycle_billing_duration added to the mix
+        plan = PlanFactory.create(generate_after=100,
+                                  interval=Plan.INTERVALS.MONTH,
+                                  interval_count=1,
+                                  cycle_billing_duration=datetime.timedelta(days=5))
+
+        subscription = SubscriptionFactory.create(
+            plan=plan,
+            state=Subscription.STATES.CANCELED,
+            start_date=datetime.date(2015, 1, 1),
+            cancel_date=datetime.date(2018, 1, 20)
+        )
+
+        billing_log = BillingLog.objects.create(
+            subscription=subscription,
+            billing_date=datetime.date(2015, 9, 2),
+            plan_billed_up_to=datetime.date(2018, 1, 31),
+            metered_features_billed_up_to=datetime.date(2017, 12, 31)
+        )
+
+        correct_billing_date = datetime.date(2018, 2, 1)
+        incorrect_billing_date_1 = subscription.cancel_date + datetime.timedelta(days=1)
+        incorrect_billing_date_2 = correct_billing_date - datetime.timedelta(days=1)
+
+        assert \
+            billing_log.metered_features_billed_up_to \
+            < subscription.cancel_date \
+            < incorrect_billing_date_1 \
+            < incorrect_billing_date_2 \
+            <= billing_log.plan_billed_up_to \
+            < correct_billing_date
+
+        assert subscription.should_be_billed(correct_billing_date)
+        assert not subscription.should_be_billed(incorrect_billing_date_1)
+        assert not subscription.should_be_billed(incorrect_billing_date_2)
+
     @freeze_time('2015-01-01')
     def test_updateable_buckets_active_subscription(self):
         plan = PlanFactory.create(generate_after=24 * 60,

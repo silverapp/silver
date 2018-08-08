@@ -498,12 +498,19 @@ class Subscription(models.Model):
         if generate_documents_datetime < cycle_start_datetime + generate_after:
             return False
 
-        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
+        billed_up_to_dates = self.billed_up_to_dates
+        plan_billed_up_to = billed_up_to_dates['plan_billed_up_to']
+        metered_features_billed_up_to = billed_up_to_dates['metered_features_billed_up_to']
 
         # We want to bill the subscription if the plan hasn't been billed for this cycle or
         # if the subscription has been canceled and the plan won't be billed for this cycle.
         if self.prebill_plan or self.state == self.STATES.CANCELED:
-            return plan_billed_up_to < cycle_start_date
+            plan_should_be_billed = plan_billed_up_to < cycle_start_date
+
+            if self.state == self.STATES.CANCELED:
+                return metered_features_billed_up_to < cycle_start_date or plan_should_be_billed
+
+            return plan_should_be_billed
 
         # wait until the cycle that is going to be billed ends:
         billed_cycle_end_date = self.cycle_end_date(plan_billed_up_to + ONE_DAY)
