@@ -27,7 +27,7 @@ from model_utils import Choices
 
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db import transaction as db_transaction
@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(unicode(
+        company=slugify(str(
             document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
@@ -124,13 +124,14 @@ class BillingDocumentBase(models.Model):
 
     kind = models.CharField(get_billing_documents_kinds, max_length=8, db_index=True)
     related_document = models.ForeignKey('self', blank=True, null=True,
-                                         related_name='reverse_related_document')
+                                         related_name='reverse_related_document',
+                                         on_delete=models.PROTECT)
 
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
     number = models.IntegerField(blank=True, null=True, db_index=True)
-    customer = models.ForeignKey('Customer')
-    provider = models.ForeignKey('Provider')
+    customer = models.ForeignKey('Customer', on_delete=models.PROTECT)
+    provider = models.ForeignKey('Provider', on_delete=models.PROTECT)
     archived_customer = JSONField(default=dict, null=True, blank=True)
     archived_provider = JSONField(default=dict, null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
@@ -159,7 +160,7 @@ class BillingDocumentBase(models.Model):
         help_text='Date of the transaction exchange rate.'
     )
 
-    pdf = ForeignKey(PDF, null=True)
+    pdf = ForeignKey(PDF, null=True, on_delete=models.PROTECT)
     state = FSMField(choices=STATE_CHOICES, max_length=10, default=STATES.DRAFT,
                      verbose_name="State",
                      help_text='The state the invoice is in.')
@@ -398,11 +399,11 @@ class BillingDocumentBase(models.Model):
     series_number.short_description = 'Number'
     series_number = property(series_number)
 
-    def __unicode__(self):
-        return u'%s %s => %s [%.2f %s]' % (self.series_number,
-                                           self.provider.billing_name,
-                                           self.customer.billing_name,
-                                           self.total, self.currency)
+    def __str__(self):
+        return '%s %s => %s [%.2f %s]' % (self.series_number,
+                                          self.provider.billing_name,
+                                          self.customer.billing_name,
+                                          self.total, self.currency)
 
     @property
     def updateable_fields(self):

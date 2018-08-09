@@ -31,16 +31,16 @@ class MultipleCharFilter(CharFilter):
 
 
 class MeteredFeaturesFilter(FilterSet):
-    name = CharFilter(name='name', lookup_expr='icontains')
+    name = CharFilter(field_name='name', lookup_expr='icontains')
 
     class Meta:
         model = MeteredFeature
-        fields = ('name', )
+        fields = ('name',)
 
 
 class SubscriptionFilter(FilterSet):
-    plan = CharFilter(name='plan__name', lookup_expr='iexact')
-    reference = MultipleCharFilter(name='reference', lookup_expr='iexact')
+    plan = CharFilter(field_name='plan__name', lookup_expr='iexact')
+    reference = MultipleCharFilter(field_name='reference', lookup_expr='iexact')
 
     class Meta:
         model = Subscription
@@ -48,18 +48,19 @@ class SubscriptionFilter(FilterSet):
 
 
 class CustomerFilter(FilterSet):
-    active = BooleanFilter(name='is_active', lookup_expr='iexact')
-    email = CharFilter(name='email', lookup_expr='icontains')
-    company = CharFilter(name='company', lookup_expr='icontains')
-    first_name = CharFilter(name='first_name', lookup_expr='icontains')
-    last_name = CharFilter(name='last_name', lookup_expr='icontains')
-    country = CharFilter(name='country', lookup_expr='icontains')
-    sales_tax_name = CharFilter(name='sales_tax_name', lookup_expr='icontains')
-    sales_tax_number = CharFilter(name='sales_tax_number',
+    active = BooleanFilter(field_name='is_active', lookup_expr='iexact')
+    email = CharFilter(field_name='email', lookup_expr='icontains')
+    company = CharFilter(field_name='company', lookup_expr='icontains')
+    first_name = CharFilter(field_name='first_name', lookup_expr='icontains')
+    last_name = CharFilter(field_name='last_name', lookup_expr='icontains')
+    country = CharFilter(field_name='country', lookup_expr='icontains')
+    sales_tax_name = CharFilter(field_name='sales_tax_name',
+                                lookup_expr='icontains')
+    sales_tax_number = CharFilter(field_name='sales_tax_number',
                                   lookup_expr='icontains')
-    consolidated_billing = CharFilter(name='consolidated_billing',
+    consolidated_billing = CharFilter(field_name='consolidated_billing',
                                       lookup_expr='icontains')
-    reference = MultipleCharFilter(name='customer_reference',
+    reference = MultipleCharFilter(field_name='customer_reference',
                                    lookup_expr='iexact')
 
     class Meta:
@@ -70,8 +71,8 @@ class CustomerFilter(FilterSet):
 
 
 class ProviderFilter(FilterSet):
-    email = CharFilter(name='email', lookup_expr='icontains')
-    company = CharFilter(name='company', lookup_expr='icontains')
+    email = CharFilter(field_name='email', lookup_expr='icontains')
+    company = CharFilter(field_name='company', lookup_expr='icontains')
 
     class Meta:
         model = Provider
@@ -79,38 +80,41 @@ class ProviderFilter(FilterSet):
 
 
 class PlanFilter(FilterSet):
-    name = CharFilter(name='name', lookup_expr='icontains')
-    currency = CharFilter(name='currency', lookup_expr='icontains')
-    enabled = BooleanFilter(name='enabled', lookup_expr='iexact')
-    private = BooleanFilter(name='private', lookup_expr='iexact')
-    interval = CharFilter(name='interval', lookup_expr='icontains')
-    product_code = CharFilter(name='product_code', lookup_expr='icontains')
-    provider = CharFilter(name='provider__company', lookup_expr='icontains')
+    plan_name = CharFilter(field_name='plan_name', lookup_expr='icontains')
+    currency = CharFilter(field_name='currency', lookup_expr='icontains')
+    enabled = BooleanFilter(field_name='enabled', lookup_expr='iexact')
+    private = BooleanFilter(field_name='private', lookup_expr='iexact')
+    interval = CharFilter(field_name='interval', lookup_expr='icontains')
+    product_code = CharFilter(field_name='product_code', lookup_expr='icontains')
+    provider = CharFilter(field_name='provider__company', lookup_expr='icontains')
 
     class Meta:
         model = Plan
-        fields = ['name', 'currency', 'enabled', 'private', 'product_code',
+        fields = ['plan_name', 'currency', 'enabled', 'private', 'product_code',
                   'provider', 'interval']
 
 
 class BillingDocumentFilter(FilterSet):
-    id = NumberFilter(name='id', lookup_expr='iexact')
-    state = MultipleCharFilter(name='state', lookup_expr='iexact')
-    number = NumberFilter(name='number', lookup_expr='iexact')
-    customer = NumberFilter(name='customer__pk', lookup_expr='iexact')
-    customer_name = CharFilter(name='customer__name', lookup_expr='icontains')
-    customer_company = CharFilter(name='customer__company',
+    id = NumberFilter(field_name='id', lookup_expr='iexact')
+    state = MultipleCharFilter(field_name='state', lookup_expr='iexact')
+    number = NumberFilter(field_name='number', lookup_expr='iexact')
+    customer = NumberFilter(field_name='customer__pk', lookup_expr='iexact')
+    customer_name = CharFilter(field_name='customer__name',
+                               lookup_expr='icontains')
+    customer_company = CharFilter(field_name='customer__company',
                                   lookup_expr='icontains')
-    provider_name = CharFilter(name='provider__name', lookup_expr='icontains')
-    provider_company = CharFilter(name='provider__company',
+    provider_name = CharFilter(field_name='provider__name',
+                               lookup_expr='icontains')
+    provider_company = CharFilter(field_name='provider__company',
                                   lookup_expr='icontains')
-    issue_date = DateFilter(name='issue_date', lookup_expr='iexact')
-    due_date = DateFilter(name='due_date', lookup_expr='iexact')
-    paid_date = DateFilter(name='due_date', lookup_expr='iexact')
-    cancel_date = DateFilter(name='cancel_date', lookup_expr='iexact')
-    currency = MultipleCharFilter(name='currency', lookup_expr='icontains')
-    sales_tax_name = MultipleCharFilter(name='sales_tax_name', lookup_expr='icontains')
-    is_overdue = BooleanFilter(name='overdue', method='filter_is_overdue')
+    issue_date = DateFilter(field_name='issue_date', lookup_expr='iexact')
+    due_date = DateFilter(field_name='due_date', lookup_expr='iexact')
+    paid_date = DateFilter(field_name='due_date', lookup_expr='iexact')
+    cancel_date = DateFilter(field_name='cancel_date', lookup_expr='iexact')
+    currency = MultipleCharFilter(field_name='currency', lookup_expr='icontains')
+    sales_tax_name = MultipleCharFilter(field_name='sales_tax_name',
+                                        lookup_expr='icontains')
+    is_overdue = BooleanFilter(field_name='overdue', method='filter_is_overdue')
 
     def filter_is_overdue(self, queryset, _, value):
         if value:
@@ -126,7 +130,7 @@ class BillingDocumentFilter(FilterSet):
 
 
 class InvoiceFilter(BillingDocumentFilter):
-    series = CharFilter(name='provider__invoice_series',
+    series = CharFilter(field_name='provider__invoice_series',
                         lookup_expr='icontains')
 
     class Meta(BillingDocumentFilter.Meta):
@@ -135,7 +139,7 @@ class InvoiceFilter(BillingDocumentFilter):
 
 
 class ProformaFilter(BillingDocumentFilter):
-    series = CharFilter(name='provider__proforma_series',
+    series = CharFilter(field_name='provider__proforma_series',
                         lookup_expr='icontains')
 
     class Meta(BillingDocumentFilter.Meta):
@@ -145,14 +149,14 @@ class ProformaFilter(BillingDocumentFilter):
 
 class TransactionFilter(FilterSet):
     payment_processor = CharFilter(
-        name='payment_method__payment_processor',
+        field_name='payment_method__payment_processor',
         lookup_expr='iexact'
     )
-    state = CharFilter(name='state')
-    min_amount = NumberFilter(name='amount', lookup_expr='gte')
-    max_amount = NumberFilter(name='amount', lookup_expr='lte')
-    currency = CharFilter(name='currency', lookup_expr='iexact')
-    disabled = BooleanFilter(name='disabled')
+    state = CharFilter(field_name='state')
+    min_amount = NumberFilter(field_name='amount', lookup_expr='gte')
+    max_amount = NumberFilter(field_name='amount', lookup_expr='lte')
+    currency = CharFilter(field_name='currency', lookup_expr='iexact')
+    disabled = BooleanFilter(field_name='disabled')
 
     class Meta:
         model = Transaction
@@ -161,9 +165,9 @@ class TransactionFilter(FilterSet):
 
 
 class PaymentMethodFilter(FilterSet):
-    processor = CharFilter(name='payment_processor', lookup_expr='iexact')
-    canceled = BooleanFilter(name='canceled')
-    verified = BooleanFilter(name='verified')
+    processor = CharFilter(field_name='payment_processor', lookup_expr='iexact')
+    canceled = BooleanFilter(field_name='canceled')
+    verified = BooleanFilter(field_name='verified')
 
     class Meta:
         model = PaymentMethod

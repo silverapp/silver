@@ -23,7 +23,7 @@ from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
 
 from django import forms
-from django.core import urlresolvers
+from django.urls import reverse
 from django.contrib import messages
 from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
                                   SimpleListFilter)
@@ -36,7 +36,6 @@ from django.db.models import BLANK_CHOICE_DASH
 from django.forms import ChoiceField
 from django.utils.html import escape
 from django_fsm import TransitionNotAllowed
-from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.shortcuts import render
@@ -46,11 +45,11 @@ from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
 from silver.payment_processors.mixins import PaymentProcessorTypes
 
-from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog, BillingDocumentBase,
-                    Transaction, PaymentMethod)
-from documents_generator import DocumentsGenerator
+from .models import (Plan, MeteredFeature, Subscription, Customer, Provider,
+                     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
+                     ProductCode, Proforma, BillingLog, BillingDocumentBase,
+                     Transaction, PaymentMethod)
+from .documents_generator import DocumentsGenerator
 
 
 logger = logging.getLogger('silver')
@@ -221,7 +220,7 @@ class SubscriptionAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=unicode(entry),
+                    object_repr=str(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -271,7 +270,7 @@ class CustomerAdmin(LiveModelAdmin):
               'zip_code', 'country', 'currency', 'consolidated_billing',
               'payment_due_days', 'sales_tax_name', 'sales_tax_percent',
               'sales_tax_number', 'extra', 'meta']
-    list_display = ['__unicode__', 'customer_reference',
+    list_display = ['__str__', 'customer_reference',
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'first_name', 'last_name', 'company',
                      'address_1', 'address_2', 'city', 'zip_code', 'country',
@@ -330,7 +329,7 @@ class ProviderAdmin(LiveModelAdmin):
               'proforma_starting_number', 'default_document_state',
               'generate_documents_on_trial_end', 'separate_cycles_during_trial', 'prebill_plan',
               'cycle_billing_duration', 'extra', 'meta']
-    list_display = ['__unicode__', 'invoice_series_list_display',
+    list_display = ['__str__', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
@@ -646,7 +645,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=unicode(entry),
+                    object_repr=str(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=readable_action
@@ -934,7 +933,7 @@ class TransactionForm(forms.ModelForm):
 class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
-    list_display = ('__unicode__', 'related_invoice', 'related_proforma',
+    list_display = ('__str__', 'related_invoice', 'related_proforma',
                     'amount', 'state', 'created_at', 'updated_at',
                     'get_customer', 'get_pay_url', 'get_payment_method',
                     'get_is_recurring')
@@ -961,8 +960,8 @@ class TransactionAdmin(ModelAdmin):
     get_pay_url.short_description = 'Pay URL'
 
     def get_customer(self, obj):
-        link = urlresolvers.reverse("admin:silver_customer_change",
-                                    args=[obj.payment_method.customer.pk])
+        link = reverse("admin:silver_customer_change",
+                       args=[obj.payment_method.customer.pk])
         return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
     get_customer.allow_tags = True
     get_customer.short_description = 'Customer'
@@ -973,8 +972,8 @@ class TransactionAdmin(ModelAdmin):
     get_is_recurring.short_description = 'Recurring'
 
     def get_payment_method(self, obj):
-        link = urlresolvers.reverse("admin:silver_paymentmethod_change",
-                                    args=[obj.payment_method.pk])
+        link = reverse("admin:silver_paymentmethod_change",
+                       args=[obj.payment_method.pk])
         return u'<a href="%s">%s</a>' % (link, obj.payment_method)
     get_payment_method.allow_tags = True
     get_payment_method.short_description = 'Payment Method'

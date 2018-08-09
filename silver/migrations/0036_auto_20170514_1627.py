@@ -71,12 +71,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='invoice',
             name='pdf',
-            field=models.ForeignKey(to='silver.PDF', null=True),
+            field=models.ForeignKey(to='silver.PDF', null=True, on_delete=models.PROTECT),
         ),
         migrations.AddField(
             model_name='proforma',
             name='pdf',
-            field=models.ForeignKey(to='silver.PDF', null=True),
+            field=models.ForeignKey(to='silver.PDF', null=True, on_delete=models.PROTECT),
         ),
 
         migrations.RunPython(move_pdf_from_documents_to_model,

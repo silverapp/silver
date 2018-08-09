@@ -53,7 +53,7 @@ class SubscriptionList(generics.ListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         url = reverse('customer-detail', kwargs={'customer_pk': customer_pk},
                       request=request)
-        request.data.update({unicode('customer'): unicode(url)})
+        request.data.update({str('customer'): str(url)})
 
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 

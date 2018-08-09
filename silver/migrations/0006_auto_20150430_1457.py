@@ -60,12 +60,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='meteredfeature',
             name='name',
-            field=models.CharField(help_text=b'The feature display name.', max_length=200, db_index=True),
+            field=models.CharField(help_text='The feature display name.', max_length=200, db_index=True),
         ),
         migrations.AlterField(
             model_name='plan',
             name='name',
-            field=models.CharField(help_text=b'Display name of the plan.', max_length=200, db_index=True),
+            field=models.CharField(help_text='Display name of the plan.', max_length=200, db_index=True),
         ),
         migrations.AlterField(
             model_name='proforma',

@@ -34,8 +34,7 @@ from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory,
                                     DocumentEntryFactory)
-from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
-                                   triggered_processor)
+from silver.tests.fixtures import PAYMENT_PROCESSORS, triggered_processor
 
 
 def reverse(*args, **kwargs):
@@ -131,7 +130,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         str(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
@@ -300,7 +299,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         str(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], invoice.transaction_currency)
@@ -664,15 +663,15 @@ class TestTransactionEndpoint(APITestCase):
             mocked_token.return_value = 'token'
 
             return OrderedDict([
-                ('id', unicode(transaction.uuid)),
+                ('id', str(transaction.uuid)),
                 ('url', reverse('transaction-detail',
                                 kwargs={'customer_pk': customer.id,
                                         'transaction_uuid': transaction.uuid})),
                 ('customer', reverse('customer-detail', args=[customer.pk])),
                 ('provider', reverse('provider-detail', args=[provider.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction.amount)),
-                ('currency', unicode(transaction.currency)),
-                ('state', unicode(transaction.state)),
+                ('amount', str(Decimal('0.00') + transaction.amount)),
+                ('currency', str(transaction.currency)),
+                ('state', str(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
                 ('can_be_consumed', transaction.can_be_consumed),

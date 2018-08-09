@@ -80,11 +80,13 @@ class Transaction(models.Model):
                      default=States.Initial)
 
     proforma = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
-                                 related_name='proforma_transactions')
+                                 related_name='proforma_transactions',
+                                 on_delete=models.PROTECT)
     invoice = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
-                                related_name='invoice_transactions')
+                                related_name='invoice_transactions',
+                                on_delete=models.PROTECT)
 
-    payment_method = models.ForeignKey('PaymentMethod')
+    payment_method = models.ForeignKey('PaymentMethod', on_delete=models.PROTECT)
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
@@ -295,8 +297,8 @@ class Transaction(models.Model):
                 not self.document.amount_to_be_charged_in_transaction_currency):
             self.document.pay()
 
-    def __unicode__(self):
-        return unicode(self.uuid)
+    def __str__(self):
+        return str(self.uuid)
 
 
 @receiver(post_transition)
