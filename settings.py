@@ -22,7 +22,7 @@ These settings are used by the ``manage.py`` command.
 
 """
 
-DEBUG = False
+DEBUG = True
 
 SITE_ID = 1
 
@@ -103,7 +103,7 @@ MEDIA_URL = '/app_media/'
 STATIC_ROOT = PROJECT_ROOT + '/app_static/'
 STATIC_URL = '/app_static/'
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

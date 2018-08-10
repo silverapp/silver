@@ -105,7 +105,7 @@ def pay_transaction_view(request, transaction, expired=None):
 
 class DocumentAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = self.model.objects.all()
@@ -141,7 +141,7 @@ class ProformaAutocomplete(DocumentAutocomplete):
 
 class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = PaymentMethod.objects.exclude(canceled=True)

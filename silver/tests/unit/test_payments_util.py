@@ -42,7 +42,7 @@ class TestPaymentsUtilMethods(TestCase):
     def test_get_payment_complete_url(self):
         transaction = TransactionFactory()
 
-        expected_url = '/pay/token/complete?return_url=http://google.com'
+        expected_url = '/pay/token/complete?return_url=http%3A%2F%2Fgoogle.com'
         mocked_request = MagicMock(GET={'return_url': 'http://google.com'},
                                    versioning_scheme=None)
         mocked_request.build_absolute_uri.return_value = '/pay/token/complete'
@@ -83,10 +83,10 @@ class TestPaymentsUtilMethods(TestCase):
         uuid = UUID('6fa459ea-ee8a-3ca4-894e-db77e160355e', version=4)
         transaction = TransactionFactory(uuid=uuid)
 
-        expected_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdG' \
-                         'lvbiI6IjZmYTQ1OWVhLWVlOGEtNGNhNC04OTRlLWRiNzdlMTYwM' \
-                         'zU1ZSIsImV4cCI6MTQ5Nzk2NTY0MH0.-bpx5A3DfSe3-HO6aH_g' \
-                         'lS8adcCxUn8lSK1-RPxohhI'
+        expected_token = b'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdG' \
+                         b'lvbiI6IjZmYTQ1OWVhLWVlOGEtNGNhNC04OTRlLWRiNzdlMTYwM' \
+                         b'zU1ZSIsImV4cCI6MTQ5Nzk2NTY0MH0.-bpx5A3DfSe3-HO6aH_g' \
+                         b'lS8adcCxUn8lSK1-RPxohhI'
         with patch('silver.utils.payments.datetime') as mocked_datetime:
             mocked_datetime.utcnow.return_value = datetime.strptime('Jun 20 2017 1:33PM',
                                                                     '%b %d %Y %I:%M%p')

@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
             model_name='meteredfeature',
             name='included_units',
             field=models.DecimalField(
-                help_text=b'The number of included units per plan interval.',
+                help_text='The number of included units per plan interval.',
                 max_digits=19,
                 decimal_places=4,
                 validators=[django.core.validators.MinValueValidator(0.0)]),
@@ -57,14 +57,14 @@ class Migration(migrations.Migration):
                 validators=[django.core.validators.MinValueValidator(0.0)],
                 max_digits=19,
                 blank=True,
-                help_text=b'The number of included units during the trial period.',
+                help_text='The number of included units during the trial period.',
                 null=True),
         ),
         migrations.AlterField(
             model_name='meteredfeature',
             name='price_per_unit',
             field=models.DecimalField(
-                help_text=b'The price per unit.',
+                help_text='The price per unit.',
                 max_digits=19,
                 decimal_places=4,
                 validators=[django.core.validators.MinValueValidator(0.0)]),
@@ -81,7 +81,7 @@ class Migration(migrations.Migration):
             model_name='plan',
             name='amount',
             field=models.DecimalField(
-                help_text=b'The amount in the specified currency to be charged on the interval specified.',
+                help_text='The amount in the specified currency to be charged on the interval specified.',
                 max_digits=19,
                 decimal_places=4,
                 validators=[django.core.validators.MinValueValidator(0.0)]),

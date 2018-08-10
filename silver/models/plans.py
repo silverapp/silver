@@ -105,11 +105,13 @@ class Plan(models.Model):
     private = models.BooleanField(default=False,
                                   help_text='Indicates if a plan is private.')
     product_code = models.ForeignKey(
-        'ProductCode', help_text='The product code for this plan.'
+        'ProductCode', help_text='The product code for this plan.',
+        on_delete=models.PROTECT
     )
     provider = models.ForeignKey(
         'Provider', related_name='plans',
-        help_text='The provider which provides the plan.'
+        help_text='The provider which provides the plan.',
+        on_delete=models.PROTECT
     )
 
     class Meta:
@@ -126,8 +128,8 @@ class Plan(models.Model):
                 raise ValidationError(err_msg)
             product_codes[mf.product_code.value] = mf.name
 
-    def __unicode__(self):
-        return unicode(self.name)
+    def __str__(self):
+        return self.name
 
     @property
     def provider_flow(self):
@@ -155,13 +157,14 @@ class MeteredFeature(models.Model):
         help_text='The number of included units during the trial period.'
     )
     product_code = UnsavedForeignKey(
-        'ProductCode', help_text='The product code for this plan.'
+        'ProductCode', help_text='The product code for this plan.',
+        on_delete=models.PROTECT
     )
 
     class Meta:
         ordering = ('name',)
 
-    def __unicode__(self):
-        fmt = u'{name} ({price:.2f}$, {included:.2f} included)'
+    def __str__(self):
+        fmt = '{name} ({price:.2f}$, {included:.2f} included)'
         return fmt.format(name=self.name, price=self.price_per_unit,
                           included=self.included_units)

@@ -60,52 +60,52 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='billinglog',
             name='metered_features_billed_up_to',
-            field=models.DateField(default=django.utils.timezone.now, help_text=b'The date up to which the metered features have been billed.'),
+            field=models.DateField(default=django.utils.timezone.now, help_text='The date up to which the metered features have been billed.'),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='billinglog',
             name='plan_billed_up_to',
-            field=models.DateField(default=django.utils.timezone.now, help_text=b'The date up to which the plan base amount has been billed.'),
+            field=models.DateField(default=django.utils.timezone.now, help_text='The date up to which the plan base amount has been billed.'),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='provider',
             name='generate_documents_on_trial_end',
             field=models.BooleanField(default=True,
-                                      help_text=b'If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
+                                      help_text='If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
         ),
         migrations.AddField(
             model_name='provider',
             name='prebill_plan',
             field=models.BooleanField(default=True,
-                                      help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
+                                      help_text='If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
         ),
         migrations.AddField(
             model_name='provider',
             name='separate_cycles_during_trial',
             field=models.BooleanField(default=False,
-                                      help_text=b'If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
+                                      help_text='If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
         ),
         migrations.AddField(
             model_name='plan',
             name='generate_documents_on_trial_end',
-            field=models.NullBooleanField(help_text=b'If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
+            field=models.NullBooleanField(help_text='If this is set to True, then billing documents will be generated when the subscription trial ends, instead of waiting for the end of the billing cycle.'),
         ),
         migrations.AddField(
             model_name='plan',
             name='separate_cycles_during_trial',
-            field=models.NullBooleanField(help_text=b'If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
+            field=models.NullBooleanField(help_text='If this is set to True, then the trial period cycle will be split if it spans across multiple billing intervals.'),
         ),
         migrations.AlterField(
             model_name='paymentmethod',
             name='payment_processor',
-            field=models.CharField(choices=[(b'manual', b'manual'), (b'failing_void', b'failing_void'), (b'triggered', b'triggered')], max_length=256),
+            field=models.CharField(choices=[('manual', 'manual'), ('failing_void', 'failing_void'), ('triggered', 'triggered')], max_length=256),
         ),
         migrations.AddField(
             model_name='plan',
             name='prebill_plan',
-            field=models.NullBooleanField(help_text=b'If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
+            field=models.NullBooleanField(help_text='If this is set to True, then the plan base amount will be billed at thebeginning of the billing cycle rather than after the end.'),
         ),
         migrations.RunPython(fill_billing_log_billed_up_to_fields, migrations.RunPython.noop)
     ]

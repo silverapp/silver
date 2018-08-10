@@ -15,12 +15,12 @@
 
 import calendar
 import logging
+import functools
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from annoying.functions import get_object_or_None
 from dateutil import rrule
-from django.conf import settings
 from django.utils.timezone import utc
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from annoying.fields import JSONField
@@ -58,8 +58,10 @@ def field_template_path(field, provider=None):
 
 
 class MeteredFeatureUnitsLog(models.Model):
-    metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
-    subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
+    metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed',
+                                        on_delete=models.PROTECT)
+    subscription = models.ForeignKey('Subscription', related_name='mf_log_entries',
+                                     on_delete=models.PROTECT)
     consumed_units = models.DecimalField(max_digits=19, decimal_places=4,
                                          validators=[MinValueValidator(0.0)])
     start_date = models.DateField(editable=False)
@@ -110,8 +112,8 @@ class MeteredFeatureUnitsLog(models.Model):
 
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
-    def __unicode__(self):
-        return unicode(self.metered_feature.name)
+    def __str__(self):
+        return self.metered_feature.name
 
 
 class Subscription(models.Model):
@@ -141,12 +143,14 @@ class Subscription(models.Model):
 
     plan = models.ForeignKey(
         'Plan',
-        help_text='The plan the customer is subscribed to.'
+        help_text='The plan the customer is subscribed to.',
+        on_delete=models.PROTECT
     )
     description = models.CharField(max_length=1024, blank=True, null=True)
     customer = models.ForeignKey(
         'Customer', related_name='subscriptions',
-        help_text='The customer who is subscribed to the plan.'
+        help_text='The customer who is subscribed to the plan.',
+        on_delete=models.PROTECT
     )
     trial_end = models.DateField(
         blank=True, null=True,
@@ -570,7 +574,8 @@ class Subscription(models.Model):
                 if self.trial_end:
                     if self.trial_end < self.start_date:
                         self.trial_end = None
-                elif self.plan.trial_period_days > 0:
+                elif (self.plan.trial_period_days and
+                      self.plan.trial_period_days > 0):
                     self.trial_end = self.start_date + timedelta(
                         days=self.plan.trial_period_days - 1)
 
@@ -893,7 +898,7 @@ class Subscription(models.Model):
                                         start_date__gte=start_date,
                                         end_date__lte=end_date)
         log = [qs_item.consumed_units for qs_item in qs]
-        total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+        total_consumed_units = functools.reduce(lambda x, y: x + y, log, 0)
 
         if total_consumed_units > included_units:
             return total_consumed_units - included_units
@@ -1001,17 +1006,20 @@ class Subscription(models.Model):
         base_context.update(context)
         return base_context
 
-    def __unicode__(self):
-        return u'%s (%s)' % (self.customer, self.plan)
+    def __str__(self):
+        return '%s (%s)' % (self.customer, self.plan)
 
 
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
-                                     related_name='billing_logs')
+                                     related_name='billing_logs',
+                                     on_delete=models.PROTECT)
     invoice = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
-                                related_name='invoice_billing_logs')
+                                related_name='invoice_billing_logs',
+                                on_delete=models.PROTECT)
     proforma = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
-                                 related_name='proforma_billing_logs')
+                                 related_name='proforma_billing_logs',
+                                 on_delete=models.PROTECT)
     billing_date = models.DateField(
         help_text="The date when the invoice/proforma was issued."
     )
@@ -1038,8 +1046,8 @@ class BillingLog(models.Model):
     class Meta:
         ordering = ['-billing_date']
 
-    def __unicode__(self):
-        return u'{sub} - {pro} - {inv} - {date}'.format(
+    def __str__(self):
+        return '{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)
 

@@ -50,7 +50,7 @@ class PaymentMethod(models.Model):
 
     payment_processor = models.CharField(choices=PaymentProcessors.as_choices(),
                                          blank=False, null=False, max_length=256)
-    customer = models.ForeignKey(Customer)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     added_at = models.DateTimeField(default=timezone.now)
     data = JSONField(blank=True, null=True, default={})
 
@@ -183,10 +183,10 @@ class PaymentMethod(models.Model):
     def public_data(self):
         return {}
 
-    def __unicode__(self):
-        return u'{} - {} - {}'.format(self.customer,
-                                      self.get_payment_processor_display(),
-                                      self.pk)
+    def __str__(self):
+        return '{} - {} - {}'.format(self.customer,
+                                     self.get_payment_processor_display(),
+                                     self.pk)
 
 
 def create_transactions_for_issued_documents(payment_method):

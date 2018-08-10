@@ -68,6 +68,6 @@ class BaseBillingEntity(LiveModel):
                        'meta']
         return {field: getattr(self, field, '') for field in field_names}
 
-    def __unicode__(self):
-        return (u'%s (%s)' % (self.name, self.company) if self.company
+    def __str__(self):
+        return ('%s (%s)' % (self.name, self.company) if self.company
                 else self.name)

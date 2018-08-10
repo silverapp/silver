@@ -39,6 +39,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plan',
             name='product_code',
-            field=models.ForeignKey(help_text=b'The product code for this plan.', to='silver.ProductCode'),
+            field=models.ForeignKey(
+                help_text='The product code for this plan.',
+                to='silver.ProductCode',
+                on_delete=models.PROTECT
+            ),
         ),
     ]
