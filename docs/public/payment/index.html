@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,170 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Payments in Silver</h1>
+  
+  <p class="page-intro">
+    An overview of what is a Payment in Silver, listing a customer&rsquo;s payments or retrieving a specific one, as well as creating and transitioning one.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-a-customer-s-payments">List a Customer&rsquo;s Payments</a></li>
+<li><a href="#retrieve-a-customer-s-payment">Retrieve a Customer&rsquo;s Payment</a></li>
+<li><a href="#create-a-payment">Create a Payment</a></li>
+<li><a href="#transition-a-payment">Transition a Payment</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#payment">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-a-customers-payments">List a customer&rsquo;s Payments</a></li>
+<li><a href="#retrieve-a-customers-payment">Retrieve a customer&rsquo;s payment</a></li>
+<li><a href="#create-a-payment">Create a payment</a></li>
+<li><a href="#transition-a-payment">Transition a payment</a>
+</li>
+</ol>
+
+<h2 id="list-a-customer-s-payments">List a Customer&rsquo;s Payments</h2>
+
+<pre><code>GET /customers/&lt;customer_id&gt;/payments/
+</code></pre>
+
+<p>Available filters: <code>amount</code>, <code>currency</code>, <code>due_date</code>, <code>status</code>, <code>visible</code>, <code>provider</code>
+<pre>
+[
+    {
+        &laquo;id&raquo;: 1,
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payments/1/&quot;">http://127.0.0.1:8000/customers/1/payments/1/&quot;</a>,
+        &laquo;customer&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/&quot;">http://127.0.0.1:8000/customers/1/&quot;</a>,
+        &laquo;provider&raquo;: &laquo;<a href="http://127.0.0.1:8000/providers/1/&quot;">http://127.0.0.1:8000/providers/1/&quot;</a>,
+        &laquo;amount&raquo;: &laquo;200.00&raquo;,
+        &laquo;currency&raquo;: &laquo;USD&raquo;,
+        &laquo;due_date&raquo;: null,
+        &laquo;status&raquo;: &laquo;unpaid&raquo;,
+        &laquo;visible&raquo;: true,
+        &laquo;proforma&raquo;: null,
+        &laquo;invoice&raquo;: &laquo;<a href="http://127.0.0.1:8000/invoices/1/&quot;">http://127.0.0.1:8000/invoices/1/&quot;</a>
+    },
+    {&hellip;}
+]
+</pre></p>
+
+<h2 id="retrieve-a-customer-s-payment">Retrieve a Customer&rsquo;s Payment</h2>
+
+<pre><code>GET /customers/&lt;customer_id&gt;/payments/&lt;payment_id&gt;/
+</code></pre>
+
+<pre>
+    {
+        "id": 1,
+        "url": "http://127.0.0.1:8000/customers/1/payments/1/",
+        "customer": "http://127.0.0.1:8000/customers/1/",
+        "provider": "http://127.0.0.1:8000/providers/1/",
+        "amount": "200.00",
+        "currency": "USD",
+        "due_date": null,
+        "status": "unpaid",
+        "visible": true,
+        "proforma": null,
+        "invoice": "http://127.0.0.1:8000/invoices/1/"
+    }
+</pre>
+
+<h2 id="create-a-payment">Create a Payment</h2>
+
+<pre><code>POST /customers/&lt;customer_id&gt;/payments/
+</code></pre>
+
+<pre>
+Payload:
+    {
+        "customer": "http://127.0.0.1:8000/customers/1/",
+        "provider": "http://127.0.0.1:8000/providers/1/",
+        "amount": "200.00",
+        "currency": "USD",
+        "due_date": null,
+        "status": "unpaid",
+        "visible": true,
+        "proforma": "http://127.0.0.1:8000/proformas/1/",
+        "invoice": "http://127.0.0.1:8000/invoices/1/"
+    }
+Response:
+    HTTP 201 Created
+    {
+        "id": 1,
+        "url": "http://127.0.0.1:8000/customers/1/payments/1/",
+        "customer": "http://127.0.0.1:8000/customers/1/",
+        "provider": "http://127.0.0.1:8000/providers/1/",
+        "amount": "200.00",
+        "currency": "USD",
+        "due_date": null,
+        "status": "unpaid",
+        "visible": true,
+        "proforma": "http://127.0.0.1:8000/proformas/1/",
+        "invoice": "http://127.0.0.1:8000/invoices/1/"
+    }
+</pre>  
+
+<h2 id="transition-a-payment">Transition a Payment</h2>
+
+<pre><code>PATCH /customers/&lt;customer_id&gt;/payments/&lt;payment_id&gt;/
+</code></pre>
+
+<p><pre>
+Payload:
+    {
+        &laquo;status&raquo;: &laquo;pending&raquo;
+    }
+Response:
+    HTTP 200 OK
+    {
+        &laquo;id&raquo;: 1,
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payments/1/&quot;">http://127.0.0.1:8000/customers/1/payments/1/&quot;</a>,
+        &laquo;customer&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/&quot;">http://127.0.0.1:8000/customers/1/&quot;</a>,
+        &laquo;provider&raquo;: &laquo;<a href="http://127.0.0.1:8000/providers/1/&quot;">http://127.0.0.1:8000/providers/1/&quot;</a>,
+        &laquo;amount&raquo;: &laquo;200.00&raquo;,
+        &laquo;currency&raquo;: &laquo;USD&raquo;,
+        &laquo;due_date&raquo;: null,
+        &laquo;status&raquo;: &laquo;pending&raquo;,
+        &laquo;visible&raquo;: true,
+        &laquo;proforma&raquo;: &laquo;<a href="http://127.0.0.1:8000/proformas/1/&quot;">http://127.0.0.1:8000/proformas/1/&quot;</a>,
+        &laquo;invoice&raquo;: &laquo;<a href="http://127.0.0.1:8000/invoices/1/&quot;">http://127.0.0.1:8000/invoices/1/&quot;</a>
+    }
+</pre>
+<em>The <code>status</code> field is the only field that can be modified after the payment&rsquo;s creation. If there is an on-going transaction for this payment, then the payment cannot be modified.</em></p>
+
+</div>
+
     
       
 
@@ -489,11 +652,11 @@
     
     <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
     
-    <li><a href="/silver/docs/resources/">Silver resources</a></li>
+    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
     
-    <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
+    <li><a href="/silver/docs/customers/">Managing customers</a></li>
     
-    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
+    <li><a href="/silver/docs/api/">Silver API</a></li>
     
     <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     

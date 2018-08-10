@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,387 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Silver resources</h1>
+  
+  <p class="page-intro">
+    Here is a list of all the resources available in Silver, as well as how they interact. All their parameters and methods are described in detail, for a better understanding of their functionality.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#plan">Plan:</a></li>
+<li><a href="#metered-feature">Metered feature:</a></li>
+<li><a href="#customer">Customer:</a></li>
+<li><a href="#provider">Provider:</a></li>
+<li><a href="#subscription">Subscription:</a></li>
+<li><a href="#billing-document">Billing document:</a></li>
+<li><a href="#invoice">Invoice:</a></li>
+<li><a href="#proforma">Proforma:</a></li>
+<li><a href="#document-entry">Document entry:</a></li>
+<li><a href="#payment-method">Payment Method:</a>
+<ul>
+<li><a href="#paymentmethod-state">PaymentMethod.State</a></li>
+</ul></li>
+<li><a href="#payment-processor">Payment Processor:</a>
+<ul>
+<li><a href="#methods">Methods:</a></li>
+</ul></li>
+<li><a href="#processor-manager">Processor Manager:</a>
+<ul>
+<li><a href="#methods-1">Methods</a></li>
+</ul></li>
+<li><a href="#transaction">Transaction:</a>
+<ul>
+<li><a href="#transaction-state">Transaction.State</a></li>
+</ul></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>Resources:</p>
+
+<ol>
+<li><a href="#plan">Plan</a></li>
+<li><a href="#metered-feature">Metered feature</a></li>
+<li><a href="#customer">Customer</a></li>
+<li><a href="#provider">Provider</a></li>
+<li><a href="#subscription">Subscription</a></li>
+<li><a href="#billing-document">Billing Document</a></li>
+<li><a href="#invoice">Invoice</a></li>
+<li><a href="#proforma">Proforma</a></li>
+<li><a href="#document-entry">Document entry</a></li>
+<li><a href="#coupon">Coupon</a></li>
+<li><a href="#discount">Discount</a></li>
+<li><a href="#offer">Offer</a></li>
+<li><a href="#add-on-feature">Add-on feature</a></li>
+<li><a href="#payment-method">Payment Method</a></li>
+<li><a href="#payment-processor">Payment Processor</a></li>
+<li><a href="#payment-manager">Processor Manager</a></li>
+<li><a href="#customer-details">Customer Details</a></li>
+<li><a href="#transaction">Transaction</a>
+</li>
+</ol>
+
+<hr />
+
+<h2 id="plan">Plan:</h2>
+
+<ul>
+<li><code>(string) name</code>: Display name of the plan.</li>
+<li><code>(string) interval = 'month'</code>: One of <code>day</code>, <code>week</code>, <code>month</code> or <code>year</code>. The frequency with which a subscription should be billed.</li>
+<li><code>(positive int) interval_count = 1</code>: The number of intervals (specified in the interval property) between each subscription billing. For example, <code>interval=month</code> and <code>interval_count=3</code> bills every 3 months.</li>
+<li><code>(positive decimal) amount = 0.0000</code>: The amount in the specified currency to be charged on the interval specified.</li>
+<li><code>(string) currency</code>: Currency in which subscription will be charged.</li>
+<li><code>(positive int) trial_period_days = NULL</code>: Number of trial period days granted when subscribing a customer to this plan. <code>NULL</code> if the plan has no trial period.</li>
+<li><code>(MeteredFeature list) metered_features = NULL</code>: A list of plan&rsquo;s <a href="#metered-feature">metered features</a>.</li>
+<li><code>(positive int) generate_after = 0</code>: Number of seconds to wait after current billing cycle ends before generating the invoice. This can be used to allow systems to finish updating feature counters.</li>
+<li><code>(boolean) enabled = True</code>: Whether to accept subscriptions</li>
+<li><code>(boolean) private = False</code>: This is a private plan (eg. one made specifically for one customer).</li>
+<li><code>(ProductCode) product_code</code>: The product code for this plan.</li>
+<li><code>(Provider) provider</code>: The provider of the plan.
+</li>
+</ul>
+
+<h2 id="metered-feature">Metered feature:</h2>
+
+<p>It&rsquo;s a feature of which a number of units can be added during billing cycle. At the end of the billing cycle, it&rsquo;s calculated by multiplying <code>price_per_unit</code> and the number of reported units. An example of metered feature is <code>bandwidth</code>. A metered feature has the following structure.
+* <code>(string) name</code>: The feature name.
+* <code>(string) unit</code>: The metered feature&rsquo;s unit.
+* <code>(positive decimal) price_per_unit = 0.0000</code>: The price per unit.
+* <code>(positive decimal) included_units = 0.0000</code>: The number of included units per plan interval.
+* <code>(positive decimal) included_units_during_trial = NULL</code>: The number of included units during the trial period. If this field is empty, it is considered that all the consumed metered features are free.
+* <code>(ProductCode) product_code</code>: The product code for this features.</p>
+
+<h2 id="customer">Customer:</h2>
+
+<ul>
+<li><code>(string) customer_reference</code>: It&rsquo;s a reference to be passed between silver and clients. It usually points to an account ID.</li>
+<li><code>(positive int) payment_due_days</code>: Due days for generated invoices.</li>
+<li><code>(hash) billing_details</code>: An hash consisting of billing information. None are mandatory and all will show up on the invoice.
+
+<ul>
+<li><code>(string) name</code>: The name to be used for billing purposes.</li>
+<li><code>(string) company</code>: Company to issue invoices to.</li>
+<li><code>(string) email</code>: Customer email</li>
+<li><code>(string) address_1</code>:</li>
+<li><code>(string) address_2</code>:</li>
+<li><code>(string) country</code>:</li>
+<li><code>(string) city</code>:</li>
+<li><code>(string) zip_code</code>:</li>
+<li><code>(string) extra</code>: Extra information to display on the invoice (markdown formatted).</li>
+</ul></li>
+<li><code>(string) sales_tax_number = NULL</code>: Sales tax number (eg. U1234567 or other valid VAT number formats)</li>
+<li><code>(positive decimal) sales_tax_percent = NULL</code>: Whenever to add sales tax. If null, it won&rsquo;t show up on the invoice.</li>
+<li><code>(string) sales_tax_name = NULL</code>: Sales tax name (eg. &lsquo;sales tax&rsquo; or &lsquo;VAT&rsquo;).</li>
+<li><code>(boolean) consolidated_billing = False</code>: It indicates if the customer uses consolidated billing.
+</li>
+</ul>
+
+<h2 id="provider">Provider:</h2>
+
+<ul>
+<li><code>(string) name</code>: The name of the provider.</li>
+<li><code>(string) company</code>: The company issuing the invoice.</li>
+<li><code>(string) flow = 'proforma'</code>: The flow that will be used for generating invoices. Can be one of the following:
+
+<ul>
+<li><code>'proforma'</code>: First generate a proforma and then automatically generate the corresponding invoice when the proforma is paid.</li>
+<li><code>'invoice'</code>: Generate invoices directly and ignore the existence of proformas.</li>
+</ul></li>
+<li><code>(string) invoice_series = NULL</code>: The series that will be used on the provider&rsquo;s invoices.</li>
+<li><code>(positive int) invoice_starting_number</code>: The start value for the auto-generated invoice number.</li>
+<li><code>(string) proforma_series = NULL</code>: The series that will be used on the provider&rsquo;s proformas.</li>
+<li><code>(positive int) proforma_starting_number</code>: The start value for the auto-generated invoice number.</li>
+<li><code>(string) default_document_state</code>: The default state of the auto-generated documents.</li>
+<li><code>(string) email = NULL</code>: The e-mail address of the provider.</li>
+<li><code>(string) address_1</code>:</li>
+<li><code>(string) address_2 = NULL</code>:</li>
+<li><code>(string) country = NULL</code>:</li>
+<li><code>(string) city</code>:</li>
+<li><code>(string) state = NULL</code>:</li>
+<li><code>(string) zip_code</code>:</li>
+<li><code>(string) extra = NULL</code>: Extra information to display on the invoice (markdown formatted).
+</li>
+</ul>
+
+<h2 id="subscription">Subscription:</h2>
+
+<ul>
+<li><code>(plan) plan</code>: The plan the customer is subscribed to.</li>
+<li><code>(string) description = NULL</code>: The subscription&rsquo;s description.</li>
+<li><code>(string) reference = NULL</code>: The subscription&rsquo;s reference in an external system.</li>
+<li><code>(customer) customer</code>: Customer who is subscribed to the plan.</li>
+<li><code>(date) start_date</code>: The starting date for the subscription</li>
+<li><code>(date) trial_end = NULL</code>: The date at which the trial ends. If set, overrides the computed trial end date from the plan.</li>
+<li><code>(date) cancel_date = NULL</code>: The cancel date of the subscription.</li>
+<li><code>(date) ended_at = NULL</code>: If the subscription has ended (either because it was canceled or because the customer was switched to a subscription to a new plan), the date the subscription ended</li>
+<li><code>(string) state = 'active'</code>: The state the subscription is in. Can be one of the following:
+
+<ul>
+<li><code>inactive</code>: Subscriptions in this state need to be activated for example by a human review. In this state they will not generate any invoices nor accept any updates to metered features. If not set, the <code>trial_end</code> date is set by switching the subscription to <code>active</code> state. Also, the <code>start_date</code> must be specified when switching from <code>inactive</code> to <code>active</code>.</li>
+<li><code>active</code>: Subscriptions in this state generate invoices as normal.</li>
+<li><code>canceled</code>: The subscription is canceled an has to be billed the next time that the <code>generate_docs</code> command runs.</li>
+<li><code>canceled</code>: The subscription will be billed and ended only at the beginning of the new billing cycle. Note that usually the <code>generated_docs</code> command runs regularly (e.g.: hourly), not just at billing cycles start.</li>
+<li><code>ended</code>: The subscription is ended due to upgrade, cancellation or being unpaid.</li>
+</ul></li>
+<li><code>(BillingLog list) billing_log_entries</code>: Contains the billing history (dates) of a subscription.
+</li>
+</ul>
+
+<h2 id="billing-document">Billing document:</h2>
+
+<p>This is fully inherited by <a href="#invoice">invoice</a> and <a href="#proforma">proforma</a>.</p>
+
+<ul>
+<li><code>(integer) number</code>: The number of the billing document. It will be generated automatically.</li>
+<li><code>(date) due_date = NULL</code>: The due date of the billing document.</li>
+<li><code>(date) issued_date = NULL</code>: The billing document&rsquo;s issue date.</li>
+<li><code>(date) paid_date = NULL</code>: The billing document&rsquo;s paid date.</li>
+<li><code>(date) cancel_date = NULL</code>: The billing document&rsquo;s canceled date.</li>
+<li><code>(Customer) customer</code>: The billing document&rsquo;s customer.</li>
+<li><code>(Provider) provider</code>: The billing document&rsquo;s provider.</li>
+<li><code>(DocumentEntry list) entries</code>: billing <a href="#document-entry">document entries</a>.</li>
+<li><code>(positive decimal) sales_tax_percent = NULL</code>: Whenever to add sales tax. If null, it won&rsquo;t show up on the billing document.</li>
+<li><code>(string) sales_tax_name = NULL</code>: Sales tax name (eg. &lsquo;sales tax&rsquo; or &lsquo;VAT&rsquo;).</li>
+<li><code>(string) currency</code>: Currency in which the billing document is issued.</li>
+<li><code>(boolean) past_due = False</code>: Indicates if the billing document is past due.</li>
+<li><code>(string) state = 'draft'</code>: The state the billing document is in. Can be one of the following:
+
+<ul>
+<li><code>draft</code>: This is, by default, the billing document initial state. In this state, the billing document can be modified.</li>
+<li><code>issued</code>: The billing document is issued. In this state, the billing document cannot be modified anymore and it&rsquo;s waiting to be either paid or canceled. When switching to this state, the customer&rsquo;s <code>billing_details</code> are copied into <code>billing_details</code> and <code>issued_date</code> is set.</li>
+<li><code>paid</code>: The billing document has been paid.</li>
+<li><code>canceled</code>: The billing document has been canceled.
+</li>
+</ul></li>
+</ul>
+
+<h2 id="invoice">Invoice:</h2>
+
+<p>An invoice is a type of <a href="#billing-document">billing document</a> and it inherits all the fields found in a billing document.
+Additional fields, specific to an invoice:
+* <code>(Proforma) proforma = NULL</code>: The proforma to whom the invoice is associated.</p>
+
+<h2 id="proforma">Proforma:</h2>
+
+<p>A proforma is a type of <a href="#billing-document">billing document</a> and it inherits all the fields found in a billing document.
+Additional fields, specific to a proforma:
+* <code>(Invoice) invoice = NULL</code>: The invoice to whom the proforma is associated.</p>
+
+<h2 id="document-entry">Document entry:</h2>
+
+<ul>
+<li><code>(string) description</code>: The billing document&rsquo;s entry description.</li>
+<li><code>(string) unit</code>: The billing document&rsquo;s entry unit.</li>
+<li><code>(positive decimal) quantity = 1.0000</code>: The billing document&rsquo;s entry quantity.</li>
+<li><code>(positive decimal) unit_price</code>: The price per unit.</li>
+<li><code>(ProductCode) product_code = NULL</code>: An eventual product code.</li>
+<li><code>(date) start_date = NULL</code>: If the billing document entry applies to an eventual date range, like a metered feature bucket, the start date of that range</li>
+<li><code>(date) end_date = NULL</code>: The same as <code>start_date</code> but for the ranges end date.</li>
+<li><code>(boolean) prorated = False</code>: This entry is a result of a proration, like for example the first half-month.</li>
+<li><code>(Invoice) invoice = NULL</code>: The invoice to whom it belongs.</li>
+<li><code>(Proforma) proforma = NULL</code>: The proforma to whom it belongs.
+</li>
+</ul>
+
+<hr />
+
+<h2 id="payment-method">Payment Method:</h2>
+
+<ul>
+<li><code>payment_processor (PaymentProcessorField)</code>: The payment processor of the payment method.</li>
+<li><code>customer (FK to Customer)</code>: The customer that owns the payment method.</li>
+<li><code>added_at (Datetime, autoadd=now)</code>: Datetime when the payment method was added.</li>
+<li><code>verified_at (Datetime, null, autoadd)</code>: Datetime when the payment was verified.</li>
+<li><code>data (JSON, null)</code>: Can store various information. E.g. token that can be used to link the payment method to an external resource / service.</li>
+<li><code>state (String, choices=</code><a href="#paymentmethodstate">PaymentMethod.State</a><code>)</code>: The state of the payment method.
+</li>
+</ul>
+
+<h4 id="paymentmethod-state">PaymentMethod.State</h4>
+
+<pre><code>   uninitialized ---&gt; unverified
+             \         /
+              \       /
+               V     V
+               enabled &lt;----&gt; disabled
+                    \         /
+                     \       /
+                      V     V
+                      removed
+</code></pre>
+
+<hr />
+
+<h2 id="payment-processor">Payment Processor:</h2>
+
+<blockquote>
+<p>The base class of a payment processor. Specific payment processors will have to extend this class.
+<em>This is not a Django Model</em></p>
+</blockquote>
+
+<ul>
+<li><code>type (Class constant String, choices=('manual', subclasses-only:['automatic', 'triggered']))</code>
+<em><strong>manual</strong> - The transactions are initiated by a Silver client. Their status is also verified/managed by a Silver client (e.g admin).</em>
+<em><strong>triggered</strong> - The transactions are initiated by a Silver client or triggered by a mechanism within Silver. Their status is verified/managed by the Payment Processor.</em>
+<em><strong>automatic</strong> - The transactions are initiated by the real Payment Processor services. Their status are managed by the real Payment Processor services, but are synced in Silver by the Payment Processor class.</em>
+</li>
+</ul>
+
+<h4 id="methods">Methods:</h4>
+
+<ul>
+<li><code>charge_payment(payment, payment_method=None)</code>
+<em>This method will be called whenever the processor should attempt to process the payment using the given payment method.</em>
+</li>
+</ul>
+
+<p><em><strong>Returns</strong> a boolean that describes if the charge attempt was succesful or not.</em></p>
+
+<ul>
+<li><p><code>refund_payment(payment, payment_method=None)</code></p></li>
+
+<li><p><code>void_payment(payment, payment_method=None)</code></p></li>
+
+<li><p><code>manage_payment(payment)</code></p></li>
+</ul>
+
+<hr />
+
+<h2 id="processor-manager">Processor Manager:</h2>
+
+<blockquote>
+<p>Holds a list of all the available <a href="#payment-processor">Payment Processors</a>.</p>
+</blockquote>
+
+<ul>
+<li><code>processors (Payment Processor list)</code> - stores the available payment processors.
+</li>
+</ul>
+
+<h4 id="methods-1">Methods</h4>
+
+<ul>
+<li><code>register(payment_processor, setup_data={})</code>
+<em>Adds the <code>payment_processor</code> to the <code>processors</code> list and also sets the <code>status</code> of that specific Payment Processor Class.</em>
+<em>The Payment Processors specified in the Django settings variable <code>PAYMENT_PROCESSORS</code> are automatically registered.</em></li>
+<li><code>get(payment_processor_name)</code>
+<em>Returns an instance of the payment processor class or raises a <code>PaymentProcessorManager.DoesNotExist</code> exception if the payment processor with that name is not found.</em></li>
+<li><code>all()</code>
+<em>Returns a list of all the registered Payment Processors.</em></li>
+<li><code>get_choices()</code>
+<em>Returns choices for the PaymentProcessorField</em>
+</li>
+</ul>
+
+<hr />
+
+<h2 id="transaction">Transaction:</h2>
+
+<blockquote>
+<p>It&rsquo;s the relation between a Document and a Payment Method. It holds the state of the payment processing and it can be used to initiate the payment processing.</p>
+</blockquote>
+
+<ul>
+<li><code>state (String choices=</code><a href="#transactionstate">Transaction.State</a><code>)</code>: The state of the transaction.</li>
+<li><code>payment_method (ForeignKey to</code><a href="#payment-method">Payment Method</a><code>)</code></li>
+<li><code>invoice (ForeignKey to</code><a href="#invoice">Invoice</a><code>)</code></li>
+<li><code>proforma (ForeignKey to</code><a href="#proforma">Invoice</a><code>)</code></li>
+<li><code>amount (Decimal)</code>: The amount to be charged from the customer. Must be equal (or lower - not yet implemented) to the amount on the document.</li>
+<li><code>currency (String choices=</code>pycountry.currencies`, default=&lsquo;USD&rsquo;): The currency used for billing.</li>
+<li><code>currency_rate_date (Date, null)</code>: The date of the currency rate.</li>
+<li><code>uuid (UUID, default=uuid.uuid4)</code></li>
+<li><code>valid_until (DateTime, null)</code></li>
+<li><code>last_access (DateTime, null)</code></li>
+<li><code>disabled (Bool, default=False)</code>
+</li>
+</ul>
+
+<h4 id="transaction-state">Transaction.State</h4>
+
+<pre><code>             unpaid ---------------
+            /  ^                  |
+          /    |                  |
+        /      |                  |
+      V        V                  |
+canceled &lt;-- pending --&gt; failed   |
+               |                  |
+               |                  |
+               V                  |
+               paid &lt;--------------
+</code></pre>
+
+<p>Done</p>
+
+</div>
+
     
       
 
@@ -487,15 +867,15 @@
   <h2>See Also</h2>
   <ul>
     
+    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
+    
+    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
+    
+    <li><a href="/silver/docs/invoices/">Invoices</a></li>
+    
+    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
+    
     <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
-    
-    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
-    
-    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
-    
-    <li><a href="/silver/docs/api/">Silver API</a></li>
-    
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
     
   </ul>
 </div>

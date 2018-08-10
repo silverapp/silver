@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,118 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Managing customers</h1>
+  
+  <p class="page-intro">
+    An introduction to Silver&rsquo;s management of customers — how to retrieve a customer, filtering options, as well as create, update or delete operations.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-customers">List all customers</a></li>
+<li><a href="#retrieve-a-customer">Retrieve a customer</a></li>
+<li><a href="#create-a-new-customer">Create a new customer</a></li>
+<li><a href="#update-a-customer">Update a customer</a></li>
+<li><a href="#delete-a-customer">Delete a customer</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#customer">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-customers">List all customers</a></li>
+<li><a href="#retrieve-a-customer">Retrieve a customer</a></li>
+<li><a href="#create-a-new-customer">Create new customer</a></li>
+<li><a href="#update-a-customer">Update a customer</a></li>
+<li><a href="#delete-a-customer">Delete a customer</a>
+</li>
+</ol>
+
+<h2 id="list-all-customers">List all customers</h2>
+
+<p>By default this lists all the customers.</p>
+
+<pre><code>GET /customers
+</code></pre>
+
+<p>Available filtering parameters: <code>email</code>, <code>name</code>, <code>company</code>, <code>active</code>, <code>country</code>, <code>sales_tax_name</code>, <code>sales_tax_number</code>.</p>
+
+<pre><code>GET /customers?active=True
+</code></pre>
+
+<h2 id="retrieve-a-customer">Retrieve a customer</h2>
+
+<pre><code>GET /customers/:id
+</code></pre>
+
+<h2 id="create-a-new-customer">Create a new customer</h2>
+
+<pre>
+POST /customers
+{
+    'customer_reference': '5',
+    '<b>name</b>': 'John Doe',
+    'company': 'ACME Inc.',
+    'email': 'johndoe@acme.inc',
+    '<b>address_1</b>': 'Funny Road no.4',
+    'address_2': null,
+    'country': 'US',
+    '<b>city</b>': 'Wilmington',
+    'state': 'Delaware',
+    'zip_code': 9000,
+    'extra': 'Tax exempt due to XXX',
+    'sales_tax_percent': 24,
+    'sales_tax_name': 'VAT',
+    'sales_tax_number': ''
+    'consolidated_billing': true
+}
+</pre>
+
+<h2 id="update-a-customer">Update a customer</h2>
+
+<p>All the customer&rsquo;s fields are editable. Use <code>PATCH</code> for partial update and <code>PUT</code> for full update.</p>
+
+<pre><code>PATCH /customers/:id
+PUT /customers/:id
+</code></pre>
+
+<h2 id="delete-a-customer">Delete a customer</h2>
+
+<p>Customer deletion is actually a soft delete. Deleting a customer automatically cancels that customer&rsquo;s subscriptions.</p>
+
+<pre><code>DELETE /customers/:id
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +598,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
+    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
+    
+    <li><a href="/silver/docs/api/">Silver API</a></li>
     
     <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
     
+    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
+    
     <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
-    
-    <li><a href="/silver/docs/resources/">Silver resources</a></li>
-    
-    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
     
   </ul>
 </div>

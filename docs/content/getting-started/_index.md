@@ -12,9 +12,10 @@ draft: false
 aliases: []
 toc: true
 related: true
+layout: documentation-home
 ---
 
-Silver is a service for automatic billing. It assigns __customers__ to __plans__ and creates automatic __invoice entries__ .
+Silver is a service for automatic billing. It assigns __customers__ to __plans__ and creates automatic __invoice entries__.
 
 
 | Resources                                                              | Links                         |

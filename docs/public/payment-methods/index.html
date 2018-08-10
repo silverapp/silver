@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,164 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Payment methods in Silver</h1>
+  
+  <p class="page-intro">
+    Detailed explanations of what is a Payment Method in Silver, how to retrieve and create one, as well as what does transitioning a Payment method means.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-payment-methods">List all Payment Methods</a></li>
+<li><a href="#retrieve-a-specific-payment-method">Retrieve a specific Payment Method</a></li>
+<li><a href="#create-a-payment-method">Create a Payment Method</a></li>
+<li><a href="#transition-a-payment-method">Transition a Payment Method</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#payment-method">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-payment-methods">List all customer&rsquo;s payment methods</a></li>
+<li><a href="#retrieve-a-specific-payment-method">Retrieve a customer&rsquo;s payment method</a></li>
+<li><a href="#create-a-payment-method">Create a payment method</a></li>
+<li><a href="#transition-a-payment-method">Transition a payment method</a>
+</li>
+</ol>
+
+<h2 id="list-all-payment-methods">List all Payment Methods</h2>
+
+<pre><code>GET /customers/&lt;customer_id&gt;/payment_methods/
+</code></pre>
+
+<p>Available filters: &mdash;
+<pre></p>
+
+<p>[
+    {
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payment_methods/1/&quot;">http://127.0.0.1:8000/customers/1/payment_methods/1/&quot;</a>,
+        &laquo;transactions&raquo;: null,
+        &laquo;customer&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/&quot;">http://127.0.0.1:8000/customers/1/&quot;</a>,
+        &laquo;payment_processor&raquo;: &laquo;<a href="http://127.0.0.1:8000/payment_processors/Manual/&quot;">http://127.0.0.1:8000/payment_processors/Manual/&quot;</a>,
+        &laquo;added_at&raquo;: &laquo;2016-11-09T12:36:41.008129Z&raquo;,
+        &laquo;verified_at&raquo;: null,
+        &laquo;state&raquo;: &laquo;uninitialized&raquo;
+    },
+    {
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payment_methods/2/&quot;">http://127.0.0.1:8000/customers/1/payment_methods/2/&quot;</a>,
+        &laquo;transactions&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/&quot;">http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/&quot;</a>,
+        &laquo;customer&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/&quot;">http://127.0.0.1:8000/customers/1/&quot;</a>,
+        &laquo;payment_processor&raquo;: &laquo;<a href="http://127.0.0.1:8000/payment_processors/PayPal/&quot;">http://127.0.0.1:8000/payment_processors/PayPal/&quot;</a>,
+        &laquo;added_at&raquo;: &laquo;2016-12-17T15:11:03.008129Z&raquo;,
+        &laquo;verified_at&raquo;: &laquo;2016-12-17T15:11:03.008129Z&raquo;,
+        &laquo;state&raquo;: &laquo;enabled&raquo;
+    }
+]
+</pre></p>
+
+<h2 id="retrieve-a-specific-payment-method">Retrieve a specific Payment Method</h2>
+
+<pre><code>GET /customers/&lt;customer_id&gt;/payment_methods/&lt;payment_method_id&gt;/
+</code></pre>
+
+<pre>
+    {
+        "url": "http://127.0.0.1:8000/customers/1/payment_methods/2/",
+        "transactions": "http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/",
+        "customer": "http://127.0.0.1:8000/customers/1/",
+        "payment_processor": "http://127.0.0.1:8000/payment_processors/PayPal/",
+        "added_at": "2016-12-17T15:11:03.008129Z",
+        "verified_at": "2016-12-17T15:11:03.008129Z",
+        "state": "enabled"
+    }
+</pre>
+
+<h2 id="create-a-payment-method">Create a Payment Method</h2>
+
+<pre><code>POST /customers/&lt;customer_id&gt;/payment_methods/
+</code></pre>
+
+<pre>
+Payload:
+    {
+        "payment_processor": "http://127.0.0.1:8000/payment_processors/PayPal/",
+        "state": "unverified",
+        "additional_data": {
+            "reference": "xoiy6c1b"
+        }
+    }
+Response:
+    HTTP 201 Created
+    {
+        "url": "http://127.0.0.1:8000/customers/1/payment_methods/2/",
+        "transactions": "http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/",
+        "customer": "http://127.0.0.1:8000/customers/1/",
+        "payment_processor": "http://127.0.0.1:8000/payment_processors/PayPal/",
+        "added_at": "2016-12-17T15:11:03.008129Z",
+        "verified_at": null,
+        "state": "unverified"
+    }
+</pre>
+
+<p><em>The <code>additional_data</code> field can be only specified for payments with <code>uninitialized</code> or <code>unverified</code> states, when transitioning to a <code>unverified</code> or a <code>enabled</code> state. The <code>additional_data</code> field will be passed to the Payment Processor&rsquo;s <code>initialize_unverified</code> or <code>initialize_enabled</code> methods.</em></p>
+
+<h2 id="transition-a-payment-method">Transition a Payment Method</h2>
+
+<pre><code>PATCH /customers/&lt;customer_id&gt;/payment_methods/&lt;payment_method_id&gt;/
+</code></pre>
+
+<p><pre>
+Payload:
+    {
+        &laquo;state&raquo;: &laquo;enabled&raquo;,
+        &laquo;additional_data&raquo;: {
+            &laquo;reference&raquo;: &laquo;xoiy6c1b&raquo;
+        }
+    }
+Response:
+    HTTP 200 OK
+    {
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payment_methods/2/&quot;">http://127.0.0.1:8000/customers/1/payment_methods/2/&quot;</a>,
+        &laquo;transactions&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/&quot;">http://127.0.0.1:8000/customers/1/payment_methods/2/transactions/&quot;</a>,
+        &laquo;customer&raquo;: &laquo;<a href="http://127.0.0.1:8000/customers/1/&quot;">http://127.0.0.1:8000/customers/1/&quot;</a>,
+        &laquo;payment_processor&raquo;: &laquo;<a href="http://127.0.0.1:8000/payment_processors/PayPal/&quot;">http://127.0.0.1:8000/payment_processors/PayPal/&quot;</a>,
+        &laquo;added_at&raquo;: &laquo;2016-12-17T15:11:03.008129Z&raquo;,
+        &laquo;verified_at&raquo;: null,
+        &laquo;state&raquo;: &laquo;enabled&raquo;
+    }
+</pre>
+<em>The <code>additional_data</code> field can be only specified for payments with <code>uninitialized</code> or <code>unverified</code> states, when transitioning to a <code>unverified</code> or a <code>enabled</code> state. The <code>additional_data</code> field will be passed to the Payment Processor&rsquo;s <code>initialize_unverified</code> or <code>initialize_enabled</code> methods.</em></p>
+
+</div>
+
     
       
 
@@ -487,15 +644,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
+    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
     
-    <li><a href="/silver/docs/resources/">Silver resources</a></li>
+    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
     
     <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
     
-    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
+    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
     
-    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
+    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     
   </ul>
 </div>

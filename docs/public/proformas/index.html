@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,337 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Proformas in Silver</h1>
+  
+  <p class="page-intro">
+    Detailed explanations of what is a Proforma in Silver, how to create, delete and update one, as well as how to add entries. Also, it is explained the process of issuing and paying proformas.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-proformas">List all proformas</a></li>
+<li><a href="#retrieve-a-proforma">Retrieve a proforma</a></li>
+<li><a href="#create-a-proforma">Create a proforma</a></li>
+<li><a href="#update-a-proforma">Update a proforma</a></li>
+<li><a href="#add-an-entry-to-a-proforma">Add an entry to a proforma</a></li>
+<li><a href="#update-an-entry-of-a-proforma">Update an entry of a proforma</a></li>
+<li><a href="#delete-an-entry-from-a-proforma">Delete an entry from a proforma</a></li>
+<li><a href="#issue-a-proforma">Issue a proforma</a></li>
+<li><a href="#pay-a-proforma">Pay a proforma</a></li>
+<li><a href="#cancel-a-proforma">Cancel a proforma</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#proforma">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-proformas">List all proformas</a></li>
+<li><a href="#retrieve-a-proforma">Retrieve a proforma</a></li>
+<li><a href="#create-a-proforma">Create a proforma</a></li>
+<li><a href="#update-a-proforma">Update a proforma</a></li>
+<li><a href="#add-an-entry-to-a-proforma">Add an entry to a proforma</a></li>
+<li><a href="#delete-an-entry-from-a-proforma">Delete an entry from a proforma</a></li>
+<li><a href="#update-an-entry-of-a-proforma">Update an entry of a proforma</a></li>
+<li><a href="#issue-a-proforma">Issue a proforma</a></li>
+<li><a href="#pay-a-proforma">Pay a proforma</a></li>
+<li><a href="#cancel-a-proforma">Cancel a proforma</a>
+</li>
+</ol>
+
+<h2 id="list-all-proformas">List all proformas</h2>
+
+<pre><code>GET /proformas/
+</code></pre>
+
+<p>Available filter parameters: <code>state</code>, <code>number</code>, <code>customer_name</code>, <code>customer_company</code>, <code>provider_name</code>, <code>provider_company</code>, <code>issue_date</code>, <code>due_date</code>, <code>paid_date</code>, <code>cancel_date</code>, <code>currency</code>, <code>sales_tax_name</code>.</p>
+
+<h2 id="retrieve-a-proforma">Retrieve a proforma</h2>
+
+<pre><code>GET /proformas/:id
+{
+    &quot;id&quot;: 1,
+    &quot;series&quot;: &quot;pl&quot;,
+    &quot;number&quot;: 1,
+    &quot;provider&quot;: &quot;https://api.example.com/providers/1/&quot;,
+    &quot;customer&quot;: &quot;https://api.example.com/customers/1/&quot;,
+    &quot;archived_provider&quot;: {
+        &quot;city&quot;: &quot;Timisoara&quot;,
+        &quot;name&quot;: &quot;provider1&quot;,
+        &quot;display_email&quot;: &quot;random@test.com&quot;,
+        &quot;extra&quot;: &quot;&quot;,
+        &quot;country&quot;: &quot;RO&quot;,
+        &quot;company&quot;: &quot;&quot;,
+        &quot;state&quot;: &quot;&quot;,
+        &quot;meta&quot;: null,
+        &quot;address_1&quot;: &quot;Random address&quot;,
+        &quot;address_2&quot;: &quot;&quot;,
+        &quot;notification_email&quot;: &quot;random@test.com&quot;,
+        &quot;zip_code&quot;: &quot;&quot;,
+        &quot;proforma_series&quot;: &quot;pl&quot;
+    },
+    &quot;archived_customer&quot;: {
+        &quot;city&quot;: &quot;Timisoara&quot;,
+        &quot;consolidated_billing&quot;: false,
+        &quot;extra&quot;: &quot;&quot;,
+        &quot;country&quot;: &quot;RO&quot;,
+        &quot;company&quot;: &quot;&quot;,
+        &quot;sales_tax_percent&quot;: null,
+        &quot;state&quot;: &quot;&quot;,
+        &quot;meta&quot;: null,
+        &quot;address_1&quot;: &quot;adresa 1&quot;,
+        &quot;address_2&quot;: &quot;&quot;,
+        &quot;payment_due_days&quot;: 5,
+        &quot;sales_tax_number&quot;: &quot;&quot;,
+        &quot;zip_code&quot;: &quot;&quot;,
+        &quot;customer_reference&quot;: &quot;&quot;,
+        &quot;emails&quot;: [
+            &quot;[]&quot;
+        ],
+        &quot;name&quot;: &quot;Gigel&quot;
+    },
+    &quot;due_date&quot;: &quot;2016-12-11&quot;,
+    &quot;issue_date&quot;: &quot;2016-12-06&quot;,
+    &quot;paid_date&quot;: null,
+    &quot;cancel_date&quot;: null,
+    &quot;sales_tax_name&quot;: &quot;&quot;,
+    &quot;sales_tax_percent&quot;: null,
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;state&quot;: &quot;issued&quot;,
+    &quot;invoice&quot;: null,
+    &quot;proforma_entries&quot;: [
+        {
+            &quot;description&quot;: &quot;pageviews description&quot;,
+            &quot;unit&quot;: &quot;pageviews&quot;,
+            &quot;unit_price&quot;: &quot;10.0000&quot;,
+            &quot;quantity&quot;: &quot;1000.0000&quot;,
+            &quot;total&quot;: 10000.0,
+            &quot;total_before_tax&quot;: 10000.0,
+            &quot;start_date&quot;: null,
+            &quot;end_date&quot;: null,
+            &quot;prorated&quot;: true,
+            &quot;product_code&quot;: &quot;pv&quot;
+        }
+    ],
+    &quot;total&quot;: 10000.0,
+    &quot;pdf_url&quot;: &quot;https://api.example.com/app_media/documents/provider1/proformas/2016/12/Proforma_pl-1.pdf&quot;,
+    &quot;transactions&quot;: [
+        {
+            &quot;id&quot;: &quot;adbc1b82-f89f-470a-9905-ad154a14764e&quot;,
+            &quot;url&quot;: &quot;https://api.example.com/customers/1/transactions/adbc1b82-f89f-470a-9905-ad154a14764e/&quot;,
+            &quot;customer&quot;: &quot;https://api.example.com/customers/1/&quot;,
+            &quot;provider&quot;: &quot;https://api.example.com/providers/1/&quot;,
+            &quot;amount&quot;: &quot;10000.00&quot;,
+            &quot;currency&quot;: &quot;USD&quot;,
+            &quot;currency_rate_date&quot;: null,
+            &quot;state&quot;: &quot;initial&quot;,
+            &quot;proforma&quot;: &quot;https://api.example.com/proformas/1/&quot;,
+            &quot;invoice&quot;: null,
+            &quot;can_be_consumed&quot;: true,
+            &quot;payment_processor&quot;: &quot;https://api.example.com/payment_processors/manual/&quot;,
+            &quot;payment_method&quot;: &quot;https://api.example.com/customers/1/payment_methods/1/&quot;,
+            &quot;pay_url&quot;: &quot;https://api.example.com/pay/adbc1b82-f89f-470a-9905-ad154a14764e/&quot;,
+            &quot;valid_until&quot;: null,
+            &quot;success_url&quot;: null,
+            &quot;failed_url&quot;: null
+        },
+        {
+            &quot;id&quot;: &quot;d4ac558e-5e6f-460d-b89b-b5484f61d363&quot;,
+            &quot;url&quot;: &quot;https://api.example.com/customers/1/transactions/d4ac558e-5e6f-460d-b89b-b5484f61d363/&quot;,
+            &quot;customer&quot;: &quot;https://api.example.com/customers/1/&quot;,
+            &quot;provider&quot;: &quot;https://api.example.com/providers/1/&quot;,
+            &quot;amount&quot;: &quot;100.00&quot;,
+            &quot;currency&quot;: &quot;USD&quot;,
+            &quot;currency_rate_date&quot;: null,
+            &quot;state&quot;: &quot;initial&quot;,
+            &quot;proforma&quot;: &quot;https://api.example.com/proformas/1/&quot;,
+            &quot;invoice&quot;: null,
+            &quot;can_be_consumed&quot;: true,
+            &quot;payment_processor&quot;: &quot;https://api.example.com/payment_processors/braintree/&quot;,
+            &quot;payment_method&quot;: &quot;https://api.example.com/customers/1/payment_methods/2/&quot;,
+            &quot;pay_url&quot;: &quot;https://api.example.com/pay/d4ac558e-5e6f-460d-b89b-b5484f61d363/&quot;,
+            &quot;valid_until&quot;: null,
+            &quot;success_url&quot;: null,
+            &quot;failed_url&quot;: null
+        }
+    ]
+}
+</code></pre>
+
+<h2 id="create-a-proforma">Create a proforma</h2>
+
+<pre>
+PUT /proformas
+{
+    'due_date': '2014-10-06',
+    'issue_date': '2014-10-01',
+    '<b>customer</b>': 'https://api.example.com/customers/32',
+    '<b>provider</b>': 'https://api.example.com/providers/45',
+    '<b>proforma_entries</b>': [
+        {
+            'description': 'Hydrogen Monthly Subscription for October 2014',
+            'unit': 'subscription',
+            'quantity': 1,
+            'unit_price': 150,
+            'product_code': 'hydrogen-subscription',
+            'start_date': '2014-10-01',
+            'end_date': '2014-10-31',
+            'prorated': False
+        },
+        {
+            'description': 'Prorated PageViews for September 2014',
+            'unit': '100k pageviews',
+            'quantity': 5.4,
+            'unit_price': 10,
+            'product_code': 'page-views',
+            'start_date': '2014-09-16',
+            'end_date': '2014-09-30',
+            'prorated': True
+        }
+    ]
+    'sales_tax_percent': 24,
+    'sales_tax_name': 'VAT',
+    'currency': 'USD',
+    'state': 'draft'
+}
+</pre>
+
+<h2 id="update-a-proforma">Update a proforma</h2>
+
+<p><em>NOTE</em>: Modifying a proforma is only possible when it&rsquo;s in <code>draft</code> state. Also, take note that the proforma&rsquo;s state cannot be updated through this method.</p>
+
+<p>Use <code>PATCH</code> for partial update and <code>PUT</code> for full update</p>
+
+<pre><code>PUT /proformas/:id
+PATCH /proformas/:id
+{
+    'due_date': '2014-10-06',
+    'issue_date': '2014-10-01',
+    'customer': 'https://api.example.com/customers/32',
+    'sales_tax_percent': 24,
+    'sales_tax_name': 'VAT',
+    'currency': 'USD'
+}
+</code></pre>
+
+<h2 id="add-an-entry-to-a-proforma">Add an entry to a proforma</h2>
+
+<p><em>NOTE</em>: Adding an entry is only possible when the proforma is in <code>draft</code> state.</p>
+
+<pre>
+POST /proformas/:id/entries
+{
+    '<b>description</b>': 'Hydrogen Monthly Subscription for October 2014',
+    'unit': 'subscription',
+    '<b>quantity</b>': 1,
+    '<b>unit_price</b>': 150,
+    'product_code': 'hydrogen-subscription',
+    'start_date': '2014-10-01',
+    'end_date': '2014-10-31',
+    'prorated': False
+}
+</pre>
+
+<h2 id="update-an-entry-of-a-proforma">Update an entry of a proforma</h2>
+
+<p><em>NOTE</em>: Updating an entry is only possible when the proforma is in <code>draft</code> state.</p>
+
+<pre><code>PUT /proformas/:id/entries/:entry_id
+{
+    'description': 'Hydrogen Monthly Subscription for October 2014',
+    'unit': 'subscription',
+    'quantity': 1,
+    'unit_price': 150,
+    'product_code': 'hydrogen-subscription',
+    'start_date': '2014-10-01',
+    'end_date': '2014-10-31',
+    'prorated': False
+}
+</code></pre>
+
+<h2 id="delete-an-entry-from-a-proforma">Delete an entry from a proforma</h2>
+
+<p><em>NOTE</em>: Deleting an entry is only possible when the proforma is in <code>draft</code> state.</p>
+
+<pre><code>DELETE /proformas/:id/entries/:entry_id
+</code></pre>
+
+<h2 id="issue-a-proforma">Issue a proforma</h2>
+
+<p>The proforma must be in the <code>draft</code> state.
+Issuing a proforma follows these steps:
+* When <code>issue_date</code> is specified, the proforma&rsquo;s <code>issue_date</code> is set to this value. If it&rsquo;s not and the proforma has no <code>issue_date</code> set, it it set to the current date.
+* If <code>due_date</code> is specified it overwrites the proforma&rsquo;s <code>due_date</code>
+* If the proforma has no <code>billing_details</code> set, it copies the <code>billing_details</code> from the customer. The same goes with <code>sales_tax_percent</code> and <code>sales_tax_name</code>
+* Sets the proforma status to <code>issued</code></p>
+
+<pre><code>PATCH /proformas/:id/state
+{
+    'state': 'issued',
+    'issue_date': '2014-10-01',
+    'due_date': '2014-10-06'
+}
+</code></pre>
+
+<h2 id="pay-a-proforma">Pay a proforma</h2>
+
+<p>The proforma must be in the <code>issued</code> state.
+Paying a proforma follows these steps:
+* If <code>paid_date</code> is specified, set the proforma <code>paid_date</code> to this value, else set the proforma <code>paid_date</code> to the current date
+* Sets the proforma status to <code>paid</code></p>
+
+<p><strong>NOTE</strong>: if the provider&rsquo;s selected flow is <code>proforma</code>, when a proforma is paid, a proforma is issued and transitioned to <code>paid</code> state.</p>
+
+<pre><code>PATCH /proformas/:id/state
+{
+    'state': 'paid',
+    'paid_date': '2014-10-04'
+}
+</code></pre>
+
+<h2 id="cancel-a-proforma">Cancel a proforma</h2>
+
+<p>The proforma must be in the <code>issued</code> state.
+Canceling an proforma follows these steps:
+* If <code>cancel_date</code> is specified, set the proforma <code>cancel_date</code> to this value, else set the proforma <code>cancel_date</code> to the current date
+* Sets the proforma status to <code>paid</code></p>
+
+<pre><code>PATCH /proformas/:id/state
+{
+    'state': 'canceled',
+    'cancel_date': '2014-10-04'
+}
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +817,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
+    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
     
-    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
+    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
     
     <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
     
-    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
-    
     <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
+    
+    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
     
   </ul>
 </div>

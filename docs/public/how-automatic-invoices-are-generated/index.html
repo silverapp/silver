@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,47 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">How automated invoices are generated</h1>
+  
+  <p class="page-intro">
+    Here you can find details regarding the process of generating automated invoices in Silver, for a better understanding of how the whole process works.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  <p>Each day a process runs and scans every active subscription. For each subscription schedules an invoicing job taking into account <code>generate_after</code>. The invoicing job has the following blueprint:</p>
+
+<pre><code>def invoicing(subscription, start_date, end_date):
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +527,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
+    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     
-    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
+    <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
     
     <li><a href="/silver/docs/resources/">Silver resources</a></li>
     
-    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
+    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
     
-    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
+    <li><a href="/silver/docs/customers/">Managing customers</a></li>
     
   </ul>
 </div>

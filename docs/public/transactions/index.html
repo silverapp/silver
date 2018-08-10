@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,191 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Transactions in silver</h1>
+  
+  <p class="page-intro">
+    Detailed explanations of what is a Transaction in Silver, how to list all transactions or a specific one, as well as what does creating a transaction involves.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-transactions">List all Transactions</a>
+<ul>
+<li><a href="#response">Response</a></li>
+</ul></li>
+<li><a href="#retrieve-a-specific-transaction">Retrieve a specific Transaction</a>
+<ul>
+<li><a href="#response-1">Response</a></li>
+</ul></li>
+<li><a href="#create-a-transaction">Create a Transaction</a>
+<ul>
+<li><a href="#payload">Payload</a>
+<ul>
+<li><a href="#notes">Notes</a></li>
+</ul></li>
+<li><a href="#response-2">Response</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#transactions">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-transactions">List all transactions</a></li>
+<li><a href="#retrieve-a-specific-transaction">Retrieve a transaction</a></li>
+<li><a href="#create-a-transaction">Create a transaction</a>
+</li>
+</ol>
+
+<h1 id="list-all-transactions">List all Transactions</h1>
+<div class="highlight"><pre class="chroma"><code class="language-routeros" data-lang="routeros">GET /customers/&lt;customer_id&gt;/transactions/
+GET /customers/&lt;customer_id&gt;/payment_methods/&lt;payment_method_id&gt;/transactions/</code></pre></div>
+<p>Available filters: <code>payment</code>, <code>is_usable</code></p>
+
+<h2 id="response">Response</h2>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="err">Status:</span> <span class="err">HTTP</span> <span class="mi">200</span> <span class="err">OK</span>
+<span class="p">[</span>
+    <span class="p">{</span>
+        <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;994e56ca-3340-449d-80d6-41d73446c0e6&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/transactions/994e56ca-3340-449d-80d6-41d73446c0e6/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;customer&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;provider&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/providers/2/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="s2">&#34;99.99&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;state&#34;</span><span class="p">:</span> <span class="s2">&#34;failed&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;proforma&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/proformas/3/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;invoice&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;can_be_consumed&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="nt">&#34;payment_processor&#34;</span><span class="p">:</span> <span class="s2">&#34;braintree&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;payment_method&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/payment_methods/1/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;pay_url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/pay/dfu9ANg0ajfja0gm9hj3m301dkcvwjgbqwe9/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;valid_until&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-22T10:00:22.636182Z&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-22T10:00:10.515239Z&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;fail_code&#34;</span><span class="p">:</span> <span class="s2">&#34;insufficient_funds&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;refund_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;cancel_code&#34;</span><span class="p">:</span> <span class="kc">null</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;994e56ca-3340-449d-80d6-41d73446c0e6&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/transactions/994e56ca-3340-449d-80d6-41d73446c0e6/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;customer&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;provider&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/providers/2/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="s2">&#34;99.99&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;state&#34;</span><span class="p">:</span> <span class="s2">&#34;settled&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;proforma&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/proformas/3/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;invoice&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;can_be_consumed&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="nt">&#34;payment_processor&#34;</span><span class="p">:</span> <span class="s2">&#34;braintree&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;payment_method&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/payment_methods/1/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;pay_url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/pay/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;valid_until&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:22.636182Z&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:10.515239Z&#34;</span><span class="p">,</span>
+        <span class="nt">&#34;fail_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;refund_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+        <span class="nt">&#34;cancel_code&#34;</span><span class="p">:</span> <span class="kc">null</span>
+    <span class="p">}</span>
+<span class="p">]</span></code></pre></div>
+<h1 id="retrieve-a-specific-transaction">Retrieve a specific Transaction</h1>
+<div class="highlight"><pre class="chroma"><code class="language-routeros" data-lang="routeros">GET /customers/&lt;customer_id&gt;/transactions/&lt;transaction_uuid&gt;</code></pre></div>
+<h2 id="response-1">Response</h2>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="err">Status:</span> <span class="err">HTTP</span> <span class="mi">200</span> <span class="err">OK</span>
+<span class="p">{</span>
+    <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;994e56ca-3340-449d-80d6-41d73446c0e6&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/transactions/994e56ca-3340-449d-80d6-41d73446c0e6/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;customer&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;provider&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/providers/2/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="s2">&#34;99.99&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;state&#34;</span><span class="p">:</span> <span class="s2">&#34;settled&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;proforma&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/proformas/3/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;invoice&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;can_be_consumed&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&#34;payment_processor&#34;</span><span class="p">:</span> <span class="s2">&#34;braintree&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;payment_method&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/payment_methods/1/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;pay_url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/pay/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;valid_until&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:22.636182Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:10.515239Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;fail_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;refund_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;cancel_code&#34;</span><span class="p">:</span> <span class="kc">null</span>
+<span class="p">}</span></code></pre></div>
+<h1 id="create-a-transaction">Create a Transaction</h1>
+<div class="highlight"><pre class="chroma"><code class="language-routeros" data-lang="routeros">POST /customers/&lt;customer_id&gt;/transactions/</code></pre></div>
+<h2 id="payload">Payload</h2>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+    <span class="nt">&#34;payment_method&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/payment_methods/1/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="mf">99.99</span><span class="p">,</span>
+    <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;invoice&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/invoices/3/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;proforma&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/proformas/3/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;valid_until&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:10.515239Z&#34;</span><span class="p">,</span>
+<span class="p">}</span></code></pre></div>
+<h3 id="notes">Notes</h3>
+
+<ul>
+<li><code>amount</code>: Can be omitted, in which case the amount will be the remaining amount of the billing document to be paid. Otherwise it must be lower or equal to the remaining amount of the billing document to be paid.</li>
+<li><code>currency</code>: Can be omitted, in which case the <code>transaction_currency</code> of the billing document will be used. If specified it must be the same as the <code>transaction_currency</code> of the billing document, so it can only be used as a safety measure.</li>
+<li><code>invoice</code> and <code>proforma</code>: Only one of these must be specified for the transaction to be created. If both are specified, they must be related.</li>
+<li><code>valid_until</code>: Can be omitted. If specified, the transaction cannot be paid by the customer past that date.
+</li>
+</ul>
+
+<h2 id="response-2">Response</h2>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="err">Status:</span> <span class="err">HTTP</span> <span class="mi">201</span> <span class="err">Created</span>
+<span class="p">{</span>
+    <span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;994e56ca-3340-449d-80d6-41d73446c0e6&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/transactions/994e56ca-3340-449d-80d6-41d73446c0e6/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;customer&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;provider&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/providers/2/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="s2">&#34;99.99&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;state&#34;</span><span class="p">:</span> <span class="s2">&#34;initial&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;proforma&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/proformas/3/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;invoice&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;can_be_consumed&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&#34;payment_processor&#34;</span><span class="p">:</span> <span class="s2">&#34;braintree&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;payment_method&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/customers/2/payment_methods/1/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;pay_url&#34;</span><span class="p">:</span> <span class="s2">&#34;http://127.0.0.1:8000/pay/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;valid_until&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;updated_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:22.636182Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;created_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2018-01-23T10:00:10.515239Z&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;fail_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;refund_code&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nt">&#34;cancel_code&#34;</span><span class="p">:</span> <span class="kc">null</span>
+<span class="p">}</span></code></pre></div>
+</div>
+
     
       
 
@@ -487,15 +671,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
-    
-    <li><a href="/silver/docs/api/">Silver API</a></li>
-    
     <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
     
     <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
     
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
+    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
+    
+    <li><a href="/silver/docs/invoices/">Invoices</a></li>
+    
+    <li><a href="/silver/docs/api/">Silver API</a></li>
     
   </ul>
 </div>

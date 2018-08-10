@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,80 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/getting-started" class="page-categories-item">
+          GETTING STARTED
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Welcome to Presslabs Docs!</h1>
+  
+  <p class="page-intro">
+    The definitive reference for operating the smartest managed WordPress hosting platform.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<h1 id="how-to-create-your-sphinx-documentation">How to create your Sphinx documentation</h1>
+
+<p>In order to kickstart your Sphinx documentation, please do the following:</p>
+
+<h2 id="create-virtual-environment">Create virtual environment.</h2>
+
+<p>If you haven&rsquo;t done so already, create a virtual environment for this reusable
+app like so:</p>
+
+<pre><code>mkvirtualenv -p python2.7 django-silver
+pip install Sphinx
+deactivate
+workon django-silver
+sphinx-quickstart
+</code></pre>
+
+<p>Answer the questions:</p>
+
+<pre><code>&gt; Root path for the documentation [.]:
+&gt; Separate source and build directories (y/N) [n]: y
+&gt; Name prefix for templates and static dir [_]:
+&gt; Project name: silver
+&gt; Author name(s): PressLabs
+&gt; Project version: 0.1
+&gt; Project release [0.1]:
+&gt; Source file suffix [.rst]:
+&gt; Name of your master document (without suffix) [index]:
+&gt; Do you want to use the epub builder (y/N) [n]:
+&gt; autodoc: automatically insert docstrings from modules (y/N) [n]: y
+&gt; doctest: automatically test code snippets in doctest blocks (y/N) [n]:
+&gt; intersphinx: link between Sphinx documentation of different projects (y/N) [n]: y
+&gt; todo: write &quot;todo&quot; entries that can be shown or hidden on build (y/N) [n]: y
+&gt; coverage: checks for documentation coverage (y/N) [n]: y
+&gt; pngmath: include math, rendered as PNG images (y/N) [n]:
+&gt; mathjax: include math, rendered in the browser by MathJax (y/N) [n]:
+&gt; ifconfig: conditional inclusion of content based on config values (y/N) [n]: y
+&gt; viewcode: include links to the source code of documented Python objects (y/N) [n]: y
+&gt; Create Makefile? (Y/n) [y]:
+&gt; Create Windows command file? (Y/n) [y]:
+</code></pre>
+
+</div>
+
     
   </div>
 </article>
