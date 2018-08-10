@@ -1,0 +1,21 @@
+{
+    "name": "Presslabs DOCS",
+    "short_name": "Presslabs",
+    "icons": [
+        {
+            "src": "/files/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/files/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#4DC74C",
+    "scope": "/",
+    "background_color": "#4DC74C",
+    "start_url": ".",
+    "display": "standalone"
+}

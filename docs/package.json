@@ -1,0 +1,9 @@
+{
+  "license": "MIT",
+  "scripts": {
+    "algolia": "atomic-algolia"
+  },
+  "dependencies": {
+    "atomic-algolia": "^0.3.15"
+  }
+}
