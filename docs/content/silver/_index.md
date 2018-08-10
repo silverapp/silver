@@ -1,13 +1,13 @@
 ---
-title: Getting started
+title: Silver
 description: Silver is a service for automatic billing. It assigns customers to plans and creates automatic invoice entries. Here is a list of links to resource definitions as well as detailed usage examples.
-linktitle: Getting started
+linktitle: Siver
 categories: [api]
 keywords: [api]
 menu:
   docs:
-    parent: "getting-started"
-weight: 1
+    parent: "silver"
+weight: 2
 draft: false
 aliases: []
 toc: true
