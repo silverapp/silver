@@ -3,6 +3,12 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.6.2 (2018-08-10)
+- Fixed a bug where a canceled subscription would not be billed if the plan was billed up to a date
+later than the cancel date.
+- Fixed Transaction return_url being quoted because of a new version of furl, which has also been
+pinned to known working versions.
+
 ## 0.6.1 (2018-05-08)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Subscription's meta field now defaults to an empty dict. **(WARNING)**
