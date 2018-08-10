@@ -5,3 +5,4 @@
 [submodule "docs/themes/presslabs"]
 	path = docs/themes/presslabs
 	url = git@github.com:presslabs/hugo-docs-theme.git
+	branch = prod
