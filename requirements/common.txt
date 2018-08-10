@@ -30,6 +30,6 @@ cryptography>=1.9,<2.3  # ------------------------------------------------------
 PyJWT>=1.5,<1.7  # ------------------------------------------------------------- (bumped 2018-06-07)
 
 # Other
-furl  # (URL parsing and manipulation) ----------------------------------------- (bumped 2018-06-07)
+furl>=1,<1.3  # (URL parsing and manipulation) --------------------------------- (bumped 2018-08-10)
 xhtml2pdf>=0.2,<0.3  # (PDF rendering, python-dev is required) ----------------- (bumped 2018-06-07)
 PyPDF2>=1.26,<2  # (PDF manipulation) ------------------------------------------ (bumped 2018-06-07)

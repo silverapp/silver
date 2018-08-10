@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import urllib
 from furl import furl
 from dal import autocomplete
 
@@ -50,9 +51,13 @@ def complete_payment_view(request, transaction, expired=None):
         payment_processor.handle_transaction_response(transaction, request)
 
     if 'return_url' in request.GET:
-        redirect_url = furl(request.GET['return_url']).add({
-                                'transaction_uuid': transaction.uuid
-                            }).url
+        redirect_url = urllib.unquote(
+            furl(request.GET['return_url']).add(
+                {
+                    'transaction_uuid': transaction.uuid
+                }
+            ).url
+        )
         return HttpResponseRedirect(redirect_url)
     else:
         return render(request, 'transactions/complete_payment.html',

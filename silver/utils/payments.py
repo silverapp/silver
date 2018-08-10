@@ -14,6 +14,7 @@
 from datetime import datetime
 
 import jwt
+import urllib
 from furl import furl
 
 from django.conf import settings
@@ -40,4 +41,4 @@ def get_payment_complete_url(transaction, request):
     if request and 'return_url' in request.GET:
         url = url.add({'return_url': request.GET['return_url']})
 
-    return url.url
+    return urllib.unquote(url.url)
