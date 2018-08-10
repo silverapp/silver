@@ -47,36 +47,6 @@ pipeline:
       - make lint
       - make test
 
-  build-docs:
-    image: jobandtalent/mkdocs
-    group: build
-    commands:
-      - cd docs/
-      - pip3 install mdx_figcaption_ng
-      - mkdocs build --clean
-      - for i in $(ls | grep -v compiled_docs); do rm -rf $i; done
-      - mkdir -p /drone/src/presslabs-org/wp-content/root/silver/docs
-      - rm -rf /drone/src/presslabs-org/wp-content/root/silver/docs/*
-      - mv compiled_docs/* /drone/src/presslabs-org/wp-content/root/silver/docs
-      - rm -rf compiled_docs/
-    when:
-      branch: master
-      event: push
-
-  update-presslabs-org:
-    image: appleboy/drone-git-push
-    branch: prod
-    group: publish
-    commit: true
-    path: /drone/src/presslabs-org
-    commit_message: "[docs] Update silver docs"
-    remote: git@github.com:/Presslabs/presslabs-org.git
-    secrets:
-      - GIT_PUSH_SSH_KEY
-    when:
-      branch: master
-      event: push
-
   publish-docker:
     image: plugins/docker
     group: publish
