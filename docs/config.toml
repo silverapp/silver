@@ -1,4 +1,4 @@
-baseURL = "https://www.presslabs.org/silver/docs/"
+baseURL = "https://www.presslabs.org/docs/"
 languageCode = "en-us"
 title = "Silver Documentation"
 summaryLength = 15

@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,122 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Providers in Silver</h1>
+  
+  <p class="page-intro">
+    An overview of Providers in Silver, with details regarding listing all providers or a specific one, as well as how to create, update or delete one.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-providers">List all providers</a></li>
+<li><a href="#list-a-specific-provider">List a specific provider</a></li>
+<li><a href="#create-a-new-provider">Create a new provider</a></li>
+<li><a href="#update-a-provider">Update a provider</a></li>
+<li><a href="#delete-a-provider">Delete a provider</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#provider">Resources</a>  page.</p>
+
+<ol>
+<li><a href="#list-all-providers">List all providers</a></li>
+<li><a href="#list-a-specific-provider">List a specific provider</a></li>
+<li><a href="#create-a-new-provider">Create a new provider</a></li>
+<li><a href="#update-a-provider">Update a provider</a></li>
+<li><a href="#delete-a-provider">Delete a provider</a>
+</li>
+</ol>
+
+<h2 id="list-all-providers">List all providers</h2>
+
+<p>By default this will list all the providers.</p>
+
+<pre><code>GET /providers/
+</code></pre>
+
+<p>Filters can be used for better results. The available filters are <code>company</code> and <code>email</code></p>
+
+<pre><code>GET /providers/?company=Presslabs
+</code></pre>
+
+<h2 id="list-a-specific-provider">List a specific provider</h2>
+
+<p>By default this will list a specific provider.</p>
+
+<pre><code>GET /providers/:id/
+</code></pre>
+
+<h2 id="create-a-new-provider">Create a new provider</h2>
+
+<pre>
+POST /providers
+{
+    '<b>name</b>': 'Presslabs',
+    'company': 'Presslabs SRL',
+    'email': 'contact@presslabs.com',
+    '<b>address_1</b>': 'Str. Vasile Alecsandri nr. 3, Etaj 3, Ap. 12 Timișoara,',
+    'address_2': null,
+    'country': 'RO',
+    '<b>city</b>': 'Timisoara',
+    'state': 'Timis',
+    'zip_code': 300566,
+    'extra': 'This can be used as an additional field to include into billing documents',
+    'flow': 'proforma',
+    '<b>invoice_series</b>': 'IS1',
+    '<b>invoice_starting_number</b>': '1',
+    'proforma_series': 'PS1',
+    'proforma_starting_number': '1',
+    'default_document_state': 'draft',
+    'meta': ''
+}
+</pre>
+
+<h2 id="update-a-provider">Update a provider</h2>
+
+<p>All the provider&rsquo;s fields are editable. Use <code>PATCH</code> for partial updates and <code>PUT</code> for full updates.</p>
+
+<pre><code>PATCH /providers/:id
+PUT /providers/:id
+</code></pre>
+
+<h2 id="delete-a-provider">Delete a provider</h2>
+
+<p>Provider deletion is actually a soft delete.</p>
+
+<pre><code>DELETE /providers/:id
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +602,15 @@
   <h2>See Also</h2>
   <ul>
     
+    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
+    
+    <li><a href="/silver/docs/invoices/">Invoices</a></li>
+    
     <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
     
     <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
     
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
-    
-    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
-    
-    <li><a href="/silver/docs/invoices/">Invoices</a></li>
+    <li><a href="/silver/docs/resources/">Silver resources</a></li>
     
   </ul>
 </div>

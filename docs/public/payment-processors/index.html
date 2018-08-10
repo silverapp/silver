@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,91 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Payment processors in Silver</h1>
+  
+  <p class="page-intro">
+    Detailed explanations of what is a Payment Processor in Silver, as well as how to list a provider&rsquo;s Payment Processors and how to retrieve a specific one.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-a-provider-s-payment-processors">List a Provider&rsquo;s Payment Processors</a></li>
+<li><a href="#retrieve-a-specific-payment-processor">Retrieve a specific Payment Processor</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#payment-processor">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-a-providers-payment-processors">List a Provider&rsquo;s Payment Processors</a></li>
+<li><a href="#retrieve-a-providers-payment-processors">Retrieve a Provider&rsquo;s Payment Processor</a>
+</li>
+</ol>
+
+<h2 id="list-a-provider-s-payment-processors">List a Provider&rsquo;s Payment Processors</h2>
+
+<pre><code>GET /providers/&lt;provider_id&gt;/payment_processors/
+</code></pre>
+
+<p>Available filters: <code>type</code>
+<pre>
+[
+    {
+        &laquo;name&raquo;: &laquo;Manual&raquo;,
+        &laquo;type&raquo;: &laquo;manual&raquo;,
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/providers/1/payment_processors/Manual/&quot;">http://127.0.0.1:8000/providers/1/payment_processors/Manual/&quot;</a>
+    },
+    {
+        &laquo;name&raquo;: &laquo;PayPal&raquo;,
+        &laquo;type&raquo;: &laquo;triggered&raquo;,
+        &laquo;url&raquo;: &laquo;<a href="http://127.0.0.1:8000/providers/1/payment_processors/PayPal/&quot;">http://127.0.0.1:8000/providers/1/payment_processors/PayPal/&quot;</a>
+    }
+]
+</pre></p>
+
+<h2 id="retrieve-a-specific-payment-processor">Retrieve a specific Payment Processor</h2>
+
+<pre><code>GET /providers/&lt;provider_id&gt;/payment_processors/&lt;payment_processor_id&gt;/
+</code></pre>
+
+<pre>
+    {
+        "name": "PayPal",
+        "type": "triggered",
+        "url": "http://127.0.0.1:8000/providers/1/payment_processors/PayPal/"
+    }
+</pre>
+
+</div>
+
     
       
 
@@ -487,13 +571,13 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
-    
-    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
-    
     <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
     
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
+    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
+    
+    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
+    
+    <li><a href="/silver/docs/api/">Silver API</a></li>
     
     <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
     

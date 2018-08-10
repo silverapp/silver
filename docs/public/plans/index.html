@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,154 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Plans in Silver</h1>
+  
+  <p class="page-intro">
+    Here you will find what is a Plan in Silver, how to retrieve, update or disable one, as well as what are a plan&rsquo;s metered features and how to create them.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-plans">List all plans</a></li>
+<li><a href="#create-a-plan">Create a plan</a></li>
+<li><a href="#retrieve-a-plan">Retrieve a plan</a></li>
+<li><a href="#update-a-plan">Update a plan</a></li>
+<li><a href="#disable-a-plan">Disable a plan</a></li>
+<li><a href="#list-all-metered-features">List all metered features</a></li>
+<li><a href="#list-the-metered-features-of-a-plan">List the metered features of a plan</a></li>
+<li><a href="#create-a-metered-feature">Create a metered feature</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#plan">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-plans">Retrieve all plans</a></li>
+<li><a href="#create-a-plan">Create a plan</a></li>
+<li><a href="#retrieve-a-plan">Retrieve a specific plan</a></li>
+<li><a href="#update-a-plan">Update a plan</a></li>
+<li><a href="#disable-a-plan">Disable a plan</a></li>
+<li><a href="#list-all-metered-features">List all metered features</a></li>
+<li><a href="#list-the-metered-features-of-a-plan">List the metered features of a plan</a></li>
+<li><a href="#create-a-metered-feature">Create a metered feature</a>
+</li>
+</ol>
+
+<h2 id="list-all-plans">List all plans</h2>
+
+<p>By default this will list every existing Plan.</p>
+
+<pre><code>GET /plans/
+</code></pre>
+
+<p>Filters, such as <code>enabled</code> and <code>private</code>, can be used for better results. Available filters: <code>name</code>, <code>currency</code>, <code>enabled</code>, <code>private</code>, <code>interval</code>, <code>product_code</code> and <code>provider</code>.</p>
+
+<pre><code>GET /plans?enabled=True&amp;private=False
+</code></pre>
+
+<h2 id="create-a-plan">Create a plan</h2>
+
+<pre><code>POST /plans
+</code></pre>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+    <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;Hydrogen&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;interval&#34;</span><span class="p">:</span> <span class="s2">&#34;month&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;interval_count&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&#34;amount&#34;</span><span class="p">:</span> <span class="mi">150</span><span class="p">,</span>
+    <span class="nt">&#34;currency&#34;</span><span class="p">:</span> <span class="s2">&#34;USD&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;trial_period_days&#34;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="nt">&#34;metered_features&#34;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;Page Views&#34;</span><span class="p">,</span>
+            <span class="nt">&#34;unit&#34;</span><span class="p">:</span> <span class="s2">&#34;100k&#34;</span><span class="p">,</span>
+            <span class="nt">&#34;price_per_unit&#34;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+            <span class="nt">&#34;included_units&#34;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>
+            <span class="nt">&#34;product_code&#34;</span><span class="p">:</span> <span class="s2">&#34;existing_pc_2&#34;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;VIP Support&#34;</span><span class="p">,</span>
+            <span class="nt">&#34;price_per_unit&#34;</span><span class="p">:</span> <span class="mf">49.99</span><span class="p">,</span>
+            <span class="nt">&#34;included_units&#34;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="nt">&#34;product_code&#34;</span><span class="p">:</span> <span class="s2">&#34;non-existing_pc&#34;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&#34;due_days&#34;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="nt">&#34;generate_after&#34;</span><span class="p">:</span> <span class="mi">86400</span><span class="p">,</span>
+    <span class="nt">&#34;product_code&#34;</span><span class="p">:</span> <span class="s2">&#34;hyd_3g432556g&#34;</span><span class="p">,</span>
+    <span class="nt">&#34;enabled&#34;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&#34;private&#34;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&#34;provider&#34;</span><span class="p">:</span> <span class="s2">&#34;www.example.com/providers/2/&#34;</span>
+<span class="p">}</span></code></pre></div>
+<h2 id="retrieve-a-plan">Retrieve a plan</h2>
+
+<pre><code>GET /plans/:id
+</code></pre>
+
+<h2 id="update-a-plan">Update a plan</h2>
+
+<p>Only <code>name</code>, <code>generate_after</code> and <code>due_days</code> are editable through API.</p>
+
+<pre><code>PATCH /plans/:id
+</code></pre>
+
+<h2 id="disable-a-plan">Disable a plan</h2>
+
+<p>Plans cannot be actually deleted through API but only through the admin interface. They can be only disabled by API and this is what the <code>DELETE</code> verb should do.</p>
+
+<pre><code>DELETE /plans/:id
+</code></pre>
+
+<h2 id="list-all-metered-features">List all metered features</h2>
+
+<pre><code>GET /metered-features
+</code></pre>
+
+<h2 id="list-the-metered-features-of-a-plan">List the metered features of a plan</h2>
+
+<pre><code>GET /plans/:id/metered-features
+</code></pre>
+
+<h2 id="create-a-metered-feature">Create a metered feature</h2>
+
+<pre><code>POST /metered-features/
+</code></pre>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+  <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;Random Metered Feature&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;unit&#34;</span><span class="p">:</span> <span class="s2">&#34;pounds&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;price_per_unit&#34;</span><span class="p">:</span> <span class="s2">&#34;100&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;included_units&#34;</span><span class="p">:</span> <span class="s2">&#34;2&#34;</span><span class="p">,</span>
+  <span class="nt">&#34;product_code&#34;</span><span class="p">:</span> <span class="s2">&#34;Code&#34;</span>
+<span class="p">}</span></code></pre></div>
+</div>
+
     
       
 
@@ -487,15 +634,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
+    <li><a href="/silver/docs/customers/">Managing customers</a></li>
     
-    <li><a href="/silver/docs/resources/">Silver resources</a></li>
-    
-    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
+    <li><a href="/silver/docs/api/">Silver API</a></li>
     
     <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
     
-    <li><a href="/silver/docs/invoices/">Invoices</a></li>
+    <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
+    
+    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     
   </ul>
 </div>

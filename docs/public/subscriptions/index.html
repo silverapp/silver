@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,166 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Subscriptions in Silver</h1>
+  
+  <p class="page-intro">
+    An overview of what is a Subscription in Silver, how to list a customer&rsquo;s subscriptions, as well as the basic operations it supports, like create, activate, cancel and more.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#listing-a-customer-s-subscriptions">Listing a customer&rsquo;s subscriptions</a></li>
+<li><a href="#creating-a-subscription">Creating a subscription</a></li>
+<li><a href="#retrieving-a-subscription">Retrieving a subscription</a></li>
+<li><a href="#activating-a-subscription">Activating a subscription</a></li>
+<li><a href="#canceling-a-subscription">Canceling a subscription</a></li>
+<li><a href="#reactivate-a-subscription">Reactivate a subscription</a></li>
+<li><a href="#update-subscription-metered-feature">Update subscription metered feature</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#subscription">Resources</a> page.</p>
+
+<ol>
+<li><a href="#listing-a-customers-subscriptions">List a customer&rsquo;s subscriptions</a></li>
+<li><a href="#creating-a-subscription">Creating a subscription</a></li>
+<li><a href="#retrieving-a-subscription">Retrieving a subscription</a></li>
+<li><a href="#activating-a-subscription">Activating a subscription</a></li>
+<li><a href="#canceling-a-subscription">Canceling a subscription</a></li>
+<li><a href="#reactivate-a-subscription">Reactivate a subscription</a></li>
+<li><a href="#update-subscription-metered-feature">Update subscription metered feature</a></li>
+<li><a href="#extend-trial-period">Extend trial period (not implemented)</a>
+</li>
+</ol>
+
+<h2 id="listing-a-customer-s-subscriptions">Listing a customer&rsquo;s subscriptions</h2>
+
+<p>By default this will list every Subscription related to a specific customer.</p>
+
+<pre><code>GET /customer/:id/subscriptions
+</code></pre>
+
+<p>Filters can be used for better results. The available filters are <code>plan</code>, <code>reference</code> and <code>state</code>.</p>
+
+<pre><code>GET /customer/&lt;customer-id&gt;/subscriptions?plan=Hydrogen&amp;state=active
+</code></pre>
+
+<h2 id="creating-a-subscription">Creating a subscription</h2>
+
+<pre><code>POST /customer/:id/subscriptions
+{
+    'plan': 'http://api.example.com/plans/1',
+    'customer': 'http://api.example.com/customer/32',
+    'trial_end_date': null,
+    'start_date': '2014-10-18'
+}
+</code></pre>
+
+<h2 id="retrieving-a-subscription">Retrieving a subscription</h2>
+
+<pre><code>GET /customers/:customer_id/subscriptions/:subscription_id
+</code></pre>
+
+<p>Will return a subscription object and a list of plans <code>metered_features</code>.</p>
+
+<h2 id="activating-a-subscription">Activating a subscription</h2>
+
+<p>When activating a subscription the following happens:
+* the subscription <code>start_date</code> is set to the current date, if it isn&rsquo;t already set or given in the request;
+* the subscription <code>trial_end_date</code> is computed from <code>start_date</code> plus the plan&rsquo;s <code>trail_period_days</code>, if it hasn&rsquo;t been already set or given in the request;
+* the subscription <code>state</code> is transitioned to <code>active</code>.</p>
+
+<p>Some validation checks must be done so that the <code>start_date</code> is older or equal to the <code>trial_end_date</code>. This transition is only available from the <code>inactive</code> state.</p>
+
+<pre><code>POST /customers/:customer_id/subscriptions/:subscription_id/activate/
+{
+    'start_date': '2014-10-18',
+    'trial_end_date': '2014-11-3'
+}
+</code></pre>
+
+<h2 id="canceling-a-subscription">Canceling a subscription</h2>
+
+<p>When sending the POST request, a <code>when</code> parameter needs to be provided. It can take two values: <code>now</code> and <code>end_of_billing_cycle</code>.</p>
+
+<p>When canceling a subscription <code>now</code>, a final invoice is issued and the subscription is transitioned to <code>ended</code> state.
+When canceling a subscription at the <code>end_of_billing_cycle</code> the subscription is only transitioned to the <code>canceled</code> state. At the end of the billing cycle a final invoice will be issued and the subscription will be transitioned to the <code>ended</code> state.</p>
+
+<pre><code>POST /customers/:customer_id/subscriptions/:subscription_id/cancel/
+{
+    'when': 'now'
+}
+</code></pre>
+
+<h2 id="reactivate-a-subscription">Reactivate a subscription</h2>
+
+<p>Subscriptions which are canceled, can be reactivated before the end of billing cycle. The request just transitions a subscription from <code>canceled</code> to <code>active</code>.</p>
+
+<pre><code>POST /customers/:customer_id/subscriptions/:subscription_id/reactivate/
+</code></pre>
+
+<h2 id="update-subscription-metered-feature">Update subscription metered feature</h2>
+
+<p>Each Subscription has Metered Features Units Logs that correspond to the Plan&rsquo;s Metered Features.
+A Units Log consists of multiple buckets representing billing cycles.</p>
+
+<p>For example if we have a monthly plan, recurring every month and if the subscription <code>start_date</code> is &lsquo;2014-10-8&rsquo;, the <code>trial_end_date</code> is &lsquo;2014-10-23&rsquo; and the <code>end_date</code> is &lsquo;2014-12-28&rsquo;, then the buckets will look like this:
+* 2014-10-08 -&gt; 2014-10-23, marked as <code>trial</code>
+* 2014-10-24 -&gt; 2014-11-01
+* 2014-11-01 -&gt; 2014-11-30
+* 2014-12-01 -&gt; 2014-12-28</p>
+
+<p>In order to perform an update the subscription must be active.
+There are 3 parameters required in the request body: <code>count</code>, <code>update_type</code> and <code>date</code>.</p>
+
+<p>The <code>count</code> parameter is the value to update the bucket with and it can be either positive or negative.</p>
+
+<p>The <code>update_type</code> parameter can be absolute (meaning the new bucket value will be equal to the count value) or relative (meaning the count value will be added to the bucket value).</p>
+
+<p>The bucket is determined using the <code>date</code> parameter.
+The buckets can be updated until the time given by the bucket <code>end_date</code> + the plan&rsquo;s <code>generate_after</code> seconds is older than the time when the request is made.
+After that, the buckets are frozen and cannot be updated anymore.</p>
+
+<p>Requests that are invalid or late will return a HTTP 4XX status code response.</p>
+
+<pre><code>PATCH /customers/:customer_id/subscriptions/:subscription_id/metered-features/:metered_feature_product_code
+{
+        &quot;count&quot;: 12345.0000,
+        &quot;date&quot;: &quot;2015-02-20&quot;,
+        &quot;update_type&quot;: &quot;absolute&quot;
+}
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +646,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
+    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
     
     <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
     
-    <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
+    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
     
-    <li><a href="/silver/docs/customers/">Managing customers</a></li>
+    <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     
-    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
+    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
     
   </ul>
 </div>

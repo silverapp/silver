@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,98 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Silver API</h1>
+  
+  <p class="page-intro">
+    Here is an overview of the Silver API. You can find useful information about how to paginate the results and iterate through the entire collection.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#listing">Listing</a></li>
+<li><a href="#iterating-entire-collection">Iterating entire collection</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>General API specification.</p>
+
+<h2 id="listing">Listing</h2>
+
+<p>Requests that return multiple items are paginated by default to 30 items. You can specify the <code>page</code> parameter for the page number and <code>per_page</code> to increase/decrease the items per page. There is a hard limit of items per page of <code>100</code>. The page numbering is 1-based and if you do not specify a <code>page</code> parameter it&rsquo;s default value is 1.</p>
+
+<p><strong>NOTE</strong> that not all listings can be iterated using <code>page</code> parameters and some ignore the page parameter.</p>
+
+<h2 id="iterating-entire-collection">Iterating entire collection</h2>
+
+<p>In order to iterate the entire collection you must follow the <code>Link</code> header.</p>
+
+<pre><code>Link: &lt;https://api.example.com/silver/subscriptions?page=3&amp;per_page=100&gt;; rel=&quot;next&quot;,
+  &lt;https://api.example.com/silver/subscriptions?page=last&amp;per_page=100&gt;; rel=&quot;last&quot;
+</code></pre>
+
+<p>The possible <code>rel</code> values are:</p>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>next</td>
+<td>Shows the URL of the immediate next page of results.</td>
+</tr>
+
+<tr>
+<td>last</td>
+<td>Shows the URL of the last page of results.</td>
+</tr>
+
+<tr>
+<td>first</td>
+<td>Shows the URL of the first page of results.</td>
+</tr>
+
+<tr>
+<td>prev</td>
+<td>Shows the URL of the immediate previous page of results.</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+
     
       
 
@@ -487,15 +578,15 @@
   <h2>See Also</h2>
   <ul>
     
-    <li><a href="/silver/docs/invoices/">Invoices</a></li>
-    
-    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
-    
     <li><a href="/silver/docs/payment/">Payments in Silver</a></li>
     
-    <li><a href="/silver/docs/subscriptions/">Subscriptions in Silver</a></li>
+    <li><a href="/silver/docs/plans/">Plans in Silver</a></li>
+    
+    <li><a href="/silver/docs/payment-processors/">Payment processors in Silver</a></li>
     
     <li><a href="/silver/docs/customers/">Managing customers</a></li>
+    
+    <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
     
   </ul>
 </div>

@@ -48,7 +48,7 @@
 
 
 
-
+<meta property="article:modified_time" content="2018-08-10T11:32:09&#43;02:00"/>
 
 <meta property="og:site_name" content="Welcome to Presslabs Documentation!" />
 
@@ -479,7 +479,317 @@
 </div>
 
     <div id="readout"></div>
+    <header class="page-heading">
+  <div class="heading-extra">
     
+      <div class="page-categories">
+        
+        <a href="/silver/docs/categories/api" class="page-categories-item">
+          API
+        </a>
+        
+      </div>
+    
+    <div class="page-lastmod" title="Last Modified: Aug 10, 2018">
+      <i class="particle">clock</i> <span>Last Modified:</span> Aug 10, 2018
+    </div>
+  </div>
+
+  <h1 class="page-title">Invoices</h1>
+  
+  <p class="page-intro">
+    Detailed explanations of what is an Invoice in Silver, how to create, delete and update one, as well as what does the process of paying an invoice involves.
+  </p>
+  
+</header>
+
+<aside class="page-toc">
+  
+    <h4 class="page-toc-title">What's on this Page</h4>
+    <div class="page-toc-content">
+      <nav id="TableOfContents">
+<ul>
+<li><a href="#list-all-invoices">List all invoices</a></li>
+<li><a href="#retrieve-an-invoice">Retrieve an invoice</a></li>
+<li><a href="#create-an-invoice">Create an invoice</a></li>
+<li><a href="#update-an-invoice">Update an invoice</a></li>
+<li><a href="#add-an-entry-to-an-invoice">Add an entry to an invoice</a></li>
+<li><a href="#update-an-entry-of-an-invoice">Update an entry of an invoice</a></li>
+<li><a href="#delete-an-entry-from-an-invoice">Delete an entry from an invoice</a></li>
+<li><a href="#issue-an-invoice">Issue an invoice</a></li>
+<li><a href="#pay-an-invoice">Pay an invoice</a></li>
+<li><a href="#cancel-an-invoice">Cancel an invoice</a></li>
+</ul>
+</nav>
+    </div>
+  
+</aside>
+
+<div class="prose" id="prose">
+  
+
+<p>For resource definition check out <a href="Resources#invoice">Resources</a> page.</p>
+
+<ol>
+<li><a href="#list-all-invoices">List all invoices</a></li>
+<li><a href="#retrieve-an-invoice">Retrieve an invoice</a></li>
+<li><a href="#create-an-invoice">Create an invoice</a></li>
+<li><a href="#update-an-invoice">Update an invoice</a></li>
+<li><a href="#add-an-entry-to-an-invoice">Add an entry to an invoice</a></li>
+<li><a href="#delete-an-entry-from-an-invoice">Delete an entry from an invoice</a></li>
+<li><a href="#update-an-entry-of-an-invoice">Update an entry of an invoice</a></li>
+<li><a href="#issue-an-invoice">Issue an invoice</a></li>
+<li><a href="#pay-an-invoice">Pay an invoice</a></li>
+<li><a href="#cancel-an-invoice">Cancel an invoice</a>
+</li>
+</ol>
+
+<h2 id="list-all-invoices">List all invoices</h2>
+
+<pre><code>GET /invoices/
+
+</code></pre>
+
+<p>Available filter parameters: <code>state</code>, <code>number</code>, <code>customer_name</code>, <code>customer_company</code>, <code>provider_name</code>, <code>provider_company</code>, <code>issue_date</code>, <code>due_date</code>, <code>paid_date</code>, <code>cancel_date</code>, <code>currency</code>, <code>sales_tax_name</code>.</p>
+
+<h2 id="retrieve-an-invoice">Retrieve an invoice</h2>
+
+<pre><code>GET /invoices/:id
+{
+    &quot;id&quot;: 1,
+    &quot;series&quot;: &quot;pl&quot;,
+    &quot;number&quot;: 1,
+    &quot;provider&quot;: &quot;https://api.example.com/providers/1/&quot;,
+    &quot;customer&quot;: &quot;https://api.example.com/customers/1/&quot;,
+    &quot;archived_provider&quot;: {
+        &quot;city&quot;: &quot;Timisoara&quot;,
+        &quot;name&quot;: &quot;provider1&quot;,
+        &quot;display_email&quot;: &quot;random@test.com&quot;,
+        &quot;extra&quot;: &quot;&quot;,
+        &quot;country&quot;: &quot;RO&quot;,
+        &quot;company&quot;: &quot;&quot;,
+        &quot;state&quot;: &quot;&quot;,
+        &quot;meta&quot;: null,
+        &quot;address_1&quot;: &quot;Random address&quot;,
+        &quot;address_2&quot;: &quot;&quot;,
+        &quot;notification_email&quot;: &quot;random@test.com&quot;,
+        &quot;zip_code&quot;: &quot;&quot;,
+        &quot;invoice_series&quot;: &quot;pl&quot;
+    },
+    &quot;archived_customer&quot;: {
+        &quot;city&quot;: &quot;Timisoara&quot;,
+        &quot;consolidated_billing&quot;: false,
+        &quot;extra&quot;: &quot;&quot;,
+        &quot;country&quot;: &quot;RO&quot;,
+        &quot;company&quot;: &quot;&quot;,
+        &quot;sales_tax_percent&quot;: null,
+        &quot;state&quot;: &quot;&quot;,
+        &quot;meta&quot;: null,
+        &quot;address_1&quot;: &quot;adresa 1&quot;,
+        &quot;address_2&quot;: &quot;&quot;,
+        &quot;payment_due_days&quot;: 5,
+        &quot;sales_tax_number&quot;: &quot;&quot;,
+        &quot;zip_code&quot;: &quot;&quot;,
+        &quot;customer_reference&quot;: &quot;&quot;,
+        &quot;emails&quot;: [
+            &quot;[u'[]']&quot;
+        ],
+        &quot;name&quot;: &quot;Gigel&quot;
+    },
+    &quot;due_date&quot;: &quot;2017-01-04&quot;,
+    &quot;issue_date&quot;: &quot;2017-01-04&quot;,
+    &quot;paid_date&quot;: &quot;2017-01-04&quot;,
+    &quot;cancel_date&quot;: null,
+    &quot;sales_tax_name&quot;: &quot;&quot;,
+    &quot;sales_tax_percent&quot;: null,
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;state&quot;: &quot;paid&quot;,
+    &quot;proforma&quot;: &quot;https://api.example.com/proformas/1/&quot;,
+    &quot;invoice_entries&quot;: [
+        {
+            &quot;description&quot;: &quot;pageviews description&quot;,
+            &quot;unit&quot;: &quot;pageviews&quot;,
+            &quot;unit_price&quot;: &quot;10.0000&quot;,
+            &quot;quantity&quot;: &quot;1000.0000&quot;,
+            &quot;total&quot;: 10000.0,
+            &quot;total_before_tax&quot;: 10000.0,
+            &quot;start_date&quot;: null,
+            &quot;end_date&quot;: null,
+            &quot;prorated&quot;: true,
+            &quot;product_code&quot;: &quot;pv&quot;
+        }
+    ],
+    &quot;total&quot;: 10000.0,
+    &quot;pdf_url&quot;: &quot;https://api.example.com/app_media/documents/provider1/invoices/2017/01/Invoice_pl-1.pdf&quot;,
+    &quot;transactions&quot;: [
+        {
+            &quot;id&quot;: &quot;8eb0e5a2-b5af-406e-9b77-b91a4a995cb5&quot;,
+            &quot;url&quot;: &quot;https://api.example.com/customers/1/transactions/8eb0e5a2-b5af-406e-9b77-b91a4a995cb5/&quot;,
+            &quot;customer&quot;: &quot;https://api.example.com/customers/1/&quot;,
+            &quot;provider&quot;: &quot;https://api.example.com/providers/1/&quot;,
+            &quot;amount&quot;: &quot;100.00&quot;,
+            &quot;currency&quot;: &quot;USD&quot;,
+            &quot;currency_rate_date&quot;: null,
+            &quot;state&quot;: &quot;initial&quot;,
+            &quot;proforma&quot;: null,
+            &quot;invoice&quot;: &quot;https://api.example.com/invoices/1/&quot;,
+            &quot;can_be_consumed&quot;: true,
+            &quot;payment_processor&quot;: &quot;https://api.example.com/payment_processors/manual/&quot;,
+            &quot;payment_method&quot;: &quot;https://api.example.com/customers/1/payment_methods/1/&quot;,
+            &quot;pay_url&quot;: &quot;https://api.example.com/pay/8eb0e5a2-b5af-406e-9b77-b91a4a995cb5/&quot;,
+            &quot;valid_until&quot;: null,
+            &quot;success_url&quot;: null,
+            &quot;failed_url&quot;: null
+        }
+    ]
+}
+</code></pre>
+
+<h2 id="create-an-invoice">Create an invoice</h2>
+
+<pre>
+PUT /invoices
+{
+    'due_date': '2014-10-06',
+    'issue_date': '2014-10-01',
+    '<b>customer</b>': 'https://api.example.com/customers/32',
+    '<b>provider</b>': 'https://api.example.com/providers/45',
+    '<b>invoice_entries</b>': [
+        {
+            'description': 'Hydrogen Monthly Subscription for October 2014',
+            'unit': 'subscription',
+            'quantity': 1,
+            'unit_price': 150,
+            'product_code': 'hydrogen-subscription',
+            'start_date': '2014-10-01',
+            'end_date': '2014-10-31',
+            'prorated': False
+        },
+        {
+            'description': 'Prorated PageViews for September 2014',
+            'unit': '100k pageviews',
+            'quantity': 5.4,
+            'unit_price': 10,
+            'product_code': 'page-views',
+            'start_date': '2014-09-16',
+            'end_date': '2014-09-30',
+            'prorated': True
+        }
+    ]
+    'sales_tax_percent': 24,
+    'sales_tax_name': 'VAT',
+    'currency': 'USD',
+    'state': 'draft'
+}
+</pre>
+
+<h2 id="update-an-invoice">Update an invoice</h2>
+
+<p><em>NOTE</em>: Modifying an invoice is only possible when it&rsquo;s in <code>draft</code> state. Also, take note that the invoice state cannot be updated through this method.</p>
+
+<p>Use <code>PATCH</code> for partial update and <code>PUT</code> for full update</p>
+
+<pre><code>PUT /invoices/:id
+PATCH /invoices/:id
+{
+    'due_date': '2014-10-06',
+    'issue_date': '2014-10-01',
+    'customer': 'https://api.example.com/customers/32',
+    'sales_tax_percent': 24,
+    'sales_tax_name': 'VAT',
+    'currency': 'USD'
+}
+</code></pre>
+
+<h2 id="add-an-entry-to-an-invoice">Add an entry to an invoice</h2>
+
+<p><em>NOTE</em>: Adding an entry is only possible when the invoice is in <code>draft</code> state.</p>
+
+<pre>
+POST /invoices/:id/entries
+{
+    '<b>description</b>': 'Hydrogen Monthly Subscription for October 2014',
+    'unit': 'subscription',
+    '<b>quantity</b>': 1,
+    '<b>unit_price</b>': 150,
+    'product_code': 'hydrogen-subscription',
+    'start_date': '2014-10-01',
+    'end_date': '2014-10-31',
+    'prorated': False
+}
+</pre>
+
+<h2 id="update-an-entry-of-an-invoice">Update an entry of an invoice</h2>
+
+<p><em>NOTE</em>: Updating an entry is only possible when the invoice is in <code>draft</code> state.</p>
+
+<pre><code>PUT /invoices/:id/entries/:entry_id
+{
+    'description': 'Hydrogen Monthly Subscription for October 2014',
+    'unit': 'subscription',
+    'quantity': 1,
+    'unit_price': 150,
+    'product_code': 'hydrogen-subscription',
+    'start_date': '2014-10-01',
+    'end_date': '2014-10-31',
+    'prorated': False
+}
+</code></pre>
+
+<h2 id="delete-an-entry-from-an-invoice">Delete an entry from an invoice</h2>
+
+<p><em>NOTE</em>: Deleting an entry is only possible when the invoice is in <code>draft</code> state.</p>
+
+<pre><code>DELETE /invoices/:id/entries/:entry_id
+</code></pre>
+
+<h2 id="issue-an-invoice">Issue an invoice</h2>
+
+<p>The invoice must be in the <code>draft</code> state.
+Issuing an invoice follows these steps:
+* When <code>issue_date</code> is specified, the invoice&rsquo;s <code>issue_date</code> is set to this value. If it&rsquo;s not and the invoice has no <code>issue_date</code> set, it it set to the current date.
+* If <code>due_date</code> is specified it overwrites the invoice&rsquo;s <code>due_date</code>
+* If the invoice has no <code>billing_details</code> set, it copies the <code>billing_details</code> from the customer. The same goes with <code>sales_tax_percent</code> and <code>sales_tax_name</code>
+* Sets the invoice status to <code>issued</code></p>
+
+<pre><code>PATCH /invoices/:id/state
+{
+    'state': 'issued',
+    'issue_date': '2014-10-01',
+    'due_date': '2014-10-06'
+}
+</code></pre>
+
+<h2 id="pay-an-invoice">Pay an invoice</h2>
+
+<p>The invoice must be in the <code>issued</code> state.
+Paying an invoice follows these steps:
+* If <code>paid_date</code> is specified, set the invoice <code>paid_date</code> to this value, else set the invoice <code>paid_date</code> to the current date
+* Sets the invoice status to <code>paid</code></p>
+
+<pre><code>PATCH /invoices/:id/state
+{
+    'state': 'paid',
+    'paid_date': '2014-10-04'
+}
+</code></pre>
+
+<h2 id="cancel-an-invoice">Cancel an invoice</h2>
+
+<p>The invoice must be in the <code>issued</code> state.
+Canceling an invoice follows these steps:
+* If <code>cancel_date</code> is specified, set the invoice <code>cancel_date</code> to this value, else set the invoice <code>cancel_date</code> to the current date
+* Sets the invoice status to <code>paid</code></p>
+
+<pre><code>PATCH /invoices/:id/state
+{
+    'state': 'canceled',
+    'cancel_date': '2014-10-04'
+}
+</code></pre>
+
+</div>
+
     
       
 
@@ -487,15 +797,15 @@
   <h2>See Also</h2>
   <ul>
     
+    <li><a href="/silver/docs/api/">Silver API</a></li>
+    
+    <li><a href="/silver/docs/providers/">Providers in Silver</a></li>
+    
+    <li><a href="/silver/docs/resources/">Silver resources</a></li>
+    
     <li><a href="/silver/docs/transactions/">Transactions in silver</a></li>
     
     <li><a href="/silver/docs/payment-methods/">Payment methods in Silver</a></li>
-    
-    <li><a href="/silver/docs/proformas/">Proformas in Silver</a></li>
-    
-    <li><a href="/silver/docs/how-automatic-invoices-are-generated/">How automated invoices are generated</a></li>
-    
-    <li><a href="/silver/docs/api/">Silver API</a></li>
     
   </ul>
 </div>
