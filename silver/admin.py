@@ -465,7 +465,7 @@ class DocumentEntryForm(forms.ModelForm):
 class DocumentEntryInline(TabularInline):
     model = DocumentEntry
     form = DocumentEntryForm
-    extra = 0
+    extra = 1
 
 
 class BillingDocumentForm(forms.ModelForm):

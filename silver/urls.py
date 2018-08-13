@@ -22,6 +22,8 @@ from silver.views import (pay_transaction_view, complete_payment_view,
                           InvoiceAutocomplete, ProformaAutocomplete,
                           PaymentMethodAutocomplete)
 
+from django.conf import settings
+
 admin.autodiscover()
 
 urlpatterns = [
@@ -29,6 +31,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
+    url(r'^', include('stats.api.urls')),
 
     url(r'pay/(?P<token>[0-9a-zA-Z-_\.]+)/$',
         pay_transaction_view, name='payment'),
@@ -42,3 +45,4 @@ urlpatterns = [
     url(r'^autocomplete/payment-method/$',
         PaymentMethodAutocomplete.as_view(), name='autocomplete-payment-method'),
 ]
+

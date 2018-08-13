@@ -31,26 +31,23 @@ from django.core.urlresolvers import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db import transaction as db_transaction
-from django.db.models import Max, ForeignKey, F
+from django.db.models import Max, ForeignKey
 from django.template.loader import select_template
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
+from .entries import DocumentEntry
 from silver.models.billing_entities import Customer, Provider
 from silver.currencies import CurrencyConverter, RateNotFound
 from silver.models.documents.pdf import PDF
 from silver.utils.international import currencies
 
-from .entries import DocumentEntry
-
-
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
     _storage_klass = import_string(_storage[0])
     _storage = _storage_klass(*_storage[1], **_storage[2])
-
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -96,9 +93,17 @@ class BillingDocumentQuerySet(models.QuerySet):
 
 class BillingDocumentManager(models.Manager):
     def get_queryset(self):
-        return super(BillingDocumentManager, self).get_queryset() \
-                                                  .select_related('customer', 'provider',
-                                                                  'related_document')
+        queryset = super(BillingDocumentManager, self).get_queryset()
+        queryset = queryset.select_related('customer', 'provider', 'related_document')
+
+        if self.model.kind == 'Invoice':
+            queryset = queryset.prefetch_related('invoice_entries', 'invoice_entries__product_code')
+
+        if self.model.kind == 'Proforma':
+            queryset = queryset.prefetch_related('proforma_entries',
+                                                 'proforma_entries__product_code',
+                                                 'proforma_entries__invoice')
+        return queryset
 
 
 def get_billing_documents_kinds():
