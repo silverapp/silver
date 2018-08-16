@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import datetime
 
-from django.test import TestCase
 from freezegun import freeze_time
 from mock import patch, PropertyMock, MagicMock
+
+from django.test import TestCase
 
 from silver.models import Plan, Subscription, BillingLog
 from silver.tests.factories import (SubscriptionFactory, MeteredFeatureFactory,

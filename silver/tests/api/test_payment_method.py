@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import sys
+
 from copy import deepcopy
 
 from django.test import override_settings
+
 from rest_framework import permissions, status
 from rest_framework.reverse import reverse
 
@@ -181,7 +185,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_get_listing_no_customer(self):
         url = reverse('payment-method-list', kwargs={
-            'customer_pk': sys.maxint
+            'customer_pk': sys.maxsize
         })
 
         response = self.client.get(url, format='json')
@@ -190,7 +194,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_get_detail_no_customer(self):
         url = reverse('payment-method-detail', kwargs={
-            'customer_pk': sys.maxint,
+            'customer_pk': sys.maxsize,
             'payment_method_id': 0
         })
 
@@ -201,7 +205,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
     def test_get_detail_no_payment_method(self):
         url = reverse('payment-method-detail', kwargs={
             'customer_pk': self.customer.pk,
-            'payment_method_id': sys.maxint
+            'payment_method_id': sys.maxsize
         })
 
         response = self.client.get(url, format='json')
@@ -210,7 +214,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
 
     def test_post_listing_no_customer(self):
         url = reverse('payment-method-list', kwargs={
-            'customer_pk': sys.maxint
+            'customer_pk': sys.maxsize
         })
 
         response = self.client.post(url, data={

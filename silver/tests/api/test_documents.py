@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import json
+import six
 
 from mock import patch
 from freezegun import freeze_time
@@ -29,6 +32,7 @@ from silver.tests.factories import (ProformaFactory, AdminUserFactory,
 from silver.tests.fixtures import PAYMENT_PROCESSORS
 from silver.tests.utils import build_absolute_test_url
 
+
 FREEZED_TIME = '2017-01-24T12:46:07Z'
 
 
@@ -40,7 +44,7 @@ class TestDocumentEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def _get_expected_data(self, document, transactions=None):
-        kind = unicode(document.kind.lower())
+        kind = six.text_type(document.kind.lower())
         transactions = [{
             u'id': u'%s' % transaction.uuid,
             u'url': build_absolute_test_url(reverse('transaction-detail',
@@ -80,8 +84,8 @@ class TestDocumentEndpoints(APITestCase):
                                                          [document.provider.id])),
             u'customer': build_absolute_test_url(reverse('customer-detail',
                                                          [document.customer.id])),
-            u'due_date': unicode(document.due_date) if document.due_date else None,
-            u'issue_date': unicode(document.issue_date) if document.issue_date else None,
+            u'due_date': six.text_type(document.due_date) if document.due_date else None,
+            u'issue_date': six.text_type(document.issue_date) if document.issue_date else None,
             u'paid_date': document.paid_date,
             u'cancel_date': document.cancel_date,
             u'sales_tax_name': document.sales_tax_name,

@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .base import BillingDocumentBase
-from .entries import DocumentEntry
-from .invoice import Invoice
-from .proforma import Proforma
-from .pdf import PDF
+from silver.models.documents.base import BillingDocumentBase
+from silver.models.documents.entries import DocumentEntry
+from silver.models.documents.invoice import Invoice
+from silver.models.documents.proforma import Proforma
+from silver.models.documents.pdf import PDF

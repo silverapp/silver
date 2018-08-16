@@ -11,10 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import
+
 from collections import OrderedDict
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
+
 from rest_framework.renderers import JSONRenderer
 from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse

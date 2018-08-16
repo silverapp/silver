@@ -15,6 +15,8 @@
 
 """URLs for the silver app."""
 
+from __future__ import absolute_import
+
 from django.conf.urls import include, url
 from django.contrib import admin
 
@@ -22,7 +24,9 @@ from silver.views import (pay_transaction_view, complete_payment_view,
                           InvoiceAutocomplete, ProformaAutocomplete,
                           PaymentMethodAutocomplete)
 
+
 admin.autodiscover()
+
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),

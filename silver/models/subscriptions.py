@@ -12,20 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import calendar
 import logging
+import six
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from functools import reduce
 
+from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from dateutil import rrule
-from django.conf import settings
-from django.utils.timezone import utc
 from django_fsm import FSMField, transition, TransitionNotAllowed
-from annoying.fields import JSONField
 from model_utils import Choices
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -34,10 +37,11 @@ from django.dispatch import receiver
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
+from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
 
-from .billing_entities import Customer
-from .documents import DocumentEntry
+from silver.models.billing_entities import Customer
+from silver.models.documents import DocumentEntry
 from silver.utils.dates import ONE_DAY, relativedelta, first_day_of_month
 from silver.validators import validate_reference
 
@@ -110,8 +114,8 @@ class MeteredFeatureUnitsLog(models.Model):
 
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
-    def __unicode__(self):
-        return unicode(self.metered_feature.name)
+    def __str__(self):
+        return six.text_type(self.metered_feature.name)
 
 
 class Subscription(models.Model):
@@ -1001,7 +1005,7 @@ class Subscription(models.Model):
         base_context.update(context)
         return base_context
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s (%s)' % (self.customer, self.plan)
 
 
@@ -1038,7 +1042,7 @@ class BillingLog(models.Model):
     class Meta:
         ordering = ['-billing_date']
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)

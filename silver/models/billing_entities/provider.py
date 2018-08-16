@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 from model_utils import Choices
 
@@ -23,7 +24,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils.translation import ugettext_lazy as _
 
-from .base import BaseBillingEntity
+from silver.models.billing_entities.base import BaseBillingEntity
 
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
@@ -146,6 +147,9 @@ class Provider(BaseBillingEntity):
         base_fields = self.get_archivable_field_values()
         base_fields.update({'proforma_series': getattr(self, 'proforma_series', '')})
         return base_fields
+
+    def __str__(self):
+        return self.name
 
 
 @receiver(pre_save, sender=Provider)

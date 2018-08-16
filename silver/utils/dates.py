@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 from datetime import timedelta
 from dateutil.relativedelta import *
+
 
 ONE_DAY = timedelta(days=1)
 ONE_MONTH = relativedelta(months=1)

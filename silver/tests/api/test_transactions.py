@@ -12,30 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, timedelta
+from __future__ import absolute_import
+
+import six
+
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from mock import patch
 
 from django.utils import timezone
 from django.test import override_settings
+
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Proforma
-
-from silver.models import Transaction
-from silver.tests.utils import build_absolute_test_url
-from silver.utils.payments import get_payment_url
-
+from silver.models import Proforma, Transaction
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory,
                                     DocumentEntryFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
                                    triggered_processor)
+from silver.tests.utils import build_absolute_test_url
+from silver.utils.payments import get_payment_url
 
 
 def reverse(*args, **kwargs):
@@ -131,7 +133,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         six.text_type(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
@@ -300,7 +302,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         six.text_type(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], invoice.transaction_currency)
@@ -664,15 +666,15 @@ class TestTransactionEndpoint(APITestCase):
             mocked_token.return_value = 'token'
 
             return OrderedDict([
-                ('id', unicode(transaction.uuid)),
+                ('id', six.text_type(transaction.uuid)),
                 ('url', reverse('transaction-detail',
                                 kwargs={'customer_pk': customer.id,
                                         'transaction_uuid': transaction.uuid})),
                 ('customer', reverse('customer-detail', args=[customer.pk])),
                 ('provider', reverse('provider-detail', args=[provider.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction.amount)),
-                ('currency', unicode(transaction.currency)),
-                ('state', unicode(transaction.state)),
+                ('amount', six.text_type(Decimal('0.00') + transaction.amount)),
+                ('currency', six.text_type(transaction.currency)),
+                ('state', six.text_type(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
                 ('can_be_consumed', transaction.can_be_consumed),

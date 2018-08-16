@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from uuid import UUID
+
+from __future__ import absolute_import
 
 import jwt
-from django.http import Http404
+from uuid import UUID
 
 from django.conf import settings
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 from silver.models.transactions import Transaction

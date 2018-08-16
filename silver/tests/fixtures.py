@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 from silver.payment_processors import PaymentProcessorBase
 from silver.payment_processors.mixins import (TriggeredProcessorMixin,
                                               ManualProcessorMixin)
 from silver.payment_processors.views import GenericTransactionView
 
+
 triggered_processor = 'triggered'
 manual_processor = 'manual'
 failing_void_processor = 'failing_void'
+
 
 PAYMENT_PROCESSORS = {
     triggered_processor: {

@@ -11,13 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import
+
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from silver.models import Invoice, Proforma
 
+from silver.models import Invoice, Proforma
 from silver.tests.factories import (PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, TransactionFactory,
                                     CustomerFactory)

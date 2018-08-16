@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import json
+import six
+
+from six.moves import range
+
 from datetime import timedelta
 from decimal import Decimal
+from mock import patch
 
 from annoying.functions import get_object_or_None
 from factory.django import mute_signals
-from mock import patch
+
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
@@ -34,6 +40,7 @@ from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     SubscriptionFactory, TransactionFactory,
                                     PaymentMethodFactory)
 from silver.tests.utils import build_absolute_test_url
+
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -496,8 +503,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+        self.assertTrue(all(item in list(response.data.items())
+                        for item in six.iteritems(mandatory_content)))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -519,8 +526,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+        self.assertTrue(all(item in list(response.data.items())
+                        for item in six.iteritems(mandatory_content)))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -546,8 +553,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in six.iteritems(mandatory_content))
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
@@ -602,8 +609,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'paid'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in six.iteritems(mandatory_content))
 
     def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -628,8 +635,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'paid'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in six.iteritems(mandatory_content))
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -681,8 +688,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'canceled'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in six.iteritems(mandatory_content))
 
     def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -708,8 +715,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'canceled'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in six.iteritems(mandatory_content))
 
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()

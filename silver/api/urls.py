@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 from django.conf.urls import url
 
 from silver import views as silver_views
 from silver.api.views import billing_entities_views, documents_views, payment_method_views, \
     plan_views, product_code_views, subscription_views, transaction_views
+
 
 urlpatterns = [
     url(r'^customers/$',

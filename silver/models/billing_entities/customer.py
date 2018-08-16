@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 from pyvat import is_vat_number_format_valid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from silver.utils.international import currencies
 
-from .base import BaseBillingEntity
+from silver.utils.international import currencies
+from silver.models.billing_entities.base import BaseBillingEntity
 from silver.validators import validate_reference
 
 
@@ -103,4 +105,7 @@ class Customer(BaseBillingEntity):
 
     @property
     def name(self):
-        return "%s %s" % (self.first_name, self.last_name)
+        return u"%s %s" % (self.first_name, self.last_name)
+
+    def __str__(self):
+        return self.name

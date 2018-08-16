@@ -12,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 from datetime import datetime, timedelta
+from mock import patch
 
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.test import override_settings
-from mock import patch
+
 from rest_framework import status
 from rest_framework.test import APITestCase
-from silver.models import Transaction
-from silver.utils.payments import get_payment_url, get_payment_complete_url
 
+from silver.models import Transaction
 from silver.tests.factories import (AdminUserFactory, TransactionFactory)
 from silver.tests.fixtures import PAYMENT_PROCESSORS, not_implemented_view
+from silver.utils.payments import get_payment_url, get_payment_complete_url
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

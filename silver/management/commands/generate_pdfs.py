@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import logging
+
 from itertools import chain
 
 from django.core.management.base import BaseCommand
 
 from silver.models import Invoice, Proforma
+
 
 logger = logging.getLogger(__name__)
 

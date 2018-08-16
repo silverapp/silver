@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import logging
 import argparse
+
 from datetime import datetime as dt
-from types import StringType
 
 from django.core.management.base import BaseCommand
 from django.utils import translation
 
 from silver.documents_generator import DocumentsGenerator
 from silver.models import Subscription
+
 
 logger = logging.getLogger(__name__)
 

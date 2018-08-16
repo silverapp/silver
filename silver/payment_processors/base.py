@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
+import six
+
 from django.conf import settings
+from django.template.loader import select_template
 from django.utils.deconstruct import deconstructible
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
-from django.template.loader import select_template
 
 
 def get_instance(name):
@@ -95,11 +99,8 @@ class PaymentProcessorBase(object):
     def __repr__(self):
         return self.name
 
-    def __unicode__(self):
-        return unicode(self.name)
-
     def __str__(self):
-        return str(self.name)
+        return six.text_type(self.name)
 
     def __eq__(self, other):
         return self.__class__ is other.__class__

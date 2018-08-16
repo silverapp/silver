@@ -11,10 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from django.core.exceptions import ValidationError
+
+from __future__ import absolute_import
+
 from mock import MagicMock, patch
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
+
 from silver.models import Transaction
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
                                     TransactionFactory, ProformaFactory, DocumentEntryFactory)

@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
+import six
+
 from model_utils import Choices
 
 from django.core.exceptions import ValidationError
@@ -126,8 +130,8 @@ class Plan(models.Model):
                 raise ValidationError(err_msg)
             product_codes[mf.product_code.value] = mf.name
 
-    def __unicode__(self):
-        return unicode(self.name)
+    def __str__(self):
+        return six.text_type(self.name)
 
     @property
     def provider_flow(self):
@@ -161,7 +165,7 @@ class MeteredFeature(models.Model):
     class Meta:
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         fmt = u'{name} ({price:.2f}$, {included:.2f} included)'
         return fmt.format(name=self.name, price=self.price_per_unit,
                           included=self.included_units)

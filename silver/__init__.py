@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-# -*- coding: utf-8 -*-
-
 HOOK_EVENTS = {
     # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
     'customer.created': 'silver.Customer.created',
