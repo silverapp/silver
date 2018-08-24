@@ -17,9 +17,9 @@ from __future__ import absolute_import
 
 import json
 import pytest
-import six
 
 from django.core.urlresolvers import reverse
+from django.utils.encoding import smart_text
 
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -74,7 +74,7 @@ class TestProviderEndpoints(APITestCase):
             "meta": {},
         }
 
-        for attr, value in six.iteritems(expected_data):
+        for attr, value in expected_data.iteritems():
             assert response.data[attr] == value
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -113,7 +113,7 @@ class TestProviderEndpoints(APITestCase):
 
             assert response.status_code == 400
 
-            for response_item in six.iteritems(response.data):
+            for response_item in response.data.iteritems():
                 field_name = response_item[0]
                 if field_name in ['id', 'url']:
                     continue

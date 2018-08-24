@@ -1307,7 +1307,7 @@ class TestInvoiceGenerationCommand(TestCase):
                                   generate_after=120, enabled=True,
                                   trial_period_days=7, amount=Decimal('200.00'),
                                   metered_features=[metered_feature])
-        start_date = dt.date(2015, 0o2, 0o1)
+        start_date = dt.date(2015, 2, 1)
         trial_end = start_date + dt.timedelta(days=plan.trial_period_days)
 
         subscription = SubscriptionFactory.create(

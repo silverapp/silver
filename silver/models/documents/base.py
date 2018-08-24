@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import logging
 import pytz
-import six
 
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -37,6 +36,7 @@ from django.db import transaction as db_transaction
 from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(six.text_type(
+        company=slugify(smart_text(
             document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
@@ -107,6 +107,7 @@ def get_billing_documents_kinds():
             for subclass in BillingDocumentBase.__subclasses__())
 
 
+@python_2_unicode_compatible
 class BillingDocumentBase(models.Model):
     objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 

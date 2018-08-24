@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import uuid
 import logging
-import six
 
 from decimal import Decimal
 
@@ -31,6 +30,7 @@ from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from silver.models import Invoice, Proforma
@@ -42,6 +42,7 @@ from silver.utils.models import AutoDateTimeField
 logger = logging.getLogger(__name__)
 
 
+@python_2_unicode_compatible
 class Transaction(models.Model):
     _provider = None
 
@@ -298,7 +299,7 @@ class Transaction(models.Model):
             self.document.pay()
 
     def __str__(self):
-        return six.text_type(self.uuid)
+        return self.uuid
 
 
 @receiver(post_transition)

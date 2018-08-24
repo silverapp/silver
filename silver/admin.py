@@ -18,7 +18,6 @@ import errno
 import logging
 import os
 import requests
-import six
 
 from six.moves import map
 from collections import OrderedDict
@@ -44,6 +43,7 @@ from django.forms import ChoiceField
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.encoding import smart_text
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
@@ -64,7 +64,7 @@ def metadata(obj):
     d = u'(None)'
     if obj.meta:
         d = u''
-        for key, value in six.iteritems(obj.meta):
+        for key, value in obj.meta.iteritems():
             d += u'%s: <code>%s</code><br>' % (escape(key), escape(value))
     return d
 metadata.allow_tags = True
@@ -225,7 +225,7 @@ class SubscriptionAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=six.text_type(entry),
+                    object_repr=smart_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -650,7 +650,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=six.text_type(entry),
+                    object_repr=smart_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=readable_action

@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 
 import json
-import six
 
 from datetime import timedelta
 from decimal import Decimal
@@ -24,6 +23,7 @@ from six.moves import range
 
 from django.utils import timezone
 from django.conf import settings
+from django.utils.encoding import smart_text
 
 from annoying.functions import get_object_or_None
 from rest_framework import status
@@ -443,7 +443,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
@@ -466,7 +466,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
@@ -495,7 +495,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
         assert Invoice.objects.count() == 0
@@ -556,7 +556,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
         invoice = Invoice.objects.all()[0]
         assert proforma.related_document == invoice
@@ -590,7 +590,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
         invoice = Invoice.objects.all()[0]
         assert proforma.related_document == invoice
@@ -642,7 +642,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert Invoice.objects.count() == 0
 
     def test_cancel_proforma_with_provided_date(self):
@@ -669,7 +669,7 @@ class TestProformaEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert Invoice.objects.count() == 0
 
     def test_cancel_proforma_in_draft_state(self):

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import calendar
 import logging
-import six
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -37,6 +36,7 @@ from django.dispatch import receiver
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
 
@@ -61,6 +61,7 @@ def field_template_path(field, provider=None):
     return 'billing_documents/{field}.html'.format(field=field)
 
 
+@python_2_unicode_compatible
 class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
     subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
@@ -115,9 +116,10 @@ class MeteredFeatureUnitsLog(models.Model):
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
     def __str__(self):
-        return six.text_type(self.metered_feature.name)
+        return self.metered_feature.name
 
 
+@python_2_unicode_compatible
 class Subscription(models.Model):
     class STATES(object):
         ACTIVE = 'active'
@@ -1009,6 +1011,7 @@ class Subscription(models.Model):
         return u'%s (%s)' % (self.customer, self.plan)
 
 
+@python_2_unicode_compatible
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
                                      related_name='billing_logs')

@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 
 import json
-import six
 
 from six.moves import range
 
@@ -32,6 +31,7 @@ from rest_framework.test import APITestCase
 
 from django.db.models.signals import pre_save
 from django.utils import timezone
+from django.utils.encoding import smart_text
 from django.conf import settings
 
 from silver.models import Invoice, Transaction
@@ -503,8 +503,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item in list(response.data.items())
-                        for item in six.iteritems(mandatory_content)))
+        self.assertTrue(all(item in response.data.items()
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -527,7 +527,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(item in list(response.data.items())
-                        for item in six.iteritems(mandatory_content)))
+                        for item in mandatory_content.iteritems()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -554,7 +554,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
@@ -610,7 +610,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
     def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -636,7 +636,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -689,7 +689,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
     def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -716,7 +716,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in six.iteritems(mandatory_content))
+                   for item in mandatory_content.iteritems())
 
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()
