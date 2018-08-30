@@ -1,13 +1,16 @@
 import uuid
 
-from django_xhtml2pdf.utils import generate_pdf_template_object
+from xhtml2pdf import pisa
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+from django.db.models.functions import Greatest
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
+
+from silver.utils.pdf import fetch_resources
 
 
 def get_storage():
@@ -37,15 +40,17 @@ class PDF(Model):
     def generate(self, template, context, upload=True):
         pdf_file_object = HttpResponse(content_type='application/pdf')
 
-        generate_pdf_template_object(template, pdf_file_object, context)
+        html = template.render(context)
+        pisa.pisaDocument(src=html.encode("UTF-8"),
+                          dest=pdf_file_object,
+                          encoding='UTF-8',
+                          link_callback=fetch_resources)
 
         if not pdf_file_object:
             return
 
         if upload:
             self.upload(pdf_file_object=pdf_file_object, filename=context['filename'])
-
-        self.mark_as_clean()
 
         return pdf_file_object
 
@@ -54,12 +59,16 @@ class PDF(Model):
 
         pdf_content = ContentFile(pdf_file_object)
 
-        self.pdf_file.save(filename, pdf_content, True)
+        with transaction.atomic():
+            self.pdf_file.save(filename, pdf_content, True)
+            self.mark_as_clean()
 
     def mark_as_dirty(self):
         with transaction.atomic():
-            PDF.objects.filter(id=self.id).update(dirty=F('dirty') + 1)
+            PDF.objects.filter(id=self.id).update(dirty=Greatest(F('dirty') + 1, 1))
             self.refresh_from_db(fields=['dirty'])
 
     def mark_as_clean(self):
-        PDF.objects.filter(id=self.id).update(dirty=F('dirty') - self.dirty)
+        with transaction.atomic():
+            PDF.objects.filter(id=self.id).update(dirty=Greatest(F('dirty') - self.dirty, 0))
+            self.refresh_from_db(fields=['dirty'])

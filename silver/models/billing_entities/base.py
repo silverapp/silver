@@ -29,7 +29,7 @@ class BaseBillingEntity(LiveModel):
     address_1 = models.CharField(max_length=128)
     address_2 = models.CharField(max_length=128, blank=True, null=True)
     country = models.CharField(choices=countries, max_length=3)
-    phone = models.CharField(max_length=15, blank=True, null=True)
+    phone = models.CharField(max_length=32, blank=True, null=True)
     email = models.CharField(blank=True, null=True, max_length=254)
     city = models.CharField(max_length=128)
     state = models.CharField(max_length=128, blank=True, null=True)

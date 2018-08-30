@@ -27,6 +27,7 @@ from rest_framework.test import APITestCase
 from silver.models import Proforma
 
 from silver.models import Transaction
+from silver.tests.utils import build_absolute_test_url
 from silver.utils.payments import get_payment_url
 
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
@@ -38,7 +39,7 @@ from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
 
 
 def reverse(*args, **kwargs):
-    return u'http://testserver' + _reverse(*args, **kwargs)
+    return build_absolute_test_url(_reverse(*args, **kwargs))
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
@@ -94,7 +95,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         payment_method_url = reverse('payment-method-detail',
                                      kwargs={'customer_pk': customer.pk,
@@ -231,7 +232,7 @@ class TestTransactionEndpoint(APITestCase):
         proforma.issue()
         proforma.create_invoice()
         proforma.refresh_from_db()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -270,7 +271,7 @@ class TestTransactionEndpoint(APITestCase):
                                           transaction_xe_rate=Decimal('0.25'),
                                           proforma_entries=entries)
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0) + timedelta(minutes=30)
         url = reverse('payment-method-transaction-list',
@@ -312,7 +313,7 @@ class TestTransactionEndpoint(APITestCase):
                                           state=Proforma.STATES.ISSUED,
                                           issue_date=timezone.now().date())
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -349,7 +350,7 @@ class TestTransactionEndpoint(APITestCase):
                                           state=Proforma.STATES.ISSUED,
                                           issue_date=timezone.now().date())
         proforma.create_invoice()
-        invoice = proforma.invoice
+        invoice = proforma.related_document
 
         valid_until = datetime.now().replace(microsecond=0)
         url = reverse('payment-method-transaction-list',
@@ -410,8 +411,8 @@ class TestTransactionEndpoint(APITestCase):
         transaction = TransactionFactory.create(payment_method=payment_method)
 
         proforma = ProformaFactory.create(state='issued')
-        invoice = InvoiceFactory.create(proforma=proforma, state='issued')
-        proforma.invoice = invoice
+        invoice = InvoiceFactory.create(related_document=proforma, state='issued')
+        proforma.related_document = invoice
         proforma.save()
 
         invoice_url = reverse('invoice-detail', args=[invoice.pk])
@@ -679,7 +680,7 @@ class TestTransactionEndpoint(APITestCase):
                 ('payment_method', reverse('payment-method-detail',
                                            kwargs={'customer_pk': customer.id,
                                                    'payment_method_id': payment_method.id})),
-                ('pay_url', 'http://testserver' + get_payment_url(transaction, None)),
+                ('pay_url', build_absolute_test_url(get_payment_url(transaction, None))),
                 ('valid_until', None),
 
                 ('updated_at', transaction.updated_at.isoformat()[:-6] + 'Z'),

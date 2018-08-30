@@ -1,8 +1,108 @@
 # Changelog
 
+## Unrealeased changes
+_Nothing yet_
+
+## 0.6.2 (2018-08-10)
+- Fixed a bug where a canceled subscription would not be billed if the plan was billed up to a date
+later than the cancel date.
+- Fixed Transaction return_url being quoted because of a new version of furl, which has also been
+pinned to known working versions.
+
+## 0.6.1 (2018-05-08)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Subscription's meta field now defaults to an empty dict. **(WARNING)**
+- Added cancel_date to SubscriptionSerializer.
+
+## 0.6 (2018-04-25)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Dropped Django 1.8 support, meaning only Django 1.11 is currently supported. **(WARNING)**
+- PDF generate method will no longer mark the `PDF` object as clean if the file is not saved
+  (through the `upload` method) **(WARNING)**
+- Fixed a potential bug, involving the same `PDF` object and multiple threads, where the `PDF`
+  `mark_as_dirty` method would fail to work properly.
+
+
+## 0.5.5 (2018-03-30)
+- Make sure to use the plan currency when generating documents.
+
+## 0.5.4 (2018-02-14)
+- Also store plan and metered feature amounts separately in Billing Logs.
+
+## 0.5.3 (2018-01-09)
+- Increase phone number limits to 32, since there are a lot of phone formats.
+
+## 0.5.2 (2017-12-28)
+- Small admin interface improvements for payment methods and transactions
+- Solved archived customer bug. In some cases, the `name` attribute of an
+  archived customer could be pass to the BillingEntity contructor,
+  resulting in a 500 error (since BillingEntity) doesn't have a `name` argument.
+- Fix DocumentAutocomplete bug. DocumentAutocomplete would fail if a `-` is
+  pressent in query.
+
+## 0.5.1 (2017-12-04)
+- Pin html5lib to 1.0b8 since this is a stable version working with xhtml2pdf
+
+## 0.5 (2017-12-04)
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**
+- Implementations of payment processors don't have to call the `process` method on the transaction
+anymore. A new method called `process_transaction` has been added for actionable PaymentProcessors
+which tries to call the transaction `process` method. This has been done to avoid a case of duplicate
+transactions. **(BREAKING)**
+
+## 0.4.4 (2017-11-20)
+- Fixed some tests that were behaving differently when run inside a parent application.
+- Use a custom working xhtml2pdf version for pdf generation
+- Add `SILVER_SHOW_PDF_STORAGE_URL` option. If `False`, `pdf_url` for document
+  endpoints, will display an url to a view that will redirect to the actual
+  document url. This is a small optimization in case you are using external
+  document storages (like S3 or Google Storage), because it can take up to 1-2
+  seconds for them to generate secrets token for secured urls. By default it is
+  `True` which mean that the old behaviour is still up.
+
+## 0.4.3 (2017-11-16)
+- Reduce query numbers for some API endpoints (`/plans`,
+  `/customers/subscriptions`) and admin
+
+## 0.4.2 (2017-11-16)
+- Remove django-xhtml2pdf
+- Adapt pdf generation for Django 1.8 and 1.11
+
+## 0.4.1 (2017-11-15)
+Add deleted customer and id filters on document list endpoint.
+
+## 0.4 (2017-11-15)
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**
+- Invoice and Proforma are now Proxy models of the BillingDocumentBase model, which is no longer
+abstract. This allows for an easier aggregation in the /documents API endpoint. Both models should
+still be usable as before and BillingDocumentBase instances should automatically be assigned
+their concrete class, depending on their `kind` field. **(BREAKING)**
+
+## 0.3.13 (2017-11-08)
+- Add `_total` and `_total_in_transaction_currency` to document base.
+
+## 0.3.12 (2017-11-08)
+- Optimize document view queries (30% speed improvement).
+
+## 0.3.11 (2017-11-08)
+- Optimize document view queries (37% speed improvement).
+
+## 0.3.10 (2017-11-01)
+- Fixed subscription end of billing cycle cancel date.
+- Added development requirements via `setup.py`.
+
+## 0.3.9 (2017-11-01)
+- Fixed updateable_buckets end_date not being the bucket_end_date for a canceled subscription.
+
+## 0.3.8 (2017-11-01)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Fixed not being able to create Metered Feature Units Logs through the API if the subscription
+is canceled but not past the cancel_date.
+- Updateable buckets past the subscription cancel date are no longer valid. **(WARNING)**
+
 ## 0.3.7 (2017-10-27)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
-- Old PDFs are no longer deleted on PDF regeneration **(WARNING)**
+- Old PDFs are no longer deleted on PDF regeneration. **(WARNING)**
 
 ## 0.3.6 (2017-10-17)
 - Fixed execute_transactions task name.

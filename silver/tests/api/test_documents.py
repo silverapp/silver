@@ -25,9 +25,9 @@ from rest_framework.test import APITestCase
 
 from silver.tests.factories import (ProformaFactory, AdminUserFactory,
                                     InvoiceFactory, TransactionFactory,
-                                    PaymentMethodFactory)
+                                    PaymentMethodFactory, DocumentEntryFactory)
 from silver.tests.fixtures import PAYMENT_PROCESSORS
-
+from silver.tests.utils import build_absolute_test_url
 
 FREEZED_TIME = '2017-01-24T12:46:07Z'
 
@@ -41,15 +41,18 @@ class TestDocumentEndpoints(APITestCase):
 
     def _get_expected_data(self, document, transactions=None):
         kind = unicode(document.kind.lower())
-        payment_method_url = u'http://testserver/customers/%d/payment_methods/%d/'
         transactions = [{
             u'id': u'%s' % transaction.uuid,
-            u'url': u'http://testserver/customers/%d/transactions/%s/' % (document.customer.pk,
-                                                                          transaction.uuid),
-            u'customer': u'http://testserver/customers/%s/' % document.customer.pk,
-            u'provider': u'http://testserver/providers/%s/' % document.provider.pk,
-            u'invoice': u'http://testserver/invoices/%d/' % (transaction.invoice_id),
-            u'proforma': u'http://testserver/proformas/%d/' % (transaction.proforma_id),
+            u'url': build_absolute_test_url(reverse('transaction-detail',
+                                                    [transaction.customer.pk, transaction.uuid])),
+            u'customer': build_absolute_test_url(reverse('customer-detail',
+                                                         [transaction.customer.id])),
+            u'provider': build_absolute_test_url(reverse('provider-detail',
+                                                         [transaction.provider.id])),
+            u'invoice': build_absolute_test_url(reverse('invoice-detail',
+                                                        [transaction.invoice.id])),
+            u'proforma': build_absolute_test_url(reverse('proforma-detail',
+                                                         [transaction.proforma.id])),
             u'payment_processor': transaction.payment_processor,
             u'refund_code': transaction.refund_code,
             u'fail_code': transaction.fail_code,
@@ -61,19 +64,22 @@ class TestDocumentEndpoints(APITestCase):
             u'updated_at': FREEZED_TIME,
             u'currency': u'%s' % transaction.currency,
             u'amount': u'%.2f' % transaction.amount,
-            u'payment_method': payment_method_url % (document.customer.pk,
-                                                     transaction.payment_method.pk),
-            u'pay_url': u'http://testserver/pay/token/',
+            u'payment_method': build_absolute_test_url(reverse('payment-method-detail',
+                                                       [transaction.customer.pk,
+                                                        transaction.payment_method.pk])),
+            u'pay_url': build_absolute_test_url(reverse('payment', ['token']))
         } for transaction in transactions or []]
 
         return {
             u'id': document.pk,
-            u'url': u'http://testserver/%ss/%s/' % (kind, document.pk),
+            u'url':  build_absolute_test_url(reverse(kind + '-detail', [document.pk])),
             u'kind': kind,
             u'series': document.series,
             u'number': document.number,
-            u'provider': u'http://testserver/providers/%s/' % document.provider.pk,
-            u'customer': u'http://testserver/customers/%s/' % document.customer.pk,
+            u'provider': build_absolute_test_url(reverse('provider-detail',
+                                                         [document.provider.id])),
+            u'customer': build_absolute_test_url(reverse('customer-detail',
+                                                         [document.customer.id])),
             u'due_date': unicode(document.due_date) if document.due_date else None,
             u'issue_date': unicode(document.issue_date) if document.issue_date else None,
             u'paid_date': document.paid_date,
@@ -84,8 +90,8 @@ class TestDocumentEndpoints(APITestCase):
             u'transaction_currency': document.transaction_currency,
             u'state': document.state,
             u'total': document.total,
-            u'pdf_url': (u'http://testserver%s' % document.pdf.url) if (document.pdf and
-                                                                        document.pdf.url) else None,
+            u'pdf_url': build_absolute_test_url(document.pdf.url) if (document.pdf and
+                                                                      document.pdf.url) else None,
             u'transactions': transactions,
             u'total_in_transaction_currency': document.total_in_transaction_currency
         }
@@ -98,7 +104,8 @@ class TestDocumentEndpoints(APITestCase):
             One proforma, one invoice, without related documents
         """
         proforma = ProformaFactory.create()
-        invoice = InvoiceFactory.create()
+        invoice_entries = DocumentEntryFactory.create_batch(3)
+        invoice = InvoiceFactory.create(invoice_entries=invoice_entries)
         invoice.issue()
         payment_method = PaymentMethodFactory.create(customer=invoice.customer)
         transaction = TransactionFactory.create(payment_method=payment_method,
@@ -111,7 +118,7 @@ class TestDocumentEndpoints(APITestCase):
             response = self.client.get(url)
 
         # ^ there's a bug where specifying format='json' doesn't work
-        response_data = json.loads(json.dumps(response.data))
+        response_data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response_data), 2)
@@ -126,8 +133,8 @@ class TestDocumentEndpoints(APITestCase):
             One proforma with a related invoice, one invoice
         """
         proforma = ProformaFactory.create()
-        invoice1 = InvoiceFactory.create(proforma=proforma)
-        proforma.invoice = invoice1
+        invoice1 = InvoiceFactory.create(related_document=proforma)
+        proforma.related_document = invoice1
         proforma.save()
 
         invoice2 = InvoiceFactory.create()

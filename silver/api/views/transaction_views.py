@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from django.http import Http404
+from django_filters.rest_framework import DjangoFilterBackend
 from django_fsm import TransitionNotAllowed
-from rest_framework import permissions, filters, status
+from rest_framework import permissions, status
 from rest_framework.generics import ListCreateAPIView, get_object_or_404, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,7 +16,7 @@ from silver.models import PaymentMethod, Transaction
 class TransactionList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = TransactionSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = TransactionFilter
 
     def get_queryset(self):

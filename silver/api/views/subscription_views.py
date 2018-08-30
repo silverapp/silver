@@ -3,7 +3,8 @@ from decimal import Decimal
 
 from annoying.functions import get_object_or_None
 from django.utils import timezone
-from rest_framework import generics, permissions, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -23,7 +24,7 @@ class MeteredFeatureList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = MeteredFeaturesFilter
 
 
@@ -40,7 +41,7 @@ class MeteredFeatureDetail(generics.RetrieveAPIView):
 class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = SubscriptionFilter
 
     def get_queryset(self):
@@ -237,8 +238,9 @@ class MeteredFeatureUnitsLogDetail(APIView):
             return Response({"detail": "Metered Feature Not found."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        if subscription.state != 'active':
-            return Response({"detail": "Subscription is not active."},
+        if subscription.state not in [subscription.STATES.ACTIVE,
+                                      subscription.STATES.CANCELED]:
+            return Response({"detail": "Subscription is %s." % subscription.state},
                             status=status.HTTP_403_FORBIDDEN)
 
         required_fields = ['date', 'count', 'update_type']
@@ -287,7 +289,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
                 if i['start_date'] == bsd and i['end_date'] == bed),
             None)
 
-        if interval is None:
+        if not interval:
             return Response({"detail": "Date is out of bounds."},
                             status=status.HTTP_400_BAD_REQUEST)
 

@@ -1,5 +1,8 @@
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from rest_framework.relations import HyperlinkedRelatedField
+
+from django.conf import settings
 
 from silver.api.serializers.product_codes_serializer import ProductCodeRelatedField
 from silver.models import MeteredFeature
@@ -23,7 +26,7 @@ class PaymentMethodTransactionsUrl(serializers.HyperlinkedIdentityField):
     def get_url(self, obj, view_name, request, format):
         lookup_value = getattr(obj, self.lookup_field)
         kwargs = {'payment_method_id': str(lookup_value),
-                  'customer_pk': obj.customer.pk}
+                  'customer_pk': obj.customer_id}
         return self.reverse(view_name, kwargs=kwargs,
                             request=request, format=format)
 
@@ -49,4 +52,11 @@ class MeteredFeatureSerializer(serializers.ModelSerializer):
 
 class PDFUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
-        return request.build_absolute_uri(obj.pdf.url) if (obj.pdf and obj.pdf.url) else None
+        if not (obj.pdf and obj.pdf.url):
+            return None
+
+        if getattr(settings, 'SILVER_SHOW_PDF_STORAGE_URL', True):
+            return request.build_absolute_uri(obj.pdf.url)
+
+        return self.reverse(view_name, kwargs={'pdf_pk': obj.pdf.pk},
+                            request=request, format=format)

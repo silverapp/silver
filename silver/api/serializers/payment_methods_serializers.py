@@ -29,7 +29,7 @@ class PaymentProcessorUrl(serializers.HyperlinkedRelatedField):
 class PaymentMethodUrl(serializers.HyperlinkedRelatedField):
     def get_url(self, obj, view_name, request, format):
         kwargs = {'payment_method_id': obj.pk,
-                  'customer_pk': obj.customer.pk}
+                  'customer_pk': obj.customer_id}
         return self.reverse(view_name, kwargs=kwargs, request=request, format=format)
 
     def get_object(self, view_name, view_args, view_kwargs):
@@ -41,7 +41,6 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
                            read_only=True)
     transactions = PaymentMethodTransactionsUrl(
         view_name='payment-method-transaction-list', source='*')
-    customer = CustomerUrl(view_name='customer-detail', read_only=True)
     payment_processor_name = serializers.ModelField(
         model_field=PaymentMethod()._meta.get_field('payment_processor'),
         source="payment_processor",
@@ -60,6 +59,7 @@ class PaymentMethodSerializer(serializers.HyperlinkedModelSerializer):
                   'canceled', 'valid_until', 'display_info')
         extra_kwargs = {
             'added_at': {'read_only': True},
+            'customer': {'read_only': True, 'lookup_url_kwarg': 'customer_pk'}
         }
 
     def validate(self, attrs):

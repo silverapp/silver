@@ -3,8 +3,7 @@ from rest_framework import serializers
 # from silver.api.serializers import PDFUrl
 from silver.api.serializers.common import CustomerUrl, PDFUrl
 from silver.api.serializers.transaction_serializers import TransactionSerializer
-from silver.models import DocumentEntry, Customer, Transaction, Invoice, Proforma
-from silver.models.documents import Document
+from silver.models import DocumentEntry, Customer, Invoice, Proforma, BillingDocumentBase
 
 
 class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
@@ -53,25 +52,30 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
     """
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     url = DocumentUrl(proforma_view_name='proforma-detail',
                       invoice_view_name='invoice-detail', )
 
     transactions = serializers.SerializerMethodField()
 
     def get_transactions(self, document):
-        transactions = None
-
         if document.kind == 'invoice':
-            transactions = Transaction.objects.filter(invoice_id=document.id)
+            transactions = document.invoice_transactions.all()
         elif document.kind == 'proforma':
-            transactions = Transaction.objects.filter(proforma_id=document.id)
+            transactions = document.proforma_transactions.all()
+        else:
+            return []
+
+        for transaction in transactions:
+            # This is done to avoid prefetching already prefetched resources
+            transaction.payment_method.customer = document.customer
+            transaction.provider = document.provider
 
         return TransactionSerializer(transactions, many=True,
                                      context=self.context).data
 
     class Meta:
-        model = Document
+        model = BillingDocumentBase
         fields = ('id', 'url', 'kind', 'series', 'number', 'provider',
                   'customer', 'due_date', 'issue_date', 'paid_date',
                   'cancel_date', 'sales_tax_name', 'sales_tax_percent',
@@ -82,7 +86,7 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
 
 class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
     invoice_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
@@ -99,7 +103,8 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('archived_provider', 'archived_customer', 'total',
                             'total_in_transaction_currency')
         extra_kwargs = {
-            'transaction_currency': {'required': False}
+            'transaction_currency': {'required': False},
+            'proforma': {'source': 'related_document', 'view_name': 'proforma-detail'}
         }
 
     def create(self, validated_data):
@@ -151,7 +156,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
 class ProformaSerializer(serializers.HyperlinkedModelSerializer):
     proforma_entries = DocumentEntrySerializer(many=True)
-    pdf_url = PDFUrl(view_name='', source='*', read_only=True)
+    pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
@@ -168,7 +173,8 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('archived_provider', 'archived_customer', 'total',
                             'total_in_transaction_currency')
         extra_kwargs = {
-            'transaction_currency': {'required': False}
+            'transaction_currency': {'required': False},
+            'invoice': {'source': 'related_document', 'view_name': 'invoice-detail'}
         }
 
     def create(self, validated_data):

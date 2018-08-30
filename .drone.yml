@@ -1,12 +1,8 @@
-matrix:
-  DJANGO_VERSION:
-    - <1.9
-    - <2.0
-
 pipeline:
   test:
     image: presslabs/silver
     pull: true
+    group: build
     environment:
       - SILVER_DB_ENGINE=django.db.backends.mysql
       - SILVER_DB_NAME=test_db
@@ -22,6 +18,7 @@ pipeline:
 
   publish-docker:
     image: plugins/docker
+    group: publish
     repo: presslabs/silver
     tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
     force_tag: true
@@ -41,3 +38,7 @@ services:
       - MYSQL_PASSWORD=silver
   redis:
     image: redis:3-alpine
+
+matrix:
+  DJANGO_VERSION:
+    - <2.0

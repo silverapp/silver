@@ -33,7 +33,7 @@ from silver.tests.factories import (AdminUserFactory, CustomerFactory,
                                     ProviderFactory, InvoiceFactory,
                                     SubscriptionFactory, TransactionFactory,
                                     PaymentMethodFactory)
-
+from silver.tests.utils import build_absolute_test_url
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -49,9 +49,12 @@ class TestInvoiceEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': "",
             'number': "",
             'currency': 'RON',
@@ -68,8 +71,8 @@ class TestInvoiceEndpoints(APITestCase):
             "id": response.data["id"],
             "series": invoice.series,
             "number": invoice.number,
-            "provider": "http://testserver/providers/%s/" % provider.pk,
-            "customer": "http://testserver/customers/%s/" % customer.pk,
+            "provider": provider_url,
+            "customer": customer_url,
             "archived_provider": '{}',
             "archived_customer": '{}',
             "due_date": None,
@@ -97,9 +100,12 @@ class TestInvoiceEndpoints(APITestCase):
         SubscriptionFactory.create()
 
         url = reverse('invoice-list')
+        provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+        customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
         data = {
-            'provider': 'http://testserver/providers/%s/' % provider.pk,
-            'customer': 'http://testserver/customers/%s/' % customer.pk,
+            'provider': provider_url,
+            'customer': customer_url,
             'series': None,
             'number': None,
             'currency': 'RON',
@@ -130,12 +136,16 @@ class TestInvoiceEndpoints(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_get_invoice(self):
+    @patch('silver.api.serializers.common.settings')
+    def test_get_invoice(self, mocked_settings):
         InvoiceFactory.reset_sequence(1)
         TransactionFactory.reset_sequence(1)
 
         customer = CustomerFactory.create()
         invoice = InvoiceFactory.create(customer=customer, state=Invoice.STATES.ISSUED)
+
+        invoice.generate_pdf()
+
         with mute_signals(pre_save):
             transactions = [
                 TransactionFactory.create(
@@ -147,80 +157,95 @@ class TestInvoiceEndpoints(APITestCase):
                                  Transaction.States.Refunded,
                                  Transaction.States.Failed]
             ]
+
         expected_transactions = [{
             "id": str(transaction.uuid),
-            "url": "http://testserver/customers/%s/transactions/%s/" %
-                   (invoice.customer.pk, transaction.uuid),
-            "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
-            "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
+            "url": build_absolute_test_url(reverse('transaction-detail',
+                                                   [transaction.customer.pk, transaction.uuid])),
+            "customer": build_absolute_test_url(reverse('customer-detail',
+                                                        [transaction.customer.id])),
+            "provider": build_absolute_test_url(reverse('provider-detail',
+                                                        [transaction.provider.id])),
             "amount": "%s.00" % str(transaction.amount),
             "currency": "USD",
             "state": transaction.state,
-            "proforma": "http://testserver/proformas/%s/" % transaction.proforma.pk,
-            "invoice": "http://testserver/invoices/%s/" % transaction.invoice.pk,
+            "proforma": build_absolute_test_url(reverse('proforma-detail',
+                                                        [transaction.proforma.id])),
+            "invoice": build_absolute_test_url(reverse('invoice-detail',
+                                                       [transaction.invoice.id])),
             "can_be_consumed": transaction.can_be_consumed,
             "payment_processor": transaction.payment_processor,
-            "payment_method": "http://testserver/customers/%s/payment_methods/%s/" %
-                              (invoice.customer.pk, transaction.payment_method.pk),
-            "pay_url": "http://testserver/pay/token/"
-                       if transaction.state == Transaction.States.Initial else None,
+            "payment_method": build_absolute_test_url(reverse('payment-method-detail',
+                                                              [transaction.customer.pk,
+                                                               transaction.payment_method.pk])),
+            "pay_url": (build_absolute_test_url(reverse('payment', ['token']))
+                        if transaction.state == Transaction.States.Initial else None),
         } for transaction in transactions]
 
         with patch('silver.utils.payments._get_jwt_token') as mocked_token:
             mocked_token.return_value = 'token'
-
             url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
-            response = self.client.get(url)
 
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            expected_response = {
-                "id": invoice.pk,
-                "series": "InvoiceSeries",
-                "number": 1,
-                "provider": "http://testserver/providers/%s/" % invoice.provider.pk,
-                "customer": "http://testserver/customers/%s/" % invoice.customer.pk,
-                "archived_provider": '{}',
-                "archived_customer": '{}',
-                "due_date": None,
-                "issue_date": invoice.issue_date.strftime('%Y-%m-%d'),
-                "paid_date": None,
-                "cancel_date": None,
-                "sales_tax_name": "VAT",
-                "sales_tax_percent": '1.00',
-                "currency": "RON",
-                "transaction_currency": invoice.transaction_currency,
-                "transaction_xe_rate": ("%.4f" % invoice.transaction_xe_rate
-                                        if invoice.transaction_xe_rate else None),
-                "transaction_xe_date": invoice.transaction_xe_date,
-                "state": "issued",
-                "proforma": "http://testserver/proformas/%s/" % invoice.proforma.pk,
-                "invoice_entries": [],
-                "pdf_url": invoice.pdf.url,
-                "total": 0
-            }
-            for field in expected_response:
-                self.assertEqual(expected_response[field], response.data[field],
-                                 msg=("Expected %s, actual %s for field %s" % (
-                                      expected_response[field], response.data[field],
-                                      field)))
+            for show_pdf_storage_url, pdf_url in [
+                (True, build_absolute_test_url(invoice.pdf.url)),
+                (False, build_absolute_test_url(reverse('pdf', args=[invoice.pdf.pk])))
+            ]:
+                mocked_settings.SILVER_SHOW_PDF_STORAGE_URL = show_pdf_storage_url
 
-            self.assertEqual(len(response.data["transactions"]),
-                             len(expected_transactions))
+                response = self.client.get(url)
 
-            for actual_transaction in response.data["transactions"]:
-                expected_transaction = [
-                    transaction for transaction in expected_transactions if
-                    transaction["id"] == actual_transaction["id"]
-                ]
-                self.assertTrue(expected_transaction)
-                expected_transaction = expected_transaction[0]
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                expected_response = {
+                    "id": invoice.pk,
+                    "series": "InvoiceSeries",
+                    "number": 1,
+                    "provider": build_absolute_test_url(reverse('provider-detail',
+                                                                [invoice.provider.pk])),
+                    "customer": build_absolute_test_url(reverse('customer-detail',
+                                                                [invoice.customer.pk])),
+                    "archived_provider": '{}',
+                    "archived_customer": '{}',
+                    "due_date": None,
+                    "issue_date": invoice.issue_date.strftime('%Y-%m-%d'),
+                    "paid_date": None,
+                    "cancel_date": None,
+                    "sales_tax_name": "VAT",
+                    "sales_tax_percent": '1.00',
+                    "currency": "RON",
+                    "transaction_currency": invoice.transaction_currency,
+                    "transaction_xe_rate": ("%.4f" % invoice.transaction_xe_rate
+                                            if invoice.transaction_xe_rate else None),
+                    "transaction_xe_date": invoice.transaction_xe_date,
+                    "state": "issued",
+                    "proforma": build_absolute_test_url(reverse('proforma-detail',
+                                                                [invoice.related_document.pk])),
+                    "invoice_entries": [],
+                    "pdf_url": pdf_url,
+                    "total": 0
+                }
+                for field in expected_response:
+                    self.assertEqual(expected_response[field], response.data[field],
+                                     msg=("Expected %s, actual %s for field %s" % (
+                                          expected_response[field], response.data[field],
+                                          field)))
 
-                self.assertEqual(
-                    expected_transaction[field], actual_transaction[field],
-                    msg=("Expected %s, actual %s for field %s" % (
-                        expected_response[field], response.data[field], field)
-                         )
-                )
+                self.assertEqual(len(response.data["transactions"]),
+                                 len(expected_transactions))
+
+                for actual_transaction in response.data["transactions"]:
+                    expected_transaction = [
+                        transaction for transaction in expected_transactions if
+                        transaction["id"] == actual_transaction["id"]
+                    ]
+                    self.assertTrue(expected_transaction)
+                    expected_transaction = expected_transaction[0]
+
+                    self.assertEqual(
+                        expected_transaction[field], actual_transaction[field],
+                        msg=("Expected %s, actual %s for field %s" % (
+                            expected_response[field], response.data[field], field)
+                             )
+                    )
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})

@@ -18,4 +18,3 @@ from .entries import DocumentEntry
 from .invoice import Invoice
 from .proforma import Proforma
 from .pdf import PDF
-from .document import Document

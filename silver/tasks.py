@@ -7,7 +7,7 @@ from django.utils import timezone
 from redis.exceptions import LockError
 
 from silver.documents_generator import DocumentsGenerator
-from silver.models import Invoice, Proforma, Transaction
+from silver.models import Invoice, Proforma, Transaction, BillingDocumentBase
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.vendors.redis_server import redis
 
@@ -19,10 +19,7 @@ PDF_GENERATION_TIME_LIMIT = getattr(settings, 'PDF_GENERATION_TIME_LIMIT',
 @shared_task(base=QueueOnce, once={'graceful': True},
              time_limit=PDF_GENERATION_TIME_LIMIT)
 def generate_pdf(document_id, document_type):
-    if document_type == 'Invoice':
-        document = Invoice.objects.get(id=document_id)
-    else:
-        document = Proforma.objects.get(id=document_id)
+    document = BillingDocumentBase.objects.get(id=document_id, kind=document_type)
 
     document.generate_pdf()
 
@@ -96,7 +93,7 @@ def execute_transaction(transaction_id):
     if payment_processor.type != PaymentProcessorTypes.Triggered:
         return
 
-    payment_processor.execute_transaction(transaction)
+    payment_processor.process_transaction(transaction)
 
 
 @shared_task(ignore_result=True)

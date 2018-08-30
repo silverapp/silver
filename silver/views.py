@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import urllib
 from furl import furl
 from dal import autocomplete
 
@@ -50,9 +51,13 @@ def complete_payment_view(request, transaction, expired=None):
         payment_processor.handle_transaction_response(transaction, request)
 
     if 'return_url' in request.GET:
-        redirect_url = furl(request.GET['return_url']).add({
-                                'transaction_uuid': transaction.uuid
-                            }).url
+        redirect_url = urllib.unquote(
+            furl(request.GET['return_url']).add(
+                {
+                    'transaction_uuid': transaction.uuid
+                }
+            ).url
+        )
         return HttpResponseRedirect(redirect_url)
     else:
         return render(request, 'transactions/complete_payment.html',
@@ -108,7 +113,7 @@ class DocumentAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             q = self.q.rsplit('-')
             if len(q) == 2:
-                query = (Q(series=q[0]), Q(number=q[1]))
+                query = (Q(series=q[0]) | Q(number=q[1]))
             else:
                 query = (Q(series__istartswith=self.q) |
                          Q(number__istartswith=self.q) |
@@ -139,7 +144,7 @@ class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
         if not (self.request.user.is_authenticated() and self.request.user.is_staff):
             raise Http404
 
-        queryset = PaymentMethod.objects.all()
+        queryset = PaymentMethod.objects.exclude(canceled=True)
 
         if self.q:
             query = (Q(customer__first_name__istartswith=self.q) |

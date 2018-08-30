@@ -13,6 +13,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunSQL(
+            sql="""
+                DROP VIEW IF EXISTS silver_document;
+            """,
+        ),
         migrations.AlterField(
             model_name='customer',
             name='country',
@@ -102,5 +107,43 @@ class Migration(migrations.Migration):
             model_name='transaction',
             name='data',
             field=annoying.fields.JSONField(blank=True, default={}, null=True),
+        ),
+        migrations.RunSQL(
+            sql="""
+                DROP VIEW IF EXISTS silver_document;
+                CREATE VIEW silver_document AS SELECT
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
+                    paid_date, cancel_date, state, provider_id, customer_id,
+                    proforma_id as related_document_id, archived_customer,
+                    archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
+                    transaction_currency
+                    FROM silver_invoice
+                UNION
+                SELECT
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
+                    paid_date, cancel_date, state, provider_id, customer_id,
+                    NULL as related_document_id, archived_customer,
+                    archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
+                    transaction_currency
+                    FROM silver_proforma WHERE invoice_id is NULL
+            """,
+            reverse_sql="""
+                DROP VIEW IF EXISTS silver_document;
+                CREATE VIEW silver_document AS SELECT
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
+                    paid_date, cancel_date, state, provider_id, customer_id,
+                    proforma_id as related_document_id, archived_customer,
+                    archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,
+                    transaction_currency
+                    FROM silver_invoice
+                UNION
+                SELECT
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
+                    paid_date, cancel_date, state, provider_id, customer_id,
+                    NULL as related_document_id, archived_customer,
+                    archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,
+                    transaction_currency
+                    FROM silver_proforma WHERE invoice_id is NULL
+            """
         ),
     ]

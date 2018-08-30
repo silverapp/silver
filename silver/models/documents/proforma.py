@@ -16,21 +16,27 @@
 from django_fsm import transition
 
 from django.core.exceptions import ValidationError
-from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .base import BillingDocumentBase
+from .base import BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
 from .entries import DocumentEntry
 from .invoice import Invoice
 from silver.models.billing_entities import Provider
 
 
-class Proforma(BillingDocumentBase):
-    invoice = models.ForeignKey('Invoice', blank=True, null=True,
-                                related_name='related_proforma')
+class ProformaManager(BillingDocumentManager):
+    def get_queryset(self):
+        queryset = super(BillingDocumentManager, self).get_queryset()
+        return queryset.filter(kind='proforma').prefetch_related('proforma_entries__product_code',
+                                                                 'proforma_entries__invoice')
 
-    kind = 'Proforma'
+
+class Proforma(BillingDocumentBase):
+    objects = ProformaManager.from_queryset(BillingDocumentQuerySet)()
+
+    class Meta:
+        proxy = True
 
     def __init__(self, *args, **kwargs):
         super(Proforma, self).__init__(*args, **kwargs)
@@ -40,6 +46,10 @@ class Proforma(BillingDocumentBase):
 
         customer_field = self._meta.get_field("customer")
         customer_field.related_name = "proformas"
+
+    @property
+    def transactions(self):
+        return self.proforma_transactions.all()
 
     def clean(self):
         super(Proforma, self).clean()
@@ -66,15 +76,15 @@ class Proforma(BillingDocumentBase):
     def pay(self, paid_date=None):
         super(Proforma, self)._pay(paid_date)
 
-        if not self.invoice:
-            self.invoice = self._new_invoice()
-            self.invoice.issue()
-            self.invoice.pay(paid_date=paid_date)
+        if not self.related_document:
+            self.related_document = self._new_invoice()
+            self.related_document.issue()
+            self.related_document.pay(paid_date=paid_date)
 
             # if the proforma is paid, the invoice due_date should be issue_date
-            self.invoice.due_date = self.invoice.issue_date
+            self.related_document.due_date = self.related_document.issue_date
 
-            self.invoice.save()
+            self.related_document.save()
             self.save()
 
     def create_invoice(self):
@@ -82,21 +92,21 @@ class Proforma(BillingDocumentBase):
             raise ValueError("You can't create an invoice from a %s proforma, "
                              "only from an issued one" % self.state)
 
-        if self.invoice:
+        if self.related_document:
             raise ValueError("This proforma already has an invoice { %s }"
-                             % self.invoice)
+                             % self.related_document)
 
-        self.invoice = self._new_invoice()
-        self.invoice.issue()
+        self.related_document = self._new_invoice()
+        self.related_document.issue()
 
         self.save()
 
-        return self.invoice
+        return self.related_document
 
     def _new_invoice(self):
         # Generate the new invoice based this proforma
         invoice_fields = self.fields_for_automatic_invoice_generation
-        invoice_fields.update({'proforma': self})
+        invoice_fields.update({'related_document': self})
         invoice = Invoice.objects.create(**invoice_fields)
 
         # For all the entries in the proforma => add the link to the new
@@ -123,10 +133,6 @@ class Proforma(BillingDocumentBase):
                   'transaction_currency', 'transaction_xe_rate',
                   'transaction_xe_date']
         return {field: getattr(self, field, None) for field in fields}
-
-    @property
-    def related_document(self):
-        return self.invoice
 
     @property
     def entries(self):

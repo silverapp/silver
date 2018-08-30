@@ -1,22 +1,26 @@
+import django
+from django.db.models import Q
+from django.http import HttpResponseRedirect
+
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, filters, status
 from rest_framework.generics import get_object_or_404, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from silver.api.filters import InvoiceFilter, ProformaFilter, DocumentFilter
+from silver.api.filters import InvoiceFilter, ProformaFilter, BillingDocumentFilter
 from silver.api.serializers.documents_serializers import InvoiceSerializer, \
     DocumentEntrySerializer, ProformaSerializer, DocumentSerializer
-from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma
-from silver.models.documents import Document
+from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma, PDF
 
 
 class InvoiceListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()\
-        .select_related('proforma')\
-        .prefetch_related('transaction_set')
-    filter_backends = (filters.DjangoFilterBackend,)
+        .select_related('related_document')\
+        .prefetch_related('invoice_transactions')
+    filter_backends = (DjangoFilterBackend,)
     filter_class = InvoiceFilter
 
 
@@ -205,9 +209,9 @@ class ProformaListCreate(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProformaSerializer
     queryset = Proforma.objects.all()\
-        .select_related('invoice')\
-        .prefetch_related('transaction_set')
-    filter_backends = (filters.DjangoFilterBackend,)
+        .select_related('related_document')\
+        .prefetch_related('proforma_transactions')
+    filter_backends = (DjangoFilterBackend,)
     filter_class = ProformaFilter
 
 
@@ -265,10 +269,10 @@ class ProformaInvoiceRetrieveCreate(APIView):
             return Response({"detail": "Proforma not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        if not proforma.invoice:
+        if not proforma.related_document:
             proforma.create_invoice()
 
-        serializer = InvoiceSerializer(proforma.invoice,
+        serializer = InvoiceSerializer(proforma.related_document,
                                        context={'request': request})
         return Response(serializer.data)
 
@@ -281,7 +285,7 @@ class ProformaInvoiceRetrieveCreate(APIView):
             return Response({"detail": "Proforma not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        serializer = InvoiceSerializer(proforma.invoice,
+        serializer = InvoiceSerializer(proforma.related_document,
                                        context={'request': request})
         return Response(serializer.data)
 
@@ -339,10 +343,33 @@ class ProformaStateHandler(APIView):
 class DocumentList(ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentSerializer
-    filter_class = DocumentFilter
-    filter_backends = (filters.OrderingFilter, filters.DjangoFilterBackend)
+    filter_class = BillingDocumentFilter
+    filter_backends = (filters.OrderingFilter, DjangoFilterBackend)
     ordering_fields = ('due_date', )
     ordering = ('-due_date', '-number')
 
     def get_queryset(self):
-        return Document.objects.all().select_related('provider', 'customer')
+        django_version = django.get_version().split('.')
+        if django_version[0] == '1' and int(django_version[1]) < 11:
+            return BillingDocumentBase.objects.filter(
+                Q(kind='invoice') | Q(kind='proforma', related_document=None)
+            ).select_related('customer', 'provider', 'pdf')
+
+        invoices = BillingDocumentBase.objects \
+            .filter(kind='invoice') \
+            .prefetch_related('invoice_transactions__payment_method')
+        proformas = BillingDocumentBase.objects \
+            .filter(kind='proforma', related_document=None) \
+            .prefetch_related('proforma_transactions__payment_method')
+
+        return (invoices | proformas).select_related('customer', 'provider', 'pdf')
+
+
+class PDFRetrieve(generics.RetrieveAPIView):
+    permission_classes = (permissions.IsAdminUser,)
+    queryset = PDF.objects.all()
+    lookup_url_kwarg = 'pdf_pk'
+
+    def get(self, *args, **kwargs):
+        pdf = self.get_object()
+        return HttpResponseRedirect(pdf.url)

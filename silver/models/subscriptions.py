@@ -173,7 +173,7 @@ class Subscription(models.Model):
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         protected=True, help_text='The state the subscription is in.'
     )
-    meta = JSONField(blank=True, null=True)
+    meta = JSONField(blank=True, null=True, default={})
 
     def clean(self):
         errors = dict()
@@ -382,13 +382,21 @@ class Subscription(models.Model):
                                     ignore_trial=False, granulate=True)
 
     def updateable_buckets(self):
+        buckets = []
+
         if self.state in ['ended', 'inactive']:
-            return None
-        buckets = list()
+            return buckets
+
         start_date = self.bucket_start_date()
         end_date = self.bucket_end_date()
+
         if start_date is None or end_date is None:
             return buckets
+
+        if self.state == self.STATES.CANCELED:
+            if self.cancel_date < start_date:
+                return buckets
+
         buckets.append({'start_date': start_date, 'end_date': end_date})
 
         generate_after = timedelta(seconds=self.plan.generate_after)
@@ -490,12 +498,19 @@ class Subscription(models.Model):
         if generate_documents_datetime < cycle_start_datetime + generate_after:
             return False
 
-        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
+        billed_up_to_dates = self.billed_up_to_dates
+        plan_billed_up_to = billed_up_to_dates['plan_billed_up_to']
+        metered_features_billed_up_to = billed_up_to_dates['metered_features_billed_up_to']
 
         # We want to bill the subscription if the plan hasn't been billed for this cycle or
         # if the subscription has been canceled and the plan won't be billed for this cycle.
         if self.prebill_plan or self.state == self.STATES.CANCELED:
-            return plan_billed_up_to < cycle_start_date
+            plan_should_be_billed = plan_billed_up_to < cycle_start_date
+
+            if self.state == self.STATES.CANCELED:
+                return metered_features_billed_up_to < cycle_start_date or plan_should_be_billed
+
+            return plan_should_be_billed
 
         # wait until the cycle that is going to be billed ends:
         billed_cycle_end_date = self.cycle_end_date(plan_billed_up_to + ONE_DAY)
@@ -511,17 +526,18 @@ class Subscription(models.Model):
 
     @property
     def is_billed_first_time(self):
-        return self.billing_log_entries.all().count() == 0
+        return self.billing_logs.all().count() == 0
 
     @property
     def last_billing_log(self):
-        return self.billing_log_entries.order_by('billing_date').last()
+        return self.billing_logs.order_by('billing_date').last()
 
     @property
     def last_billing_date(self):
+        # ToDo: Improve this when dropping Django 1.8 support
         try:
-            return self.billing_log_entries.all()[:1].get().billing_date
-        except BillingLog.DoesNotExist:
+            return self.billing_logs.all()[0].billing_date
+        except (BillingLog.DoesNotExist, IndexError):
             # It should never get here.
             return None
 
@@ -566,13 +582,9 @@ class Subscription(models.Model):
 
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
-                bucket_after_trial = self.bucket_end_date(
-                    reference_date=self.trial_end + ONE_DAY)
-                # After trial_end comes a prorated paid period. The cancel_date
-                # should be one day after the end of the prorated paid period.
-                self.cancel_date = bucket_after_trial + ONE_DAY
+                self.cancel_date = self.bucket_end_date(reference_date=self.trial_end)
             else:
-                self.cancel_date = self.cycle_end_date() + ONE_DAY
+                self.cancel_date = self.cycle_end_date()
         elif when == self.CANCEL_OPTIONS.NOW:
             for metered_feature in self.plan.metered_features.all():
                 log = MeteredFeatureUnitsLog.objects.filter(
@@ -719,7 +731,7 @@ class Subscription(models.Model):
             # spans over 2 months and the subscription has been already billed
             # once => this month it is still on trial but it only
             # has remaining = consumed_last_cycle - included_during_trial
-            last_log_entry = self.billing_log_entries.all()[0]
+            last_log_entry = self.billing_logs.all()[0]
             if last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
                     product_code=metered_feature.product_code)
@@ -995,11 +1007,11 @@ class Subscription(models.Model):
 
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
-                                     related_name='billing_log_entries')
-    invoice = models.ForeignKey('Invoice', null=True, blank=True,
-                                related_name='billing_log_entries')
-    proforma = models.ForeignKey('Proforma', null=True, blank=True,
-                                 related_name='billing_log_entries')
+                                     related_name='billing_logs')
+    invoice = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
+                                related_name='invoice_billing_logs')
+    proforma = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
+                                 related_name='proforma_billing_logs')
     billing_date = models.DateField(
         help_text="The date when the invoice/proforma was issued."
     )
@@ -1010,6 +1022,14 @@ class BillingLog(models.Model):
         help_text="The date up to which the metered features have been billed."
     )
     total = models.DecimalField(
+        decimal_places=2, max_digits=12,
+        null=True, blank=True
+    )
+    plan_amount = models.DecimalField(
+        decimal_places=2, max_digits=12,
+        null=True, blank=True
+    )
+    metered_features_amount = models.DecimalField(
         decimal_places=2, max_digits=12,
         null=True, blank=True
     )

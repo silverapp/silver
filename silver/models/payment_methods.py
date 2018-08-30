@@ -169,7 +169,6 @@ class PaymentMethod(models.Model):
         previous_instance = kwargs.pop('previous_instance', None)
 
         super(PaymentMethod, self).full_clean(*args, **kwargs)
-
         self.clean_with_previous_instance(previous_instance)
 
         # this assumes that nobody calls clean and then modifies this object
@@ -185,8 +184,9 @@ class PaymentMethod(models.Model):
         return {}
 
     def __unicode__(self):
-        return u'{} - {}'.format(self.customer,
-                                 self.get_payment_processor_display())
+        return u'{} - {} - {}'.format(self.customer,
+                                      self.get_payment_processor_display(),
+                                      self.pk)
 
 
 def create_transactions_for_issued_documents(payment_method):
@@ -198,7 +198,7 @@ def create_transactions_for_issued_documents(payment_method):
     transactions = []
 
     for document in chain(
-        Proforma.objects.filter(invoice=None, customer=customer,
+        Proforma.objects.filter(related_document=None, customer=customer,
                                 state=Proforma.STATES.ISSUED),
         Invoice.objects.filter(state=Invoice.STATES.ISSUED, customer=customer)
     ):

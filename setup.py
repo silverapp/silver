@@ -47,9 +47,11 @@ import os
 from setuptools import setup, find_packages
 
 
-install_requires = [line.strip()
-                    for line in open("requirements/common.txt").readlines()
-                    if not line.strip().startswith('#')]
+install_requires = list(filter(
+    bool, [line.split('#')[0].strip()
+           for line in open("requirements/common.txt").readlines()
+           if not any([line.startswith('https://'), line.startswith('http://')])]
+))
 
 
 def read(fname):
@@ -60,7 +62,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version='0.3.7',
+    version='0.6.2',
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',
@@ -70,11 +72,16 @@ setup(
     author_email='ping@presslabs.com',
     url='http://www.presslabs.com/silver/',
     packages=find_packages(),
+    extras_require={
+        'dev': 'Faker'
+    },
     include_package_data=True,
     install_requires=install_requires,
+    dependency_links=[
+        'https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip#egg=xhtml2pdf'
+    ],
     classifiers=[
         'Environment :: Web Environment',
-        'Framework :: Django :: 1.8',
         'Framework :: Django :: 1.11',
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',

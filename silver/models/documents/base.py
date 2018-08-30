@@ -14,6 +14,7 @@
 
 
 import logging
+from decimal import Decimal
 from datetime import datetime, timedelta
 
 import pytz
@@ -95,14 +96,14 @@ class BillingDocumentQuerySet(models.QuerySet):
 
 class BillingDocumentManager(models.Manager):
     def get_queryset(self):
-        queryset = super(BillingDocumentManager, self).get_queryset()
-        queryset = queryset.select_related('customer', 'provider')
-        if (self.model.kind == 'Invoice'):
-            queryset = queryset.prefetch_related('invoice_entries__product_code')
-        if (self.model.kind == 'Proforma'):
-            queryset = queryset.prefetch_related('proforma_entries__product_code',
-                                                 'proforma_entries__invoice')
-        return queryset
+        return super(BillingDocumentManager, self).get_queryset() \
+                                                  .select_related('customer', 'provider',
+                                                                  'related_document')
+
+
+def get_billing_documents_kinds():
+    return ((subclass.__name__.lower(), subclass.__name__)
+            for subclass in BillingDocumentBase.__subclasses__())
 
 
 class BillingDocumentBase(models.Model):
@@ -120,6 +121,10 @@ class BillingDocumentBase(models.Model):
         (STATES.PAID, _('Paid')),
         (STATES.CANCELED, _('Canceled'))
     )
+
+    kind = models.CharField(get_billing_documents_kinds, max_length=8, db_index=True)
+    related_document = models.ForeignKey('self', blank=True, null=True,
+                                         related_name='reverse_related_document')
 
     series = models.CharField(max_length=20, blank=True, null=True,
                               db_index=True)
@@ -159,16 +164,44 @@ class BillingDocumentBase(models.Model):
                      verbose_name="State",
                      help_text='The state the invoice is in.')
 
+    _total = models.DecimalField(max_digits=19, decimal_places=2,
+                                 null=True, blank=True)
+    _total_in_transaction_currency = models.DecimalField(max_digits=19,
+                                                         decimal_places=2,
+                                                         null=True, blank=True)
+
     _last_state = None
+    _document_entries = None
 
     class Meta:
-        abstract = True
-        unique_together = ('provider', 'series', 'number')
+        unique_together = ('kind', 'provider', 'series', 'number')
         ordering = ('-issue_date', 'series', '-number')
 
     def __init__(self, *args, **kwargs):
         super(BillingDocumentBase, self).__init__(*args, **kwargs)
+
+        if not self.kind:
+            self.kind = self.__class__.__name__.lower()
+        else:
+            for subclass in BillingDocumentBase.__subclasses__():
+                if subclass.__name__.lower() == self.kind:
+                    self.__class__ = subclass
+
         self._last_state = self.state
+
+    def _get_entries(self):
+        if not self._document_entries:
+            self._document_entries = getattr(self, self.kind + '_entries').all()
+
+        return self._document_entries
+
+    def compute_total_in_transaction_currency(self):
+        return sum([Decimal(entry.total_in_transaction_currency)
+                    for entry in self._get_entries()])
+
+    def compute_total(self):
+        return sum([Decimal(entry.total)
+                    for entry in self._get_entries()])
 
     def mark_for_generation(self):
         self.pdf.mark_as_dirty()
@@ -208,6 +241,8 @@ class BillingDocumentBase(models.Model):
             self.number = self._generate_number()
 
         self.archived_customer = self.customer.get_archivable_field_values()
+        self._total = self.compute_total()
+        self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
 
     @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
@@ -403,10 +438,6 @@ class BillingDocumentBase(models.Model):
                 entry.proforma = self
             yield(entry)
 
-    @property
-    def transactions(self):
-        return self.transaction_set.all()
-
     def get_template_context(self, state=None):
         customer = Customer(**self.archived_customer)
         provider = Provider(**self.archived_provider)
@@ -498,6 +529,9 @@ class BillingDocumentBase(models.Model):
 
     @property
     def total(self):
+        if self._total is not None:
+            return self._total
+
         return sum([entry.total for entry in self.entries])
 
     @property
@@ -510,6 +544,9 @@ class BillingDocumentBase(models.Model):
 
     @property
     def total_in_transaction_currency(self):
+        if self._total_in_transaction_currency is not None:
+            return self._total_in_transaction_currency
+
         return sum([entry.total_in_transaction_currency
                     for entry in self.entries])
 

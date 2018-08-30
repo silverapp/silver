@@ -76,11 +76,13 @@ class TestInvoiceGenerationCommand(TestCase):
         metered_feature = MeteredFeatureFactory(
             included_units_during_trial=Decimal('0.00'),
             price_per_unit=mf_price)
+        currency = 'EUR'
         plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
                                   interval_count=1, generate_after=120,
                                   enabled=True, amount=Decimal('200.00'),
                                   trial_period_days=24,
-                                  metered_features=[metered_feature])
+                                  metered_features=[metered_feature],
+                                  currency=currency)
         start_date = dt.date(2015, 5, 20)
 
         # Create the prorated subscription
@@ -132,6 +134,7 @@ class TestInvoiceGenerationCommand(TestCase):
         prorated_plan_value = Decimal(18 / 30.0).quantize(Decimal('0.0000')) * plan.amount
         consumed_mfs_value = (consumed_1 + consumed_2) * mf_price
         assert proforma.total == prorated_plan_value + consumed_mfs_value
+        assert proforma.currency == currency
 
     def test_gen_for_non_consolidated_billing_with_consumed_units(self):
         """
@@ -145,10 +148,12 @@ class TestInvoiceGenerationCommand(TestCase):
         customer = CustomerFactory.create(consolidated_billing=False)
         metered_feature = MeteredFeatureFactory(included_units=Decimal('0.00'))
         plan_price = Decimal('200.00')
+        currency = 'RON'
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
                                   amount=plan_price,
-                                  metered_features=[metered_feature])
+                                  metered_features=[metered_feature],
+                                  currency=currency)
         start_date = dt.date(2014, 1, 1)
 
         # Create 3 subscriptions for the same customer
@@ -184,9 +189,10 @@ class TestInvoiceGenerationCommand(TestCase):
         for proforma in Proforma.objects.all():
             entries = proforma.proforma_entries.all()
             assert entries.count() == 2  # Plan for current month, Metered features for last month
+            assert proforma.currency == currency
 
             for entry in entries:
-                if 'plan' in entry.description.lower():
+                if entry.product_code == plan.product_code:
                     assert entry.quantity == 1
                     assert entry.unit_price == plan_price
                 else:
@@ -227,6 +233,7 @@ class TestInvoiceGenerationCommand(TestCase):
             # plan for february
             # plan for march
             assert entries.count() == 3
+            assert proforma.currency == 'USD'
 
             for entry in entries:
                 assert entry.quantity == 1
@@ -816,7 +823,7 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.proforma_entries.count() == 3
         for entry in proforma.proforma_entries.all():
             assert entry.prorated
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 assert entry.start_date == subscription.trial_end + ONE_DAY
                 assert entry.end_date == dt.date(2015, 6, 30)
             else:
@@ -897,14 +904,13 @@ class TestInvoiceGenerationCommand(TestCase):
         # - mfs trial extra june (+)
         # - remaining plan for june (+)
         assert proforma.proforma_entries.count() == 2
-        for entry in proforma.proforma_entries.all():
-            assert entry.prorated
-            if 'plan' in entry.description.lower():
-                assert entry.start_date == subscription.trial_end + ONE_DAY
-                assert entry.end_date == dt.date(2015, 6, 30)
-            else:
-                assert entry.start_date == dt.date(2015, 6, 1)
-                assert entry.end_date == subscription.trial_end
+        first_entry = proforma.proforma_entries.first()
+        assert first_entry.start_date == dt.date(2015, 6, 1)
+        assert first_entry.end_date == subscription.trial_end
+
+        second_entry = proforma.proforma_entries.last()
+        assert second_entry.start_date == subscription.trial_end + ONE_DAY
+        assert second_entry.end_date == dt.date(2015, 6, 30)
 
         prorated_plan_value = Decimal(28 / 30.0).quantize(Decimal('0.0000')) * plan.amount
         extra_mfs_during_trial = consumed_during_second_trial_part * mf_price
@@ -1665,14 +1671,14 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total == Decimal('0.00')
         assert proforma.proforma_entries.count() == 4  # plan trial and consumed mfs
         for entry in proforma.proforma_entries.all():
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 unit_price = Decimal(7 / 31.0).quantize(Decimal('0.0000')) * plan.amount
                 assert entry.quantity == 1
             else:
                 assert entry.quantity == mf_log.consumed_units
                 unit_price = metered_feature.price_per_unit
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.unit_price == unit_price
@@ -1691,11 +1697,10 @@ class TestInvoiceGenerationCommand(TestCase):
 
         assert proforma.proforma_entries.count() == 4  # plan trial (+-), plan (+) and mfs (0)
         for entry in proforma.proforma_entries.all():
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 assert entry.quantity == 1
-                if 'trial' in entry.description.lower():
+                if entry.start_date == dt.date(2015, 2, 1):  # trial
                     unit_price = plan.amount - billed_plan_amount
-                    assert entry.start_date == dt.date(2015, 2, 1)
                     assert entry.end_date == dt.date(2015, 2, 8)
                 else:
                     assert entry.start_date == dt.date(2015, 2, 9)
@@ -1707,7 +1712,7 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert entry.end_date == dt.date(2015, 2, 28)
                 unit_price = entry.unit_price
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.unit_price == unit_price
@@ -1761,7 +1766,7 @@ class TestInvoiceGenerationCommand(TestCase):
                 assert entry.start_date == dt.date(2015, 2, 1)
                 assert entry.end_date == subscription.trial_end
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.quantity == 1
@@ -1779,14 +1784,14 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.proforma_entries.count() == 3  # mfs during trial (+-) and remaining plan
 
         for entry in proforma.proforma_entries.all():
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 assert entry.quantity == 1
                 unit_price = plan_amount
             else:
                 assert entry.quantity == mf_log.consumed_units
                 unit_price = metered_feature.price_per_unit
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.unit_price == unit_price
@@ -1836,7 +1841,7 @@ class TestInvoiceGenerationCommand(TestCase):
             assert entry.end_date == dt.date(2015, 1, 31)
             unit_price = Decimal(7 / 31.0).quantize(Decimal('0.0000')) * plan.amount
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:
                 unit_price *= -1
 
             assert entry.quantity == 1
@@ -1854,14 +1859,14 @@ class TestInvoiceGenerationCommand(TestCase):
         # plan trial for february (+-)
         assert proforma.proforma_entries.count() == 4
         for entry in proforma.proforma_entries.all():
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 assert entry.quantity == 1
                 unit_price = Decimal(8 / 28.0).quantize(Decimal('0.0000')) * plan.amount
             else:
                 assert entry.quantity == mf_log.consumed_units
                 unit_price = metered_feature.price_per_unit
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.unit_price == unit_price
@@ -1877,14 +1882,14 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.proforma_entries.count() == 1  # remaining plan (+)
 
         for entry in proforma.proforma_entries.all():
-            if 'plan' in entry.description.lower():
+            if entry.product_code == plan.product_code:
                 assert entry.quantity == 1
                 unit_price = plan_amount
             else:
                 assert entry.quantity == mf_log.consumed_units
                 unit_price = metered_feature.price_per_unit
 
-            if 'discount' in entry.description.lower():
+            if entry.unit_price < 0:  # discount
                 unit_price *= -1
 
             assert entry.unit_price == unit_price

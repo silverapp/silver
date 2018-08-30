@@ -1,5 +1,6 @@
 from django.http import Http404
-from rest_framework import permissions, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import permissions, status
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, \
     get_object_or_404, RetrieveUpdateAPIView
 from rest_framework.response import Response
@@ -37,7 +38,7 @@ class PaymentProcessorDetail(RetrieveAPIView):
 class PaymentMethodList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentMethodSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = PaymentMethodFilter
 
     def get_queryset(self):

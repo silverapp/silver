@@ -7,7 +7,6 @@ from itertools import chain
 from django.db import migrations, models
 
 import silver.models.documents.pdf
-from silver.models import BillingDocumentBase
 
 
 class Migration(migrations.Migration):
@@ -24,8 +23,8 @@ class Migration(migrations.Migration):
         PDF = apps.get_model('silver', 'PDF')
 
         for document in chain(
-            Invoice.objects.using(db_alias).exclude(state=BillingDocumentBase.STATES.DRAFT),
-            Proforma.objects.using(db_alias).exclude(state=BillingDocumentBase.STATES.DRAFT),
+            Invoice.objects.using(db_alias).exclude(state='draft'),
+            Proforma.objects.using(db_alias).exclude(state='draft'),
         ):
             pdf_object = PDF.objects.using(db_alias).create()
             pdf_object.pdf_file = document.pdf_old
@@ -41,8 +40,8 @@ class Migration(migrations.Migration):
         Proforma = apps.get_model('silver', 'Proforma')
 
         for document in chain(
-            Invoice.objects.using(db_alias).exclude(state=BillingDocumentBase.STATES.DRAFT),
-            Proforma.objects.using(db_alias).exclude(state=BillingDocumentBase.STATES.DRAFT),
+            Invoice.objects.using(db_alias).exclude(state='draft'),
+            Proforma.objects.using(db_alias).exclude(state='draft'),
         ):
             document.pdf_old = document.pdf.pdf_file
             document.save()
@@ -96,7 +95,7 @@ class Migration(migrations.Migration):
             sql="""
                 DROP VIEW IF EXISTS silver_document;
                 CREATE VIEW silver_document AS SELECT
-                    'invoice' AS `kind`, id, series, number, issue_date, due_date,
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     proforma_id as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
@@ -104,7 +103,7 @@ class Migration(migrations.Migration):
                     FROM silver_invoice
                 UNION
                 SELECT
-                    'proforma' AS `kind`, id, series, number, issue_date, due_date,
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     NULL as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf_id,
@@ -114,7 +113,7 @@ class Migration(migrations.Migration):
             reverse_sql="""
                 DROP VIEW IF EXISTS silver_document;
                 CREATE VIEW silver_document AS SELECT
-                    'invoice' AS `kind`, id, series, number, issue_date, due_date,
+                    'invoice' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     proforma_id as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,
@@ -122,7 +121,7 @@ class Migration(migrations.Migration):
                     FROM silver_invoice
                 UNION
                 SELECT
-                    'proforma' AS `kind`, id, series, number, issue_date, due_date,
+                    'proforma' AS kind, id, series, number, issue_date, due_date,
                     paid_date, cancel_date, state, provider_id, customer_id,
                     NULL as related_document_id, archived_customer,
                     archived_provider, sales_tax_percent, sales_tax_name, currency, pdf,

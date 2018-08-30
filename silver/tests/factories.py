@@ -25,7 +25,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
-                           Subscription, Invoice, ProductCode,
+                           Subscription, Invoice, ProductCode, PDF,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
                            Transaction, PaymentMethod)
 from silver.tests.fixtures import manual_processor
@@ -192,6 +192,11 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
             for invoice_entry in extracted:
                 self.invoice_entries.add(invoice_entry)
 
+        if self.state != 'draft':
+            self._total = self.compute_total()
+            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.save()
+
 
 class ProformaFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -233,6 +238,11 @@ class ProformaFactory(factory.django.DjangoModelFactory):
             # A list of groups were passed in, use them
             for proforma_entry in extracted:
                 self.proforma_entries.add(proforma_entry)
+
+        if self.state != Proforma.STATES.DRAFT:
+            self._total = self.compute_total()
+            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.save()
 
 
 class DocumentEntryFactory(factory.django.DjangoModelFactory):
@@ -297,15 +307,20 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         invoice = kwargs.get('invoice')
         proforma = kwargs.get('proforma')
         if proforma:
-            proforma.invoice = invoice
+            proforma.related_document = invoice
             if invoice:
                 proforma.transaction_currency = invoice.transaction_currency
             proforma.save()
 
         if invoice:
-            invoice.proforma = proforma
+            invoice.related_document = proforma
             if proforma:
                 invoice.transaction_currency = proforma.transaction_currency
             invoice.save()
 
         return super(TransactionFactory, cls)._create(model_class, *args, **kwargs)
+
+
+class PDFFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PDF
