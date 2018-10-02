@@ -24,7 +24,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.test import TestCase, Client
-from django.utils.encoding import smart_text
+from django.utils.encoding import force_text
 
 from silver.tests.factories import InvoiceFactory
 
@@ -76,7 +76,7 @@ class InvoiceAdminTestCase(TestCase):
                     user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(invoice).pk,
                     object_id=invoice.pk,
-                    object_repr=smart_text(invoice),
+                    object_repr=force_text(invoice),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.capitalize().replace('_', ' ')

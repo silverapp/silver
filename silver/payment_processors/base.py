@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from django.conf import settings
 from django.template.loader import select_template
 from django.utils.deconstruct import deconstructible
-from django.utils.encoding import smart_text
+from django.utils.encoding import force_text
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 
@@ -99,7 +99,7 @@ class PaymentProcessorBase(object):
         return self.name
 
     def __str__(self):
-        return smart_text(self.name)
+        return force_text(self.name)
 
     def __eq__(self, other):
         return self.__class__ is other.__class__

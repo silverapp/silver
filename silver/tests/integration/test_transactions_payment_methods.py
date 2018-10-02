@@ -41,16 +41,15 @@ class TestDocumentsTransactions(TestCase):
         )
 
         expected_exception = ValidationError
-        expected_message = '{\'__all__\': [u"Currency EUR is not allowed by ' \
+        expected_message = 'Currency EUR is not allowed by ' \
                            'the payment method. Allowed currencies are ' \
-                           '[\'RON\', \'USD\']."]}'
-
+                           '[\'RON\', \'USD\'].'
         try:
             TransactionFactory.create(payment_method=payment_method,
                                       invoice=invoice)
             self.fail('{} not raised.'.format(str(expected_exception)))
         except expected_exception as e:
-            self.assertEqual(expected_message, str(e))
+            self.assertTrue(expected_message in str(e))
 
     def test_create_transactions_on_verified_payment_method_creation(self):
         customer = CustomerFactory.create()

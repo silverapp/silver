@@ -23,7 +23,7 @@ from annoying.functions import get_object_or_None
 from django_filters.rest_framework import DjangoFilterBackend
 
 from django.utils import timezone
-from django.utils.encoding import smart_text
+from django.utils.encoding import force_text
 
 from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
@@ -74,7 +74,7 @@ class SubscriptionList(generics.ListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         url = reverse('customer-detail', kwargs={'customer_pk': customer_pk},
                       request=request)
-        request.data.update({smart_text('customer'): smart_text(url)})
+        request.data.update({force_text('customer'): force_text(url)})
 
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import errno
 import logging
@@ -43,7 +43,7 @@ from django.forms import ChoiceField
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.utils.encoding import smart_text
+from django.utils.encoding import force_text
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
@@ -64,7 +64,7 @@ def metadata(obj):
     d = u'(None)'
     if obj.meta:
         d = u''
-        for key, value in obj.meta.iteritems():
+        for key, value in obj.meta.items():
             d += u'%s: <code>%s</code><br>' % (escape(key), escape(value))
     return d
 metadata.allow_tags = True
@@ -225,7 +225,7 @@ class SubscriptionAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=smart_text(entry),
+                    object_repr=force_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -650,7 +650,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=smart_text(entry),
+                    object_repr=force_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=readable_action
@@ -659,7 +659,7 @@ class BillingDocumentAdmin(ModelAdmin):
             except TransitionNotAllowed:
                 failed_changes.append(entry.id)
             except ValueError as error:
-                failed_actions.append(error.message)
+                failed_actions.append(force_text(error))
             except AttributeError:
                 failed_actions.append('{action} failed for {document}.'.format(
                     action=readable_action, document=entry

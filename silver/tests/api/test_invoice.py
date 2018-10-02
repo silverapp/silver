@@ -31,7 +31,7 @@ from rest_framework.test import APITestCase
 
 from django.db.models.signals import pre_save
 from django.utils import timezone
-from django.utils.encoding import smart_text
+from django.utils.encoding import force_text
 from django.conf import settings
 
 from silver.models import Invoice, Transaction
@@ -164,7 +164,6 @@ class TestInvoiceEndpoints(APITestCase):
                                  Transaction.States.Refunded,
                                  Transaction.States.Failed]
             ]
-
         expected_transactions = [{
             "id": str(transaction.uuid),
             "url": build_absolute_test_url(reverse('transaction-detail',
@@ -173,8 +172,8 @@ class TestInvoiceEndpoints(APITestCase):
                                                         [transaction.customer.id])),
             "provider": build_absolute_test_url(reverse('provider-detail',
                                                         [transaction.provider.id])),
-            "amount": "%s.00" % str(transaction.amount),
-            "currency": "USD",
+            "amount": "%s.00" % str(transaction.amount) if not isinstance(transaction.amount, Decimal) else str(transaction.amount),
+            "currency": "RON",
             "state": transaction.state,
             "proforma": build_absolute_test_url(reverse('proforma-detail',
                                                         [transaction.proforma.id])),
@@ -246,13 +245,13 @@ class TestInvoiceEndpoints(APITestCase):
                     ]
                     self.assertTrue(expected_transaction)
                     expected_transaction = expected_transaction[0]
-
-                    self.assertEqual(
-                        expected_transaction[field], actual_transaction[field],
-                        msg=("Expected %s, actual %s for field %s" % (
-                            expected_response[field], response.data[field], field)
-                             )
-                    )
+                    for field in expected_transaction:
+                        self.assertEqual(
+                            expected_transaction[field], actual_transaction[field],
+                            msg=("Expected %s, actual %s for field %s" % (
+                                expected_transaction[field], actual_transaction[field], field)
+                                 )
+                        )
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -527,7 +526,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(item in list(response.data.items())
-                        for item in mandatory_content.iteritems()))
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -554,7 +553,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
@@ -610,7 +609,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -636,7 +635,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -689,7 +688,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -716,7 +715,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         assert response.status_code == status.HTTP_200_OK
         assert all(item in list(response.data.items())
-                   for item in mandatory_content.iteritems())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()

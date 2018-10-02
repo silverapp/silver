@@ -11,8 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import absolute_import
+ 
+from __future__ import absolute_import, unicode_literals
 
 import jwt
 import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
@@ -21,25 +21,24 @@ from datetime import datetime
 from furl import furl
 
 from django.conf import settings
+from django.utils.encoding import force_text
 
 from rest_framework.reverse import reverse
 
 
 def _get_jwt_token(transaction):
     valid_until = datetime.utcnow() + settings.SILVER_PAYMENT_TOKEN_EXPIRATION
-    return jwt.encode({
-        'exp': valid_until,
-        'transaction': str(transaction.uuid)
-    }, settings.PAYMENT_METHOD_SECRET)
+    data = {'transaction': force_text(transaction.uuid), 'exp': valid_until}
+    return force_text(jwt.encode(data, settings.PAYMENT_METHOD_SECRET))
 
 
 def get_payment_url(transaction, request):
-    kwargs = {'token': str(_get_jwt_token(transaction))}
+    kwargs = {'token': _get_jwt_token(transaction)}
     return reverse('payment', kwargs=kwargs, request=request)
 
 
 def get_payment_complete_url(transaction, request):
-    kwargs = {'token': str(_get_jwt_token(transaction))}
+    kwargs = {'token': _get_jwt_token(transaction)}
     url = furl(reverse('payment-complete', kwargs=kwargs, request=request))
 
     if request and 'return_url' in request.GET:
