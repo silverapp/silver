@@ -57,21 +57,23 @@ class PDF(Model):
         return self.pdf_file.url if self.pdf_file else None
 
     def generate(self, template, context, upload=True):
-        with BytesIO() as pdf_file_object:
-            html = template.render(context)
-            pisa.pisaDocument(
-                src=html.encode("UTF-8"),
-                dest=pdf_file_object,
-                encoding='UTF-8',
-                link_callback=fetch_resources)
-            pdf_file_object.seek(0)
-            if upload:
-                self.upload(
-                    pdf_file_object=force_bytes(pdf_file_object),
-                    filename=context['filename']
-                )
-            return pdf_file_object
-        return
+        html = template.render(context)
+        pdf_file_object = BytesIO()
+        pisa.pisaDocument(
+            src=html.encode("UTF-8"),
+            dest=pdf_file_object,
+            encoding='UTF-8',
+            link_callback=fetch_resources)
+
+        if not pdf_file_object:
+            return
+
+        if upload:
+            self.upload(
+                pdf_file_object=force_bytes(pdf_file_object),
+                filename=context['filename']
+            )
+        return pdf_file_object
 
     def upload(self, pdf_file_object, filename):
         # the PDF's upload_path attribute needs to be set before calling this method
