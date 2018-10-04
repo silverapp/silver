@@ -22,7 +22,8 @@ from xhtml2pdf import pisa
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+from django.db.models import (
+    Model, FileField, TextField, UUIDField, PositiveIntegerField, F)
 from django.db.models.functions import Greatest
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
@@ -58,13 +59,17 @@ class PDF(Model):
     def generate(self, template, context, upload=True):
         with BytesIO() as pdf_file_object:
             html = template.render(context)
-            pisa.pisaDocument(src=html.encode("UTF-8"),
-                              dest=pdf_file_object,
-                              encoding='UTF-8',
-                              link_callback=fetch_resources)
+            pisa.pisaDocument(
+                src=html.encode("UTF-8"),
+                dest=pdf_file_object,
+                encoding='UTF-8',
+                link_callback=fetch_resources)
             pdf_file_object.seek(0)
             if upload:
-                self.upload(pdf_file_object=force_bytes(pdf_file_object), filename=context['filename'])
+                self.upload(
+                    pdf_file_object=force_bytes(pdf_file_object),
+                    filename=context['filename']
+                )
             return pdf_file_object
         return
 

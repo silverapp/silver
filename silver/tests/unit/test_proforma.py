@@ -21,8 +21,8 @@ from six.moves import zip
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
-from silver.tests.factories import (ProformaFactory, DocumentEntryFactory,
-    CustomerFactory)
+from silver.tests.factories import (
+    ProformaFactory, DocumentEntryFactory, CustomerFactory)
 
 
 class TestProforma(TestCase):

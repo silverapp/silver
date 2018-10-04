@@ -59,9 +59,10 @@ class PaymentProcessorBase(object):
     def get_form(self, transaction, request):
         form = None
         if self.form_class:
-            form = self.form_class(payment_method=transaction.payment_method,
-                                   transaction=transaction, request=request)
-
+            form = self.form_class(
+                payment_method=transaction.payment_method,
+                transaction=transaction, request=request
+            )
         return form
 
     def get_template(self, transaction):

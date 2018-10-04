@@ -27,8 +27,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from silver.api.filters import InvoiceFilter, ProformaFilter, BillingDocumentFilter
-from silver.api.serializers.documents_serializers import (InvoiceSerializer,
-    DocumentEntrySerializer, ProformaSerializer, DocumentSerializer)
+from silver.api.serializers.documents_serializers import (
+    InvoiceSerializer, DocumentEntrySerializer, ProformaSerializer, DocumentSerializer)
 from silver.models import Invoice, BillingDocumentBase, DocumentEntry, Proforma, PDF
 
 

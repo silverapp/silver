@@ -92,9 +92,8 @@ def test_generate_pdf_task(mock_http_response, mock_get_template, settings,
     assert invoice.pdf.url == settings.MEDIA_URL + invoice.get_pdf_upload_path()
 
     assert pisa_document_mock.call_count == 1
-    
-    # FIXME
-    # pisa_document_mock.assert_called_once_with(src=mock_get_template().render().encode('UTF-8'),
-    #                                            dest=mock_http_response(),
-    #                                            encoding='UTF-8',
-    #                                            link_callback=fetch_resources)
+
+    pisa_document_mock.assert_called_once_with(src=mock_get_template().render().encode('UTF-8'),
+                                               dest=mock_http_response(),
+                                               encoding='UTF-8',
+                                               link_callback=fetch_resources)

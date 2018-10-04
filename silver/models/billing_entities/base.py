@@ -58,8 +58,9 @@ class BaseBillingEntity(LiveModel):
         return slugify(self.billing_name)
 
     def address(self):
-        return ", ".join([_f for _f in [self.address_1, self.city, self.state,
-                                       self.zip_code, self.country] if _f])
+        return ", ".join([_f for _f in [
+            self.address_1, self.city, self.state, self.zip_code, self.country] if _f
+        ])
     address.short_description = 'Address'
 
     def get_list_display_fields(self):

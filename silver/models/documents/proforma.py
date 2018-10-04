@@ -21,7 +21,8 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 from silver.models.billing_entities import Provider
-from silver.models.documents.base import BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
+from silver.models.documents.base import (
+    BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet)
 from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.invoice import Invoice
 
