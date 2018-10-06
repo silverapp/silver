@@ -22,7 +22,8 @@ from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
 from silver.tests.factories import (
-    ProformaFactory, DocumentEntryFactory, CustomerFactory)
+    ProformaFactory, DocumentEntryFactory, CustomerFactory
+)
 
 
 class TestProforma(TestCase):

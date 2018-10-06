@@ -22,7 +22,8 @@ from rest_framework_bulk import ListBulkCreateAPIView
 
 from silver.api.filters import CustomerFilter, ProviderFilter
 from silver.api.serializers.billing_entities_serializers import (
-    CustomerSerializer, ProviderSerializer)
+    CustomerSerializer, ProviderSerializer
+)
 from silver.models import Customer, Provider
 
 

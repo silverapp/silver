@@ -18,19 +18,18 @@ import errno
 import logging
 import os
 import requests
-
 from six.moves import map
 from collections import OrderedDict
 
 from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
-
 from django_fsm import TransitionNotAllowed
 
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import (
-    helpers, site, TabularInline, ModelAdmin, SimpleListFilter)
+    helpers, site, TabularInline, ModelAdmin, SimpleListFilter
+)
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
@@ -52,7 +51,8 @@ from silver.models import (
     Plan, MeteredFeature, Subscription, Customer, Provider,
     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
     ProductCode, Proforma, BillingLog, BillingDocumentBase,
-    Transaction, PaymentMethod)
+    Transaction, PaymentMethod
+)
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url

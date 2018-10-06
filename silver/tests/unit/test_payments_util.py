@@ -99,5 +99,6 @@ class TestPaymentsUtilMethods(TestCase):
                              'lS8adcCxUn8lSK1-RPxohhI'
         with patch('silver.utils.payments.datetime') as mocked_datetime:
             mocked_datetime.utcnow.return_value = datetime.strptime(
-              'Jun 20 2017 1:33PM', '%b %d %Y %I:%M%p')
+              'Jun 20 2017 1:33PM', '%b %d %Y %I:%M%p'
+            )
             self.assertEquals(_get_jwt_token(transaction), expected_token)

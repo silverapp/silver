@@ -37,7 +37,8 @@ from django.conf import settings
 from silver.models import Invoice, Transaction
 from silver.tests.factories import (
     AdminUserFactory, CustomerFactory, ProviderFactory, InvoiceFactory,
-    SubscriptionFactory, TransactionFactory, PaymentMethodFactory)
+    SubscriptionFactory, TransactionFactory, PaymentMethodFactory
+)
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -171,9 +172,7 @@ class TestInvoiceEndpoints(APITestCase):
                                                         [transaction.customer.id])),
             "provider": build_absolute_test_url(reverse('provider-detail',
                                                         [transaction.provider.id])),
-            "amount": (
-                "%s.00" % str(transaction.amount) if not isinstance(transaction.amount, Decimal)
-                else str(transaction.amount)),
+            "amount": "%.2f" % transaction.amount,
             "currency": "RON",
             "state": transaction.state,
             "proforma": build_absolute_test_url(reverse('proforma-detail',

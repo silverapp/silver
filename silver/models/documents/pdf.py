@@ -15,15 +15,16 @@
 from __future__ import absolute_import
 
 import uuid
-
 from io import BytesIO
+
 from xhtml2pdf import pisa
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import (
-    Model, FileField, TextField, UUIDField, PositiveIntegerField, F)
+    Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+)
 from django.db.models.functions import Greatest
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
@@ -63,7 +64,8 @@ class PDF(Model):
             src=html.encode("UTF-8"),
             dest=pdf_file_object,
             encoding='UTF-8',
-            link_callback=fetch_resources)
+            link_callback=fetch_resources
+        )
 
         if not pdf_file_object:
             return

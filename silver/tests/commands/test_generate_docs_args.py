@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 from decimal import Decimal
 from mock import patch, PropertyMock, MagicMock
+
 from annoying.functions import get_object_or_None
 
 from django.core.management import call_command
