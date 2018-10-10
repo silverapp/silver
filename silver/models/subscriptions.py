@@ -576,7 +576,7 @@ class Subscription(models.Model):
                 if self.trial_end:
                     if self.trial_end < self.start_date:
                         self.trial_end = None
-                elif self.plan.trial_period_days is not None and self.plan.trial_period_days > 0:
+                elif self.plan.trial_period_days:
                     self.trial_end = self.start_date + timedelta(
                         days=self.plan.trial_period_days - 1)
 
