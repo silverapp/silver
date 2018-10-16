@@ -1,11 +1,22 @@
 ---
-title: Adding a new payment processor
+title:  Adding a new payment processor
 description: This guide will explain the steps of adding a new payment processor to Silver.
+linktitle: Adding a new payment processor
+categories: [silver]
+keywords: [silver]
+menu:
+  docs:
+    parent: "guides"
+weight: 1
+draft: false
+aliases: []
+toc: true
+related: true
 ---
 
 ## Getting started
-First, there needs to be a Python SDK for your Payment Processor, that allows you to connect and 
-communicate with its services. If there isn't one, you should start by contacting the Payment 
+First, there needs to be a Python SDK for your Payment Processor, that allows you to connect and
+communicate with its services. If there isn't one, you should start by contacting the Payment
 Processor's developers and ask them if they can provide one, or try implementing it yourself.
 
 In this guide, we'll name the SDK package `payment_processor_sdk` and it will be totally imaginary.
@@ -20,7 +31,7 @@ proper names instead.
 
 
 ### The Django app variant
-This method is better if you want to get started faster. You can always decide to publish your app 
+This method is better if you want to get started faster. You can always decide to publish your app
 as a separate Django project if you want.
 
 - Create your app
@@ -39,10 +50,10 @@ INTERNAL_APPS = [
 
 
 ### The Django project variant
-This method is better if you want to keep your projects separated or publish your work from the 
+This method is better if you want to keep your projects separated or publish your work from the
 beginning.
 
-This method also assumes you have already created a virtualenv for the main project, the payment 
+This method also assumes you have already created a virtualenv for the main project, the payment
 processor project and installed Django there too.
 
 - Create your project
@@ -71,7 +82,7 @@ INTERNAL_APPS = [
 
 ### Deciding how your Payment Processor will look
 
-In your payment_processor app you should have the following structure. It's fine if you can't find 
+In your payment_processor app you should have the following structure. It's fine if you can't find
 everything in there yet. You can complete it as we go:
 
 ```
@@ -95,10 +106,10 @@ payment_processor
 
 In `payment_processors.py` you will create your Payment Processor class. You should inherit
 the PaymentProcessorBase class and a mixin class based on what type of your Payment Processor will be.
-For more info, you should read the [payment processor resource definition](Resources#payment-processor).
+For more info, you should read the [payment processor resource definition]({{< ref "../resources.md#payment-processor" >}}).
 
 We are going to "partially implement" a `triggered` Payment Processor.
-That means the Transactions (payments) will be triggered from within Silver, and their status will 
+That means the Transactions (payments) will be triggered from within Silver, and their status will
 be mirrored to Silver either by polling or by webhooks if your payment processor service provides them.
 
 ```python
@@ -113,7 +124,7 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
     template_slug = 'payment_processor_triggered'
 ```
 
-There's not much in there at the moment so we'll try to add a way of creating an external (real) 
+There's not much in there at the moment so we'll try to add a way of creating an external (real)
 transaction. We can do that by implementing the `execute_transaction` method.
 
 ```python
@@ -125,14 +136,14 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 
     def execute_transaction(self, transaction):
         """
-            :param transaction: A Silver Transaction object in pending state, that hasn't been 
+            :param transaction: A Silver Transaction object in pending state, that hasn't been
             executed before.
 
             Creates a real, external transaction based on the given Silver transaction.
 
-            Warning: You should never call this method directly! Use the `process_transaction` 
+            Warning: You should never call this method directly! Use the `process_transaction`
                      method instead, which will call this method.
-                     However, if you need to call it directly, make sure the transaction hasn't been 
+                     However, if you need to call it directly, make sure the transaction hasn't been
                      executed before.
 
             :return: True on success, False on failure.
@@ -174,7 +185,7 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
             'status': status,
             'id': transaction_result.id
         })
-        
+
         # Then we transition the Silver transaction to a new state if needed:
         if status == 'settled':
             transaction.settle()
@@ -230,7 +241,7 @@ from silver.models import PaymentMethod
 class CustomPaymentMethod(PaymentMethod):
     class Meta:
         proxy = True
-    
+
     @property
     def token(self):
         return self.decrypt_data(self.data.get('token'))
@@ -240,13 +251,12 @@ class CustomPaymentMethod(PaymentMethod):
         self.data['token'] = self.encrypt_data(value)  # self.encrypt_data is already implemented
 ```
 
-You might have noticed that earlier when we implemented `execute_transaction`, we mentioned a token. 
+You might have noticed that earlier when we implemented `execute_transaction`, we mentioned a token.
 Most payment processors will provide you with a token because you are not supposed to handle the
 customer's payment method info, so you will use the token to refer to the payment method instead.
 
-The token is useful if the customer wants to save his payment method info for further or recurring 
-payments. Read about how you can obtain it in the [payment operation section](#the-payment-operation).
-
+The token is useful if the customer wants to save his payment method info for further or recurring
+payments. Read about how you can obtain it in the [payment operation section]({{< ref "#the-payment-operation" >}}).
 
 ### The payment operation
 
@@ -254,29 +264,30 @@ This section tries to explain how the customer's payment operation usually goes 
 the following steps are described:
 
 1. The customer usually clicks a Pay button somewhere in a different application, which will trigger a
-[create request on the Silver's `/transactions` endpoint](Transactions#create-a-transaction).
+[create request on the Silver's `/transactions` endpoint]({{< ref "../payments/transactions.md#create-a-transaction" >}})
+
 2. The transaction is created, and the response payload contains a field called `pay_url`, which
 is a Silver URL that points to a view that will act as a payment page, which most likely you'll also
 have to implement because of the differences between the payment processors.  
 The `pay_url` expires after some time, based on the `SILVER_PAYMENT_TOKEN_EXPIRATION` setting and it
 contains a different access token (JWT) every time it is generated. Therefore it is better to obtain
-it right before the payer is about to access it. It cannot be accessed without the required access 
+it right before the payer is about to access it. It cannot be accessed without the required access
 token.  
-You can read more about the payment page [here](#the-payment-page)
+You can read more about the payment page [here]({{< ref "#the-payment-page" >}})
 3. The App redirects the customer to the `pay_url`. There the customer can enter its payment method
 info and accept the transaction.  
-Keep in mind the customer might choose to cancel the operation, enter wrong or expired payment method 
+Keep in mind the customer might choose to cancel the operation, enter wrong or expired payment method
 data etc.. In some cases the customer might be redirected from the Silver payment page to the external
 Payment Processor payment page.
-4. Depending on the outcome of the operation, the customer may be redirected to the 
+4. Depending on the outcome of the operation, the customer may be redirected to the
 `complete_payment_view` Silver view, which will call the `handle_transaction_response` method of our
 `TriggeredPaymentProcessor` class.  
-Sometimes the payment processor won't rely on the customer to access `the complete_payment_view` (since 
-it is not a guarantee it will happen) and will send a webhook containing info about the external 
+Sometimes the payment processor won't rely on the customer to access `the complete_payment_view` (since
+it is not a guarantee it will happen) and will send a webhook containing info about the external
 transaction.
 The `handle_transaction_response` method is where we can update our
-transaction reference and status. See 
-[the implementation example below](#handling-the-transaction-response-from-the-payment-processor).  
+transaction reference and status. See
+[the implementation example below]({{< ref "#handling-the-transaction-response-from-the-payment-processor" >}}).  
 5. From there the client can be redirected to a final `redirect_url` or have a Silver template rendered
 stating the state of the transaction.
 
@@ -293,12 +304,12 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
             :param transaction: A Silver Transaction object.
             :param request: A Django request object. It should contain POST (or GET) data about the
             transaction, which will be used to update the Silver Transaction.
-    
+
             This method should update the transaction info (external reference, state ...) after the
             first HTTP response from the payment gateway.
-    
+
             It will automatically be called by the `complete_payment_view`.
-    
+
             If not needed, one can `pass` it or just `return`.
         """
 
@@ -307,32 +318,32 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 
         # If the payment processor allows it and the customer requested to save the payment method,
         # a token can be provided in the request.POST data
-        # You can update the payment method in the _update_transaction_status method if you wish, 
+        # You can update the payment method in the _update_transaction_status method if you wish,
         # or do it here
         transaction.payment_method.data['token'] = request.POST.get('token')
         # You'll be able to reuse the token for a later payment or recurring payments
 ```
 
-As mentioned earlier in step 4, the payment processor might offer a different solution to obtaining the 
-transaction's "initial" information. In this case you can just pass the payment processor's webhook 
-request to this method or just `pass` inside the `handle_transaction_response` method and handle this 
+As mentioned earlier in step 4, the payment processor might offer a different solution to obtaining the
+transaction's "initial" information. In this case you can just pass the payment processor's webhook
+request to this method or just `pass` inside the `handle_transaction_response` method and handle this
 logic somewhere else. The implementation details are really up to you.
 
 
 #### The payment page
-There's 3 things you usually want to implement / change for the payment page: The 
-[transaction form class](#the-transaction-form-class),
-the [transaction form / payment page template](#the-transaction-form-template) and the 
-[transaction view class](#the-transaction-view-class).
+There's 3 things you usually want to implement / change for the payment page: The
+[transaction form class]({{< ref "##handling-the-transaction-response-from-the-payment-processor#the-transaction-form-class" >}}),
+the [transaction form / payment page template]({{< ref "#the-transaction-form-template" >}}) and the
+[transaction view class]({{< ref "#the-transaction-view-class" >}}).
 
 
 ##### The transaction form class
 The form class is only needed if the external payment processor service requires a form submission of
 some sort.
 
-You may specify it by using the `form_class` attribute of the PaymentProcessor class. It will be 
-rendered by default in the payment page, but you will probably be required to customize the 
-[form template](#the-transaction-form-/-payment-page-template) anyway.
+You may specify it by using the `form_class` attribute of the PaymentProcessor class. It will be
+rendered by default in the payment page, but you will probably be required to customize the
+[form template]({{< ref "#the-transaction-form-/-payment-page-template" >}}) anyway.
 
 You can override the PaymentProcessor's `get_form` method if you need more maneuverability.
 
@@ -347,7 +358,7 @@ By default it will be selected from one of the following paths:
 - `templates/forms/transaction_form.html`
 Where:
 - `template_slug` is an attribute of the PaymentProcessor class  
-- `provider_slug` is equal to `slugify(provider.company or provider.name)`, so if 
+- `provider_slug` is equal to `slugify(provider.company or provider.name)`, so if
 `provider.company = "Some company"`, `provider_slug` will be equal to `some-company`
 
 ```python
@@ -358,11 +369,11 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
     template_slug = 'triggered_payment_processor'
 ```
 
-You can override the context of the template by using a 
-[custom `transaction_view_class`](#the-transaction-view-class). The default context will contain data
+You can override the context of the template by using a
+[custom `transaction_view_class`]({{< ref "#the-transaction-view-class" >}}). The default context will contain data
 such as the `transaction`, `payment_method`, `customer`, `form`...
 
-Now on to actually writing your transaction_form template. A good starting point would be the following 
+Now on to actually writing your transaction_form template. A good starting point would be the following
 example:
 
 ```html
@@ -385,7 +396,7 @@ the form to a service of your payment's processor. That's all up to you.
 Here's a couple of real world examples that might shed some light if you are confused:
 1. [PayU transaction form template](https://github.com/silverapp/silver-payu/blob/master/silver_payu/templates/payu/transaction_form.html)  
    [Here](https://github.com/silverapp/silver-payu/blob/master/silver_payu/templates/payu/payu_lu_form.html)
-    is one of the form templates that are used inside. You can see the form action has been changed to point to 
+    is one of the form templates that are used inside. You can see the form action has been changed to point to
     the payment processor's endpoint.
 2. [Braintree transaction form template](https://github.com/silverapp/silver-braintree/blob/master/silver_braintree/templates/forms/braintree/transaction_form.html)  
     You can see some custom javascript being inserted in there. Also, notice that a Silver form is not used.
@@ -437,15 +448,15 @@ Now it's time to start writing some tests.
 
 
 #### Testing
-Depending on your implementation, you might want to write some unit tests for your 
-`TriggeredPaymentProcessor` class, your `TriggeredPaymentMethod` model, your forms, and then some 
+Depending on your implementation, you might want to write some unit tests for your
+`TriggeredPaymentProcessor` class, your `TriggeredPaymentMethod` model, your forms, and then some
 integration tests for your views. You should at least test every method that you've written so far.
 
 A general advice is to remember to not just test the happy paths, but also the sad paths.
 
 Mocking your `payment_processor_sdk` may or may not be a good idea. These usually don't change their API
-very often, and when they do you're most likely going to have to rewrite your PaymentProcessor 
-implementation anyway. The good part about mocking is you won't rely on the payment processor to offer 
+very often, and when they do you're most likely going to have to rewrite your PaymentProcessor
+implementation anyway. The good part about mocking is you won't rely on the payment processor to offer
 you a sandbox account for testing or ensure that their testing services are always working.
 
 For peace of mind, you might want to write some in-browser integration tests, using a tool like Selenium.
