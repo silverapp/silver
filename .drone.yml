@@ -28,6 +28,18 @@ pipeline:
     when:
       event: [push, tag]
 
+  trigger:
+    image: plugins/downstream
+    server: https://drone.presslabs.net
+    fork: true
+    wait: true
+    secrets: [ DRONE_TOKEN ]
+    repositories:
+      - presslabs/code
+    when:
+      branch: master
+      event: push
+
 services:
   mysql:
     image: mysql:5.5
