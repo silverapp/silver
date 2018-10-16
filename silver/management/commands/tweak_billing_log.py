@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import datetime as dt
+
 from datetime import datetime
-from optparse import make_option
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -24,11 +25,8 @@ from silver.models import Subscription, BillingLog
 
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--date',
-                    action='store',
-                    dest='date'),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('--date', action='store', dest='date')
 
     def handle(self, *args, **options):
         if options['date']:

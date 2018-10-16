@@ -12,30 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, timedelta
+from __future__ import absolute_import
+
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from mock import patch
 
 from django.utils import timezone
 from django.test import override_settings
+from django.utils.encoding import force_text
+
 from rest_framework import status
 from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Proforma
-
-from silver.models import Transaction
-from silver.tests.utils import build_absolute_test_url
-from silver.utils.payments import get_payment_url
-
+from silver.models import Proforma, Transaction
 from silver.tests.factories import (AdminUserFactory, TransactionFactory,
                                     PaymentMethodFactory, InvoiceFactory,
                                     ProformaFactory, CustomerFactory,
                                     DocumentEntryFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
                                    triggered_processor)
+from silver.tests.utils import build_absolute_test_url
+from silver.utils.payments import get_payment_url
 
 
 def reverse(*args, **kwargs):
@@ -131,7 +132,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         force_text(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], currency)
@@ -300,7 +301,7 @@ class TestTransactionEndpoint(APITestCase):
         self.assertEqual(response.data['valid_until'][:-1], valid_until.isoformat())
         self.assertEqual(response.data['can_be_consumed'], True)
         self.assertEqual(response.data['amount'],
-                         unicode(invoice.total_in_transaction_currency))
+                         force_text(invoice.total_in_transaction_currency))
         self.assertEqual(response.data['invoice'], invoice_url)
         self.assertEqual(response.data['proforma'], proforma_url)
         self.assertEqual(response.data['currency'], invoice.transaction_currency)
@@ -372,8 +373,8 @@ class TestTransactionEndpoint(APITestCase):
         response = self.client.post(url, format='json', data=data)
 
         expected_data = {
-            'non_field_errors': [u"Amount is greater than the amount that should be charged in "
-                                 u"order to pay the billing document."]
+            'non_field_errors': ["Amount is greater than the amount that should be charged in "
+                                 "order to pay the billing document."]
         }
         self.assertEqual(response.data, expected_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -664,15 +665,15 @@ class TestTransactionEndpoint(APITestCase):
             mocked_token.return_value = 'token'
 
             return OrderedDict([
-                ('id', unicode(transaction.uuid)),
+                ('id', force_text(transaction.uuid)),
                 ('url', reverse('transaction-detail',
                                 kwargs={'customer_pk': customer.id,
                                         'transaction_uuid': transaction.uuid})),
                 ('customer', reverse('customer-detail', args=[customer.pk])),
                 ('provider', reverse('provider-detail', args=[provider.pk])),
-                ('amount', unicode(Decimal('0.00') + transaction.amount)),
-                ('currency', unicode(transaction.currency)),
-                ('state', unicode(transaction.state)),
+                ('amount', force_text(Decimal('0.00') + transaction.amount)),
+                ('currency', force_text(transaction.currency)),
+                ('state', force_text(transaction.state)),
                 ('proforma', reverse('proforma-detail', args=[proforma.pk])),
                 ('invoice', reverse('invoice-detail', args=[invoice.pk])),
                 ('can_be_consumed', transaction.can_be_consumed),

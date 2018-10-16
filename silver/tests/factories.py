@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2015 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import datetime
-from decimal import Decimal
-
 import factory
 import factory.fuzzy
+
+from decimal import Decimal
 from faker import Faker
 
 from django.contrib.auth import get_user_model

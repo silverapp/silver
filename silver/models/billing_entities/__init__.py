@@ -12,6 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .customer import Customer
-from .provider import Provider
+from silver.models.billing_entities.customer import Customer
+from silver.models.billing_entities.provider import Provider

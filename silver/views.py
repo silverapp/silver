@@ -11,16 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import urllib
+
+from __future__ import absolute_import
+
+import six.moves.urllib.request
+import six.moves.urllib.parse
+import six.moves.urllib.error
+
 from furl import furl
 from dal import autocomplete
 
-from django.db.models import Q
-from django.utils import timezone
-from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 
 from silver.models.payment_methods import PaymentMethod
@@ -51,7 +57,7 @@ def complete_payment_view(request, transaction, expired=None):
         payment_processor.handle_transaction_response(transaction, request)
 
     if 'return_url' in request.GET:
-        redirect_url = urllib.unquote(
+        redirect_url = six.moves.urllib.parse.unquote(
             furl(request.GET['return_url']).add(
                 {
                     'transaction_uuid': transaction.uuid

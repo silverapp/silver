@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 from django_fsm import transition
 
@@ -19,10 +20,11 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .base import BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
-from .entries import DocumentEntry
-from .invoice import Invoice
 from silver.models.billing_entities import Provider
+from silver.models.documents.base import (
+    BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet)
+from silver.models.documents.entries import DocumentEntry
+from silver.models.documents.invoice import Invoice
 
 
 class ProformaManager(BillingDocumentManager):

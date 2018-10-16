@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
+from datetime import date, timedelta
 from decimal import Decimal
+from six.moves import zip
 
-from datetime import date
-
-from datetime import timedelta
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Proforma, Invoice

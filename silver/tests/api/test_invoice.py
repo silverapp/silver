@@ -12,28 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import json
+
+from six.moves import range
+
 from datetime import timedelta
 from decimal import Decimal
+from mock import patch
 
 from annoying.functions import get_object_or_None
 from factory.django import mute_signals
-from mock import patch
+
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from django.db.models.signals import pre_save
 from django.utils import timezone
+from django.utils.encoding import force_text
 from django.conf import settings
 
 from silver.models import Invoice, Transaction
-from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, InvoiceFactory,
-                                    SubscriptionFactory, TransactionFactory,
-                                    PaymentMethodFactory)
+from silver.tests.factories import (
+    AdminUserFactory, CustomerFactory, ProviderFactory, InvoiceFactory,
+    SubscriptionFactory, TransactionFactory, PaymentMethodFactory
+)
 from silver.tests.utils import build_absolute_test_url
+
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -157,7 +164,6 @@ class TestInvoiceEndpoints(APITestCase):
                                  Transaction.States.Refunded,
                                  Transaction.States.Failed]
             ]
-
         expected_transactions = [{
             "id": str(transaction.uuid),
             "url": build_absolute_test_url(reverse('transaction-detail',
@@ -166,8 +172,8 @@ class TestInvoiceEndpoints(APITestCase):
                                                         [transaction.customer.id])),
             "provider": build_absolute_test_url(reverse('provider-detail',
                                                         [transaction.provider.id])),
-            "amount": "%s.00" % str(transaction.amount),
-            "currency": "USD",
+            "amount": "%.2f" % transaction.amount,
+            "currency": "RON",
             "state": transaction.state,
             "proforma": build_absolute_test_url(reverse('proforma-detail',
                                                         [transaction.proforma.id])),
@@ -239,13 +245,13 @@ class TestInvoiceEndpoints(APITestCase):
                     ]
                     self.assertTrue(expected_transaction)
                     expected_transaction = expected_transaction[0]
-
-                    self.assertEqual(
-                        expected_transaction[field], actual_transaction[field],
-                        msg=("Expected %s, actual %s for field %s" % (
-                            expected_response[field], response.data[field], field)
-                             )
-                    )
+                    for field in expected_transaction:
+                        self.assertEqual(
+                            expected_transaction[field], actual_transaction[field],
+                            msg=("Expected %s, actual %s for field %s" % (
+                                expected_transaction[field], actual_transaction[field], field)
+                                 )
+                        )
 
     def test_delete_invoice(self):
         url = reverse('invoice-detail', kwargs={'pk': 1})
@@ -497,7 +503,7 @@ class TestInvoiceEndpoints(APITestCase):
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -519,8 +525,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item in response.data.items()
-                        for item in mandatory_content.iteritems()))
+        self.assertTrue(all(item in list(response.data.items())
+                        for item in mandatory_content.items()))
         self.assertNotEqual(response.data.get('archived_provider', {}), {})
         self.assertNotEqual(response.data.get('archived_customer', {}), {})
 
@@ -546,8 +552,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'issued'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in mandatory_content.items())
         assert response.data.get('archived_provider', {}) != {}
         assert response.data.get('archived_customer', {}) != {}
 
@@ -602,8 +608,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'paid'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -628,8 +634,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'paid'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in mandatory_content.items())
 
     def test_pay_invoice_when_in_draft_state(self):
         provider = ProviderFactory.create()
@@ -681,8 +687,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'canceled'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_with_provided_date(self):
         provider = ProviderFactory.create()
@@ -708,8 +714,8 @@ class TestInvoiceEndpoints(APITestCase):
             'state': 'canceled'
         }
         assert response.status_code == status.HTTP_200_OK
-        assert all(item in response.data.items()
-                   for item in mandatory_content.iteritems())
+        assert all(item in list(response.data.items())
+                   for item in mandatory_content.items())
 
     def test_cancel_invoice_in_draft_state(self):
         provider = ProviderFactory.create()

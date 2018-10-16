@@ -11,15 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import
+
 from itertools import cycle
+from mock import MagicMock, patch
+
+from django_fsm import TransitionNotAllowed
 
 from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.test import TestCase, Client
-from django_fsm import TransitionNotAllowed
-from mock import MagicMock, patch
+from django.utils.encoding import force_text
 
 from silver.tests.factories import InvoiceFactory
 
@@ -71,7 +76,7 @@ class InvoiceAdminTestCase(TestCase):
                     user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(invoice).pk,
                     object_id=invoice.pk,
-                    object_repr=unicode(invoice),
+                    object_repr=force_text(invoice),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.capitalize().replace('_', ' ')
@@ -90,7 +95,7 @@ class InvoiceAdminTestCase(TestCase):
         exceptions = cycle([ValueError, TransitionNotAllowed])
 
         def _exception_thrower(*args):
-            raise exceptions.next()
+            raise next(exceptions)
 
         mock_action = MagicMock(side_effect=_exception_thrower)
 

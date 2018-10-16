@@ -11,15 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import
+
 from itertools import cycle
+from mock import MagicMock, patch
 
 from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
+from django.utils.encoding import force_text
 from django.test import TestCase, Client
 from django_fsm import TransitionNotAllowed
-from mock import MagicMock, patch
 
 from silver.tests.factories import ProformaFactory
 
@@ -72,7 +76,7 @@ class ProformaAdminTestCase(TestCase):
                     user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(proforma).pk,
                     object_id=proforma.pk,
-                    object_repr=unicode(proforma),
+                    object_repr=force_text(proforma),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.capitalize().replace('_', ' ')
@@ -91,7 +95,7 @@ class ProformaAdminTestCase(TestCase):
         exceptions = cycle([ValueError, TransitionNotAllowed])
 
         def _exception_thrower(*args):
-            raise exceptions.next()
+            raise next(exceptions)
 
         mock_action = MagicMock(side_effect=_exception_thrower)
 

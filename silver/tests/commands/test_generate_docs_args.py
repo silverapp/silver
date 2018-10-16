@@ -13,21 +13,24 @@
 # limitations under the License.
 
 
+from __future__ import absolute_import
+
 from decimal import Decimal
+from mock import patch, PropertyMock, MagicMock
+
+from annoying.functions import get_object_or_None
 
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils.six import StringIO
-from mock import patch, PropertyMock, MagicMock
-from annoying.functions import get_object_or_None
 
+from silver.management.commands.generate_docs import date as generate_docs_date
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription,
                            Customer, Plan)
 from silver.tests.factories import (SubscriptionFactory, PlanFactory,
                                     MeteredFeatureFactory,
                                     MeteredFeatureUnitsLogFactory,
                                     CustomerFactory, ProviderFactory)
-from silver.management.commands.generate_docs import date as generate_docs_date
 
 
 class TestGenerateDocsArguments(TestCase):

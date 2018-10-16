@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 from decimal import Decimal
+
+from six.moves import zip
 
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
-from silver.tests.factories import ProformaFactory, DocumentEntryFactory, \
-    CustomerFactory
+from silver.tests.factories import (
+    ProformaFactory, DocumentEntryFactory, CustomerFactory
+)
 
 
 class TestProforma(TestCase):

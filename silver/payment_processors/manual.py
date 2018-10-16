@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from silver.payment_processors.views import GenericTransactionView
-from silver.payment_processors.forms import GenericTransactionForm
+from __future__ import absolute_import
 
-from .base import PaymentProcessorBase
-from .mixins import ManualProcessorMixin
+from silver.payment_processors.base import PaymentProcessorBase
+from silver.payment_processors.forms import GenericTransactionForm
+from silver.payment_processors.mixins import ManualProcessorMixin
+from silver.payment_processors.views import GenericTransactionView
 
 
 class ManualProcessor(PaymentProcessorBase, ManualProcessorMixin):

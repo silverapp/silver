@@ -12,34 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, unicode_literals
+
 import uuid
 import logging
+
 from decimal import Decimal
 
-from django.db.models import Q
 from annoying.fields import JSONField
-from django_fsm import post_transition
-from django_fsm import FSMField, transition
 from annoying.functions import get_object_or_None
+from django_fsm import FSMField, post_transition, transition
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible, force_text
 from django.utils.translation import ugettext_lazy as _
 
+from silver.models import Invoice, Proforma
+from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField
-from silver.models import Invoice, Proforma
-
-from .codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 
 
 logger = logging.getLogger(__name__)
 
 
+@python_2_unicode_compatible
 class Transaction(models.Model):
     _provider = None
 
@@ -295,8 +298,8 @@ class Transaction(models.Model):
                 not self.document.amount_to_be_charged_in_transaction_currency):
             self.document.pay()
 
-    def __unicode__(self):
-        return unicode(self.uuid)
+    def __str__(self):
+        return force_text(self.uuid)
 
 
 @receiver(post_transition)

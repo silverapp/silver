@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, unicode_literals
 
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class DocumentEntry(models.Model):
     description = models.CharField(max_length=1024)
     unit = models.CharField(max_length=1024, blank=True, null=True)
@@ -99,7 +102,7 @@ class DocumentEntry(models.Model):
             prorated=self.prorated
         )
 
-    def __unicode__(self):
+    def __str__(self):
         s = u'{descr} - {unit} - {unit_price} - {quantity} - {product_code}'
         return s.format(
             descr=self.description,

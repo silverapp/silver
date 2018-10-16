@@ -1,14 +1,34 @@
+# Copyright (c) 2016 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import absolute_import
+
 import uuid
+from io import BytesIO
 
 from xhtml2pdf import pisa
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+from django.db.models import (
+    Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+)
 from django.db.models.functions import Greatest
 from django.http import HttpResponse
 from django.utils.module_loading import import_string
+from django.utils.encoding import force_bytes
 
 from silver.utils.pdf import fetch_resources
 
@@ -38,20 +58,23 @@ class PDF(Model):
         return self.pdf_file.url if self.pdf_file else None
 
     def generate(self, template, context, upload=True):
-        pdf_file_object = HttpResponse(content_type='application/pdf')
-
         html = template.render(context)
-        pisa.pisaDocument(src=html.encode("UTF-8"),
-                          dest=pdf_file_object,
-                          encoding='UTF-8',
-                          link_callback=fetch_resources)
+        pdf_file_object = BytesIO()
+        pisa.pisaDocument(
+            src=html.encode("UTF-8"),
+            dest=pdf_file_object,
+            encoding='UTF-8',
+            link_callback=fetch_resources
+        )
 
         if not pdf_file_object:
             return
 
         if upload:
-            self.upload(pdf_file_object=pdf_file_object, filename=context['filename'])
-
+            self.upload(
+                pdf_file_object=force_bytes(pdf_file_object),
+                filename=context['filename']
+            )
         return pdf_file_object
 
     def upload(self, pdf_file_object, filename):

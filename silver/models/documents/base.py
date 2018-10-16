@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, unicode_literals
 
 import logging
-from decimal import Decimal
 from datetime import datetime, timedelta
+from decimal import Decimal
 
+from annoying.fields import JSONField
+from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
+from model_utils import Choices
 import pytz
+
 from django.apps import apps
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
-from annoying.fields import JSONField
-from model_utils import Choices
-
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.core.urlresolvers import reverse
@@ -34,23 +35,22 @@ from django.db import transaction as db_transaction
 from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible, force_text
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
 
-from silver.models.billing_entities import Customer, Provider
 from silver.currencies import CurrencyConverter, RateNotFound
+from silver.models.billing_entities import Customer, Provider
+from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.pdf import PDF
 from silver.utils.international import currencies
-
-from .entries import DocumentEntry
 
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
     _storage_klass = import_string(_storage[0])
     _storage = _storage_klass(*_storage[1], **_storage[2])
-
 
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(unicode(
+        company=slugify(force_text(
             document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
@@ -106,6 +106,7 @@ def get_billing_documents_kinds():
             for subclass in BillingDocumentBase.__subclasses__())
 
 
+@python_2_unicode_compatible
 class BillingDocumentBase(models.Model):
     objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 
@@ -398,7 +399,7 @@ class BillingDocumentBase(models.Model):
     series_number.short_description = 'Number'
     series_number = property(series_number)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s %s => %s [%.2f %s]' % (self.series_number,
                                            self.provider.billing_name,
                                            self.customer.billing_name,

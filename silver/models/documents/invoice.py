@@ -12,15 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 from django_fsm import TransitionNotAllowed, transition
 
-from django.db import models
 from django.apps import apps
+from django.db import models
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
-from .base import BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
+from silver.models.documents.base import (
+    BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
+)
 from silver.models.billing_entities import Provider
 
 

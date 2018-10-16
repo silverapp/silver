@@ -1,9 +1,30 @@
+# Copyright (c) 2015 Presslabs SRL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import absolute_import
+
 import datetime
+import logging
+
 from decimal import Decimal
 
 from annoying.functions import get_object_or_None
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+
+from django.utils import timezone
+from django.utils.encoding import force_text
+
 from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -15,7 +36,7 @@ from silver.api.serializers.common import MeteredFeatureSerializer
 from silver.api.serializers.subscriptions_serializers import SubscriptionSerializer, \
     SubscriptionDetailSerializer, MFUnitsLogSerializer
 from silver.models import MeteredFeature, Subscription, MeteredFeatureUnitsLog
-import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +74,7 @@ class SubscriptionList(generics.ListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         url = reverse('customer-detail', kwargs={'customer_pk': customer_pk},
                       request=request)
-        request.data.update({unicode('customer'): unicode(url)})
+        request.data.update({force_text('customer'): force_text(url)})
 
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 

@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import, unicode_literals
+
 from itertools import chain
 
+from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from cryptography.fernet import InvalidToken, Fernet
 from django_fsm import TransitionNotAllowed
-from annoying.fields import JSONField
 from model_utils.managers import InheritanceManager
 
 from django.conf import settings
@@ -25,18 +28,19 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible
 
 from silver import payment_processors
 from silver.models import Invoice, Proforma
-
-from .billing_entities import Customer
-from .transactions import Transaction
+from silver.models.billing_entities import Customer
+from silver.models.transactions import Transaction
 
 
 class PaymentMethodInvalid(Exception):
     pass
 
 
+@python_2_unicode_compatible
 class PaymentMethod(models.Model):
     class PaymentProcessors:
         @classmethod
@@ -183,7 +187,7 @@ class PaymentMethod(models.Model):
     def public_data(self):
         return {}
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{} - {} - {}'.format(self.customer,
                                       self.get_payment_processor_display(),
                                       self.pk)

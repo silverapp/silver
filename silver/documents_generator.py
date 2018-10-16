@@ -12,15 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import datetime as dt
 import logging
+
 from decimal import Decimal
 
 from django.utils import timezone
 
 from silver.models import Customer, Subscription, Proforma, Invoice, Provider, BillingLog
 from silver.utils.dates import ONE_DAY
+
 
 logger = logging.getLogger(__name__)
 

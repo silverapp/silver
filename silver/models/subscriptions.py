@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, unicode_literals
 
 import calendar
 import logging
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from functools import reduce
 
+from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from dateutil import rrule
-from django.conf import settings
-from django.utils.timezone import utc
 from django_fsm import FSMField, transition, TransitionNotAllowed
-from annoying.fields import JSONField
 from model_utils import Choices
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -34,10 +36,12 @@ from django.dispatch import receiver
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.timezone import utc
 from django.utils.translation import ugettext_lazy as _
 
-from .billing_entities import Customer
-from .documents import DocumentEntry
+from silver.models.billing_entities import Customer
+from silver.models.documents import DocumentEntry
 from silver.utils.dates import ONE_DAY, relativedelta, first_day_of_month
 from silver.validators import validate_reference
 
@@ -57,6 +61,7 @@ def field_template_path(field, provider=None):
     return 'billing_documents/{field}.html'.format(field=field)
 
 
+@python_2_unicode_compatible
 class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed')
     subscription = models.ForeignKey('Subscription', related_name='mf_log_entries')
@@ -110,10 +115,11 @@ class MeteredFeatureUnitsLog(models.Model):
 
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
-    def __unicode__(self):
-        return unicode(self.metered_feature.name)
+    def __str__(self):
+        return self.metered_feature.name
 
 
+@python_2_unicode_compatible
 class Subscription(models.Model):
     class STATES(object):
         ACTIVE = 'active'
@@ -570,7 +576,7 @@ class Subscription(models.Model):
                 if self.trial_end:
                     if self.trial_end < self.start_date:
                         self.trial_end = None
-                elif self.plan.trial_period_days > 0:
+                elif self.plan.trial_period_days:
                     self.trial_end = self.start_date + timedelta(
                         days=self.plan.trial_period_days - 1)
 
@@ -1001,10 +1007,11 @@ class Subscription(models.Model):
         base_context.update(context)
         return base_context
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s (%s)' % (self.customer, self.plan)
 
 
+@python_2_unicode_compatible
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription',
                                      related_name='billing_logs')
@@ -1038,7 +1045,7 @@ class BillingLog(models.Model):
     class Meta:
         ordering = ['-billing_date']
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{sub} - {pro} - {inv} - {date}'.format(
             sub=self.subscription, pro=self.proforma,
             inv=self.invoice, date=self.billing_date)

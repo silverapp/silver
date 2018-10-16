@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import logging
 
@@ -20,6 +21,7 @@ from django.core.management.base import BaseCommand
 from silver.models import Transaction, Invoice, Proforma
 from silver.tests.factories import (TransactionFactory, InvoiceFactory, DocumentEntryFactory,
                                     ProformaFactory)
+
 
 logger = logging.getLogger(__name__)
 

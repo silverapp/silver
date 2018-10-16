@@ -11,10 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from django.core.exceptions import ValidationError
+
+from __future__ import absolute_import
+
 from mock import MagicMock, patch
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
+
 from silver.models import Transaction
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
                                     TransactionFactory, ProformaFactory, DocumentEntryFactory)
@@ -128,8 +132,8 @@ class TestDocumentsTransactions(TestCase):
         mock_execute = MagicMock()
         with patch.multiple(TriggeredProcessor, execute_transaction=mock_execute):
             expected_exception = ValidationError
-            expected_message = "{'__all__': [u'Amount is greater than the amount that should be " \
-                               "charged in order to pay the billing document.']}"
+            expected_message = "Amount is greater than the amount that should be " \
+                               "charged in order to pay the billing document."
             try:
                 TransactionFactory.create(invoice=invoice,
                                           payment_method=payment_method,
@@ -137,7 +141,7 @@ class TestDocumentsTransactions(TestCase):
 
                 self.fail('{} not raised.'.format(str(expected_exception)))
             except expected_exception as e:
-                self.assertEqual(str(e), expected_message)
+                self.assertTrue(expected_message in str(e))
 
             transactions = Transaction.objects.filter(
                 payment_method=payment_method, invoice=invoice,

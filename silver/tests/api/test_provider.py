@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 
 import json
 import pytest
+
 from django.core.urlresolvers import reverse
+from django.utils.encoding import force_text
+
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -70,7 +74,7 @@ class TestProviderEndpoints(APITestCase):
             "meta": {},
         }
 
-        for attr, value in expected_data.iteritems():
+        for attr, value in expected_data.items():
             assert response.data[attr] == value
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -109,7 +113,7 @@ class TestProviderEndpoints(APITestCase):
 
             assert response.status_code == 400
 
-            for response_item in response.data.iteritems():
+            for response_item in response.data.items():
                 field_name = response_item[0]
                 if field_name in ['id', 'url']:
                     continue

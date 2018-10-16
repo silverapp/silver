@@ -12,45 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, unicode_literals
 
-import os
 import errno
 import logging
+import os
 import requests
+from six.moves import map
 from collections import OrderedDict
 
 from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
+from django_fsm import TransitionNotAllowed
 
 from django import forms
-from django.core import urlresolvers
 from django.contrib import messages
-from django.contrib.admin import (helpers, site, TabularInline, ModelAdmin,
-                                  SimpleListFilter)
+from django.contrib.admin import (
+    helpers, site, TabularInline, ModelAdmin, SimpleListFilter
+)
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
+from django.core import urlresolvers
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 from django.db import connections
 from django.db.models import BLANK_CHOICE_DASH
 from django.forms import ChoiceField
-from django.utils.html import escape
-from django_fsm import TransitionNotAllowed
-from django.core.urlresolvers import reverse
-from django.utils.translation import ugettext_lazy as _
-from django.utils import timezone
-from django.shortcuts import render
 from django.http import HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
+from django.utils.encoding import force_text
+from django.utils.html import escape
+from django.utils.translation import ugettext_lazy as _
 
+from silver.documents_generator import DocumentsGenerator
+from silver.models import (
+    Plan, MeteredFeature, Subscription, Customer, Provider,
+    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
+    ProductCode, Proforma, BillingLog, BillingDocumentBase,
+    Transaction, PaymentMethod
+)
+from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
-from silver.payment_processors.mixins import PaymentProcessorTypes
-
-from models import (Plan, MeteredFeature, Subscription, Customer, Provider,
-                    MeteredFeatureUnitsLog, Invoice, DocumentEntry,
-                    ProductCode, Proforma, BillingLog, BillingDocumentBase,
-                    Transaction, PaymentMethod)
-from documents_generator import DocumentsGenerator
 
 
 logger = logging.getLogger('silver')
@@ -60,7 +65,7 @@ def metadata(obj):
     d = u'(None)'
     if obj.meta:
         d = u''
-        for key, value in obj.meta.iteritems():
+        for key, value in obj.meta.items():
             d += u'%s: <code>%s</code><br>' % (escape(key), escape(value))
     return d
 metadata.allow_tags = True
@@ -68,7 +73,7 @@ metadata.allow_tags = True
 
 def tax(obj):
     return ("{} {:.2f}%".format(obj.sales_tax_name, obj.sales_tax_percent)
-            if obj.sales_tax_percent > 0 else '')
+            if obj.sales_tax_percent else '')
 tax.admin_order_field = 'sales_tax_percent'
 
 
@@ -221,7 +226,7 @@ class SubscriptionAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=unicode(entry),
+                    object_repr=force_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -271,7 +276,7 @@ class CustomerAdmin(LiveModelAdmin):
               'zip_code', 'country', 'currency', 'consolidated_billing',
               'payment_due_days', 'sales_tax_name', 'sales_tax_percent',
               'sales_tax_number', 'extra', 'meta']
-    list_display = ['__unicode__', 'customer_reference',
+    list_display = ['name', 'customer_reference',
                     tax, 'consolidated_billing', metadata]
     search_fields = ['customer_reference', 'first_name', 'last_name', 'company',
                      'address_1', 'address_2', 'city', 'zip_code', 'country',
@@ -330,7 +335,7 @@ class ProviderAdmin(LiveModelAdmin):
               'proforma_starting_number', 'default_document_state',
               'generate_documents_on_trial_end', 'separate_cycles_during_trial', 'prebill_plan',
               'cycle_billing_duration', 'extra', 'meta']
-    list_display = ['__unicode__', 'invoice_series_list_display',
+    list_display = ['name', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
     search_fields = ['customer_reference', 'name', 'company', 'address_1',
                      'address_2', 'city', 'zip_code', 'country', 'state',
@@ -646,7 +651,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=unicode(entry),
+                    object_repr=force_text(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=readable_action
@@ -655,7 +660,7 @@ class BillingDocumentAdmin(ModelAdmin):
             except TransitionNotAllowed:
                 failed_changes.append(entry.id)
             except ValueError as error:
-                failed_actions.append(error.message)
+                failed_actions.append(force_text(error))
             except AttributeError:
                 failed_actions.append('{action} failed for {document}.'.format(
                     action=readable_action, document=entry
@@ -745,7 +750,7 @@ class BillingDocumentAdmin(ModelAdmin):
             if document.pdf:
                 local_file_path = self._download_pdf(document.pdf.url, base_path)
                 try:
-                    reader = PdfFileReader(file(local_file_path, 'rb'))
+                    reader = PdfFileReader(open(local_file_path, 'rb'))
                     merger.append(reader)
                     logging_ctx = {
                         'number': document.series_number,
@@ -934,7 +939,7 @@ class TransactionForm(forms.ModelForm):
 class TransactionAdmin(ModelAdmin):
     form = TransactionForm
 
-    list_display = ('__unicode__', 'related_invoice', 'related_proforma',
+    list_display = ('uuid', 'related_invoice', 'related_proforma',
                     'amount', 'state', 'created_at', 'updated_at',
                     'get_customer', 'get_pay_url', 'get_payment_method',
                     'get_is_recurring')
