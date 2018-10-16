@@ -1,6 +1,6 @@
 pipeline:
   test:
-    image: presslabs/silver
+    image: python:${PYTHON_VERSION}
     pull: true
     group: build
     environment:
@@ -42,3 +42,6 @@ services:
 matrix:
   DJANGO_VERSION:
     - <2.0
+  PYTHON_VERSION:
+    - 2.7
+    - 3.6
