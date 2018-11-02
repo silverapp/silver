@@ -56,4 +56,5 @@ matrix:
     - <2.0
   PYTHON_VERSION:
     - 2.7
+    - 3.5
     - 3.6
