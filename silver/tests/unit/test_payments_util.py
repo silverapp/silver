@@ -81,24 +81,3 @@ class TestPaymentsUtilMethods(TestCase):
         self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
                           mocked_view())
         mocked_view.has_calls([call(None, transaction, True), call()])
-
-    @override_settings(PAYMENT_METHOD_SECRET='a')
-    @override_settings(SILVER_PAYMENT_TOKEN_EXPIRATION=timedelta(seconds=60))
-    def test_get_jwt_token(self):
-        uuid = UUID('6fa459ea-ee8a-4ca4-894e-db77e160355e', version=4)
-        transaction = TransactionFactory(uuid=uuid)
-        if six.PY3:
-            expected_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0cmFuc2FjdG' \
-                             'lvbiI6IjZmYTQ1OWVhLWVlOGEtNGNhNC04OTRlLWRiNzdlMTYwM' \
-                             'zU1ZSIsImV4cCI6MTQ5Nzk2NTY0MH0.NuqwXlHt27nRxg5W2hHo' \
-                             'P5ugnLmw-7QYBumO7lRa1i0'
-        else:
-            expected_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdG' \
-                             'lvbiI6IjZmYTQ1OWVhLWVlOGEtNGNhNC04OTRlLWRiNzdlMTYwM' \
-                             'zU1ZSIsImV4cCI6MTQ5Nzk2NTY0MH0.-bpx5A3DfSe3-HO6aH_g' \
-                             'lS8adcCxUn8lSK1-RPxohhI'
-        with patch('silver.utils.payments.datetime') as mocked_datetime:
-            mocked_datetime.utcnow.return_value = datetime.strptime(
-              'Jun 20 2017 1:33PM', '%b %d %Y %I:%M%p'
-            )
-            self.assertEquals(_get_jwt_token(transaction), expected_token)
