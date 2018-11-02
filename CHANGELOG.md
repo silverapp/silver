@@ -1,7 +1,9 @@
 # Changelog
 
 ## Unrealeased changes
-_Nothing yet_
+- Added Python 3.5 and 3.6 compatibility while maintaining Python 2.7 compatibility for now.
+- Removed pytz dependency.
+- Bumped cryptography version.
 
 ## 0.6.2 (2018-08-10)
 - Fixed a bug where a canceled subscription would not be billed if the plan was billed up to a date
@@ -21,7 +23,6 @@ Some of these changes that were considered to be possibly breaking were marked w
   (through the `upload` method) **(WARNING)**
 - Fixed a potential bug, involving the same `PDF` object and multiple threads, where the `PDF`
   `mark_as_dirty` method would fail to work properly.
-
 
 ## 0.5.5 (2018-03-30)
 - Make sure to use the plan currency when generating documents.
@@ -170,9 +171,12 @@ for the next months invoices to be generated even if the customer has consolidat
 
 ## 0.2.8 (2017-07-17)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
-- The PDFs for Invoices and Proformas are now generated asynchronously using Celery tasks. Redis is required for locking. **(BREAKING)**
-- PDFs now have their own model, therefore a migration has been created, which unfortunately fails to migrate the file url. **(BREAKING)**
-A way to fix this would be to regenerate and re-upload the PDFs. Another way that should work would be to set the PDF.pdf_file.name value from the old Invoice.pdf_file.name.
+- The PDFs for Invoices and Proformas are now generated asynchronously using Celery tasks. Redis is 
+required for locking. **(BREAKING)**
+- PDFs now have their own model, therefore a migration has been created, which unfortunately fails 
+to migrate the file url. **(BREAKING)**
+A way to fix this would be to regenerate and re-upload the PDFs. Another way that should work would 
+be to set the PDF.pdf_file.name value from the old Invoice.pdf_file.name.
 
 ## 0.2.7 (2017-02-08)
 - Added a setting that allows automatically creating transaction when a payment method is verified.
