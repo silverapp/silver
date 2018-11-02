@@ -21,7 +21,6 @@ from decimal import Decimal
 from annoying.fields import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
 from model_utils import Choices
-import pytz
 
 from django.apps import apps
 from django.db.models.signals import post_save
@@ -72,25 +71,25 @@ class BillingDocumentQuerySet(models.QuerySet):
     def due_this_month(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
-            due_date__gte=datetime.now(pytz.utc).date().replace(day=1)
+            due_date__gte=timezone.now().date().replace(day=1)
         )
 
     def due_today(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
-            due_date__exact=datetime.now(pytz.utc).date()
+            due_date__exact=timezone.now().date()
         )
 
     def overdue(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
-            due_date__lt=datetime.now(pytz.utc).date()
+            due_date__lt=timezone.now().date()
         )
 
     def overdue_since_last_month(self):
         return self.filter(
             state=BillingDocumentBase.STATES.ISSUED,
-            due_date__lt=datetime.now(pytz.utc).date().replace(day=1)
+            due_date__lt=timezone.now().date().replace(day=1)
         )
 
 
