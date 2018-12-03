@@ -1,4 +1,4 @@
-# Copyright (c) 2017 Presslabs SRL
+# Copyright (c) 2019 Presslabs SRL
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from mock import MagicMock, patch
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 
-from silver.models import Transaction
+from silver.models import Transaction, Invoice
 from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
                                     TransactionFactory, ProformaFactory, DocumentEntryFactory)
 from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
@@ -242,3 +242,19 @@ class TestDocumentsTransactions(TestCase):
         invoice = transaction.invoice
 
         self.assertEqual(proforma.related_document, invoice)
+
+    def test_transaction_settle_with_already_paid_invoice(self):
+        transaction = TransactionFactory.create(
+            state=Transaction.States.Pending,
+        )
+
+        transaction.invoice.pay()
+
+        transaction.settle()
+        transaction.save()
+
+        transaction.invoice.refresh_from_db()
+        transaction.refresh_from_db()
+
+        assert transaction.state == Transaction.States.Settled
+        assert transaction.invoice.state == Invoice.STATES.PAID
