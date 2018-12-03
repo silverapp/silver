@@ -294,8 +294,11 @@ class Transaction(models.Model):
         return self.payment_method.payment_processor
 
     def update_document_state(self):
-        if (self.state == Transaction.States.Settled and
-                not self.document.amount_to_be_charged_in_transaction_currency):
+        if (
+            self.state == Transaction.States.Settled and
+            not self.document.amount_to_be_charged_in_transaction_currency and
+            self.document.state != self.document.STATES.PAID
+        ):
             self.document.pay()
 
     def __str__(self):
