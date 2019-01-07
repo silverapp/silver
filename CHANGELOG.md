@@ -1,7 +1,12 @@
 # Changelog
 
 ## Unrealeased changes
-- Added Python 3.5 and 3.6 compatibility while maintaining Python 2.7 compatibility for now.
+_Nothing yet_
+
+## 0.7 (2019-01-07)
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Added Python 3.5 and 3.6 compatibility while maintaining Python 2.7 compatibility for now. **(WARNING)**
+- Fixed not being able to later settle a transaction related to a manually paid document.
 - Removed pytz dependency.
 - Bumped cryptography version.
 
