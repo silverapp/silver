@@ -19,9 +19,11 @@ from rest_framework import serializers
 from silver.api.serializers.common import CustomerUrl, PDFUrl
 from silver.api.serializers.transaction_serializers import TransactionSerializer
 from silver.models import DocumentEntry, Customer, Invoice, Proforma, BillingDocumentBase
+from silver.utils.serializers import AutoCleanSerializerMixin
 
 
-class DocumentEntrySerializer(serializers.HyperlinkedModelSerializer):
+class DocumentEntrySerializer(AutoCleanSerializerMixin,
+                              serializers.HyperlinkedModelSerializer):
     product_code = serializers.SlugRelatedField(
         slug_field='value',
         read_only=True
@@ -99,8 +101,9 @@ class DocumentSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = fields
 
 
-class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
-    invoice_entries = DocumentEntrySerializer(many=True)
+class InvoiceSerializer(AutoCleanSerializerMixin,
+                        serializers.HyperlinkedModelSerializer):
+    invoice_entries = DocumentEntrySerializer(many=True, required=False)
     pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
@@ -123,7 +126,7 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         }
 
     def create(self, validated_data):
-        entries = validated_data.pop('invoice_entries', None)
+        entries = validated_data.pop('invoice_entries', [])
 
         # Create the new invoice object
         invoice = Invoice.objects.create(**validated_data)
@@ -156,6 +159,13 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
 
         return instance
 
+    def instantiate_object(self, data):
+        invoice = super(InvoiceSerializer, self).instantiate_object(data)
+        # after clean_defaults is moved into full_clean this call won't be needed
+        invoice.clean_defaults()
+
+        return invoice
+
     def validate(self, data):
         data = super(InvoiceSerializer, self).validate(data)
 
@@ -169,8 +179,9 @@ class InvoiceSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 
-class ProformaSerializer(serializers.HyperlinkedModelSerializer):
-    proforma_entries = DocumentEntrySerializer(many=True)
+class ProformaSerializer(AutoCleanSerializerMixin,
+                         serializers.HyperlinkedModelSerializer):
+    proforma_entries = DocumentEntrySerializer(many=True, required=False)
     pdf_url = PDFUrl(view_name='pdf', source='*', read_only=True)
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
@@ -189,11 +200,11 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
                             'total_in_transaction_currency')
         extra_kwargs = {
             'transaction_currency': {'required': False},
-            'invoice': {'source': 'related_document', 'view_name': 'invoice-detail'}
+            'invoice': {'source': 'related_document', 'view_name': 'invoice-detail'},
         }
 
     def create(self, validated_data):
-        entries = validated_data.pop('proforma_entries', None)
+        entries = validated_data.pop('proforma_entries', [])
 
         proforma = Proforma.objects.create(**validated_data)
 
@@ -224,11 +235,15 @@ class ProformaSerializer(serializers.HyperlinkedModelSerializer):
 
         return instance
 
+    def instantiate_object(self, data):
+        proforma = super(ProformaSerializer, self).instantiate_object(data)
+        # after clean_defaults is moved into full_clean this call won't be needed
+        proforma.clean_defaults()
+
+        return proforma
+
     def validate(self, data):
         data = super(ProformaSerializer, self).validate(data)
-
-        if self.instance:
-            self.instance.clean()
 
         if self.instance and data['state'] != self.instance.state:
             msg = "Direct state modification is not allowed." \

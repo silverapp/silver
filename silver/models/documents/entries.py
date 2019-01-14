@@ -29,14 +29,14 @@ class DocumentEntry(models.Model):
                                    validators=[MinValueValidator(0.0)])
     unit_price = models.DecimalField(max_digits=19, decimal_places=4)
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
-                                     related_name='invoices')
+                                     related_name='invoices', on_delete=models.PROTECT)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     prorated = models.BooleanField(default=False)
     invoice = models.ForeignKey('BillingDocumentBase', related_name='invoice_entries',
-                                blank=True, null=True)
+                                blank=True, null=True, on_delete=models.CASCADE)
     proforma = models.ForeignKey('BillingDocumentBase', related_name='proforma_entries',
-                                 blank=True, null=True)
+                                 blank=True, null=True, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Entry'

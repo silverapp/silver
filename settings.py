@@ -103,14 +103,14 @@ MEDIA_URL = '/app_media/'
 STATIC_ROOT = PROJECT_ROOT + '/app_static/'
 STATIC_URL = '/app_static/'
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 SECRET_KEY = 'secret'
 

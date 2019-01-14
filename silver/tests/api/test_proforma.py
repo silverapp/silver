@@ -57,14 +57,13 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': provider_url,
             'customer': customer_url,
-            'series': "",
-            'number': "",
             'currency': 'RON',
             'proforma_entries': []
         }
 
         response = self.client.post(url, data=data)
 
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         proforma = get_object_or_None(Proforma, id=response.data["id"])

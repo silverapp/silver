@@ -408,11 +408,12 @@ class TestTransactionEndpoint(APITestCase):
         payment_method = PaymentMethodFactory.create(
             payment_processor=triggered_processor
         )
-
+        customer = payment_method.customer
         transaction = TransactionFactory.create(payment_method=payment_method)
 
-        proforma = ProformaFactory.create(state='issued')
-        invoice = InvoiceFactory.create(related_document=proforma, state='issued')
+        proforma = ProformaFactory.create(state='issued', customer=customer)
+        invoice = InvoiceFactory.create(state='issued', customer=customer,
+                                        related_document=proforma)
         proforma.related_document = invoice
         proforma.save()
 
@@ -421,10 +422,8 @@ class TestTransactionEndpoint(APITestCase):
         url = reverse('transaction-detail', args=[transaction.customer.pk,
                                                   transaction.uuid])
 
-        new_payment_method = PaymentMethodFactory.create(
-            payment_processor=triggered_processor,
-            customer=payment_method.customer
-        )
+        new_payment_method = PaymentMethodFactory.create(payment_processor=triggered_processor,
+                                                         customer=customer)
 
         new_payment_method_url = reverse('payment-method-detail', kwargs={
             'customer_pk': new_payment_method.customer.pk,
@@ -443,6 +442,7 @@ class TestTransactionEndpoint(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+        print(response.data)
         self.assertEqual(response.data, {
             'proforma': [u'This field may not be modified.'],
             'invoice': [u'This field may not be modified.'],

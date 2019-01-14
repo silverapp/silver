@@ -22,7 +22,7 @@ from django_fsm import TransitionNotAllowed
 from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase, Client
 from django.utils.encoding import force_text
 

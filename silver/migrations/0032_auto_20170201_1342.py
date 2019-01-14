@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
+import django.db.models.deletion
 import django_fsm
 import jsonfield.fields
 from decimal import Decimal
@@ -143,7 +144,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='invoice',
             name='proforma',
-            field=models.ForeignKey(related_name='related_invoice', blank=True, to='silver.Proforma', null=True),
+            field=models.ForeignKey(related_name='related_invoice', blank=True, to='silver.Proforma', null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AlterField(
             model_name='plan',
@@ -158,7 +159,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='proforma',
             name='invoice',
-            field=models.ForeignKey(related_name='related_proforma', blank=True, to='silver.Invoice', null=True),
+            field=models.ForeignKey(related_name='related_proforma', blank=True, to='silver.Invoice', null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AlterField(
             model_name='provider',
@@ -202,22 +203,22 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transaction',
             name='invoice',
-            field=models.ForeignKey(blank=True, to='silver.Invoice', null=True),
+            field=models.ForeignKey(blank=True, to='silver.Invoice', null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='transaction',
             name='payment_method',
-            field=models.ForeignKey(to='silver.PaymentMethod'),
+            field=models.ForeignKey(to='silver.PaymentMethod', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='transaction',
             name='proforma',
-            field=models.ForeignKey(blank=True, to='silver.Proforma', null=True),
+            field=models.ForeignKey(blank=True, to='silver.Proforma', null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='paymentmethod',
             name='customer',
-            field=models.ForeignKey(to='silver.Customer'),
+            field=models.ForeignKey(to='silver.Customer', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.RemoveField(
             model_name='customer',

@@ -36,14 +36,14 @@ from django.utils.translation import ugettext_lazy as _
 from silver.models import Invoice, Proforma
 from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 from silver.utils.international import currencies
-from silver.utils.models import AutoDateTimeField
-
+from silver.utils.models import AutoDateTimeField, AutoCleanModelMixin
 
 logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
-class Transaction(models.Model):
+class Transaction(AutoCleanModelMixin,
+                  models.Model):
     _provider = None
 
     amount = models.DecimalField(
@@ -83,11 +83,11 @@ class Transaction(models.Model):
                      default=States.Initial)
 
     proforma = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
-                                 related_name='proforma_transactions')
+                                 on_delete=models.SET_NULL, related_name='proforma_transactions')
     invoice = models.ForeignKey("BillingDocumentBase", null=True, blank=True,
-                                related_name='invoice_transactions')
+                                on_delete=models.SET_NULL, related_name='invoice_transactions')
 
-    payment_method = models.ForeignKey('PaymentMethod')
+    payment_method = models.ForeignKey('PaymentMethod', on_delete=models.PROTECT)
     uuid = models.UUIDField(default=uuid.uuid4)
     valid_until = models.DateTimeField(null=True, blank=True)
     last_access = models.DateTimeField(null=True, blank=True)
@@ -149,10 +149,7 @@ class Transaction(models.Model):
 
     @transaction.atomic()
     def save(self, *args, **kwargs):
-        previous_instance = get_object_or_None(Transaction, pk=self.pk) if self.pk else None
-        setattr(self, 'previous_instance', previous_instance)
-
-        if not previous_instance:
+        if not self.pk:
             # Creating a new Transaction so we lock the DB rows for related billing documents and
             # transactions
             if self.proforma:
@@ -162,9 +159,6 @@ class Transaction(models.Model):
 
             Transaction.objects.select_for_update().filter(Q(proforma=self.proforma) |
                                                            Q(invoice=self.invoice))
-
-        if not getattr(self, '.cleaned', False):
-            self.full_clean(previous_instance=previous_instance)
 
         super(Transaction, self).save(*args, **kwargs)
 
@@ -226,31 +220,23 @@ class Transaction(models.Model):
                     raise ValidationError(message)
             else:
                 self.amount = self.document.amount_to_be_charged_in_transaction_currency
+        else:
+            # clean final fields
+            errors = {}
+            for field in self.final_fields:
+                old_value = self.initial_state.get(field)
+                current_value = self.current_state.get(field)
 
-    def clean_with_previous_instance(self, previous_instance):
-        if not previous_instance:
-            return
-
-        for field in self.final_fields:
-            old_value = getattr(previous_instance, field, None)
-            current_value = getattr(self, field, None)
-
-            if old_value is not None and old_value != current_value:
-                raise ValidationError("Field '%s' may not be changed." % field)
+                if old_value is not None and old_value != current_value:
+                    errors[field] = 'This field may not be modified.'
+            if errors:
+                raise ValidationError(errors)
 
     def full_clean(self, *args, **kwargs):
         # 'amount' and 'currency' are handled in our clean method
         kwargs['exclude'] = kwargs.get('exclude', []) + ['currency', 'amount']
 
-        previous_instance = kwargs.pop('previous_instance', None)
-
         super(Transaction, self).full_clean(*args, **kwargs)
-
-        self.clean_with_previous_instance(previous_instance)
-
-        # this assumes that nobody calls clean and then modifies this object
-        # without calling clean again
-        setattr(self, '.cleaned', True)
 
     @property
     def can_be_consumed(self):
