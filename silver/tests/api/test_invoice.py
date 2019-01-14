@@ -62,13 +62,12 @@ class TestInvoiceEndpoints(APITestCase):
         data = {
             'provider': provider_url,
             'customer': customer_url,
-            'series': "",
-            'number': "",
             'currency': 'RON',
             'invoice_entries': []
         }
 
         response = self.client.post(url, data=data)
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         invoice = get_object_or_None(Invoice, id=response.data["id"])
@@ -126,6 +125,7 @@ class TestInvoiceEndpoints(APITestCase):
         response = self.client.post(url, data=json.dumps(data),
                                     content_type='application/json')
 
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # TODO: Check the body of the response. There were some problems
         # related to the invoice_entries list.

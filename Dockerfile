@@ -1,4 +1,4 @@
-FROM python:2.7.11-alpine
+FROM python:3.6-alpine
 MAINTAINER Presslabs ping@presslabs.com
 
 # Ensure that Python outputs everything that's printed inside
@@ -20,7 +20,7 @@ COPY ./requirements /silver/requirements
 RUN set -ex \
     && apk update \
     && apk add --no-cache \
-        mariadb-client-libs \
+        mariadb-client \
         libjpeg-turbo \
         jpeg \
         zlib \
@@ -36,7 +36,7 @@ RUN set -ex \
     && update-ca-certificates \
     && pip install --no-cache-dir -r requirements/common.txt \
     && pip install --no-cache-dir gunicorn==19.4.5 \
-    && pip install --no-cache-dir mysql-python \
+    && pip install --no-cache-dir mysqlclient \
     && apk del .build-deps \
     && wget -qO- https://github.com/jwilder/dockerize/releases/download/v0.2.0/dockerize-linux-amd64-v0.2.0.tar.gz | tar -zxf - -C /usr/bin \
     && chown root:root /usr/bin/dockerize

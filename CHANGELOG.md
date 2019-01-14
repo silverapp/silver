@@ -3,6 +3,17 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.8b1 (2019-06-03)
+This is a beta release. It's not recommended to use it in production environments.
+
+Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+- Added Django2.0 and Django2.1 compatibility
+- If you are using Python2.7 and Django 1.11 you'll probably have to manually pin `django-filters==1.1` in your project's requirements. **(WARNING)**
+- Transaction objects are now automatically cleaned before saving. **(WARNING)**
+- The following API query params will no longer allow partial lookups (exact match is required now): `currency`, `sales_tax_name`. **(WARNING)**
+- The following API query params will no longer allow case insensitive lookups: `state`, `reference`. **(WARNING)**
+- Starting with a future release all API query params will probably require exact, case sensitive matching.
+
 ## 0.7.4 (2019-04-08)
 - Fixed BillingLog invoice field not being updated post creation. (migration fix included)
 - Fixed PDF file download in admin.

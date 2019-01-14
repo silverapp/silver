@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import json
 import pytest
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.encoding import force_text
 
 from rest_framework.test import APITestCase

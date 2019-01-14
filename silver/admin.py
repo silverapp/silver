@@ -33,9 +33,8 @@ from django.contrib.admin import (
 from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
-from django.core import urlresolvers
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db import connections
 from django.db.models import BLANK_CHOICE_DASH
 from django.forms import ChoiceField
@@ -962,8 +961,7 @@ class TransactionAdmin(ModelAdmin):
     get_pay_url.short_description = 'Pay URL'
 
     def get_customer(self, obj):
-        link = urlresolvers.reverse("admin:silver_customer_change",
-                                    args=[obj.payment_method.customer.pk])
+        link = reverse("admin:silver_customer_change", args=[obj.payment_method.customer.pk])
         return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
     get_customer.allow_tags = True
     get_customer.short_description = 'Customer'
@@ -974,8 +972,7 @@ class TransactionAdmin(ModelAdmin):
     get_is_recurring.short_description = 'Recurring'
 
     def get_payment_method(self, obj):
-        link = urlresolvers.reverse("admin:silver_paymentmethod_change",
-                                    args=[obj.payment_method.pk])
+        link = reverse("admin:silver_paymentmethod_change", args=[obj.payment_method.pk])
         return u'<a href="%s">%s</a>' % (link, obj.payment_method)
     get_payment_method.allow_tags = True
     get_payment_method.short_description = 'Payment Method'

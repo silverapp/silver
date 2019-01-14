@@ -17,6 +17,7 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
+import django.db.models.deletion
 import django_fsm
 import jsonfield.fields
 import livefield.fields
@@ -129,7 +130,7 @@ class Migration(migrations.Migration):
                     upload_to=silver.models.documents.base.documents_pdf_path, null=True, editable=False, blank=True)),
                 ('state', django_fsm.FSMField(default=b'draft', help_text=b'The state the invoice is in.', max_length=10,
                  verbose_name=b'State', choices=[(b'draft', b'Draft'), (b'issued', b'Issued'), (b'paid', b'Paid'), (b'canceled', b'Canceled')])),
-                ('customer', models.ForeignKey(to='silver.Customer')),
+                ('customer', models.ForeignKey(to='silver.Customer', on_delete=django.db.models.deletion.CASCADE)),
             ],
             options={
                 'ordering': ('-issue_date', 'number'),
@@ -164,7 +165,7 @@ class Migration(migrations.Migration):
                 ('start_date', models.DateField(editable=False)),
                 ('end_date', models.DateField(editable=False)),
                 ('metered_feature', models.ForeignKey(
-                    related_name='consumed', to='silver.MeteredFeature')),
+                    related_name='consumed', to='silver.MeteredFeature', on_delete=django.db.models.deletion.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -229,9 +230,9 @@ class Migration(migrations.Migration):
                     upload_to=silver.models.documents.base.documents_pdf_path, null=True, editable=False, blank=True)),
                 ('state', django_fsm.FSMField(default=b'draft', help_text=b'The state the invoice is in.', max_length=10,
                  verbose_name=b'State', choices=[(b'draft', b'Draft'), (b'issued', b'Issued'), (b'paid', b'Paid'), (b'canceled', b'Canceled')])),
-                ('customer', models.ForeignKey(to='silver.Customer')),
+                ('customer', models.ForeignKey(to='silver.Customer', on_delete=django.db.models.deletion.CASCADE)),
                 ('invoice', models.ForeignKey(
-                    related_name='related_invoice', blank=True, to='silver.Invoice', null=True)),
+                    related_name='related_invoice', blank=True, to='silver.Invoice', null=True, on_delete=django.db.models.deletion.CASCADE)),
             ],
             options={
                 'ordering': ('-issue_date', 'number'),
@@ -299,22 +300,23 @@ class Migration(migrations.Migration):
                  max_length=12, choices=[(
                      b'active', b'Active'), (b'inactive', b'Inactive'), (b'canceled', b'Canceled'), (b'ended', b'Ended')])),
                 ('customer', models.ForeignKey(related_name='subscriptions',
-                 to='silver.Customer', help_text=b'The customer who is subscribed to the plan.')),
+                 to='silver.Customer', help_text=b'The customer who is subscribed to the plan.', on_delete=django.db.models.deletion.CASCADE)),
                 ('plan', models.ForeignKey(
-                    help_text=b'The plan the customer is subscribed to.', to='silver.Plan')),
+                    help_text=b'The plan the customer is subscribed to.', to='silver.Plan', on_delete=django.db.models.deletion.CASCADE)),
             ],
         ),
         migrations.AddField(
             model_name='proforma',
             name='provider',
-            field=models.ForeignKey(to='silver.Provider'),
+            field=models.ForeignKey(to='silver.Provider', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='plan',
             name='product_code',
             field=models.OneToOneField(
                 to='silver.ProductCode',
-                help_text=b'The product code for this plan.'),
+                help_text=b'The product code for this plan.',
+                on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='plan',
@@ -322,21 +324,21 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 related_name='plans',
                 to='silver.Provider',
-                help_text=b'The provider which provides the plan.'),
+                help_text=b'The provider which provides the plan.', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='meteredfeatureunitslog',
             name='subscription',
             field=models.ForeignKey(
                 related_name='mf_log_entries',
-                to='silver.Subscription'),
+                to='silver.Subscription', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='meteredfeature',
             name='product_code',
             field=silver.utils.models.UnsavedForeignKey(
                 help_text=b'The product code for this plan.',
-                to='silver.ProductCode'),
+                to='silver.ProductCode', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='invoice',
@@ -345,12 +347,12 @@ class Migration(migrations.Migration):
                 related_name='related_proforma',
                 blank=True,
                 to='silver.Proforma',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='invoice',
             name='provider',
-            field=models.ForeignKey(to='silver.Provider'),
+            field=models.ForeignKey(to='silver.Provider', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='documententry',
@@ -359,7 +361,7 @@ class Migration(migrations.Migration):
                 related_name='invoice_entries',
                 blank=True,
                 to='silver.Invoice',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='documententry',
@@ -368,7 +370,7 @@ class Migration(migrations.Migration):
                 related_name='invoices',
                 blank=True,
                 to='silver.ProductCode',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='documententry',
@@ -377,7 +379,7 @@ class Migration(migrations.Migration):
                 related_name='proforma_entries',
                 blank=True,
                 to='silver.Proforma',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='billinglog',
@@ -386,7 +388,7 @@ class Migration(migrations.Migration):
                 related_name='billing_log_entries',
                 blank=True,
                 to='silver.Invoice',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='billinglog',
@@ -395,14 +397,14 @@ class Migration(migrations.Migration):
                 related_name='billing_log_entries',
                 blank=True,
                 to='silver.Proforma',
-                null=True),
+                null=True, on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AddField(
             model_name='billinglog',
             name='subscription',
             field=models.ForeignKey(
                 related_name='billing_log_entries',
-                to='silver.Subscription'),
+                to='silver.Subscription', on_delete=django.db.models.deletion.CASCADE),
         ),
         migrations.AlterUniqueTogether(
             name='proforma',
