@@ -15,6 +15,7 @@
 from __future__ import absolute_import
 
 from rest_framework import serializers
+from rest_framework.fields import JSONField, DecimalField
 
 from silver.api.serializers.common import CustomerUrl, PDFUrl
 from silver.api.serializers.transaction_serializers import TransactionSerializer
@@ -28,12 +29,20 @@ class DocumentEntrySerializer(AutoCleanSerializerMixin,
         slug_field='value',
         read_only=True
     )
+    total_before_tax = DecimalField(coerce_to_string=True, max_digits=None, decimal_places=2,
+                                    read_only=True)
+    total = DecimalField(coerce_to_string=True, max_digits=None, decimal_places=2,
+                         read_only=True)
 
     class Meta:
         model = DocumentEntry
-        fields = ('description', 'unit', 'unit_price', 'quantity', 'total',
+        fields = ('id', 'description', 'unit', 'unit_price', 'quantity', 'total',
                   'total_before_tax', 'start_date', 'end_date', 'prorated',
                   'product_code')
+        extra_kwargs = {
+            'unit_price': {'coerce_to_string': True},
+            'quantity': {'coerce_to_string': True},
+        }
 
 
 class DocumentUrl(serializers.HyperlinkedIdentityField):
@@ -108,6 +117,14 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
+    archived_customer = JSONField(read_only=True)
+    archived_provider = JSONField(read_only=True)
+    total_in_transaction_currency = serializers.DecimalField(
+        max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True
+    )
+    total = serializers.DecimalField(
+        max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True
+    )
 
     class Meta:
         model = Invoice
@@ -122,6 +139,8 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
                             'total_in_transaction_currency')
         extra_kwargs = {
             'transaction_currency': {'required': False},
+            'number': {'required': False},
+            'series': {'required': False},
             'proforma': {'source': 'related_document', 'view_name': 'proforma-detail'}
         }
 

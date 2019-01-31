@@ -115,7 +115,12 @@ MIDDLEWARE = [
 SECRET_KEY = 'secret'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination'
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'silver.api.pagination.LinkHeaderPagination',
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
 HOOK_EVENTS = _HOOK_EVENTS

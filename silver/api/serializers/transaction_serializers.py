@@ -67,8 +67,8 @@ class TransactionSerializer(AutoCleanSerializerMixin,
     customer = CustomerUrl(view_name='customer-detail', read_only=True)
     provider = ProviderUrl(view_name='provider-detail', read_only=True)
     id = serializers.CharField(source='uuid', read_only=True)
-    amount = serializers.DecimalField(required=False, decimal_places=2,
-                                      max_digits=12, min_value=0)
+    amount = serializers.DecimalField(required=False, max_digits=12, decimal_places=2, min_value=0,
+                                      coerce_to_string=True)
 
     class Meta:
         model = Transaction
