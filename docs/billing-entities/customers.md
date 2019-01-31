@@ -44,13 +44,14 @@ Content-Type: application/json
 
 {
   "customer_reference": "5",
-  "<b>name</b>": "John Doe",
+  "first_name": "John",
+  "last_name": "Doe",
   "company": "ACME Inc.",
   "email": "johndoe@acme.inc",
-  "<b>address_1</b>": "Funny Road no.4",
+  "address_1": "Funny Road no.4",
   "address_2": null,
   "country": "US",
-  "<b>city</b>": "Wilmington",
+  "city": "Wilmington",
   "state": "Delaware",
   "zip_code": 9000,
   "extra": "Tax exempt due to XXX",
