@@ -167,6 +167,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'silver.tasks.generate_pdfs',
         'schedule': datetime.timedelta(seconds=5)
     },
+    'retry-transactions': {
+        'task': 'silver.tasks.retry_transactions',
+        'schedule': datetime.timedelta(hours=1)
+    }
 }
 LOCK_MANAGER_CONNECTION = {'host': 'localhost', 'port': 6379, 'db': 1}
 
