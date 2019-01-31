@@ -16,10 +16,10 @@ from __future__ import absolute_import
 
 import pytest
 
-from mock import patch, call, MagicMock
+from mock import patch, MagicMock
 
 from silver.tasks import generate_pdfs, generate_pdf
-from silver.tests.factories import InvoiceFactory, ProformaFactory
+from silver.fixtures.factories import InvoiceFactory, ProformaFactory
 from silver.utils.pdf import fetch_resources
 
 

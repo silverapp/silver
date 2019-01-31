@@ -20,8 +20,8 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.tests.factories import AdminUserFactory
-from silver.tests.fixtures import PAYMENT_PROCESSORS
+from silver.fixtures.factories import AdminUserFactory
+from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS
 from silver.tests.utils import build_absolute_test_url
 
 

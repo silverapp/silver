@@ -19,8 +19,8 @@ import logging
 from django.core.management.base import BaseCommand
 
 from silver.models import Transaction, Invoice, Proforma
-from silver.tests.factories import (TransactionFactory, InvoiceFactory, DocumentEntryFactory,
-                                    ProformaFactory)
+from silver.fixtures.factories import (TransactionFactory, InvoiceFactory, DocumentEntryFactory,
+                                       ProformaFactory)
 
 
 logger = logging.getLogger(__name__)

@@ -23,17 +23,17 @@ from six.moves import range
 
 from django.utils import timezone
 from django.conf import settings
-from django.utils.encoding import force_text
 
 from annoying.functions import get_object_or_None
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.models import Invoice, Proforma, PDF
-from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    ProviderFactory, ProformaFactory,
-                                    SubscriptionFactory)
+from silver.models import Invoice, Proforma, PDF, DocumentEntry
+from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
+                                       ProviderFactory, ProformaFactory,
+                                       SubscriptionFactory)
+from silver.tests.api.specs.document_entry import document_entry_definition
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -62,14 +62,12 @@ class TestProformaEndpoints(APITestCase):
         }
 
         response = self.client.post(url, data=data)
-
-        print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert response.status_code == status.HTTP_201_CREATED, response.data
 
         proforma = get_object_or_None(Proforma, id=response.data["id"])
-        self.assertTrue(proforma)
+        assert proforma
 
-        self.assertEqual(response.data, {
+        assert response.data == {
             "id": response.data["id"],
             "series": "ProformaSeries",
             "number": None,
@@ -95,7 +93,7 @@ class TestProformaEndpoints(APITestCase):
             "total": 0,
             "total_in_transaction_currency": 0,
             "transactions": []
-        })
+        }
 
     def test_post_proforma_with_proforma_entries(self):
         customer = CustomerFactory.create()
@@ -202,49 +200,26 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
-        entry_data = {
+        request_data = {
             "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
-        response = self.client.post(url, data=json.dumps(entry_data),
+        response = self.client.post(url, data=json.dumps(request_data),
                                     content_type='application/json')
 
-        proforma.refresh_from_db()
+        assert response.status_code == status.HTTP_201_CREATED, response.data
 
-        total = Decimal(200.0) * Decimal(1 + proforma.sales_tax_percent / 100)
+        entry = proforma.entries.get(id=response.data['id'])
+        document_entry_definition.check_response(entry, response.data, request_data)
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data == {
-            'description': 'Page views',
-            'unit': None,
-            'quantity': '20.0000',
-            'unit_price': '10.0000',
-            'start_date': None,
-            'end_date': None,
-            'prorated': False,
-            'product_code': None,
-            'total': total,
-            'total_before_tax': Decimal(200.0)
-        }
-
+        # check proforma entries in new request
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
 
-        invoice_entries = response.data.get('proforma_entries', None)
-        assert len(invoice_entries) == 1
-        assert invoice_entries[0] == {
-            'description': 'Page views',
-            'unit': None,
-            'quantity': '20.0000',
-            'unit_price': '10.0000',
-            'start_date': None,
-            'end_date': None,
-            'prorated': False,
-            'product_code': None,
-            'total': total,
-            'total_before_tax': Decimal(200.0)
-        }
+        proforma_entries = response.data.get('proforma_entries', [])
+        assert len(proforma_entries) == 1
+        document_entry_definition.check_response(entry, proforma_entries[0], request_data)
 
     def test_try_to_get_proforma_entries(self):
         url = reverse('proforma-entry-create', kwargs={'document_pk': 1})
@@ -257,39 +232,27 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
-        entry_data = {
+        request_data = {
             "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
 
-        entries_count = 10
+        entries_count = 5
         for cnt in range(entries_count):
-            response = self.client.post(url, data=json.dumps(entry_data),
+            response = self.client.post(url, data=json.dumps(request_data),
                                         content_type='application/json')
 
-            assert response.status_code == status.HTTP_201_CREATED
+            assert response.status_code == status.HTTP_201_CREATED, response.data
 
-            proforma.refresh_from_db()
-            total = Decimal(200.0) * Decimal(1 +
-                                             proforma.sales_tax_percent / 100)
-            assert response.data == {
-                'description': 'Page views',
-                'unit': None,
-                'quantity': '20.0000',
-                'unit_price': '10.0000',
-                'start_date': None,
-                'end_date': None,
-                'prorated': False,
-                'product_code': None,
-                'total': total,
-                'total_before_tax': Decimal(200.0)
-            }
+            entry = proforma.entries.get(id=response.data['id'])
+            document_entry_definition.check_response(entry, response.data, request_data)
 
+        # check proforma entries in new request
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
-        invoice_entries = response.data.get('proforma_entries', None)
-        assert len(invoice_entries) == entries_count
+        proforma_entries = response.data.get('proforma_entries', [])
+        assert len(proforma_entries) == entries_count
 
     def test_delete_proforma_entry(self):
         proforma = ProformaFactory.create()

@@ -13,6 +13,7 @@
 # limitations under the License.
 import os
 import datetime
+import sys
 
 from silver import HOOK_EVENTS as _HOOK_EVENTS
 from django.utils.log import DEFAULT_LOGGING as LOGGING
@@ -183,3 +184,9 @@ try:
     from settings_local import *
 except ImportError:
     pass
+
+if sys.argv[0].endswith('pytest'):
+    from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS
+    PAYMENT_DUE_DAYS = 5
+    REST_FRAMEWORK['PAGE_SIZE'] = API_PAGE_SIZE = 5
+    SILVER_SHOW_PDF_STORAGE_URL = True

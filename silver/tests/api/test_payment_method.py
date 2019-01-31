@@ -26,10 +26,10 @@ from rest_framework.reverse import reverse
 from silver.api.serializers.payment_methods_serializers import PaymentMethodSerializer
 from silver.api.views.payment_method_views import PaymentMethodList, PaymentMethodDetail
 from silver.models import PaymentMethod, Transaction
-from silver.tests.factories import (CustomerFactory, PaymentMethodFactory,
-                                    TransactionFactory)
-from silver.tests.fixtures import (PAYMENT_PROCESSORS, manual_processor,
-                                   triggered_processor, failing_void_processor)
+from silver.fixtures.factories import (CustomerFactory, PaymentMethodFactory,
+                                       TransactionFactory)
+from silver.fixtures.test_fixtures import (PAYMENT_PROCESSORS, manual_processor,
+                                           triggered_processor, failing_void_processor)
 from silver.tests.api.utils.api_get_assert import APIGetAssert
 
 

@@ -20,9 +20,9 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from silver.models import Transaction
-from silver.tests.factories import TransactionFactory, PaymentMethodFactory
-from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
-                                   triggered_processor)
+from silver.fixtures.factories import TransactionFactory, PaymentMethodFactory
+from silver.fixtures.test_fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
+                                           triggered_processor)
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

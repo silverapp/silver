@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 import datetime
 import json
+from django.conf import settings
 
 from freezegun import freeze_time
 
@@ -25,9 +26,9 @@ from rest_framework.test import APITestCase
 
 from silver.models import Subscription
 from silver.tests.api.specs.subscription import spec_subscription
-from silver.tests.factories import (AdminUserFactory, CustomerFactory,
-                                    PlanFactory, SubscriptionFactory,
-                                    MeteredFeatureFactory)
+from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
+                                       PlanFactory, SubscriptionFactory,
+                                       MeteredFeatureFactory)
 
 
 class TestSubscriptionEndpoint(APITestCase):
@@ -244,7 +245,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
     def test_get_subscription_list(self):
         customer = CustomerFactory.create()
-        SubscriptionFactory.create_batch(40, customer=customer)
+        SubscriptionFactory.create_batch(settings.API_PAGE_SIZE * 2, customer=customer)
 
         url = reverse('subscription-list',
                       kwargs={'customer_pk': customer.pk})

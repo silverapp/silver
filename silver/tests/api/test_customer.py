@@ -21,8 +21,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
+from django.conf import settings
+
 from silver.models import Customer
-from silver.tests.factories import AdminUserFactory, CustomerFactory
+from silver.fixtures.factories import AdminUserFactory, CustomerFactory
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -86,7 +88,7 @@ class TestCustomerEndpoints(APITestCase):
                     response.data == {field: ['This field is required.']})
 
     def test_get_customer_list(self):
-        CustomerFactory.create_batch(40)
+        CustomerFactory.create_batch(settings.API_PAGE_SIZE * 2)
 
         url = reverse('customer-list')
 

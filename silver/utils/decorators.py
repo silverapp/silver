@@ -17,11 +17,10 @@ from __future__ import absolute_import
 import jwt
 from uuid import UUID
 
+from django.apps import apps
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-
-from silver.models.transactions import Transaction
 
 
 def get_transaction_from_token(view):
@@ -40,5 +39,16 @@ def get_transaction_from_token(view):
         except ValueError:
             raise Http404
 
+        Transaction = apps.get_model('silver.Transaction')
         return view(request, get_object_or_404(Transaction, uuid=uuid), expired)
     return decorator
+
+
+def require_transaction_currency_and_xe_rate(f):
+    def _check(self, *args, **kwargs):
+        if self.transaction_currency == self.currency:
+            return f(self, *args, **kwargs)
+        if not (self.transaction_currency and self.transaction_xe_rate):
+            return None
+        return f(self, *args, **kwargs)
+    return _check

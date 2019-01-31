@@ -29,12 +29,12 @@ from rest_framework.reverse import reverse as _reverse
 from rest_framework.test import APITestCase
 
 from silver.models import Proforma, Transaction
-from silver.tests.factories import (AdminUserFactory, TransactionFactory,
-                                    PaymentMethodFactory, InvoiceFactory,
-                                    ProformaFactory, CustomerFactory,
-                                    DocumentEntryFactory)
-from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
-                                   triggered_processor)
+from silver.fixtures.factories import (AdminUserFactory, TransactionFactory,
+                                       PaymentMethodFactory, InvoiceFactory,
+                                       ProformaFactory, CustomerFactory,
+                                       DocumentEntryFactory)
+from silver.fixtures.test_fixtures import (PAYMENT_PROCESSORS,
+                                           triggered_processor)
 from silver.tests.utils import build_absolute_test_url
 from silver.utils.payments import get_payment_url
 

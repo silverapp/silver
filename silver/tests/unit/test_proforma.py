@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
-from silver.tests.factories import (
+from silver.fixtures.factories import (
     ProformaFactory, DocumentEntryFactory, CustomerFactory
 )
 

@@ -26,10 +26,10 @@ from django.utils.six import StringIO
 from silver.management.commands.generate_docs import date as generate_docs_date
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription, Customer, Plan,
                            BillingLog)
-from silver.tests.factories import (SubscriptionFactory, PlanFactory,
-                                    MeteredFeatureFactory,
-                                    MeteredFeatureUnitsLogFactory,
-                                    CustomerFactory, ProviderFactory)
+from silver.fixtures.factories import (SubscriptionFactory, PlanFactory,
+                                       MeteredFeatureFactory,
+                                       MeteredFeatureUnitsLogFactory,
+                                       CustomerFactory, ProviderFactory)
 from silver.utils.dates import ONE_DAY
 
 

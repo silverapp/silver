@@ -26,10 +26,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.tests.factories import (ProformaFactory, AdminUserFactory,
-                                    InvoiceFactory, TransactionFactory,
-                                    PaymentMethodFactory, DocumentEntryFactory)
-from silver.tests.fixtures import PAYMENT_PROCESSORS
+from silver.fixtures.factories import (ProformaFactory, AdminUserFactory,
+                                       InvoiceFactory, TransactionFactory,
+                                       PaymentMethodFactory, DocumentEntryFactory)
+from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -76,7 +76,7 @@ class TestDocumentEndpoints(APITestCase):
 
         return {
             u'id': document.pk,
-            u'url':  build_absolute_test_url(reverse(kind + '-detail', [document.pk])),
+            u'url': build_absolute_test_url(reverse(kind + '-detail', [document.pk])),
             u'kind': kind,
             u'series': document.series,
             u'number': document.number,

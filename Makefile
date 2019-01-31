@@ -1,7 +1,7 @@
 full-test: test
 
 test:
-	DJANGO_SETTINGS_MODULE=settings_test pytest -vv
+	pytest -vv
 
 run:
 	echo "TBA"
@@ -13,6 +13,6 @@ build:
 	echo "No need to build something. You may try 'make dependencies'."
 
 lint:
-	pep8 --max-line-length=100 --exclude=migrations,urls.py,setup.py .
+	pep8 --ignore=E731 --max-line-length=100 --exclude=migrations,urls.py,setup.py .
 
 .PHONY: test full-test build lint run

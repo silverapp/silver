@@ -1,6 +1,6 @@
 import pytest
 
-from silver.tests.factories import BillingLogFactory
+from silver.fixtures.factories import BillingLogFactory
 
 
 @pytest.mark.django_db

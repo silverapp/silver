@@ -14,10 +14,10 @@
 
 from __future__ import absolute_import
 
-from django.db import transaction
 from django_fsm import transition
 
 from django.apps import apps
+from django.db import transaction
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
@@ -56,7 +56,7 @@ class Invoice(BillingDocumentBase):
     @transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
                 target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
-        self.archived_provider = self.provider.get_invoice_archivable_field_values()
+        self.archived_provider = self.provider.get_archivable_field_values()
 
         super(Invoice, self)._issue(issue_date, due_date)
 
@@ -107,6 +107,10 @@ class Invoice(BillingDocumentBase):
             ) for entry in self.entries])
 
             return storno_invoice
+
+    @property
+    def proforma(self):
+        return self.related_document
 
 
 @receiver(pre_delete, sender=Invoice)
