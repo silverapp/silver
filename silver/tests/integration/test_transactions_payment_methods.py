@@ -21,10 +21,10 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from silver.models import Invoice, Proforma
-from silver.tests.factories import (PaymentMethodFactory, InvoiceFactory,
-                                    ProformaFactory, TransactionFactory,
-                                    CustomerFactory)
-from silver.tests.fixtures import (PAYMENT_PROCESSORS, triggered_processor)
+from silver.fixtures.factories import (PaymentMethodFactory, InvoiceFactory,
+                                       ProformaFactory, TransactionFactory,
+                                       CustomerFactory)
+from silver.fixtures.test_fixtures import (PAYMENT_PROCESSORS, triggered_processor)
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

@@ -20,6 +20,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
+from silver.utils.decorators import require_transaction_currency_and_xe_rate
+
 
 @python_2_unicode_compatible
 class DocumentEntry(models.Model):
@@ -71,24 +73,40 @@ class DocumentEntry(models.Model):
         return result.quantize(Decimal('0.00'))
 
     @property
+    @require_transaction_currency_and_xe_rate
     def total_in_transaction_currency(self):
         return (self.total_before_tax_in_transaction_currency +
                 self.tax_value_in_transaction_currency)
 
     @property
+    @require_transaction_currency_and_xe_rate
     def total_before_tax_in_transaction_currency(self):
-        result = self.total_before_tax * self.document.transaction_xe_rate
+        result = self.total_before_tax * self.transaction_xe_rate
         return result.quantize(Decimal('0.00'))
 
     @property
+    @require_transaction_currency_and_xe_rate
     def unit_price_in_transaction_currency(self):
-        result = Decimal(self.unit_price) * self.document.transaction_xe_rate
+        result = Decimal(self.unit_price) * self.transaction_xe_rate
         return result.quantize(Decimal('0.0000'))
 
     @property
+    @require_transaction_currency_and_xe_rate
     def tax_value_in_transaction_currency(self):
-        result = self.tax_value * self.document.transaction_xe_rate
+        result = self.tax_value * self.transaction_xe_rate
         return result.quantize(Decimal('0.00'))
+
+    @property
+    def transaction_currency(self):
+        return self.document.transaction_currency
+
+    @property
+    def currency(self):
+        return self.document.currency
+
+    @property
+    def transaction_xe_rate(self):
+        return self.document.transaction_xe_rate
 
     def clone(self):
         return DocumentEntry(

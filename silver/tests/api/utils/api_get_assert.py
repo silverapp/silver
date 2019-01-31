@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from silver.tests.factories import AdminUserFactory
+from silver.fixtures.factories import AdminUserFactory
 
 
 class APIGetAssert(APITestCase):

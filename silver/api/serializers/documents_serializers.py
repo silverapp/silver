@@ -120,7 +120,7 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
     archived_customer = JSONField(read_only=True)
     archived_provider = JSONField(read_only=True)
     total_in_transaction_currency = serializers.DecimalField(
-        max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True
+        max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True,
     )
     total = serializers.DecimalField(
         max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True
@@ -135,8 +135,7 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
                   'transaction_xe_rate', 'transaction_xe_date', 'state', 'proforma',
                   'invoice_entries', 'total', 'total_in_transaction_currency',
                   'pdf_url', 'transactions')
-        read_only_fields = ('archived_provider', 'archived_customer', 'total',
-                            'total_in_transaction_currency')
+        read_only_fields = ('total', 'total_in_transaction_currency')
         extra_kwargs = {
             'transaction_currency': {'required': False},
             'number': {'required': False},

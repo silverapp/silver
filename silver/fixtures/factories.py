@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 
 import datetime
-import factory
 import factory.fuzzy
 
 from decimal import Decimal
@@ -28,7 +27,7 @@ from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode, PDF,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
                            Transaction, PaymentMethod, BillingLog)
-from silver.tests.fixtures import manual_processor
+from silver.fixtures.test_fixtures import manual_processor
 from silver.utils.dates import last_day_of_month, prev_month
 
 faker = Faker(locale='hu_HU')
@@ -61,7 +60,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     consolidated_billing = True
 
     customer_reference = factory.Sequence(lambda n: faker.uuid4())
-    sales_tax_percent = Decimal(1.0)
+    sales_tax_percent = Decimal("1.00")
     sales_tax_name = factory.Sequence(lambda n: 'VAT')
     payment_due_days = 5
 
@@ -172,7 +171,7 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     transaction_xe_rate = Decimal(1)
     state = Invoice.STATES.DRAFT
     issue_date = factory.LazyAttribute(
-        lambda invoice: (faker.past_datetime(start_date="-200d", tzinfo=None)
+        lambda invoice: (faker.past_datetime(start_date="-200d", tzinfo=None).date()
                          if invoice.state != Invoice.STATES.DRAFT else None)
     )
     paid_date = factory.LazyAttribute(
@@ -195,6 +194,9 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
         if self.state != 'draft':
             self._total = self.compute_total()
             self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.archived_customer = self.customer.get_archivable_field_values()
+            self.archived_provider = self.provider.get_archivable_field_values()
+
             self.save()
 
 
@@ -209,7 +211,7 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     transaction_xe_rate = Decimal(1)
     state = Proforma.STATES.DRAFT
     issue_date = factory.LazyAttribute(
-        lambda proforma: (faker.past_datetime(start_date="-200d", tzinfo=None)
+        lambda proforma: (faker.past_datetime(start_date="-200d", tzinfo=None).date()
                           if proforma.state != Invoice.STATES.DRAFT else None)
     )
     paid_date = factory.LazyAttribute(
@@ -242,6 +244,9 @@ class ProformaFactory(factory.django.DjangoModelFactory):
         if self.state != Proforma.STATES.DRAFT:
             self._total = self.compute_total()
             self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
+            self.archived_customer = self.customer.get_archivable_field_values()
+            self.archived_provider = self.provider.get_archivable_field_values()
+
             self.save()
 
 

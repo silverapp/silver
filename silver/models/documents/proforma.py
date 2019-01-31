@@ -72,7 +72,7 @@ class Proforma(BillingDocumentBase):
     @transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
                 target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
-        self.archived_provider = self.provider.get_proforma_archivable_field_values()
+        self.archived_provider = self.provider.get_archivable_field_values()
 
         super(Proforma, self)._issue(issue_date, due_date)
 
@@ -142,6 +142,10 @@ class Proforma(BillingDocumentBase):
     @property
     def entries(self):
         return self.proforma_entries.all()
+
+    @property
+    def invoice(self):
+        return self.related_document
 
 
 @receiver(pre_delete, sender=Proforma)

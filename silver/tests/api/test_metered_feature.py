@@ -16,13 +16,14 @@ from __future__ import absolute_import
 
 import json
 import pytest
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from silver.tests.factories import (AdminUserFactory, MeteredFeatureFactory,
-                                    ProductCodeFactory)
+from silver.fixtures.factories import (AdminUserFactory, MeteredFeatureFactory,
+                                       ProductCodeFactory)
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -113,7 +114,7 @@ class TestMeteredFeatureEndpoint(APITestCase):
     """
 
     def test_get_metered_feature_list(self):
-        MeteredFeatureFactory.create_batch(40)
+        MeteredFeatureFactory.create_batch(settings.API_PAGE_SIZE * 2)
         url = reverse('metered-feature-list')
 
         response = self.client.get(url)

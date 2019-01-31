@@ -18,14 +18,14 @@ from __future__ import absolute_import
 import json
 import pytest
 
-from django.urls import reverse
-from django.utils.encoding import force_text
-
 from rest_framework.test import APITestCase
 from rest_framework import status
 
+from django.conf import settings
+from django.urls import reverse
+
 from silver.models import Provider
-from silver.tests.factories import ProviderFactory, AdminUserFactory
+from silver.fixtures.factories import ProviderFactory, AdminUserFactory
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -129,8 +129,7 @@ class TestProviderEndpoints(APITestCase):
             assert qs.count() == 0
 
     def test_get_providers(self):
-        batch_size = 40
-        ProviderFactory.create_batch(batch_size)
+        ProviderFactory.create_batch(settings.API_PAGE_SIZE * 2)
         url = reverse('provider-list')
         response = self.client.get(url)
 

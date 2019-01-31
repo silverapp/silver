@@ -25,7 +25,7 @@ from django.utils.encoding import force_text
 from django.test import TestCase, Client
 from django_fsm import TransitionNotAllowed
 
-from silver.tests.factories import ProformaFactory
+from silver.fixtures.factories import ProformaFactory
 
 
 class ProformaAdminTestCase(TestCase):

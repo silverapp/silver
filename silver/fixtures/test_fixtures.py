@@ -27,15 +27,14 @@ failing_void_processor = 'failing_void'
 
 PAYMENT_PROCESSORS = {
     triggered_processor: {
-        'class': 'silver.tests.fixtures.TriggeredProcessor'
+        'class': 'silver.fixtures.test_fixtures.TriggeredProcessor'
     },
     manual_processor: {
-        'class': 'silver.tests.fixtures.ManualProcessor'
+        'class': 'silver.fixtures.test_fixtures.ManualProcessor'
     },
     failing_void_processor: {
-        'class': 'silver.tests.fixtures.FailingVoidTriggeredProcessor'
+        'class': 'silver.fixtures.test_fixtures.FailingVoidTriggeredProcessor'
     }
-
 }
 
 

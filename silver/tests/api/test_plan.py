@@ -15,14 +15,15 @@
 from __future__ import absolute_import
 
 import json
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from silver.models import ProductCode
-from silver.tests.factories import (AdminUserFactory, ProviderFactory,
-                                    PlanFactory, ProductCodeFactory)
+from silver.fixtures.factories import (AdminUserFactory, ProviderFactory,
+                                       PlanFactory, ProductCodeFactory)
 
 
 class TestPlanEndpoint(APITestCase):
@@ -120,7 +121,7 @@ class TestPlanEndpoint(APITestCase):
                          {u'detail': u'Method "PUT" not allowed.'})
 
     def test_get_plan_list(self):
-        PlanFactory.create_batch(40)
+        PlanFactory.create_batch(settings.API_PAGE_SIZE * 2)
 
         url = reverse('plan-list')
 

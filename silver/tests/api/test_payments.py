@@ -26,8 +26,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from silver.models import Transaction
-from silver.tests.factories import (AdminUserFactory, TransactionFactory)
-from silver.tests.fixtures import PAYMENT_PROCESSORS, not_implemented_view
+from silver.fixtures.factories import (AdminUserFactory, TransactionFactory)
+from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS, not_implemented_view
 from silver.utils.payments import get_payment_url, get_payment_complete_url
 
 
@@ -83,7 +83,7 @@ class TestPaymentUrls(APITestCase):
         def get_view(processor, transaction, request):
             return None
 
-        with patch('silver.tests.fixtures.ManualProcessor.get_view',
+        with patch('silver.fixtures.test_fixtures.ManualProcessor.get_view',
                    new=get_view):
             response = self.client.get(get_payment_url(transaction, None))
 
@@ -101,7 +101,7 @@ class TestPaymentUrls(APITestCase):
         def get_view(processor, transaction, request):
             return not_implemented_view
 
-        with patch('silver.tests.fixtures.ManualProcessor.get_view',
+        with patch('silver.fixtures.test_fixtures.ManualProcessor.get_view',
                    new=get_view):
             response = self.client.get(get_payment_url(transaction, None))
 

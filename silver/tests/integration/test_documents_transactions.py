@@ -20,10 +20,10 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 
 from silver.models import Transaction, Invoice
-from silver.tests.factories import (InvoiceFactory, PaymentMethodFactory,
-                                    TransactionFactory, ProformaFactory, DocumentEntryFactory)
-from silver.tests.fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
-                                   triggered_processor)
+from silver.fixtures.factories import (InvoiceFactory, PaymentMethodFactory,
+                                       TransactionFactory, ProformaFactory, DocumentEntryFactory)
+from silver.fixtures.test_fixtures import (TriggeredProcessor, PAYMENT_PROCESSORS,
+                                           triggered_processor)
 
 
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)

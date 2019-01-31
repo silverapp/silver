@@ -22,8 +22,8 @@ from mock import patch, PropertyMock, MagicMock
 from django.test import TestCase
 
 from silver.models import Plan, Subscription, BillingLog
-from silver.tests.factories import (SubscriptionFactory, MeteredFeatureFactory,
-                                    PlanFactory)
+from silver.fixtures.factories import (SubscriptionFactory, MeteredFeatureFactory,
+                                       PlanFactory)
 
 
 class TestSubscription(TestCase):

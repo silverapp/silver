@@ -43,6 +43,7 @@ from silver.currencies import CurrencyConverter, RateNotFound
 from silver.models.billing_entities import Customer, Provider
 from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.pdf import PDF
+from silver.utils.decorators import require_transaction_currency_and_xe_rate
 from silver.utils.international import currencies
 
 
@@ -554,6 +555,7 @@ class BillingDocumentBase(models.Model):
         return sum([entry.tax_value for entry in self.entries])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def total_in_transaction_currency(self):
         if self._total_in_transaction_currency is not None:
             return self._total_in_transaction_currency
@@ -562,16 +564,19 @@ class BillingDocumentBase(models.Model):
                     for entry in self.entries])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def total_before_tax_in_transaction_currency(self):
         return sum([entry.total_before_tax_in_transaction_currency
                     for entry in self.entries])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def tax_value_in_transaction_currency(self):
         return sum([entry.tax_value_in_transaction_currency
                     for entry in self.entries])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def amount_paid_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 
@@ -579,6 +584,7 @@ class BillingDocumentBase(models.Model):
                     for transaction in self.transactions.filter(state=Transaction.States.Settled)])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def amount_pending_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 
@@ -586,6 +592,7 @@ class BillingDocumentBase(models.Model):
                     for transaction in self.transactions.filter(state=Transaction.States.Pending)])
 
     @property
+    @require_transaction_currency_and_xe_rate
     def amount_to_be_charged_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 

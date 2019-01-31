@@ -237,8 +237,8 @@ class PlanFilter(SimpleListFilter):
                 _name_provider=Concat(
                     F('plan__name'), Value(' ('), F('plan__provider__name'), Value(')'),
                     output_field=fields.CharField()
-                )
-            ) \
+                ),
+        ) \
             .values_list('id', '_name_provider') \
             .distinct()
 

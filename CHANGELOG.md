@@ -1,7 +1,10 @@
 # Changelog
 
 ## Unrealeased changes
-_Nothing yet_
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**
+- `Invoice` and `Proforma` API fields `archived_provider` and `archived_customer` are now represented
+  as JSON instead of a string.
+- Empty string values 
 
 ## 0.9.6 (2019-10-28)
 - Remove Subscription state field direct modification protection. This fixes admin subscription 

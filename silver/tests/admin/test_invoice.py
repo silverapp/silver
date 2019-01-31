@@ -26,7 +26,7 @@ from django.urls import reverse
 from django.test import TestCase, Client
 from django.utils.encoding import force_text
 
-from silver.tests.factories import InvoiceFactory
+from silver.fixtures.factories import InvoiceFactory
 
 
 class InvoiceAdminTestCase(TestCase):

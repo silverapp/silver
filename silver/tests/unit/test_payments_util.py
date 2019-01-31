@@ -14,18 +14,13 @@
 
 from __future__ import absolute_import
 
-import six
-
-from uuid import UUID
-
 from datetime import datetime, timedelta
 from mock import patch, MagicMock, call
 
 from django.test import TestCase, override_settings
-from django.utils.encoding import force_text
 
-from silver.tests.factories import TransactionFactory
-from silver.tests.fixtures import PAYMENT_PROCESSORS
+from silver.fixtures.factories import TransactionFactory
+from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS
 from silver.utils.decorators import get_transaction_from_token
 from silver.utils.payments import (get_payment_url, get_payment_complete_url,
                                    _get_jwt_token)
