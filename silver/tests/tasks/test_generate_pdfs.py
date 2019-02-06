@@ -65,10 +65,7 @@ def test_generate_pdfs_task(monkeypatch):
 
 
 @pytest.mark.django_db
-@patch('silver.models.documents.base.BillingDocumentBase.get_template')
-@patch('silver.models.documents.pdf.BytesIO')
-def test_generate_pdf_task(mock_http_response, mock_get_template, settings,
-                           tmpdir, monkeypatch):
+def test_generate_pdf_task(settings, tmpdir, monkeypatch):
     settings.MEDIA_ROOT = tmpdir.strpath
 
     invoice = InvoiceFactory.create()
@@ -76,7 +73,7 @@ def test_generate_pdf_task(mock_http_response, mock_get_template, settings,
 
     assert invoice.pdf.dirty
 
-    pisa_document_mock = MagicMock()
+    pisa_document_mock = MagicMock(return_value=MagicMock(err=False))
 
     monkeypatch.setattr('silver.models.documents.pdf.pisa.pisaDocument',
                         pisa_document_mock)
@@ -93,7 +90,4 @@ def test_generate_pdf_task(mock_http_response, mock_get_template, settings,
 
     assert pisa_document_mock.call_count == 1
 
-    pisa_document_mock.assert_called_once_with(src=mock_get_template().render().encode('UTF-8'),
-                                               dest=mock_http_response(),
-                                               encoding='UTF-8',
-                                               link_callback=fetch_resources)
+    pisa_document_mock.assert_called_once()
