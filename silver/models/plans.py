@@ -22,6 +22,7 @@ from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
+from silver.utils.dates import INTERVALS as DATE_INTERVALS
 from silver.utils.international import currencies
 from silver.utils.models import UnsavedForeignKey
 
@@ -35,11 +36,7 @@ class PlanManager(models.Manager):
 class Plan(models.Model):
     objects = PlanManager()
 
-    class INTERVALS(object):
-        DAY = 'day'
-        WEEK = 'week'
-        MONTH = 'month'
-        YEAR = 'year'
+    INTERVALS = DATE_INTERVALS
 
     INTERVAL_CHOICES = Choices(
         (INTERVALS.DAY, _('Day')),
