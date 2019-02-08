@@ -3,6 +3,11 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.7.1 (2019-02-08)
+Fixed documents PDF generation.
+Added classifiers for Python 3.5 and 3.6 in setup.py.
+DOCS: Fixed typo and obsolete keys in users endpoint API documentation
+
 ## 0.7 (2019-01-07)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
 - Added Python 3.5 and 3.6 compatibility while maintaining Python 2.7 compatibility for now. **(WARNING)**
