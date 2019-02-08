@@ -42,7 +42,7 @@ class TestPaymentsUtilMethods(TestCase):
 
             self.assertEqual(get_payment_url(transaction, None), expected_url)
 
-            mocked_token.assert_called_once_with(transaction)
+            assert mocked_token.mock_calls == [call(transaction)]
 
     def test_get_payment_complete_url(self):
         transaction = TransactionFactory()
@@ -58,7 +58,7 @@ class TestPaymentsUtilMethods(TestCase):
             self.assertEqual(get_payment_complete_url(transaction, mocked_request),
                              expected_url)
 
-            mocked_token.assert_called_once_with(transaction)
+            assert mocked_token.mock_calls == [call(transaction)]
 
     def test_get_transaction_from_token(self):
         transaction = TransactionFactory()
