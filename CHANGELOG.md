@@ -3,10 +3,13 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.7.2 (2019-02-08)
+- Don't use evil mock.assert_* functions.
+
 ## 0.7.1 (2019-02-08)
-Fixed documents PDF generation.
-Added classifiers for Python 3.5 and 3.6 in setup.py.
-DOCS: Fixed typo and obsolete keys in users endpoint API documentation
+- Fixed documents PDF generation.
+- Added classifiers for Python 3.5 and 3.6 in setup.py.
+- Fixed typo and obsolete keys in users endpoint API documentation
 
 ## 0.7 (2019-01-07)
 Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
