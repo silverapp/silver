@@ -3,6 +3,9 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.7.3 (2019-02-08)
+- Fix PDF file upload for Google Storage.
+
 ## 0.7.2 (2019-02-08)
 - Don't use evil mock.assert_* functions.
 
