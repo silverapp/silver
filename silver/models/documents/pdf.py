@@ -16,7 +16,7 @@ from __future__ import absolute_import
 
 import logging
 import uuid
-from io import BytesIO
+from io import BytesIO, SEEK_SET
 
 from xhtml2pdf import pisa
 
@@ -86,6 +86,9 @@ class PDF(Model):
 
     def upload(self, pdf_file_object, filename):
         # the PDF's upload_path attribute needs to be set before calling this method
+
+        # set offset to beginning to fix bug with google cloud storage
+        pdf_file_object.seek(0, SEEK_SET)
         django_file = File(pdf_file_object)
         with transaction.atomic():
             self.pdf_file.save(filename, django_file, True)
