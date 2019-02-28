@@ -716,20 +716,16 @@ class BillingDocumentAdmin(ModelAdmin):
 
     def _download_pdf(self, url, base_path):
         local_file_path = os.path.join(base_path, 'billing-temp-document.pdf')
-        response = requests.get(url, stream=True)
-        should_wipe_bad_headers = True
+        response = requests.get(url)
+        response.encoding = 'utf-8'
+
         with open(local_file_path, 'wb') as out_file:
-            for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
-                if chunk:
-                    if should_wipe_bad_headers:
-                        pdf_header_pos = chunk.find('%PDF-')
-                        if pdf_header_pos > 0:
-                            # The file does not start with the '%PDF-' header
-                            # => trim everything up to that position
-                            chunk = chunk[pdf_header_pos:]
-                        should_wipe_bad_headers = False
-                    out_file.write(chunk)
-                    out_file.flush()
+            content = response.content
+            pdf_header_pos = content.find(b'%PDF-')
+            if pdf_header_pos > 0:
+                content = content[pdf_header_pos:]
+            out_file.write(content)
+            out_file.flush()
 
         return local_file_path
 
