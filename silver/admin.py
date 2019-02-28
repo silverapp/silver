@@ -719,7 +719,7 @@ class BillingDocumentAdmin(ModelAdmin):
         response = requests.get(url, stream=True)
         should_wipe_bad_headers = True
         with open(local_file_path, 'wb') as out_file:
-            for chunk in response.iter_content(chunk_size=1024):
+            for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
                 if chunk:
                     if should_wipe_bad_headers:
                         pdf_header_pos = chunk.find('%PDF-')
