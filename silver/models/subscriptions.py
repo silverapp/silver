@@ -1020,7 +1020,7 @@ class BillingLog(models.Model):
     proforma = models.ForeignKey('BillingDocumentBase', null=True, blank=True,
                                  related_name='proforma_billing_logs')
     billing_date = models.DateField(
-        help_text="The date when the invoice/proforma was issued."
+        help_text="The date when the invoice/proforma was generated."
     )
     plan_billed_up_to = models.DateField(
         help_text="The date up to which the plan base amount has been billed."

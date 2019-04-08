@@ -27,9 +27,9 @@ from django.utils import timezone
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode, PDF,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
-                           Transaction, PaymentMethod)
+                           Transaction, PaymentMethod, BillingLog)
 from silver.tests.fixtures import manual_processor
-
+from silver.utils.dates import last_day_of_month, prev_month
 
 faker = Faker(locale='hu_HU')
 
@@ -324,3 +324,26 @@ class TransactionFactory(factory.django.DjangoModelFactory):
 class PDFFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = PDF
+
+
+class BillingLogFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = BillingLog
+
+    subscription = factory.SubFactory(SubscriptionFactory)
+
+    proforma = factory.SubFactory(
+        ProformaFactory,
+        customer=factory.SelfAttribute('..subscription.customer'),
+        state=Invoice.STATES.ISSUED,
+        issue_date=timezone.now().date(),
+    )
+    invoice = factory.SubFactory(
+        InvoiceFactory,
+        customer=factory.SelfAttribute('..subscription.customer'),
+        state=Invoice.STATES.ISSUED,
+        issue_date=timezone.now().date(),
+    )
+    billing_date = timezone.now().date()
+    plan_billed_up_to = last_day_of_month(timezone.now().date())
+    metered_features_billed_up_to = last_day_of_month(prev_month(timezone.now().date()))

@@ -14,10 +14,9 @@
 
 from __future__ import absolute_import
 
-from django_fsm import TransitionNotAllowed, transition
+from django_fsm import transition
 
 from django.apps import apps
-from django.db import models
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
@@ -88,8 +87,11 @@ def post_invoice_save(sender, instance, created=False, **kwargs):
         return
 
     Transaction = apps.get_model('silver.Transaction')
+    BillingLog = apps.get_model('silver.BillingLog')
+
     invoice = instance
     proforma = invoice.related_document
 
     if proforma:
         Transaction.objects.filter(proforma=proforma).update(invoice=invoice)
+        BillingLog.objects.filter(proforma=proforma).update(invoice=invoice)
