@@ -5,6 +5,7 @@ _Nothing yet_
 
 ## 0.7.4 (2019-04-08)
 - Fixed BillingLog invoice field not being updated post creation. (migration fix included)
+- Fixed PDF file upload in admin.
 
 ## 0.7.3 (2019-02-08)
 - Fix PDF file upload for Google Storage.
