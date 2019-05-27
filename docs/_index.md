@@ -59,6 +59,10 @@ Just install it by using pip, add it to the INSTALLED_APPS setting and you are r
 
 ## How to contribute
 
-Development of gitfs happens on GitHub. You are highly encouraged to contribute with code, tests, documentation, or just to share your experience.
+Development of silver happens on GitHub at http://github.com/silverapp/silver.
+
+Issues are tracked at http://github.com/silverapp/silver/issues.
+
+You are highly encouraged to contribute with code, tests, documentation, or just to share your experience.
 
 [Get involved](https://github.com/presslabs/silver/)
