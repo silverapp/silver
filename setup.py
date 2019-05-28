@@ -77,9 +77,6 @@ setup(
     },
     include_package_data=True,
     install_requires=install_requires,
-    dependency_links=[
-        'https://github.com/xhtml2pdf/xhtml2pdf/archive/32a5006bb02a95d7dcfaaf46bc4e0f60520bb8e9.zip#egg=xhtml2pdf'
-    ],
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django :: 1.11',
