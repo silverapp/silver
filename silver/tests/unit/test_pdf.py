@@ -86,14 +86,14 @@ def test_pdf_mark_as_clean_mimic_2_threads():
 
 
 @pytest.mark.django_db
-def test_pdf_mark_as_dirty_min_value():
-    # somehow inconsistent state
-    pdf = PDF.objects.create(dirty=-1)
+def test_pdf_mark_as_clean_min_value():
+    pdf = PDF.objects.create(dirty=0)
+    pdf.mark_as_clean()
 
-    pdf.mark_as_dirty()
+    # be sure that basic dirty/clean logic can't down dirty field below 0
 
-    assert pdf.dirty == 1
+    assert pdf.dirty == 0
 
     pdf.refresh_from_db()
 
-    assert pdf.dirty == 1
+    assert pdf.dirty == 0
