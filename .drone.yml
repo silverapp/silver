@@ -61,7 +61,11 @@ matrix:
       DJANGO_VERSION: ">=2.0,<2.1"
     - PYTHON_VERSION: 3.5
       DJANGO_VERSION: ">2.1,<2.2"
+    - PYTHON_VERSION: 3.5
+      DJANGO_VERSION: ">2.2,<2.3"
     - PYTHON_VERSION: 3.6
       DJANGO_VERSION: ">=2.0,<2.1"
     - PYTHON_VERSION: 3.6
       DJANGO_VERSION: ">2.1,<2.2"
+    - PYTHON_VERSION: 3.6
+      DJANGO_VERSION: ">2.2,<2.3"
