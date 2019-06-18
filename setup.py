@@ -62,7 +62,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version='0.8b1',
+    version='0.8b2',
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',
@@ -80,6 +80,8 @@ setup(
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django :: 1.11',
+        'Framework :: Django :: 2.1',
+        'Framework :: Django :: 2.2',
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2.7',

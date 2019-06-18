@@ -3,6 +3,11 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.8b2 (2019-06-18)
+This is a beta release. It's not recommended to use it in production environments.
+
+- Added Django2.2 compatibility
+
 ## 0.8b1 (2019-06-03)
 This is a beta release. It's not recommended to use it in production environments.
 
