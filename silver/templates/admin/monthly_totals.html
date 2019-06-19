@@ -2,64 +2,64 @@
 
 {% load i18n l10n %}
 {% load admin_urls %}
+{% load dict_extras %}
 
 {% block breadcrumbs %}
   <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> ›
     <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a> ›
-    <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a> › Monthly Providers Reports
+    <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a> › Monthly Providers Report
   </div>
 {% endblock %}
 
 {% block content %}
-
-<form action="" method="post">
-    {% csrf_token %}
-    <ul>
-        {% for provider, ptotals in totals.items %}
-            {% if ptotals %}
-            <li> <b>{{ provider }}</b> <br>
-                <ul>
-                {% for doc_name, totals_and_draft in ptotals.items %}
+<ul>
+    {% for provider, ptotals in totals.items %}
+        {% if ptotals %}
+        <li> <b>{{ provider }}</b> <br>
+            <ul>
+            {% for doc_name, totals_and_draft in ptotals.items %}
+                    {% if totals_and_draft.entries %}
                     <li>
-                        {% for entry, item_value in totals_and_draft.items %}
-                            {% if forloop.first %}
-                                <b> {{ doc_name }} </b> (total draft: {{ item_value }})
-                            {% else %}
-                                {% if item_value|length %}
-                                    <table>
-                                        <tr> 
-                                            <th> Month </th>
-                                            <th> Total </th>
-                                            <th> Paid </th>
-                                            <th> Unpaid </th>
-                                        </tr>
-                                        {% for month, totals_value in item_value.items %}
-                                        <tr> 
-                                            <td> {{ month }} </td> 
-                                            {% for name, value in totals_value.items %}
-                                                    <td> {{ value }} </td>
-                                            {% endfor %}
-                                            </tr>
-                                        {% endfor %}
-                                    </table>
-                                {% endif %}
-                            {% endif%}
-                        {% endfor %}
-                    </li>
-                    <br>
-                {% endfor %}
-                </ul>
-            </li>
-            <br>
-            {% endif %}
-        {% endfor %}
-    </ul>
+                        <b>{{ doc_name }}
+                            (draft totals: {% for currency in totals_and_draft.currencies %}
+                                {{ totals_and_draft.draft|get_item:currency|default:"0.00" }} {{ currency }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %})
+                        </b>
+                        <table>
+                            <tr>
+                                <th> Month </th>
+                                {% for currency in totals_and_draft.currencies %}
+                                    <th> Total {{ currency }}</th>
+                                    <th> Unpaid {{ currency }}</th>
+                                    <th> Paid {{ currency }}</th>
+                                {% endfor %}
+                            </tr>
+                            {% for month, totals_value in totals_and_draft.entries.items %}
+                            <tr>
+                                <td> {{ month }} </td>
+                                {% for currency in totals_and_draft.currencies %}
+                                    {% with total="total_"|add:currency unpaid="unpaid_"|add:currency paid="paid_"|add:currency %}
+                                    <td>{{ totals_value|get_item:total|default:"0.00" }}</td>
+                                    <td>{{ totals_value|get_item:unpaid|default:"0.00" }}</td>
+                                    <td>{{ totals_value|get_item:paid|default:"0.00" }}</td>
+                                    {% endwith %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        </li>
+                    {% endif %}
+                <br>
+            {% endfor %}
+            </ul>
+        </li>
+        <br>
+        {% endif %}
+    {% endfor %}
+</ul>
 
-    <div>
-        <input type="hidden" name="action" value="generate_monthly_totals" />
-        <input type="hidden" name="post" value="yes" />
-        <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% trans "Back" %}</a>
-    </div>
-</form>
+<div>
+    <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% trans "Back" %}</a>
+</div>
 {% endblock content %}
