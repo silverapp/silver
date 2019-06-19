@@ -17,13 +17,15 @@ from __future__ import absolute_import, unicode_literals
 import errno
 import logging
 import os
-import requests
-from six.moves import map
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+from datetime import date
+from decimal import Decimal
 
+import requests
 from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
 from django_fsm import TransitionNotAllowed
+from six.moves import map
 
 from django import forms
 from django.contrib import messages
@@ -34,16 +36,17 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.urls import reverse
-from django.db import connections
 from django.db.models import BLANK_CHOICE_DASH
+from django.db.models.functions import ExtractYear, ExtractMonth
 from django.forms import ChoiceField
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_text
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
+
 
 from silver.documents_generator import DocumentsGenerator
 from silver.models import (
@@ -55,7 +58,6 @@ from silver.models import (
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
-
 
 logger = logging.getLogger('silver')
 
@@ -336,9 +338,8 @@ class ProviderAdmin(LiveModelAdmin):
               'cycle_billing_duration', 'extra', 'meta']
     list_display = ['name', 'invoice_series_list_display',
                     'proforma_series_list_display', metadata]
-    search_fields = ['customer_reference', 'name', 'company', 'address_1',
-                     'address_2', 'city', 'zip_code', 'country', 'state',
-                     'email', 'meta']
+    search_fields = ['name', 'company', 'address_1', 'address_2', 'city', 'zip_code', 'country',
+                     'state', 'email', 'meta']
     actions = ['generate_monthly_totals']
     exclude = ['live']
 
@@ -357,76 +358,73 @@ class ProviderAdmin(LiveModelAdmin):
         totals = {}
         totals[klass_name_plural] = OrderedDict()
 
-        all_documents = documents.filter(provider=provider)
-        paid_documents = documents.filter(
-            provider=provider,
-            state=BillingDocumentBase.STATES.PAID
-        )
-        documents_months = documents.order_by().filter(
+        documents = documents.filter(provider=provider)
+
+        documents_months_years = documents.order_by().annotate(
+            month=ExtractMonth('issue_date'),
+            year=ExtractYear('issue_date'),
+        ).filter(
             provider=provider
-        ).values(
-            'month'
+        ).values_list(
+            'month', 'year'
         ).distinct()
 
-        total_draft = sum(
-            doc.total for doc in (
-                documents.filter(
-                    provider=provider,
-                    state=BillingDocumentBase.STATES.DRAFT
-                )
-            )
+        totals[klass_name_plural]['entries'] = OrderedDict()
+        documents_years_months = sorted((year, month)
+                                        for month, year in documents_months_years
+                                        if month and year)
+
+        documents_currencies = set(
+            documents.filter(provider=provider).values_list("currency", flat=True).distinct()
         )
 
-        totals[klass_name_plural]['draft_total'] = str(total_draft)
-        totals[klass_name_plural]['entries'] = OrderedDict()
-        documents_months = sorted([month['month']
-                                   for month in documents_months
-                                   if month['month']])
-        for month_value in documents_months:
-            if month_value is None:
-                continue
-            display_date = month_value.strftime('%B %Y')
-            totals[klass_name_plural]['entries'][display_date] = OrderedDict()
+        unpaid_documents = documents.filter(state=BillingDocumentBase.STATES.DRAFT)
+        draft_totals = totals[klass_name_plural]['draft'] = defaultdict(Decimal)
 
-            all_documents_from_month = all_documents.filter(
-                issue_date__month=month_value.month,
-                issue_date__year=month_value.year
+        for doc in unpaid_documents:
+            draft_totals[doc.currency] += doc.total
+
+        totals[klass_name_plural]['currencies'] = documents_currencies
+
+        for year_month in documents_years_months:
+            if year_month is None:
+                continue
+            display_date = date(day=1, month=year_month[1], year=year_month[0]).strftime('%B %Y')
+            totals[klass_name_plural]['entries'][display_date] = defaultdict(Decimal)
+
+            documents_from_month = documents.filter(
+                state__in=[BillingDocumentBase.STATES.ISSUED, BillingDocumentBase.STATES.PAID],
+                issue_date__month=year_month[1],
+                issue_date__year=year_month[0]
             )
-            paid_documents_from_month = paid_documents.filter(
-                issue_date__month=month_value.month,
-                issue_date__year=month_value.year
-            )
-            total = sum(invoice.total for invoice in all_documents_from_month)
-            total_paid = sum(invoice.total for invoice in paid_documents_from_month)
-            totals[klass_name_plural]['entries'][display_date]['total'] = str(total)
-            totals[klass_name_plural]['entries'][display_date]['paid'] = str(total_paid)
-            totals[klass_name_plural]['entries'][display_date]['unpaid'] = str(total - total_paid)
+            totals_per_date = totals[klass_name_plural]['entries'][display_date]
+
+            for doc in documents_from_month:
+                totals_per_date['total_' + doc.currency] += doc.total
+
+                if doc.state == BillingDocumentBase.STATES.ISSUED:
+                    totals_per_date['unpaid_' + doc.currency] += doc.total
+
+                if doc.state == BillingDocumentBase.STATES.PAID:
+                    totals_per_date['paid_' + doc.currency] += doc.total
+
+            totals[klass_name_plural]['entries'][display_date] = {
+                total_key: str(total_value) for total_key, total_value in totals_per_date.items()
+            }
 
         return totals
 
     def generate_monthly_totals(self, request, queryset):
         totals = {}
 
-        invoices = Invoice.objects.extra(
-            select={
-                'month': connections[Invoice.objects.db].ops.date_trunc_sql(
-                    'month', 'issue_date'
-                )
-            }
-        ).filter(
+        invoices = Invoice.objects.filter(
             provider__in=queryset,
             state__in=[BillingDocumentBase.STATES.DRAFT,
                        BillingDocumentBase.STATES.ISSUED,
                        BillingDocumentBase.STATES.PAID]
         )
 
-        proformas = Proforma.objects.extra(
-            select={
-                'month': connections[Invoice.objects.db].ops.date_trunc_sql(
-                    'month', 'issue_date'
-                )
-            }
-        ).filter(
+        proformas = Proforma.objects.filter(
             provider__in=queryset,
             state__in=[BillingDocumentBase.STATES.DRAFT,
                        BillingDocumentBase.STATES.ISSUED,
@@ -447,7 +445,7 @@ class ProviderAdmin(LiveModelAdmin):
             'title': _('Monthly totals'),
             'totals': totals,
             'queryset': queryset,
-            'opts': self.model._meta
+            'opts': self.model._meta,
         }
 
         return render(request, 'admin/monthly_totals.html', context)

@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unrealeased changes
-_Nothing yet_
+- Separate totals per currency in provider monthly totals report.
 
 ## 0.8b2 (2019-06-18)
 This is a beta release. It's not recommended to use it in production environments.
