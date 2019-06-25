@@ -170,6 +170,8 @@ class BillingDocumentBase(models.Model):
                                                          decimal_places=2,
                                                          null=True, blank=True)
 
+    is_storno = models.BooleanField(default=False)
+
     _last_state = None
     _document_entries = None
 
@@ -226,11 +228,12 @@ class BillingDocumentBase(models.Model):
 
             self.transaction_xe_rate = xe_rate
 
-        if due_date:
-            self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
-        elif not self.due_date and not due_date:
-            delta = timedelta(days=PAYMENT_DUE_DAYS)
-            self.due_date = timezone.now().date() + delta
+        if not self.is_storno:
+            if due_date:
+                self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            elif not self.due_date and not due_date:
+                delta = timedelta(days=PAYMENT_DUE_DAYS)
+                self.due_date = timezone.now().date() + delta
 
         if not self.sales_tax_name:
             self.sales_tax_name = self.customer.sales_tax_name
@@ -269,6 +272,9 @@ class BillingDocumentBase(models.Model):
         self._cancel(cancel_date=cancel_date)
 
     def sync_related_document_state(self):
+        if self.is_storno:
+            return
+
         if self.related_document and self.state != self.related_document.state:
             state_transition_map = {
                 BillingDocumentBase.STATES.ISSUED: 'issue',
