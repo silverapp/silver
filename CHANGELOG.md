@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unrealeased changes
+_Nothing yet_
+
+## 0.9 (2019-06-25)
 - Added the possibility to create storno invoices.
 - Separate totals per currency in the provider monthly totals report (admin action).
 - Scrolling horizontally is no longer required to view the entire Invoice and Proforma admin lists
