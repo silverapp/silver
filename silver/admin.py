@@ -25,7 +25,7 @@ import requests
 from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
 from django_fsm import TransitionNotAllowed
-from six.moves import map
+from furl import furl
 
 from django import forms
 from django.contrib import messages
@@ -45,8 +45,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_text
 from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
-
 
 from silver.documents_generator import DocumentsGenerator
 from silver.models import (
@@ -119,7 +119,7 @@ class PlanForm(forms.ModelForm):
 
 
 class PlanAdmin(ModelAdmin):
-    list_display = ['name', 'description', 'interval_display',
+    list_display = ['name',  'get_provider', 'description', 'interval_display',
                     'trial_period_days', 'enabled', 'private']
     search_fields = ['name']
     list_filter = ['provider']
@@ -146,6 +146,12 @@ class PlanAdmin(ModelAdmin):
             d += u'<br>'
         return d
     description.allow_tags = True
+
+    def get_provider(self, obj):
+        return obj.provider.admin_change_url
+    get_provider.allow_tags = True
+    get_provider.short_description = "provider"
+    get_provider.admin_order_field = "provider"
 
 
 class MeteredFeatureUnitsLogInLine(TabularInline):
@@ -582,21 +588,21 @@ class DueDateFilter(SimpleListFilter):
 
 
 class BillingDocumentAdmin(ModelAdmin):
-    list_display = ['series_number', 'customer', 'state',
-                    'provider', 'issue_date', 'due_date', 'paid_date',
-                    'cancel_date', tax, 'total', 'transaction_total', 'get_related_document']
+    list_display = ['series_number', 'get_customer', 'state',
+                    'get_provider', 'issue_date', 'due_date', 'paid_date',
+                    'cancel_date', tax, 'total', 'transactions', 'is_storno',
+                    'get_related_document']
 
-    list_filter = ('provider__company', 'state', 'customer', DueDateFilter)
+    list_filter = ('provider__company', 'state', 'customer', DueDateFilter, 'is_storno')
 
     common_fields = ['company', 'address_1', 'address_2', 'city',
                      'country', 'zip_code', 'state', 'email']
     customer_search_fields = ['customer__{field}'.format(field=field)
-                              for field in common_fields + ['first_name',
-                                                            'last_name']]
+                              for field in common_fields + ['first_name', 'last_name']]
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields + ['name']]
     search_fields = (customer_search_fields + provider_search_fields +
-                     ['series', 'number'])
+                     ['series', 'number', '_total', '_total_in_transaction_currency'])
 
     date_hierarchy = 'issue_date'
 
@@ -604,8 +610,8 @@ class BillingDocumentAdmin(ModelAdmin):
               'due_date', 'paid_date', 'cancel_date',
               ('sales_tax_name', 'sales_tax_percent'), 'currency',
               ('transaction_currency', 'transaction_xe_rate'),
-              'transaction_xe_date', 'state', 'total', 'related_document')
-    readonly_fields = ('state', 'total', 'related_document')
+              'transaction_xe_date', ('state', 'is_storno'), 'total', 'get_related_document')
+    readonly_fields = ('state', 'total', 'get_related_document', 'is_storno')
     inlines = [DocumentEntryInline]
     actions = ['issue', 'pay', 'cancel', 'clone', 'download_selected_documents',
                'mark_pdf_for_generation']
@@ -625,69 +631,104 @@ class BillingDocumentAdmin(ModelAdmin):
     def _model_name(self):
         raise NotImplementedError
 
-    def perform_action(self, request, queryset, action):
+    def _call_method_on_queryset(self, request, method, queryset, action):
+        results = {}
+        for document in queryset:
+            results[document] = {}
+            try:
+                result = method(document)
+                if result:
+                    results[document]['result'] = result
+                    results[document]['success'] = True
+                document.save()
+
+                LogEntry.objects.log_action(
+                    user_id=request.user.id,
+                    content_type_id=ContentType.objects.get_for_model(document).pk,
+                    object_id=document.id,
+                    object_repr=force_text(document),
+                    action_flag=CHANGE,
+                    change_message='{action} action initiated by user.'.format(
+                        action=action.replace('_', ' ').strip().capitalize()
+                    )
+                )
+            except (TransitionNotAllowed, ValueError) as error:
+                results[document]['result'] = force_text(error)
+                results[document]['success'] = False
+            except AttributeError:
+                results[document]['success'] = False
+                results[document]['result'] = ""
+
+        return results
+
+    def _parse_results_into_messages(self, results):
+        parsed_results = []
+        for document, result in results.items():
+            message, info = "", ""
+
+            if result['success'] and result['result'] or not result['success']:
+                message = document.admin_change_url
+
+                if result['result']:
+                    info = getattr(result['result'], 'admin_change_url', str(result['result']))
+            if message:
+                if result:
+                    message += ": " + info
+                parsed_results.append(message)
+
+        return parsed_results
+
+    def perform_action(self, request, queryset, action,
+                       readable_action=None, readable_past_action=None):
         method = getattr(self._model, action, None)
         if not method:
             self.message_user(request, 'Illegal action.', level=messages.ERROR)
             return
 
-        failed_changes = []
-        failed_actions = []
+        readable_action = readable_action or action.replace('_', ' ').strip()
+        readable_past_action = (readable_past_action if readable_past_action else
+                                "executed {action}".format(action=action))
 
-        readable_action = action.replace('_', ' ').strip().capitalize()
+        results = self._call_method_on_queryset(request, method, queryset, action)
+        error_results = {document: result for document, result in results.items()
+                         if not result['success']}
+        success_results = {document: result for document, result in results.items()
+                           if result['success']}
 
-        results = []
-        for entry in queryset:
-            try:
-                result = method(entry)
-                if result:
-                    results.append(result)
-                entry.save()
+        error_results_count, success_results_count = len(error_results), len(success_results)
 
-                LogEntry.objects.log_action(
-                    user_id=request.user.id,
-                    content_type_id=ContentType.objects.get_for_model(entry).pk,
-                    object_id=entry.id,
-                    object_repr=force_text(entry),
-                    action_flag=CHANGE,
-                    change_message='{action} action initiated by user.'.format(
-                        action=readable_action
-                    )
+        model_name = self._model_name.lower()
+        model_name_plural = model_name + "s"
+
+        success_message, error_message = "", ""
+        if success_results_count:
+            documents_pluralization = model_name_plural if success_results_count else model_name
+
+            success_message = "Successfully {readable_past_action} {count} " \
+                "{documents_pluralization}".format(
+                    readable_past_action=readable_past_action, count=success_results_count,
+                    documents_pluralization=documents_pluralization
                 )
-            except TransitionNotAllowed:
-                failed_changes.append(entry.id)
-            except ValueError as error:
-                failed_actions.append(force_text(error))
-            except AttributeError:
-                failed_actions.append('{action} failed for {document}.'.format(
-                    action=readable_action, document=entry
-                ))
 
-        if failed_actions:
-            msg = "\n".join(failed_actions)
-            self.message_user(request, msg, level=messages.ERROR)
+            success_results_messages = self._parse_results_into_messages(success_results)
+            if success_results_messages:
+                success_message += ":<br/>" + "<br/>".join(success_results_messages)
 
-        if failed_changes:
-            failed_ids = ' '.join(map(str, failed_changes))
-            msg = "The state change failed for {model_name}(s) with "\
-                  "ids: {ids}".format(model_name=self._model_name.lower(),
-                                      ids=failed_ids)
-            self.message_user(request, msg, level=messages.ERROR)
+        if error_results_count:
+            documents_pluralization = model_name_plural if error_results_count else model_name
 
-        if not failed_actions and not failed_changes:
-            qs_count = queryset.count()
-            if action == 'clone_into_draft':
-                results = ', '.join(result.series_number for result in results)
-                msg = 'Successfully cloned {count} {model_name}(s) ' \
-                      'into {results}.'.format(
-                          model_name=self._model_name.lower(), count=qs_count,
-                          results=results
-                      )
-            else:
-                msg = 'Successfully changed {count} {model_name}(s).'.format(
-                    model_name=self._model_name.lower(), count=qs_count
-                )
-            self.message_user(request, msg)
+            error_message = "Couldn't {readable_action} {count} {documents_pluralization}".format(
+                readable_action=readable_action, count=error_results_count,
+                documents_pluralization=documents_pluralization
+            )
+
+            error_results_messages = self._parse_results_into_messages(error_results)
+            error_message += ":<br/>" + "<br/>".join(error_results_messages)
+
+        if error_message:
+            self.message_user(request, mark_safe(error_message), level=messages.ERROR)
+        if success_message:
+            self.message_user(request, mark_safe(success_message))
 
     def has_delete_permission(self, request, obj=None):
         if request.user.is_superuser:
@@ -702,14 +743,24 @@ class BillingDocumentAdmin(ModelAdmin):
         return actions
 
     def total(self, obj):
-        return '{:.2f} {currency}'.format(obj.total,
-                                          currency=obj.currency)
+        return '{:.2f} {currency}'.format(obj.total, currency=obj.currency)
+    total.admin_order_field = '_total'
 
-    def transaction_total(self, obj):
+    def transactions(self, obj):
         if obj.transaction_xe_rate:
-            return '{:.2f} {currency}'.format(obj.total_in_transaction_currency,
-                                              currency=obj.transaction_currency)
+            url_base = 'admin:silver_transaction_changelist'
+
+            url = furl(reverse(url_base))
+            url.add(args={obj.__class__.__name__.lower() + "__id__exact": obj.pk})
+
+            return '<a href="{url}" target="_blank">{total:.2f} {currency}</a>'.format(
+                url=url.url, total=obj.total_in_transaction_currency,
+                currency=obj.transaction_currency
+            )
+
         return None
+    transactions.allow_tags = True
+    transactions.admin_order_field = '_total_in_transaction_currency'
 
     def _download_pdf(self, url, base_path):
         local_file_path = os.path.join(base_path, 'billing-temp-document.pdf')
@@ -778,8 +829,20 @@ class BillingDocumentAdmin(ModelAdmin):
 
     def get_related_document(self, obj):
         return obj.related_document.admin_change_url if obj.related_document else None
-    get_related_document.short_description = 'Related document'
+    get_related_document.short_description = 'Related doc'
     get_related_document.allow_tags = True
+
+    def get_customer(self, obj):
+        return obj.customer.admin_change_url
+    get_customer.allow_tags = True
+    get_customer.short_description = "customer"
+    get_customer.admin_order_field = "customer"
+
+    def get_provider(self, obj):
+        return obj.provider.admin_change_url
+    get_provider.allow_tags = True
+    get_provider.short_description = "provider"
+    get_provider.admin_order_field = "provider"
 
 
 class InvoiceDocumentEntryInline(DocumentEntryInline):
@@ -789,37 +852,47 @@ class InvoiceDocumentEntryInline(DocumentEntryInline):
 class InvoiceAdmin(BillingDocumentAdmin):
     form = InvoiceForm
     list_display = BillingDocumentAdmin.list_display + [
-        'invoice_pdf',
+        'get_invoice_pdf',
     ]
     inlines = [InvoiceDocumentEntryInline]
+    actions = BillingDocumentAdmin.actions + ['create_storno']
 
     def issue(self, request, queryset):
-        self.perform_action(request, queryset, 'issue')
+        self.perform_action(request, queryset, 'issue', readable_past_action='issued')
     issue.short_description = 'Issue the selected invoice(s)'
 
     def pay(self, request, queryset):
-        self.perform_action(request, queryset, 'pay')
+        self.perform_action(request, queryset, 'pay', readable_past_action='paid')
     pay.short_description = 'Pay the selected invoice(s)'
 
     def cancel(self, request, queryset):
-        self.perform_action(request, queryset, 'cancel')
+        self.perform_action(request, queryset, 'cancel', readable_past_action='canceled')
     cancel.short_description = 'Cancel the selected invoice(s)'
 
+    def create_storno(self, request, queryset):
+        self.perform_action(request, queryset, 'create_storno', readable_action='create storno for',
+                            readable_past_action='created storno for')
+    create_storno.short_description = 'Generate storno(s) for the selected invoice(s)'
+
     def clone(self, request, queryset):
-        self.perform_action(request, queryset, 'clone_into_draft')
+        self.perform_action(request, queryset, 'clone_into_draft',
+                            readable_action='generate draft clones for',
+                            readable_past_action='generated draft clones for')
     clone.short_description = 'Clone the selected invoice(s) into draft'
 
     def mark_pdf_for_generation(self, request, queryset):
-        self.perform_action(request, queryset, 'mark_for_generation')
+        self.perform_action(request, queryset, 'mark_for_generation',
+                            readable_past_action='marked for generation')
     mark_pdf_for_generation.short_description = 'Mark the selected invoice(s) for PDF generation'
 
-    def invoice_pdf(self, invoice):
+    def get_invoice_pdf(self, invoice):
         if invoice.pdf:
             url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
-            return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
+            return '<a href="{url}" target="_blank">Download</a>'.format(url=url)
         else:
             return None
-    invoice_pdf.allow_tags = True
+    get_invoice_pdf.short_description = "PDF"
+    get_invoice_pdf.allow_tags = True
 
     @property
     def _model(self):
@@ -837,7 +910,7 @@ class ProformaDocumentEntryInline(DocumentEntryInline):
 class ProformaAdmin(BillingDocumentAdmin):
     form = ProformaForm
     list_display = BillingDocumentAdmin.list_display + [
-        'proforma_pdf',
+        'get_proforma_pdf',
     ]
     inlines = [ProformaDocumentEntryInline]
     actions = BillingDocumentAdmin.actions + ['create_invoice']
@@ -866,13 +939,14 @@ class ProformaAdmin(BillingDocumentAdmin):
         self.perform_action(request, queryset, 'mark_for_generation')
     mark_pdf_for_generation.short_description = 'Mark the selected proforma(s) for PDF generation'
 
-    def proforma_pdf(self, proforma):
+    def get_proforma_pdf(self, proforma):
         if proforma.pdf:
             url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
-            return '<a href="{url}" target="_blank">{url}</a>'.format(url=url)
+            return '<a href="{url}" target="_blank">Download</a>'.format(url=url)
         else:
             return None
-    proforma_pdf.allow_tags = True
+    get_proforma_pdf.short_description = "PDF"
+    get_proforma_pdf.allow_tags = True
 
     @property
     def _model(self):
@@ -936,8 +1010,8 @@ class TransactionAdmin(ModelAdmin):
                     'amount', 'state', 'created_at', 'updated_at',
                     'get_customer', 'get_pay_url', 'get_payment_method',
                     'get_is_recurring')
-    list_filter = ('payment_method__customer', 'state',
-                   'payment_method__payment_processor')
+    list_filter = ('payment_method__customer', 'state', 'payment_method__payment_processor',
+                   'proforma', 'invoice')
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
     ordering = ['-created_at']
 
@@ -959,10 +1033,10 @@ class TransactionAdmin(ModelAdmin):
     get_pay_url.short_description = 'Pay URL'
 
     def get_customer(self, obj):
-        link = reverse("admin:silver_customer_change", args=[obj.payment_method.customer.pk])
-        return u'<a href="%s">%s</a>' % (link, obj.payment_method.customer)
+        return obj.customer.admin_change_url
     get_customer.allow_tags = True
     get_customer.short_description = 'Customer'
+    get_customer.admin_order_field = 'customer'
 
     def get_is_recurring(self, obj):
         return obj.payment_method.verified

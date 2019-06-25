@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 from datetime import date, timedelta
 from decimal import Decimal
+
 from six.moves import zip
 
 from django.test import TestCase
@@ -234,3 +235,44 @@ class TestInvoice(TestCase):
                                         transaction_currency=None)
 
         self.assertEqual(invoice.transaction_currency, 'EUR')
+
+    def test_invoice_create_storno_from_canceled_state(self):
+        invoice = InvoiceFactory.create(invoice_entries=[DocumentEntryFactory.create()])
+        invoice.issue()
+        invoice.cancel()
+        storno = invoice.create_storno()
+
+        assert -invoice.total == storno.total != 0
+        assert storno.related_document == invoice
+        assert invoice.customer == storno.customer
+        assert invoice.provider == storno.provider
+
+    def test_invoice_create_storno_from_paid_state(self):
+        invoice = InvoiceFactory.create(invoice_entries=[DocumentEntryFactory.create()])
+        invoice.issue()
+        invoice.pay()
+        storno = invoice.create_storno()
+
+        assert -invoice.total == storno.total != 0
+        assert storno.related_document == invoice
+        assert invoice.customer == storno.customer
+        assert invoice.provider == storno.provider
+
+    def test_invoice_create_storno_from_unallowed_states(self):
+        invoice = InvoiceFactory.create()
+        assert invoice.state == invoice.STATES.DRAFT
+        self.assertRaises(ValueError, invoice.create_storno)
+
+        invoice.issue()
+        self.assertRaises(ValueError, invoice.create_storno)
+
+    def test_invoice_storno_issue(self):
+        invoice = InvoiceFactory.create()
+        invoice.issue()
+        invoice.pay()
+        storno = invoice.create_storno()
+
+        storno.issue()
+        assert storno.state == storno.STATES.ISSUED
+        assert storno.issue_date == date.today()
+        assert not storno.due_date

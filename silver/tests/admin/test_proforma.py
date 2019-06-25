@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 
 from itertools import cycle
-from mock import MagicMock, patch
+from mock import MagicMock, patch, Mock
 
 from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
@@ -45,7 +45,7 @@ class ProformaAdminTestCase(TestCase):
         mock_log_action = MagicMock()
         mock_log_entry.objects.log_action = mock_log_action
 
-        mock_action = MagicMock(return_value=MagicMock(series_number='aaa'))
+        mock_action = Mock(return_value=Mock(series_number='aaa', admin_change_url="result_url"))
 
         mock_proforma = MagicMock()
         mock_proforma.issue = mock_action
