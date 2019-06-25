@@ -55,6 +55,9 @@ class Proforma(BillingDocumentBase):
 
     def clean(self):
         super(Proforma, self).clean()
+        if self.is_storno:
+            raise ValidationError({"is_storno": "A proforma cannot be a storno."})
+
         if not self.series:
             if not hasattr(self, 'provider'):
                 # the clean method is called even if the clean_fields method

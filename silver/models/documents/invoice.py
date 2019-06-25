@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import
 
+from django.db import transaction
 from django_fsm import transition
 
 from django.apps import apps
@@ -23,6 +24,7 @@ from django.dispatch import receiver
 from silver.models.documents.base import (
     BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
 )
+from silver.models.documents.entries import DocumentEntry
 from silver.models.billing_entities import Provider
 
 
@@ -72,6 +74,39 @@ class Invoice(BillingDocumentBase):
     @property
     def entries(self):
         return self.invoice_entries.all()
+
+    def create_storno(self):
+        if self.is_storno:
+            raise ValueError("This invoice is already a storno one.")
+
+        if self.state not in [self.STATES.CANCELED, self.STATES.PAID]:
+            raise ValueError(
+                "The invoice state must either be canceld or paid in order to create a storno."
+            )
+
+        with transaction.atomic():
+            storno_invoice = Invoice.objects.create(
+                related_document=self,
+                provider=self.provider,
+                customer=self.customer,
+                is_storno=True,
+                sales_tax_name=self.sales_tax_name,
+                sales_tax_percent=self.sales_tax_percent,
+                currency=self.currency,
+                transaction_currency=self.transaction_currency,
+            )
+            storno_invoice.invoice_entries.add(*[DocumentEntry.objects.create(
+                unit_price=entry.unit_price,
+                unit=entry.unit,
+                quantity=entry.quantity * -1,
+                product_code=entry.product_code,
+                start_date=entry.start_date,
+                end_date=entry.end_date,
+                prorated=entry.prorated,
+                invoice=storno_invoice,
+            ) for entry in self.entries])
+
+            return storno_invoice
 
 
 @receiver(pre_delete, sender=Invoice)

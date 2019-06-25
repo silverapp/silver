@@ -2,7 +2,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}</title>
+    <title>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}
+        {% if document.is_storno %}, storno of {{ document.related_document.series }}-{{ document.related_document.number }}{% endif %}
+    </title>
     <style type="text/css">
         @page {
             size: a4;
@@ -109,6 +111,7 @@
         <tr>
             <td class="title">
                 <h1>{% if document.state == 'canceled' %} Canceled {% endif %}{{ document.kind }} {{ document.series }}-{{ document.number }}</h1>
+                {% if document.is_storno %}<h2>Storno of {{ document.related_document.series }}-{{ document.related_document.number }}</h2>{% endif %}
                 <table>
                     <tr>
                         <td width="48mm"><strong>Issue date</strong></td>
