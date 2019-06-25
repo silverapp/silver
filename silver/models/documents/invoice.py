@@ -81,7 +81,7 @@ class Invoice(BillingDocumentBase):
 
         if self.state not in [self.STATES.CANCELED, self.STATES.PAID]:
             raise ValueError(
-                "The invoice state must either be canceld or paid in order to create a storno."
+                "The invoice state must either be canceled or paid in order to create a storno."
             )
 
         with transaction.atomic():
