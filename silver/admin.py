@@ -153,6 +153,11 @@ class PlanAdmin(ModelAdmin):
     get_provider.short_description = "provider"
     get_provider.admin_order_field = "provider"
 
+    def get_queryset(self, request):
+        return super(PlanAdmin, self).get_queryset(request) \
+            .prefetch_related("metered_features") \
+            .select_related("provider")
+
 
 class MeteredFeatureUnitsLogInLine(TabularInline):
     model = MeteredFeatureUnitsLog
