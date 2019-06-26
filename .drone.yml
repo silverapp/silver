@@ -40,6 +40,9 @@ pipeline:
     when:
       branch: master
       event: push
+      matrix:
+        PYTHON_VERSION: 3.6
+        DJANGO_VERSION: ">2.2,<2.3"
 
 services:
   mysql:
