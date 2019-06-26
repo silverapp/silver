@@ -3,6 +3,11 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.9.1 (2019-06-26)
+- Allow searching for Invoices and Proformas by "series-number" in admin.
+- Fixed Transaction admin changelist query performance.
+- Improved Plan admin changelist query performance.
+
 ## 0.9 (2019-06-25)
 - Added the possibility to create storno invoices.
 - Separate totals per currency in the provider monthly totals report (admin action).
