@@ -669,6 +669,7 @@ class BillingDocumentAdmin(ModelAdmin):
                                                                 'customer',
                                                                 'provider',
                                                                 'pdf')
+
     def get_search_results(self, request, queryset, search_term):
         if '-' in search_term and search_term[-1].isdigit():
             return queryset \
