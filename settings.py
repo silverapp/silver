@@ -22,7 +22,7 @@ These settings are used by the ``manage.py`` command.
 
 """
 
-DEBUG = True
+DEBUG = False
 
 SITE_ID = 1
 
