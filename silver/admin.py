@@ -36,8 +36,8 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db.models import BLANK_CHOICE_DASH
-from django.db.models.functions import ExtractYear, ExtractMonth
+from django.db.models import BLANK_CHOICE_DASH, F, Value, fields
+from django.db.models.functions import ExtractYear, ExtractMonth, Concat
 from django.forms import ChoiceField
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -622,6 +622,14 @@ class BillingDocumentAdmin(ModelAdmin):
                                                                 'customer',
                                                                 'provider',
                                                                 'pdf')
+    def get_search_results(self, request, queryset, search_term):
+        if '-' in search_term and search_term[-1].isdigit():
+            return queryset \
+                .annotate(_series_number=Concat(F('series'), Value('-'), F('number'),
+                                                output_field=fields.CharField())) \
+                .filter(_series_number=search_term), True
+
+        return super(BillingDocumentAdmin, self).get_search_results(request, queryset, search_term)
 
     @property
     def _model(self):
