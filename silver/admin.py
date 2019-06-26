@@ -602,7 +602,7 @@ class InvoiceFilter(SimpleListFilter):
         invoices_queryset = Invoice.objects \
             .filter(invoice_transactions__in=queryset.distinct()) \
             .annotate(_series_number=Concat(F('series'), Value('-'), F('number'),
-                                           output_field=fields.CharField())) \
+                                            output_field=fields.CharField())) \
             .values_list('id', '_series_number') \
             .distinct()
 
@@ -624,7 +624,7 @@ class ProformaFilter(SimpleListFilter):
         proformas_queryset = Proforma.objects \
             .filter(proforma_transactions__in=queryset.distinct()) \
             .annotate(_series_number=Concat(F('series'), Value('-'), F('number'),
-                                           output_field=fields.CharField())) \
+                                            output_field=fields.CharField())) \
             .values_list('id', '_series_number') \
             .distinct()
 
