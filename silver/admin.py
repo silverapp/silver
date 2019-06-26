@@ -587,6 +587,48 @@ class DueDateFilter(SimpleListFilter):
         return queryset
 
 
+class InvoiceFilter(SimpleListFilter):
+    title = _('invoice')
+    parameter_name = 'invoice'
+
+    def lookups(self, request, model_admin):
+        queryset = model_admin.get_queryset(request)
+
+        invoices_queryset = Invoice.objects \
+            .filter(invoice_transactions__in=queryset.distinct()) \
+            .annotate(series_number=Concat(F('series'), Value('-'), F('number'))) \
+            .values_list('id', 'series_number') \
+            .distinct()
+
+        return list(invoices_queryset)
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(invoice__exact=self.value())
+        return queryset
+
+
+class ProformaFilter(SimpleListFilter):
+    title = _('proforma')
+    parameter_name = 'proforma'
+
+    def lookups(self, request, model_admin):
+        queryset = model_admin.get_queryset(request)
+
+        proformas_queryset = Proforma.objects \
+            .filter(proforma_transactions__in=queryset.distinct()) \
+            .annotate(series_number=Concat(F('series'), Value('-'), F('number'))) \
+            .values_list('id', 'series_number') \
+            .distinct()
+
+        return list(proformas_queryset)
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(proforma__exact=self.value())
+        return queryset
+
+
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'get_customer', 'state',
                     'get_provider', 'issue_date', 'due_date', 'paid_date',
@@ -1019,7 +1061,7 @@ class TransactionAdmin(ModelAdmin):
                     'get_customer', 'get_pay_url', 'get_payment_method',
                     'get_is_recurring')
     list_filter = ('payment_method__customer', 'state', 'payment_method__payment_processor',
-                   'proforma', 'invoice')
+                   ProformaFilter, InvoiceFilter)
     actions = ['execute', 'process', 'cancel', 'settle', 'fail']
     ordering = ['-created_at']
 
