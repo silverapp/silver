@@ -3,6 +3,9 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.9.2 (2019-06-26)
+- Fix transaction admin error.
+
 ## 0.9.1 (2019-06-26)
 - Allow searching for Invoices and Proformas by "series-number" in admin.
 - Fixed Transaction admin changelist query performance.
