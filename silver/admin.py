@@ -694,10 +694,9 @@ class BillingDocumentAdmin(ModelAdmin):
         for document in queryset:
             results[document] = {}
             try:
-                result = method(document)
-                if result:
-                    results[document]['result'] = result
-                    results[document]['success'] = True
+                results[document]['success'] = True
+                results[document]['result'] = method(document)
+
                 document.save()
 
                 LogEntry.objects.log_action(
