@@ -3,6 +3,12 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.9.3 (2019-07-27)
+This release contains security changes that were marked below with **(SECURITY)**. It is advised to
+upgrade to the latest version of django-silver.
+- Escape user-inputable text before marking it as safe in admin. **(SECURITY)**
+- Fix result handling error for a case of successful actions.
+
 ## 0.9.2 (2019-06-26)
 - Fix transaction admin error.
 
