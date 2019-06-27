@@ -20,6 +20,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.html import escape
 from django.urls import reverse
 
 from silver.utils.international import currencies
@@ -110,9 +111,9 @@ class Customer(BaseBillingEntity):
 
     @property
     def admin_change_url(self):
-        display = self.name
+        display = escape(self.name)
         if self.company:
-            display += "<hr> " + self.company
+            display += "<hr> " + escape(self.company)
 
         link = reverse("admin:silver_customer_change", args=[self.pk])
         return u'<a href="%s">%s</a>' % (link, display)

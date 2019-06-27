@@ -23,6 +23,7 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
 from silver.models.billing_entities.base import BaseBillingEntity
@@ -151,9 +152,9 @@ class Provider(BaseBillingEntity):
 
     @property
     def admin_change_url(self):
-        display = self.name
+        display = escape(self.name)
         if self.company and self.name != self.company:
-            display += "<hr> " + self.company
+            display += "<hr> " + escape(self.company)
 
         link = reverse("admin:silver_provider_change", args=[self.pk])
         return u'<a href="%s">%s</a>' % (link, display)

@@ -44,7 +44,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_text
-from django.utils.html import escape
+from django.utils.html import escape, conditional_escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 
@@ -709,7 +709,10 @@ class BillingDocumentAdmin(ModelAdmin):
                         action=action.replace('_', ' ').strip().capitalize()
                     )
                 )
-            except (TransitionNotAllowed, ValueError) as error:
+            except TransitionNotAllowed as error:
+                results[document]['result'] = mark_safe(error)
+                results[document]['success'] = False
+            except ValueError as error:
                 results[document]['result'] = force_text(error)
                 results[document]['success'] = False
             except AttributeError:
@@ -727,7 +730,8 @@ class BillingDocumentAdmin(ModelAdmin):
                 message = document.admin_change_url
 
                 if result['result']:
-                    info = getattr(result['result'], 'admin_change_url', str(result['result']))
+                    info = getattr(result['result'], 'admin_change_url',
+                                   conditional_escape(result['result']))
             if message:
                 if result:
                     message += ": " + info
