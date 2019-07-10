@@ -9,6 +9,7 @@ draft: false
 aliases: []
 toc: true
 related: true
+slug: what-is-silver
 ---
 
 ## What’s its purpose?

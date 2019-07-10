@@ -267,14 +267,6 @@ DELETE /invoices/:id/entries/:entry_id HTTP/1.1
 
 ## Issue an invoice
 
-The invoice must be in the `draft` state.
-Issuing an invoice follows these steps:
-
-* When `issue_date` is specified, the invoice's `issue_date` is set to this value. If it's not and the invoice has no `issue_date` set, it it set to the current date.
-* If `due_date` is specified it overwrites the invoice's `due_date`
-* If the invoice has no `billing_details` set, it copies the `billing_details` from the customer. The same goes with `sales_tax_percent` and `sales_tax_name`
-* Sets the invoice status to `issued`
-
 ``` http
 PATCH /invoices/:id/state HTTP/1.1
 Content-Type: application/json
@@ -286,12 +278,15 @@ Content-Type: application/json
 }
 ```
 
-## Pay an invoice
-The invoice must be in the `issued` state.
-Paying an invoice follows these steps:
+The invoice must be in the `draft` state.
+Issuing an invoice follows these steps:
 
-* If `paid_date` is specified, set the invoice `paid_date` to this value, else set the invoice `paid_date` to the current date
-* Sets the invoice status to `paid`
+* When `issue_date` is specified, the invoice's `issue_date` is set to this value. If it's not and the invoice has no `issue_date` set, it it set to the current date.
+* If `due_date` is specified it overwrites the invoice's `due_date`
+* If the invoice has no `billing_details` set, it copies the `billing_details` from the customer. The same goes with `sales_tax_percent` and `sales_tax_name`
+* Sets the invoice status to `issued`
+
+## Pay an invoice
 
 ``` http
 PATCH /invoices/:id/state HTTP/1.1
@@ -303,13 +298,13 @@ Content-Type: application/json
 }
 ```
 
-## Cancel an invoice
-
 The invoice must be in the `issued` state.
-Canceling an invoice follows these steps:
+Paying an invoice follows these steps:
 
-* If `cancel_date` is specified, set the invoice `cancel_date` to this value, else set the invoice `cancel_date` to the current date
+* If `paid_date` is specified, set the invoice `paid_date` to this value, else set the invoice `paid_date` to the current date
 * Sets the invoice status to `paid`
+
+## Cancel an invoice
 
 ``` http
 PATCH /invoices/:id/state HTTP/1.1
@@ -320,6 +315,12 @@ Content-Type: application/json
     "cancel_date": "2014-10-04"
 }
 ```
+
+The invoice must be in the `issued` state.
+Canceling an invoice follows these steps:
+
+* If `cancel_date` is specified, set the invoice `cancel_date` to this value, else set the invoice `cancel_date` to the current date
+* Sets the invoice status to `paid`
 
 ## How automated invoices are generated
 

@@ -17,13 +17,13 @@ pygmentsStyle = "github"
   legal_url = "https://www.presslabs.com/legal"
   breadcrumbs_root = "Silver DOCS"
   quick_start = true
-  quick_start_link = "code/gitium/"
+  quick_start_link = "what-is-silver/"
   logo_text = "CODE"
   search_placeholder = "Search code"
   footer_menu = true
   footer_menu_title = "DOCUMENTATION"
   title = "Welcome to Presslabs Silver Documentation!"
-  description = ""
+  description = "Silver is a payments app that you can use with your Django project and here you'll find all you need to know about it."
   release = "3.0.0"
   # debug = true
   algolia_search = true
@@ -72,43 +72,44 @@ pygmentsStyle = "github"
 
 [[menu.docs]]
   name = "Install and configure Silver"
-  weight = 1
+  weight = 2
+  identifier = "install-and-configure-silver"
   url = "/install-and-configure-silver/"
 
 [[menu.docs]]
   name = "Silver Resources"
-  weight = 1
+  weight = 3
   url = "/silver-resources/"
 
 [[menu.docs]]
   name = "Billing Documents"
-  weight = 1
+  weight = 4
   identifier = "billing-documents"
   url = "/billing-documents/"
 
 [[menu.docs]]
   name = "Billing Entities"
-  weight = 1
+  weight = 5
   identifier = "billing-entities"
   url = "/billing-entities/"
 
 [[menu.docs]]
   name = "Billing Units"
-  weight = 1
+  weight = 6
   identifier = "billing-units"
   url = "/billing-units/"
 
 [[menu.docs]]
-  name = "Guides"
-  weight = 1
-  identifier = "guides"
-  url = "/guides/"
-
-[[menu.docs]]
   name = "Payments"
-  weight = 1
+  weight = 7
   identifier = "payments"
   url = "/payments/"
+
+[[menu.docs]]
+  name = "Guides"
+  weight = 8
+  identifier = "guides"
+  url = "/guides/"
 
 [imaging]
   resampleFilter = "CatmullRom"

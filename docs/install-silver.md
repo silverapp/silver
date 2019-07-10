@@ -1,6 +1,6 @@
 ---
 title: How to install and configure Silver
-description: Here are the required steps to install silver on your machine.
+description: Here are the required steps to install Silver on your machine.
 linktitle: Install and configure Silver
 categories: [silver]
 keywords: [silver]
@@ -9,8 +9,8 @@ draft: false
 aliases: []
 toc: true
 related: true
+slug: install-and-configure-silver
 ---
-
 
 ## Install
 
@@ -23,7 +23,7 @@ pip install django-silver
 
 ## Configure
 
-Add the following to your project settings file
+Add the following lines to your project settings file:
 
 ``` python
 INSTALLED_APPS = (
