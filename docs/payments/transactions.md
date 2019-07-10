@@ -14,7 +14,7 @@ toc: true
 related: true
 ---
 
-For resource definition check out the [Resources]({{< ref "../resources.md" >}}) page.
+For resource definition check out the [Resources](../resources.md) page.
 
 ## List all Transactions
 
@@ -137,12 +137,10 @@ Content-Type: application/json
 }
 ```
 
-{{% note %}}
 * `amount`: Can be omitted, in which case the amount will be the remaining amount of the billing document to be paid. Otherwise it must be lower or equal to the remaining amount of the billing document to be paid.
 * `currency`: Can be omitted, in which case the `transaction_currency` of the billing document will be used. If specified it must be the same as the `transaction_currency` of the billing document, so it can only be used as a safety measure.
 * `invoice` and `proforma`: Only one of these must be specified for the transaction to be created. If both are specified, they must be related.
 * `valid_until`: Can be omitted. If specified, the transaction cannot be paid by the customer past that date.
-{{% /note %}}
 
 **Response**
 

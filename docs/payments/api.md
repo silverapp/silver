@@ -14,15 +14,15 @@ toc: true
 related: true
 ---
 
-For resource definition check out the [Resources]({{< ref "../resources.md" >}}) page.
+For resource definition check out the [Resources](../resources.md) page.
 
 ## Listing
 
 Requests that return multiple items are paginated by default to 30 items. You can specify the `page` parameter for the page number and `per_page` to increase/decrease the items per page. There is a hard limit of items per page of `100`. The page numbering is 1-based and if you do not specify a `page` parameter it's default value is 1.
 
-{{% note %}}
-Note that not all listings can be iterated using `page` parameters and some ignore the page parameter.
-{{% /note %}}
+> ###### NOTE
+>
+> Note that not all listings can be iterated using `page` parameters and some ignore the page parameter.
 
 ## Iterating entire collection
 

@@ -1,0 +1,116 @@
+baseURL = "https://www.presslabs.com/docs/mysql-operator/"
+languageCode = "en-us"
+title = "Silver DOCS"
+summaryLength = 15
+metaDataFormat = "yaml"
+theme = "docs"
+enableRobotsTXT = true
+enableGitInfo = true
+pygmentsCodeFences = true
+pygmentsOptions = ""
+pygmentsUseClasses = true
+pygmentsUseClassic = false
+pygmentsStyle = "github"
+
+[params]
+  site_url = "https://www.presslabs.com/code/"
+  legal_url = "https://www.presslabs.com/legal"
+  breadcrumbs_root = "Silver DOCS"
+  quick_start = true
+  quick_start_link = "code/gitium/"
+  logo_text = "CODE"
+  search_placeholder = "Search code"
+  footer_menu = true
+  footer_menu_title = "DOCUMENTATION"
+  title = "Welcome to Presslabs Silver Documentation!"
+  description = ""
+  release = "3.0.0"
+  # debug = true
+  algolia_search = true
+  algolia_appId = "0TS6NFHDBC"
+  algolia_apiKey = "d2a5958e9769691faac2c1c041b1ba31"
+  algolia_indexName = "Silver Docs"
+  algolia_currentLanguageOnly = true
+  images = ["images/code.jpg"]
+
+[params.algolia]
+  vars = ["title", "description", "summary", "content", "date", "lastmod", "permalink", "text", "lvl0", "lvl1", "url"]
+  params = ["categories", "keywords"]
+
+[blackfriday]
+  angledQuotes = true
+  extensions = ["hardLineBreak"]
+  sourceRelativeLinks = true
+  fractions = false
+  plainIDAnchors = true
+
+[outputFormats.Algolia]
+  baseName = "algolia"
+  isPlainText = true
+  mediaType = "application/json"
+  notAlternative = true
+
+[outputs]
+  home = [ "HTML", "RSS", "JSON", "Algolia" ]
+
+[taxonomies]
+  category = "categories"
+
+[related]
+  threshold = 80
+  includeNewer = true
+  toLower = false
+
+[[related.indices]]
+  name = "keywords"
+  weight = 150
+
+[[menu.docs]]
+  name = "What is Silver"
+  weight = 1
+  url = "/what-is-silver/"
+
+[[menu.docs]]
+  name = "Install and configure Silver"
+  weight = 1
+  url = "/install-and-configure-silver/"
+
+[[menu.docs]]
+  name = "Silver Resources"
+  weight = 1
+  url = "/silver-resources/"
+
+[[menu.docs]]
+  name = "Billing Documents"
+  weight = 1
+  identifier = "billing-documents"
+  url = "/billing-documents/"
+
+[[menu.docs]]
+  name = "Billing Entities"
+  weight = 1
+  identifier = "billing-entities"
+  url = "/billing-entities/"
+
+[[menu.docs]]
+  name = "Billing Units"
+  weight = 1
+  identifier = "billing-units"
+  url = "/billing-units/"
+
+[[menu.docs]]
+  name = "Guides"
+  weight = 1
+  identifier = "guides"
+  url = "/guides/"
+
+[[menu.docs]]
+  name = "Payments"
+  weight = 1
+  identifier = "payments"
+  url = "/payments/"
+
+[imaging]
+  resampleFilter = "CatmullRom"
+  quality = 75
+  anchor = "smart"
