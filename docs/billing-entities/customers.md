@@ -14,7 +14,7 @@ toc: true
 related: true
 ---
 
-For resource definition check out the [Resources]({{< ref "../resources.md" >}}) page.
+For resource definition check out the [Resources](../resources.md) page.
 
 ## List all customers
 

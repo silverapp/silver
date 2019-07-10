@@ -4,9 +4,6 @@ description: Here is a list of all the resources available in Silver, as well as
 linktitle: Resources
 categories: [silver]
 keywords: [silver]
-menu:
-  docs:
-    parent: "silver"
 weight: 2
 draft: false
 aliases: []

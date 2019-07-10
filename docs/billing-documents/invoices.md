@@ -14,7 +14,7 @@ toc: true
 related: true
 ---
 
-For resource definition check out the [Resources]({{< ref "../resources.md" >}}) page.
+For resource definition check out the [Resources](../resources.md) page.
 
 ## List all invoices
 
@@ -177,9 +177,9 @@ Content-Type: application/json
 
 ## Update an invoice
 
-{{% note %}}
-Modifying an invoice is only possible when it's in `draft` state. Also, take note that the invoice state cannot be updated through this method.
-{{% /note %}}
+> ###### NOTE
+>
+> Modifying an invoice is only possible when it's in `draft` state. Also, take note that the invoice state cannot be updated through this method.
 
 Use `PATCH` for partial update and `PUT` for full update
 
@@ -212,9 +212,10 @@ Content-Type: application/json
 ```
 
 ## Add an entry to an invoice
-{{% note %}}
-Adding an entry is only possible when the invoice is in `draft` state.
-{{% /note %}}
+
+> ###### NOTE
+>
+> Adding an entry is only possible when the invoice is in `draft` state.
 
 ``` http
 POST /invoices/:id/entries HTTP/1.1
@@ -234,9 +235,9 @@ Content-Type: application/json
 
 ## Update an entry of an invoice
 
-{{% note %}}
-Updating an entry is only possible when the invoice is in `draft` state.
-{{% /note %}}
+> ###### NOTE
+>
+> Updating an entry is only possible when the invoice is in `draft` state.
 
 ``` http
 PUT /invoices/:id/entries/:entry_id HTTP/1.1
@@ -256,9 +257,9 @@ Content-Type: application/json
 
 ## Delete an entry from an invoice
 
-{{% note %}}
-Deleting an entry is only possible when the invoice is in `draft` state.
-{{% /note %}}
+> ###### NOTE
+>
+> Deleting an entry is only possible when the invoice is in `draft` state.
 
 ``` http
 DELETE /invoices/:id/entries/:entry_id HTTP/1.1

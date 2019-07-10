@@ -4,9 +4,6 @@ description: Here are the required steps to install silver on your machine.
 linktitle: Install and configure Silver
 categories: [silver]
 keywords: [silver]
-menu:
-  docs:
-    parent: "silver"
 weight: 2
 draft: false
 aliases: []
@@ -28,7 +25,7 @@ pip install django-silver
 
 Add the following to your project settings file
 
-```
+``` python
 INSTALLED_APPS = (
     ...,
     'silver',
@@ -44,6 +41,6 @@ Silver is now ready to be used in your application.
 2. Add your pricing plans to the mix
 3. Import/add your customers
 4. Create subscriptions to the desired plans for your customers
-5.Create your custom templates using HTML/CSS or use the ones already provided
+5. Create your custom templates using HTML/CSS or use the ones already provided
 6. Generate the invoices, manually for the first time.
 7. Lay back for the next billing cycle if you've added billing generation in a cron.
