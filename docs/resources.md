@@ -4,11 +4,12 @@ description: Here is a list of all the resources available in Silver, as well as
 linktitle: Resources
 categories: [silver]
 keywords: [silver]
-weight: 2
+weight: 3
 draft: false
 aliases: []
 toc: true
 related: true
+slug: silver-resources
 ---
 
 ## Plan
@@ -43,7 +44,7 @@ A metered feature defines the features that are going to be a part of the plan. 
 
 * `(string) customer_reference`: It's a reference to be passed between silver and clients. It usually points to an account ID.
 * `(positive int) payment_due_days`: Due days for generated invoices.
-* `(hash) billing_details`: An hash consisting of billing information. None are mandatory and all will show up on the invoice.
+* `(hash) billing_details`: A hash consisting of billing information. None are mandatory and all will show up on the invoice.
   * `(string) name`: The name to be used for billing purposes.
   * `(string) company`: Company to issue invoices to.
   * `(string) email`: Customer email

@@ -1,5 +1,5 @@
 ---
-title:  Adding a new payment processor
+title:  How to add a new payment processor
 description: This guide will explain the steps of adding a new payment processor to Silver.
 linktitle: Adding a new payment processor
 categories: [silver]
@@ -36,13 +36,13 @@ proper names instead.
 This method is better if you want to get started faster. You can always decide to publish your app
 as a separate Django project if you want.
 
-- Create your app
+Create your app:
 
 ```bash
 ./manage.py startapp payment_processor
 ```
 
-- Add it to your INSTALLED_APPS in your settings file
+Add it to your INSTALLED_APPS in your settings file:
 
 ```python
 INTERNAL_APPS = [
@@ -51,7 +51,6 @@ INTERNAL_APPS = [
     # ...
 ]
 ```
-
 
 ### The Django project variant
 This method is better if you want to keep your projects separated or publish your work from the
@@ -60,13 +59,13 @@ beginning.
 This method also assumes you have already created a virtualenv for the main project, the payment
 processor project and installed Django there too.
 
-- Create your project
+Create your project:
 
 ```bash
 django_admin startproject payment_processor
 ```
 
-- Install it by linking it inside your main project's environment, where Silver is also installed
+Install it by linking it inside your main project's environment, where Silver is also installed:
 
 ```bash
 workon silver_project  # Change to your main project's environment
@@ -74,7 +73,7 @@ cd payment_processor  # Go to your payment_processor's directory
 pip install -e .  # Install your payment_processor development project as a linked dependecy
 ```
 
-- Add the payment_processor to your INSTALLED_APPS in your silver_project's settings file
+Add the payment_processor to your INSTALLED_APPS in your silver_project's settings file:
 
 ```python
 INTERNAL_APPS = [
@@ -84,9 +83,7 @@ INTERNAL_APPS = [
 ]
 ```
 
-## Implementation
-
-### Deciding how your Payment Processor will look
+## Deciding how your Payment Processor will look
 
 In your payment_processor app you should have the following structure. It's fine if you can't find
 everything in there yet. You can complete it as we go:
@@ -226,7 +223,7 @@ def _update_transaction_status(self, transaction, transaction_result):
           FAIL_CODES[transaction.fail_code].get('solve_message', 'Contact our support'))
 ```
 
-### Payment methods
+## Payment methods
 
 You can implement a Payment Method class if you want to add specific payment method logic:
 ```python
@@ -264,7 +261,7 @@ customer's payment method info, so you will use the token to refer to the paymen
 The token is useful if the customer wants to save his payment method info for further or recurring
 payments. Read about how you can obtain it in the [payment operation section](#the-payment-operation).
 
-### The payment operation
+## The payment operation
 
 This section tries to explain how the customer's payment operation usually goes like. For this purpose
 the following steps are described:
@@ -301,7 +298,7 @@ transaction reference and status. See
 stating the state of the transaction.
 
 
-#### Handling the transaction response from the payment processor.
+### Handling the transaction response from the payment processor.
 ```python
 # payment_processors.py
 # ...
@@ -339,14 +336,14 @@ request to this method or just `pass` inside the `handle_transaction_response` m
 logic somewhere else. The implementation details are really up to you.
 
 
-#### The payment page
+### The payment page
 There's 3 things you usually want to implement / change for the payment page: The
 [transaction form class](#the-transaction-form-class),
 the [transaction form / payment page template](#the-transaction-form-template) and the
 [transaction view class](#the-transaction-view-class).
 
 
-##### The transaction form class
+#### The transaction form class
 The form class is only needed if the external payment processor service requires a form submission of
 some sort.
 
@@ -357,20 +354,24 @@ rendered by default in the payment page, but you will probably be required to cu
 You can override the PaymentProcessor's `get_form` method if you need more maneuverability.
 
 
-##### The transaction form template
+#### The transaction form template
 The transaction form template represents (by default) the entire payment page template. If you want
 to structure your templates differently, you can override the PaymentProcessor's `get_template` method.
 
 By default it will be selected from one of the following paths:
+
 - `templates/forms/{template_slug}/{provider_slug}_transaction_form.html`
 - `templates/forms/{template_slug}/transaction_form.html`
 - `templates/forms/transaction_form.html`
-Where:
-- `template_slug` is an attribute of the PaymentProcessor class  
-- `provider_slug` is equal to `slugify(provider.company or provider.name)`, so if
-`provider.company = "Some company"`, `provider_slug` will be equal to `some-company`
 
-```python
+Where:
+
+`template_slug` is an attribute of the PaymentProcessor class.
+
+`provider_slug` is equal to `slugify(provider.company or provider.name)`, so if
+`provider.company = "Some company"`, `provider_slug` will be equal to `some-company`.
+
+``` python
 # payment_processors.py
 # ...
 
@@ -403,6 +404,7 @@ You might have to insert javascript from your payment processor, apply some cust
 the form to a service of your payment's processor. That's all up to you.
 
 Here's a couple of real world examples that might shed some light if you are confused:
+
 1. [PayU transaction form template](https://github.com/silverapp/silver-payu/blob/master/silver_payu/templates/payu/transaction_form.html)  
    [Here](https://github.com/silverapp/silver-payu/blob/master/silver_payu/templates/payu/payu_lu_form.html)
     is one of the form templates that are used inside. You can see the form action has been changed to point to
@@ -412,7 +414,7 @@ Here's a couple of real world examples that might shed some light if you are con
     Instead, one is loaded from the payment processor via a script.
 
 
-##### The transaction view class
+#### The transaction view class
 You need to specify a transaction view class inside your PaymentProcessor's class. It can be the default
 `GenericTransactionView` class or a custom one.
 
@@ -449,14 +451,12 @@ class CustomTransactionView(GenericTransactionView):
         return HttpResponse(self.render_template())
 ```
 
-
-### Wrapping it all up
 At this point, you should have all the functioning pieces and if you are lucky they should fit together.
 
 Now it's time to start writing some tests.
 
 
-#### Testing
+## Testing
 Depending on your implementation, you might want to write some unit tests for your
 `TriggeredPaymentProcessor` class, your `TriggeredPaymentMethod` model, your forms, and then some
 integration tests for your views. You should at least test every method that you've written so far.
