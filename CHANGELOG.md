@@ -3,7 +3,10 @@
 ## Unrealeased changes
 _Nothing yet_
 
-## 0.9.3 (2019-07-27)
+## 0.9.4 (2019-07-17)
+- Fixed a possible crash when generating documents for subscriptions with the trial period spanning over multiple billing cycles.
+
+## 0.9.3 (2019-06-27)
 This release contains security changes that were marked below with **(SECURITY)**. It is advised to
 upgrade to the latest version of django-silver.
 - Escape user-inputable text before marking it as safe in admin. **(SECURITY)**
