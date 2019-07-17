@@ -735,17 +735,19 @@ class Subscription(models.Model):
                 metered_feature, consumed_units)
         else:
             # It's still on trial but has been billed before
-            # The following part tries so handle the case when the trial
+            # The following part tries to handle the case when the trial
             # spans over 2 months and the subscription has been already billed
             # once => this month it is still on trial but it only
             # has remaining = consumed_last_cycle - included_during_trial
             last_log_entry = self.billing_logs.all()[0]
-            if last_log_entry.proforma:
+            if last_log_entry.invoice:
+                qs = last_log_entry.invoice.invoice_entries.filter(
+                    product_code=metered_feature.product_code)
+            elif last_log_entry.proforma:
                 qs = last_log_entry.proforma.proforma_entries.filter(
                     product_code=metered_feature.product_code)
             else:
-                qs = last_log_entry.invoice.invoice_entries.filter(
-                    product_code=metered_feature.product_code)
+                qs = DocumentEntry.objects.none()
 
             if not qs.exists():
                 return self._get_consumed_units_from_total_included_in_trial(
