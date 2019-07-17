@@ -1,4 +1,4 @@
-baseURL = "https://www.presslabs.com/docs/mysql-operator/"
+baseURL = "https://www.presslabs.com/code/silver/"
 languageCode = "en-us"
 title = "Silver DOCS"
 summaryLength = 15
@@ -11,6 +11,7 @@ pygmentsOptions = ""
 pygmentsUseClasses = true
 pygmentsUseClassic = false
 pygmentsStyle = "github"
+dataDir = "/site/data"
 
 [params]
   site_url = "https://www.presslabs.com/code/"
