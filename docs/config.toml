@@ -112,6 +112,13 @@ dataDir = "/site/data"
   identifier = "guides"
   url = "/guides/"
 
+[[menu.docs]]
+  name = "How to add a new payment processor"
+  weight = 8
+  parent = "guides"
+  identifier = "adding-a-new-payment-processor"
+  url = "/adding-a-new-payment-processor/"
+
 [imaging]
   resampleFilter = "CatmullRom"
   quality = 75
