@@ -29,14 +29,13 @@ pipeline:
     when:
       event: [push, tag]
 
-  trigger:
+  trigger-docs-build:
     image: plugins/downstream
     server: https://drone.presslabs.net
     fork: true
-    wait: true
-    secrets: [ DRONE_TOKEN ]
+    secrets: [DRONE_TOKEN]
     repositories:
-      - presslabs/code
+      - presslabs/docs
     when:
       branch: master
       event: push
