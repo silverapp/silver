@@ -54,10 +54,14 @@ Just install it by using pip, add it to the INSTALLED_APPS setting and you are r
 
 ## How to contribute
 
-Development of silver happens on GitHub at http://github.com/silverapp/silver.
+Development of Silver happens on GitHub at http://github.com/silverapp/silver.
 
 Issues are tracked at http://github.com/silverapp/silver/issues.
 
-You are highly encouraged to contribute with code, tests, documentation, or just to share your experience.
+The Python package can be found at https://pypi.python.org/pypi/django-silver/.
 
-[Get involved](https://github.com/presslabs/silver/)
+You are highly encouraged to contribute with code, tests, documentation
+or just sharing experience.
+
+Please see CONTRIBUTING.md for a short guide on how to get started with
+Silver contributions.
