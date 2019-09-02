@@ -14,21 +14,26 @@
 
 from __future__ import absolute_import
 
+import operator
+
 import six.moves.urllib.request
 import six.moves.urllib.parse
 import six.moves.urllib.error
+from six.moves import reduce
 
 from furl import furl
 from dal import autocomplete
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models.functions import Concat
+from django.db.models import Q, F, Value
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-
+from silver.models.plans import Plan
+from silver.models.billing_entities import Customer, Provider
 from silver.models.payment_methods import PaymentMethod
 from silver.models.transactions import Transaction
 from silver.models.documents import Proforma, Invoice
@@ -143,6 +148,81 @@ class ProformaAutocomplete(DocumentAutocomplete):
         self.model = Proforma
 
         super(ProformaAutocomplete, self).__init__(**kwargs)
+
+
+class PlanAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+            raise Http404
+
+        queryset = Plan.objects.exclude(enabled=False)
+
+        if self.q:
+            queryset = queryset.annotate(
+                name_provider__name__company=Concat(
+                    F("name"), Value(" "), F("provider__name"), Value(" "), F("provider__company")
+                )
+            )
+            terms = self.q.split()
+
+            query = reduce(
+                operator.and_,
+                (Q(name_provider__name__company__icontains=term) for term in terms)
+            )
+
+            queryset = queryset.filter(query)
+
+        return queryset
+
+
+class CustomerAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+            raise Http404
+
+        queryset = Customer.objects.all()
+
+        if self.q:
+            queryset = queryset.annotate(
+                first_last_company_name=Concat(
+                    F("first_name"), Value(" "), F("last_name"), Value(" "), F("company")
+                )
+            )
+            terms = self.q.split()
+
+            query = reduce(
+                operator.and_,
+                (Q(first_last_company_name__icontains=term) for term in terms)
+            )
+
+            queryset = queryset.filter(query)
+
+        return queryset
+
+
+class ProviderAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+            raise Http404
+
+        queryset = Provider.objects.all()
+
+        if self.q:
+            queryset = queryset.annotate(
+                name_company=Concat(
+                    F("name"), Value(" "), F("company")
+                )
+            )
+            terms = self.q.split()
+
+            query = reduce(
+                operator.and_,
+                (Q(name_company__icontains=term) for term in terms)
+            )
+
+            queryset = queryset.filter(query)
+
+        return queryset
 
 
 class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
