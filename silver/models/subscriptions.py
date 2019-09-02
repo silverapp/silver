@@ -1012,7 +1012,7 @@ class Subscription(models.Model):
         return base_context
 
     def __str__(self):
-        return u'%s (%s)' % (self.customer, self.plan)
+        return u'%s (%s)' % (self.customer, self.plan.name)
 
 
 @python_2_unicode_compatible
