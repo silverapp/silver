@@ -3,6 +3,9 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.9.5 (2019-09-03)
+- Make some admin fields dropdowns searchable.
+
 ## 0.9.4 (2019-07-17)
 - Fixed a possible crash when generating documents for subscriptions with the trial period spanning over multiple billing cycles.
 
