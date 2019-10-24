@@ -106,6 +106,9 @@ class DocumentEntry(models.Model):
 
     @property
     def transaction_xe_rate(self):
+        if self.document.currency == self.document.transaction_currency:
+            return Decimal('1.00')
+
         return self.document.transaction_xe_rate
 
     def clone(self):

@@ -218,6 +218,8 @@ class ProformaSerializer(AutoCleanSerializerMixin,
                             'total_in_transaction_currency')
         extra_kwargs = {
             'transaction_currency': {'required': False},
+            'number': {'required': False},
+            'series': {'required': False},
             'invoice': {'source': 'related_document', 'view_name': 'invoice-detail'},
         }
 

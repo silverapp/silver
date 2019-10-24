@@ -17,9 +17,12 @@ from __future__ import absolute_import
 import json
 from datetime import timedelta
 from decimal import Decimal
+
+import pytest
 from six.moves import range
 
 from factory.django import mute_signals
+from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.reverse import reverse
 
@@ -75,10 +78,10 @@ def test_post_invoice_with_invoice_entries(authenticated_api_client):
         'customer': customer_url,
         'series': None,
         'number': None,
-        'currency': 'RON',
+        'currency': text_type('RON'),
         'transaction_xe_rate': 1,
         'invoice_entries': [{
-            "description": "Page views",
+            "description": text_type("Page views"),
             "unit_price": 10.0,
             "quantity": 20}]
     }
@@ -91,6 +94,38 @@ def test_post_invoice_with_invoice_entries(authenticated_api_client):
     invoice_definition.check_response(invoice, response.data, request_data)
     assert response.data['invoice_entries']  # content already checked in previous assert
 
+
+@pytest.mark.parametrize('transaction_currency', ['RON', 'USD'])
+def test_post_invoice_with_invoice_entries_without_transaction_xe_rate(
+    transaction_currency, authenticated_api_client
+):
+    customer = CustomerFactory.create()
+    provider = ProviderFactory.create()
+    SubscriptionFactory.create()
+
+    url = reverse('invoice-list')
+    provider_url = build_absolute_test_url(reverse('provider-detail', [provider.pk]))
+    customer_url = build_absolute_test_url(reverse('customer-detail', [customer.pk]))
+
+    request_data = {
+        'provider': provider_url,
+        'customer': customer_url,
+        'series': None,
+        'number': None,
+        'currency': text_type('RON'),
+        'transaction_currency': text_type(transaction_currency),
+        'invoice_entries': [{
+            "description": text_type("Page views"),
+            "unit_price": 10.0,
+            "quantity": 20}]
+    }
+
+    response = authenticated_api_client.post(url, data=request_data, format='json')
+
+    assert response.status_code == status.HTTP_201_CREATED, response.data
+
+    invoice = Invoice.objects.get(id=response.data['id'])
+    invoice_definition.check_response(invoice, response.data, request_data)
     assert response.data['invoice_entries']  # content already checked in previous assert
 
 
@@ -117,6 +152,7 @@ def test_list_invoices(authenticated_api_client, two_pages_of_invoices):
         assert invoice_data == spec_invoice(invoice)
 
 
+@freeze_time('2019-11-10')
 def test_get_invoice(authenticated_api_client, settings, issued_invoice):
     invoice = issued_invoice
     customer = issued_invoice.customer
@@ -154,7 +190,7 @@ def test_delete_invoice(authenticated_api_client):
 def test_add_single_invoice_entry(authenticated_api_client, invoice):
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -186,9 +222,9 @@ def test_try_to_get_invoice_entries(authenticated_api_client, invoice):
 def test_add_multiple_invoice_entries(authenticated_api_client, invoice):
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
-        "quantity": '20.0'
+        "quantity": text_type('20.0'),
     }
 
     entries_count = 10
@@ -212,7 +248,7 @@ def test_delete_invoice_entry(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -238,7 +274,7 @@ def test_add_invoice_entry_in_issued_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -262,7 +298,7 @@ def test_add_invoice_entry_in_canceled_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -286,7 +322,7 @@ def test_add_invoice_entry_in_paid_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": "Page views",
+        "description": text_type("Page views"),
         "unit_price": 10.0,
         "quantity": 20
     }
