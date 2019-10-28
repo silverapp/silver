@@ -179,7 +179,7 @@ class Subscription(models.Model):
     )
     state = FSMField(
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
-        protected=True, help_text='The state the subscription is in.'
+        help_text='The state the subscription is in.'
     )
     meta = JSONField(blank=True, null=True, default={})
 
