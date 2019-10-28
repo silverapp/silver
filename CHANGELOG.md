@@ -3,6 +3,13 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.9.6 (2019-10-28)
+- Remove Subscription state field direct modification protection. This fixes admin subscription 
+  creation / editing and Subscription.refresh_from_db. Regarding the removed protection, just don't
+  modify the field directly, use the state transition methods instead.
+- The Subscription state field is properly marked as read-only now. You couldn't modify it before 
+  anyway.
+
 ## 0.9.5 (2019-09-03)
 - Make some admin fields dropdowns searchable.
 
