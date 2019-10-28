@@ -257,6 +257,7 @@ class SubscriptionAdmin(ModelAdmin):
     actions = ['activate', 'cancel_now', 'cancel_at_end_of_cycle', 'end']
     search_fields = ['customer__first_name', 'customer__last_name',
                      'customer__company', 'plan__name', 'meta']
+    readonly_fields = ['state']
     inlines = [MeteredFeatureUnitsLogInLine, BillingLogInLine]
     form = SubscriptionForm
 
