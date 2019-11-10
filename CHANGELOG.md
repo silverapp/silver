@@ -1,10 +1,22 @@
 # Changelog
 
 ## Unrealeased changes
+_Nothing yet_
+
+## 0.10 (2019-09-03)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
-- `Invoice` and `Proforma` API fields `archived_provider` and `archived_customer` are now represented
-  as JSON instead of a string.
-- Empty string values 
+
+### API
+- `Invoice` and `Proforma` fields `archived_provider` and `archived_customer` are now represented
+  as JSON instead of a string. **(BREAKING)**
+- Decimal numbers are now always properly typed as string. **(BREAKING)**
+- Rewrote some tests using pytest and [specs](https://github.com/silverapp/silver/tree/master/silver/tests/api/specs).
+- Not specifying `transaction_xe_rate` when creating documents no longer results in an internal error.
+- `number` and `series` are no longer required when creating a document.
+
+### General
+- `proforma_series` is now included in the `archived_provider` field for invoices as well.
+
 
 ## 0.9.6 (2019-10-28)
 - Remove Subscription state field direct modification protection. This fixes admin subscription 
