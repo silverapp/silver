@@ -62,7 +62,7 @@ def read(fname):
 
 setup(
     name="django-silver",
-    version='0.10.0',
+    version='0.10.1',
     description=read('DESCRIPTION'),
     long_description=read('README.rst'),
     license='Apache 2.0',

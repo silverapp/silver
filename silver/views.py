@@ -116,7 +116,7 @@ def pay_transaction_view(request, transaction, expired=None):
 
 class DocumentAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = self.model.objects.all()
@@ -152,7 +152,7 @@ class ProformaAutocomplete(DocumentAutocomplete):
 
 class PlanAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = Plan.objects.exclude(enabled=False)
@@ -177,7 +177,7 @@ class PlanAutocomplete(autocomplete.Select2QuerySetView):
 
 class CustomerAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = Customer.objects.all()
@@ -202,7 +202,7 @@ class CustomerAutocomplete(autocomplete.Select2QuerySetView):
 
 class ProviderAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = Provider.objects.all()
@@ -227,7 +227,7 @@ class ProviderAutocomplete(autocomplete.Select2QuerySetView):
 
 class PaymentMethodAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        if not (self.request.user.is_authenticated() and self.request.user.is_staff):
+        if not (self.request.user.is_authenticated and self.request.user.is_staff):
             raise Http404
 
         queryset = PaymentMethod.objects.exclude(canceled=True)

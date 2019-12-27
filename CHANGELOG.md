@@ -2,6 +2,8 @@
 
 ## Unrealeased changes
 _Nothing yet_
+## 0.10.1
+Fixed issue in autocomplete views where user.is_authenticated is no longer a function call and instead an attribute 
 
 ## 0.10 (2019-09-03)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
@@ -19,10 +21,10 @@ Some of these changes are considered to be breaking and were marked with **(BREA
 
 
 ## 0.9.6 (2019-10-28)
-- Remove Subscription state field direct modification protection. This fixes admin subscription 
+- Remove Subscription state field direct modification protection. This fixes admin subscription
   creation / editing and Subscription.refresh_from_db. Regarding the removed protection, just don't
   modify the field directly, use the state transition methods instead.
-- The Subscription state field is properly marked as read-only now. You couldn't modify it before 
+- The Subscription state field is properly marked as read-only now. You couldn't modify it before
   anyway.
 
 ## 0.9.5 (2019-09-03)
@@ -257,11 +259,11 @@ for the next months invoices to be generated even if the customer has consolidat
 
 ## 0.2.8 (2017-07-17)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
-- The PDFs for Invoices and Proformas are now generated asynchronously using Celery tasks. Redis is 
+- The PDFs for Invoices and Proformas are now generated asynchronously using Celery tasks. Redis is
 required for locking. **(BREAKING)**
-- PDFs now have their own model, therefore a migration has been created, which unfortunately fails 
+- PDFs now have their own model, therefore a migration has been created, which unfortunately fails
 to migrate the file url. **(BREAKING)**
-A way to fix this would be to regenerate and re-upload the PDFs. Another way that should work would 
+A way to fix this would be to regenerate and re-upload the PDFs. Another way that should work would
 be to set the PDF.pdf_file.name value from the old Invoice.pdf_file.name.
 
 ## 0.2.7 (2017-02-08)
