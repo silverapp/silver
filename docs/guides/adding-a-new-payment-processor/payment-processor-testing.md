@@ -1,17 +1,11 @@
 ---
 title:  Part 3 - Testing
+linktitle: Part 3
 description: The last part of this tutorial gives you some keen insights about what tests you should write for your newly created payment processor.
-linktitle: Part 3 - Testing
-categories: [silver]
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "adding-a-new-payment-processor"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 Depending on your implementation, you might want to write some unit tests for your

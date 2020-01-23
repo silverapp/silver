@@ -1,17 +1,11 @@
 ---
 title: Transactions in silver
-description: Detailed explanations of what is a Transaction in Silver, how to list all transactions or a specific one, as well as what does creating a transaction involves.
 linktitle: Transactions
-categories: [silver]
+description: Detailed explanations of what is a Transaction in Silver, how to list all transactions or a specific one, as well as what does creating a transaction involves.
 keywords: [silver]
 menu:
   docs:
     parent: "payments"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 For resource definition check out the [Resources](../resources.md) page.

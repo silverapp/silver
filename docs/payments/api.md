@@ -1,17 +1,12 @@
 ---
 title: General Silver API specifications
-description: Here is an overview of the Silver API. You can find useful information about how to paginate the results and iterate through the entire collection.
 linktitle: Silver API
-categories: [silver]
+description: Here is an overview of the Silver API. You can find useful information about how to paginate the results and iterate through the entire collection.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "payments"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
+    weight: 1
 ---
 
 For resource definition check out the [Resources](../resources.md) page.

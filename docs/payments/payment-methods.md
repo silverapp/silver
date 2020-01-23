@@ -1,17 +1,12 @@
 ---
 title: Payment Methods in Silver
-description: Detailed explanations of what is a Payment Method in Silver, how to retrieve and create one, as well as what does transitioning a Payment method means.
 linktitle: Payment Methods
-categories: [silver]
+description: Detailed explanations of what is a Payment Method in Silver, how to retrieve and create one, as well as what does transitioning a Payment method means.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "payments"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
+    weight: 1
 ---
 
 For resource definition check out the [Resources](../resources.md) page.

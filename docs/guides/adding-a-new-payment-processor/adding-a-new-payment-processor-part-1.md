@@ -1,17 +1,11 @@
 ---
 title:  Part 1 - Create the payment processor and payment method
+linktitle: Part 1
 description: The first part of this tutorial will show you how to add a new payment processor to your app, details about its structure and how to implement a payment method class.
-linktitle: Part 1 - Create the payment processor and payment method
-categories: [silver]
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "adding-a-new-payment-processor"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 ## Getting started

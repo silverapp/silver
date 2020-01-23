@@ -1,17 +1,11 @@
 ---
 title:  Part 2 - The payment operation
+linktitle: Part 2
 description: This section tries to explain how the customer's payment operation usually goes like.
-linktitle: Part 2 - The payment operation
-categories: [silver]
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "adding-a-new-payment-processor"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 For this purpose, the following steps are described:

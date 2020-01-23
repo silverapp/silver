@@ -1,17 +1,11 @@
 ---
 title: Providers in Silver
-description: An overview of Providers in Silver, with details regarding listing all providers or a specific one, as well as how to create, update or delete one.
 linktitle: Providers
-categories: [silver]
+description: An overview of Providers in Silver, with details regarding listing all providers or a specific one, as well as how to create, update or delete one.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "billing-entities"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 For resource definition check out the [Resources](../resources.md) page.

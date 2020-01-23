@@ -1,17 +1,11 @@
 ---
 title: Managing customers
-description: An introduction to Silver's management of customers — how to retrieve a customer, filtering options, as well as create, update or delete operations.
 linktitle: Customers
-categories: [silver]
+description: An introduction to Silver's management of customers — how to retrieve a customer, filtering options, as well as create, update or delete operations.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "billing-entities"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 For resource definition check out the [Resources](../resources.md) page.

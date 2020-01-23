@@ -1,17 +1,11 @@
 ---
 title: Subscriptions in Silver
-description: An overview of what is a Subscription in Silver, how to list a customer's subscriptions, as well as the basic operations it supports, like create, activate, cancel and more.
 linktitle: Subscriptions
-categories: [silver]
+description: An overview of what is a Subscription in Silver, how to list a customer's subscriptions, as well as the basic operations it supports, like create, activate, cancel and more.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "billing-units"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
 ---
 
 For resource definition check out the [Resources](../resources.md) page.
