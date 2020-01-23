@@ -1,14 +1,9 @@
 ---
-title: How to install and configure Silver
+title: "How to install and configure Silver"
+linktitle: "Install and configure Silver"
 description: Here are the required steps to install Silver on your machine.
-linktitle: Install and configure Silver
-categories: [silver]
 keywords: [silver]
 weight: 2
-draft: false
-aliases: []
-toc: true
-related: true
 slug: install-and-configure-silver
 ---
 

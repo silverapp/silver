@@ -1,17 +1,12 @@
 ---
 title: Payment Processors in Silver
-description: Detailed explanations of what is a Payment Processor in Silver, as well as how to list a provider's Payment Processors and how to retrieve a specific one.
 linktitle: Payment Processors
-categories: [silver]
+description: Detailed explanations of what is a Payment Processor in Silver, as well as how to list a provider's Payment Processors and how to retrieve a specific one.
 keywords: [silver]
 menu:
-  docs:
+  global:
     parent: "payments"
-weight: 1
-draft: false
-aliases: []
-toc: true
-related: true
+    weight: 1
 ---
 
 For resource definition check out the [Resources](../resources.md) page.
