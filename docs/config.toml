@@ -1,4 +1,4 @@
-baseURL = "https://www.presslabs.com/docs/silver/"
+baseURL = "https://www.presslabs.com/docs/code/silver/"
 pygmentsCodeFences = true
 pygmentsCodeFencesGuessSyntax = true
 pygmentsUseClasses = true
