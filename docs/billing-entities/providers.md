@@ -8,7 +8,7 @@ menu:
     parent: "billing-entities"
 ---
 
-For resource definition check out the [Resources](../resources.md) page.
+For resource definition check out the [Resources](../silver-resources.md) page.
 
 ## List all providers
 

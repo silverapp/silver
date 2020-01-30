@@ -8,7 +8,7 @@ menu:
     parent: "billing-units"
 ---
 
-For resource definition check out the [Resources](../resources.md) page.
+For resource definition check out the [Resources](../silver-resources.md) page.
 
 ## Listing a customer's subscriptions
 

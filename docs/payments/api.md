@@ -9,7 +9,7 @@ menu:
     weight: 1
 ---
 
-For resource definition check out the [Resources](../resources.md) page.
+For resource definition check out the [Resources](../silver-resources.md) page.
 
 ## Listing
 
