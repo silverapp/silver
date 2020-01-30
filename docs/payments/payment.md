@@ -8,7 +8,7 @@ menu:
     parent: "payments"
 ---
 
-For resource definition check out the [Resources](../resources.md) page.
+For resource definition check out the [Resources](../silver-resources.md) page.
 
 ## List a Customer's Payments
 

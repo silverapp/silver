@@ -103,7 +103,7 @@ payment_processor
 
 In `payment_processors.py` you will create your Payment Processor class. You should inherit
 the PaymentProcessorBase class and a mixin class based on what type of your Payment Processor will be.
-For more info, you should read the [payment processor resource definition](../resources.md#payment-processor).
+For more info, you should read the [payment processor resource definition](../silver-resources.md#payment-processor).
 
 We are going to "partially implement" a `triggered` Payment Processor.
 That means the Transactions (payments) will be triggered from within Silver, and their status will

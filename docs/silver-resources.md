@@ -4,7 +4,6 @@ linktitle: Resources
 description: Here is a list of all the resources available in Silver, as well as how they interact. All their parameters and methods are described in detail, for a better understanding of their functionality.
 keywords: [silver]
 weight: 3
-slug: silver-resources
 ---
 
 ## Plan
