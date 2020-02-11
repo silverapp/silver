@@ -11,7 +11,7 @@ menu:
 For this purpose, the following steps are described:
 
 1. The customer usually clicks a Pay button somewhere in a different application, which will trigger a
-[create request on the Silver's `/transactions` endpoint](../payments/transactions.md#create-a-transaction)
+[create request on the Silver's /transactions endpoint](../../payments/transactions.md#create-a-transaction)
 
 2. The transaction is created, and the response payload contains a field called `pay_url`, which
 is a Silver URL that points to a view that will act as a payment page, which most likely you'll also
@@ -127,7 +127,7 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
 ```
 
 You can override the context of the template by using a
-[custom `transaction_view_class`](#the-transaction-view-class). The default context will contain data
+[custom transaction_view_class](#the-transaction-view-class). The default context will contain data
 such as the `transaction`, `payment_method`, `customer`, `form`...
 
 Now on to actually writing your transaction_form template. A good starting point would be the following
