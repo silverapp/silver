@@ -30,7 +30,7 @@ from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible, force_text
+from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
 from silver.models import Invoice, Proforma
@@ -41,7 +41,6 @@ from silver.utils.models import AutoDateTimeField, AutoCleanModelMixin
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class Transaction(AutoCleanModelMixin,
                   models.Model):
     _provider = None

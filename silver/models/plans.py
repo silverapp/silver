@@ -19,7 +19,6 @@ from model_utils import Choices
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from silver.utils.international import currencies
@@ -31,7 +30,6 @@ class PlanManager(models.Manager):
         return super(PlanManager, self).get_queryset().select_related('product_code')
 
 
-@python_2_unicode_compatible
 class Plan(models.Model):
     objects = PlanManager()
 
@@ -138,7 +136,6 @@ class Plan(models.Model):
         return self.provider.flow
 
 
-@python_2_unicode_compatible
 class MeteredFeature(models.Model):
     name = models.CharField(
         max_length=200,

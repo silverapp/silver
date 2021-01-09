@@ -20,7 +20,6 @@ from livefield import LiveModel
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
-from django.utils.encoding import python_2_unicode_compatible
 
 from silver.utils.international import countries
 
@@ -28,7 +27,6 @@ from silver.utils.international import countries
 PAYMENT_DUE_DAYS = getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5)
 
 
-@python_2_unicode_compatible
 class BaseBillingEntity(LiveModel):
     company = models.CharField(max_length=128, blank=True, null=True)
     address_1 = models.CharField(max_length=128)
