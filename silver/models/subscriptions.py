@@ -37,7 +37,7 @@ from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
 from django.utils.timezone import utc
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
