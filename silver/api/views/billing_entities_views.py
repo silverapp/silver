@@ -32,7 +32,7 @@ class CustomerList(generics.ListCreateAPIView):
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_class = CustomerFilter
+    filterset_class = CustomerFilter
 
 
 class CustomerDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -53,7 +53,7 @@ class ProviderListCreate(ListBulkCreateAPIView):
     serializer_class = ProviderSerializer
     queryset = Provider.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_class = ProviderFilter
+    filterset_class = ProviderFilter
 
 
 class ProviderRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):

@@ -33,7 +33,7 @@ class PlanList(generics.ListCreateAPIView):
     serializer_class = PlanSerializer
     queryset = Plan.objects.all().prefetch_related('metered_features')
     filter_backends = (DjangoFilterBackend,)
-    filter_class = PlanFilter
+    filterset_class = PlanFilter
 
 
 class PlanDetail(generics.RetrieveDestroyAPIView):
