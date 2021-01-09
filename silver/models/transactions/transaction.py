@@ -77,7 +77,7 @@ class Transaction(AutoCleanModelMixin,
             )
 
     external_reference = models.CharField(max_length=256, null=True, blank=True)
-    data = JSONField(default={}, null=True, blank=True, encoder=DjangoJSONEncoder)
+    data = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 

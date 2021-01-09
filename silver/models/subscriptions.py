@@ -179,7 +179,7 @@ class Subscription(models.Model):
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         help_text='The state the subscription is in.'
     )
-    meta = JSONField(blank=True, null=True, default={}, encoder=DjangoJSONEncoder)
+    meta = JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     def clean(self):
         errors = dict()
