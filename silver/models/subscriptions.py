@@ -21,9 +21,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from functools import reduce
 
-from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from dateutil import rrule
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from model_utils import Choices
 
@@ -178,7 +179,7 @@ class Subscription(models.Model):
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         help_text='The state the subscription is in.'
     )
-    meta = JSONField(blank=True, null=True, default={})
+    meta = JSONField(blank=True, null=True, default={}, encoder=DjangoJSONEncoder)
 
     def clean(self):
         errors = dict()

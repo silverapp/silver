@@ -18,7 +18,8 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from annoying.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
 from model_utils import Choices
 
@@ -131,8 +132,8 @@ class BillingDocumentBase(models.Model):
     number = models.IntegerField(blank=True, null=True, db_index=True)
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
     provider = models.ForeignKey('Provider', on_delete=models.CASCADE)
-    archived_customer = JSONField(default=dict, null=True, blank=True)
-    archived_provider = JSONField(default=dict, null=True, blank=True)
+    archived_customer = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
+    archived_provider = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True, db_index=True)
     paid_date = models.DateField(null=True, blank=True)

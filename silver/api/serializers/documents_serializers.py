@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import
 
+from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework import serializers
 from rest_framework.fields import JSONField, DecimalField
 
@@ -117,8 +118,8 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
     customer = CustomerUrl(view_name='customer-detail',
                            queryset=Customer.objects.all())
     transactions = TransactionSerializer(many=True, read_only=True)
-    archived_customer = JSONField(read_only=True)
-    archived_provider = JSONField(read_only=True)
+    archived_customer = JSONField(read_only=True, encoder=DjangoJSONEncoder)
+    archived_provider = JSONField(read_only=True, encoder=DjangoJSONEncoder)
     total_in_transaction_currency = serializers.DecimalField(
         max_digits=None, decimal_places=2, coerce_to_string=True, read_only=True,
     )

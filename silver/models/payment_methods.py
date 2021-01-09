@@ -16,9 +16,10 @@ from __future__ import absolute_import, unicode_literals
 
 from itertools import chain
 
-from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from cryptography.fernet import InvalidToken, Fernet
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from django_fsm import TransitionNotAllowed
 from model_utils.managers import InheritanceManager
 
@@ -54,7 +55,7 @@ class PaymentMethod(models.Model):
                                          blank=False, null=False, max_length=256)
     customer = models.ForeignKey(Customer, models.CASCADE)
     added_at = models.DateTimeField(default=timezone.now)
-    data = JSONField(blank=True, null=True, default={})
+    data = JSONField(blank=True, null=True, default={}, encoder=DjangoJSONEncoder)
 
     verified = models.BooleanField(default=False)
     canceled = models.BooleanField(default=False)
