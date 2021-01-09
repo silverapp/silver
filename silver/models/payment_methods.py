@@ -55,7 +55,7 @@ class PaymentMethod(models.Model):
                                          blank=False, null=False, max_length=256)
     customer = models.ForeignKey(Customer, models.CASCADE)
     added_at = models.DateTimeField(default=timezone.now)
-    data = JSONField(blank=True, null=True, default={}, encoder=DjangoJSONEncoder)
+    data = JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     verified = models.BooleanField(default=False)
     canceled = models.BooleanField(default=False)
