@@ -36,7 +36,7 @@ from django.template.loader import select_template
 from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.text import slugify
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils.module_loading import import_string
 
 from silver.currencies import CurrencyConverter, RateNotFound
