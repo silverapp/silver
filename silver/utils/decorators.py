@@ -28,10 +28,12 @@ def get_transaction_from_token(view):
         try:
             expired = False
             transaction_uuid = jwt.decode(token,
-                                          settings.PAYMENT_METHOD_SECRET)['transaction']
+                                          settings.PAYMENT_METHOD_SECRET,
+                                          algorithms=['HS256'])['transaction']
         except jwt.ExpiredSignatureError:
             expired = True
             transaction_uuid = jwt.decode(token, settings.PAYMENT_METHOD_SECRET,
+                                          algorithms=['HS256'],
                                           options={'verify_exp': False})['transaction']
 
         try:
