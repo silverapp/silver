@@ -23,15 +23,15 @@ from datetime import datetime
 from furl import furl
 
 from django.conf import settings
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from rest_framework.reverse import reverse
 
 
 def _get_jwt_token(transaction):
     valid_until = datetime.utcnow() + settings.SILVER_PAYMENT_TOKEN_EXPIRATION
-    data = {'transaction': force_text(transaction.uuid), 'exp': valid_until}
-    return force_text(jwt.encode(data, settings.PAYMENT_METHOD_SECRET))
+    data = {'transaction': force_str(transaction.uuid), 'exp': valid_until}
+    return force_str(jwt.encode(data, settings.PAYMENT_METHOD_SECRET))
 
 
 def get_payment_url(transaction, request):

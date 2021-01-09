@@ -43,7 +43,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.html import escape, conditional_escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
@@ -284,7 +284,7 @@ class SubscriptionAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(entry).pk,
                     object_id=entry.id,
-                    object_repr=force_text(entry),
+                    object_repr=force_str(entry),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -778,7 +778,7 @@ class BillingDocumentAdmin(ModelAdmin):
                     user_id=request.user.id,
                     content_type_id=ContentType.objects.get_for_model(document).pk,
                     object_id=document.id,
-                    object_repr=force_text(document),
+                    object_repr=force_str(document),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.replace('_', ' ').strip().capitalize()
@@ -788,7 +788,7 @@ class BillingDocumentAdmin(ModelAdmin):
                 results[document]['result'] = mark_safe(error)
                 results[document]['success'] = False
             except ValueError as error:
-                results[document]['result'] = force_text(error)
+                results[document]['result'] = force_str(error)
                 results[document]['success'] = False
             except AttributeError:
                 results[document]['success'] = False

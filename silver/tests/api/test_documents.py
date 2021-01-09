@@ -20,7 +20,7 @@ from mock import patch
 from freezegun import freeze_time
 
 from django.test import override_settings
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from rest_framework import status
 from rest_framework.reverse import reverse
@@ -44,7 +44,7 @@ class TestDocumentEndpoints(APITestCase):
         self.client.force_authenticate(user=admin_user)
 
     def _get_expected_data(self, document, transactions=None):
-        kind = force_text(document.kind.lower())
+        kind = force_str(document.kind.lower())
         transactions = [{
             u'id': u'%s' % transaction.uuid,
             u'url': build_absolute_test_url(reverse('transaction-detail',
@@ -84,8 +84,8 @@ class TestDocumentEndpoints(APITestCase):
                                                          [document.provider.id])),
             u'customer': build_absolute_test_url(reverse('customer-detail',
                                                          [document.customer.id])),
-            u'due_date': force_text(document.due_date) if document.due_date else None,
-            u'issue_date': force_text(document.issue_date) if document.issue_date else None,
+            u'due_date': force_str(document.due_date) if document.due_date else None,
+            u'issue_date': force_str(document.issue_date) if document.issue_date else None,
             u'paid_date': document.paid_date,
             u'cancel_date': document.cancel_date,
             u'sales_tax_name': document.sales_tax_name,

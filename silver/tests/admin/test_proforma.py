@@ -21,7 +21,7 @@ from django.contrib.admin.models import CHANGE
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.test import TestCase, Client
 from django_fsm import TransitionNotAllowed
 
@@ -76,7 +76,7 @@ class ProformaAdminTestCase(TestCase):
                     user_id=self.user.pk,
                     content_type_id=ContentType.objects.get_for_model(proforma).pk,
                     object_id=proforma.pk,
-                    object_repr=force_text(proforma),
+                    object_repr=force_str(proforma),
                     action_flag=CHANGE,
                     change_message='{action} action initiated by user.'.format(
                         action=action.capitalize().replace('_', ' ')
