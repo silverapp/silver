@@ -40,7 +40,7 @@ class InvoiceListCreate(generics.ListCreateAPIView):
         .select_related('related_document')\
         .prefetch_related('invoice_transactions')
     filter_backends = (DjangoFilterBackend,)
-    filter_class = InvoiceFilter
+    filterset_class = InvoiceFilter
 
 
 class InvoiceRetrieveUpdate(generics.RetrieveUpdateAPIView):
@@ -231,7 +231,7 @@ class ProformaListCreate(generics.ListCreateAPIView):
         .select_related('related_document')\
         .prefetch_related('proforma_transactions')
     filter_backends = (DjangoFilterBackend,)
-    filter_class = ProformaFilter
+    filterset_class = ProformaFilter
 
 
 class ProformaRetrieveUpdate(generics.RetrieveUpdateAPIView):
@@ -362,7 +362,7 @@ class ProformaStateHandler(APIView):
 class DocumentList(ListAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = DocumentSerializer
-    filter_class = BillingDocumentFilter
+    filterset_class = BillingDocumentFilter
     filter_backends = (filters.OrderingFilter, DjangoFilterBackend)
     ordering_fields = ('due_date', )
     ordering = ('-due_date', '-number')

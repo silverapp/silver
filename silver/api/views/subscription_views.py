@@ -46,7 +46,7 @@ class MeteredFeatureList(generics.ListCreateAPIView):
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_class = MeteredFeaturesFilter
+    filterset_class = MeteredFeaturesFilter
 
 
 class MeteredFeatureDetail(generics.RetrieveAPIView):
@@ -63,7 +63,7 @@ class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = SubscriptionFilter
+    filterset_class = SubscriptionFilter
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)

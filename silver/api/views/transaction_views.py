@@ -35,7 +35,7 @@ class TransactionList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = TransactionSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = TransactionFilter
+    filterset_class = TransactionFilter
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
