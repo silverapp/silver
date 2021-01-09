@@ -19,7 +19,6 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import django.db.models.deletion
 import django_fsm
-import jsonfield.fields
 import livefield.fields
 import silver.models
 import django.core.validators
@@ -112,9 +111,9 @@ class Migration(migrations.Migration):
                  serialize=False, auto_created=True, primary_key=True)),
                 ('number', models.IntegerField(null=True, blank=True)),
                 ('archived_customer',
-                 jsonfield.fields.JSONField(default=dict)),
+                 models.JSONField(default=dict)),
                 ('archived_provider',
-                 jsonfield.fields.JSONField(default=dict)),
+                 models.JSONField(default=dict)),
                 ('due_date', models.DateField(null=True, blank=True)),
                 ('issue_date', models.DateField(null=True, blank=True)),
                 ('paid_date', models.DateField(null=True, blank=True)),
@@ -212,9 +211,9 @@ class Migration(migrations.Migration):
                  serialize=False, auto_created=True, primary_key=True)),
                 ('number', models.IntegerField(null=True, blank=True)),
                 ('archived_customer',
-                 jsonfield.fields.JSONField(default=dict)),
+                 models.JSONField(default=dict)),
                 ('archived_provider',
-                 jsonfield.fields.JSONField(default=dict)),
+                 models.JSONField(default=dict)),
                 ('due_date', models.DateField(null=True, blank=True)),
                 ('issue_date', models.DateField(null=True, blank=True)),
                 ('paid_date', models.DateField(null=True, blank=True)),

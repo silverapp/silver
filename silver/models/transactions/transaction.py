@@ -19,14 +19,14 @@ import logging
 
 from decimal import Decimal
 
-from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
+from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, post_transition, transition
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Q, JSONField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -77,7 +77,7 @@ class Transaction(AutoCleanModelMixin,
             )
 
     external_reference = models.CharField(max_length=256, null=True, blank=True)
-    data = JSONField(default={}, null=True, blank=True)
+    data = JSONField(default={}, null=True, blank=True, encoder=DjangoJSONEncoder)
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 

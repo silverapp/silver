@@ -31,17 +31,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='meta',
-            field=annoying.fields.JSONField(blank=True, default={}, null=True),
+            field=models.JSONField(blank=True, default={}, null=True),
         ),
         migrations.AlterField(
             model_name='invoice',
             name='archived_customer',
-            field=annoying.fields.JSONField(blank=True, default=dict, null=True),
+            field=models.JSONField(blank=True, default=dict, null=True),
         ),
         migrations.AlterField(
             model_name='invoice',
             name='archived_provider',
-            field=annoying.fields.JSONField(blank=True, default=dict, null=True),
+            field=models.JSONField(blank=True, default=dict, null=True),
         ),
         migrations.AlterField(
             model_name='invoice',
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='paymentmethod',
             name='data',
-            field=annoying.fields.JSONField(blank=True, default={}, null=True),
+            field=models.JSONField(blank=True, default={}, null=True),
         ),
         migrations.AlterField(
             model_name='plan',
@@ -66,12 +66,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='proforma',
             name='archived_customer',
-            field=annoying.fields.JSONField(blank=True, default=dict, null=True),
+            field=models.JSONField(blank=True, default=dict, null=True),
         ),
         migrations.AlterField(
             model_name='proforma',
             name='archived_provider',
-            field=annoying.fields.JSONField(blank=True, default=dict, null=True),
+            field=models.JSONField(blank=True, default=dict, null=True),
         ),
         migrations.AlterField(
             model_name='proforma',
@@ -91,12 +91,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='provider',
             name='meta',
-            field=annoying.fields.JSONField(blank=True, default={}, null=True),
+            field=models.JSONField(blank=True, default={}, null=True),
         ),
         migrations.AlterField(
             model_name='subscription',
             name='meta',
-            field=annoying.fields.JSONField(blank=True, null=True),
+            field=models.JSONField(blank=True, null=True),
         ),
         migrations.AlterField(
             model_name='transaction',
@@ -106,6 +106,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='transaction',
             name='data',
-            field=annoying.fields.JSONField(blank=True, default={}, null=True),
+            field=models.JSONField(blank=True, default={}, null=True),
         ),
     ]
