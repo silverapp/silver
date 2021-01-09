@@ -1,7 +1,14 @@
 # Changelog
 
 ## Unrealeased changes
-_Nothing yet_
+
+- Adding Django 3 support
+- Updating all dependencies to latest versions
+- Dropping Python 2 compatibility
+- Proforma API fields `archived_provider` and `archived_customer` now correctly return JSON objects rather than 
+  stringified JSON objects
+  
+
 ## 0.10.1
 Fixed issue in autocomplete views where user.is_authenticated is no longer a function call and instead an attribute 
 
