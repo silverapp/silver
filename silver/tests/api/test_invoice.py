@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import json
 from datetime import timedelta
 from decimal import Decimal
+from uuid import UUID
 
 import pytest
 from six.moves import range
@@ -175,6 +176,13 @@ def test_get_invoice(authenticated_api_client, settings, issued_invoice):
     response = authenticated_api_client.get(url, format='json')
 
     assert response.status_code == status.HTTP_200_OK, response.data
+
+    # Cast IDs to UUID so the comparison check doesn't fail
+    data = response.data
+    data['transactions'][0]['id'] = UUID(data['transactions'][0]['id'])
+    data['transactions'][1]['id'] = UUID(data['transactions'][1]['id'])
+    data['transactions'][2]['id'] = UUID(data['transactions'][2]['id'])
+
     invoice_definition.check_response(invoice, response_data=response.data)
 
 
