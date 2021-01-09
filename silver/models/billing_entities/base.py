@@ -14,7 +14,8 @@
 
 from __future__ import absolute_import, unicode_literals
 
-from annoying.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from livefield import LiveModel
 
 from django.conf import settings
@@ -42,7 +43,7 @@ class BaseBillingEntity(LiveModel):
         help_text='Extra information to display on the invoice '
                   '(markdown formatted).'
     )
-    meta = JSONField(blank=True, null=True, default={})
+    meta = JSONField(blank=True, null=True, default={}, encoder=DjangoJSONEncoder)
 
     class Meta:
         abstract = True

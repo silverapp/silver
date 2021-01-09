@@ -10,7 +10,6 @@ sqlparse = "^0.4.1"   # (required for some old migrations)
 django-fsm = "^2.7.1"
 django-filter = "^2.4.0"
 django-livefield = "^3.3.0"
-django-jsonfield = "^1.4.1"
 django-model-utils = "^4.1.1"
 django-annoying = "^0.10.6"
 django-autocomplete-light = "^3.8.1"
