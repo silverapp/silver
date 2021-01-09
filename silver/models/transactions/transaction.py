@@ -31,7 +31,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.encoding import force_str
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from silver.models import Invoice, Proforma
 from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
