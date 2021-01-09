@@ -30,7 +30,7 @@ from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.translation import ugettext_lazy as _
 
 from silver.models import Invoice, Proforma
@@ -287,7 +287,7 @@ class Transaction(AutoCleanModelMixin,
             self.document.pay()
 
     def __str__(self):
-        return force_text(self.uuid)
+        return force_str(self.uuid)
 
 
 @receiver(post_transition)
