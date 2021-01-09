@@ -26,7 +26,6 @@ from six.moves import range
 
 from django.conf import settings
 from django.utils import timezone
-from django.utils.six import text_type
 
 from silver.models import Invoice, Proforma, PDF
 from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
@@ -56,7 +55,7 @@ class TestProformaEndpoints(APITestCase):
         data = {
             'provider': provider_url,
             'customer': customer_url,
-            'currency': text_type('RON'),
+            'currency': 'RON',
             'proforma_entries': []
         }
 
@@ -80,7 +79,7 @@ class TestProformaEndpoints(APITestCase):
             "cancel_date": None,
             "sales_tax_name": "VAT",
             "sales_tax_percent": "1.00",
-            "currency": text_type("RON"),
+            "currency": "RON",
             "transaction_currency": proforma.transaction_currency,
             "transaction_xe_rate": (str(proforma.transaction_xe_rate)
                                     if proforma.transaction_xe_rate else None),
@@ -108,10 +107,10 @@ class TestProformaEndpoints(APITestCase):
             'customer': customer_url,
             'series': None,
             'number': None,
-            'currency': text_type('RON'),
+            'currency': 'RON',
             'transaction_xe_rate': 1,
             'proforma_entries': [{
-                "description": text_type("Page views"),
+                "description": "Page views",
                 "unit_price": 10.0,
                 "quantity": 20
             }]
@@ -174,7 +173,7 @@ class TestProformaEndpoints(APITestCase):
                 "cancel_date": None,
                 "sales_tax_name": "VAT",
                 "sales_tax_percent": '1.00',
-                "currency": text_type("RON"),
+                "currency": "RON",
                 "transaction_currency": proforma.transaction_currency,
                 "transaction_xe_rate": ("%.4f" % proforma.transaction_xe_rate
                                         if proforma.transaction_xe_rate else None),
@@ -200,7 +199,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         request_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
@@ -232,7 +231,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         request_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
@@ -258,7 +257,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
@@ -283,7 +282,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
@@ -306,7 +305,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }
@@ -329,7 +328,7 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20
         }

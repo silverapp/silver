@@ -17,11 +17,12 @@ from __future__ import absolute_import
 import datetime as dt
 
 from decimal import Decimal
+from io import StringIO
+
 from mock import patch, PropertyMock, MagicMock
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.utils.six import StringIO
 
 from silver.management.commands.generate_docs import date as generate_docs_date
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription, Customer, Plan,

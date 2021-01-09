@@ -34,7 +34,7 @@ from django.db import transaction as db_transaction
 from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible, force_text
+from django.utils.encoding import force_text
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.utils.module_loading import import_string
@@ -106,7 +106,6 @@ def get_billing_documents_kinds():
             for subclass in BillingDocumentBase.__subclasses__())
 
 
-@python_2_unicode_compatible
 class BillingDocumentBase(models.Model):
     objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 
