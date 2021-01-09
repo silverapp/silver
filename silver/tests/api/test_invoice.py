@@ -28,7 +28,6 @@ from rest_framework.reverse import reverse
 
 from django.db.models.signals import pre_save
 from django.utils import timezone
-from django.utils.six import text_type
 from django.conf import settings
 
 from silver.models import Invoice, Transaction, DocumentEntry
@@ -53,7 +52,7 @@ def test_post_invoice_without_invoice_entries(authenticated_api_client, customer
         'customer': customer_url,
         'series': None,
         'number': None,
-        'currency': text_type('RON'),
+        'currency': 'RON',
         'invoice_entries': []
     }
 
@@ -78,10 +77,10 @@ def test_post_invoice_with_invoice_entries(authenticated_api_client):
         'customer': customer_url,
         'series': None,
         'number': None,
-        'currency': text_type('RON'),
+        'currency': 'RON',
         'transaction_xe_rate': 1,
         'invoice_entries': [{
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20}]
     }
@@ -112,10 +111,10 @@ def test_post_invoice_with_invoice_entries_without_transaction_xe_rate(
         'customer': customer_url,
         'series': None,
         'number': None,
-        'currency': text_type('RON'),
-        'transaction_currency': text_type(transaction_currency),
+        'currency': 'RON',
+        'transaction_currency': transaction_currency,
         'invoice_entries': [{
-            "description": text_type("Page views"),
+            "description": "Page views",
             "unit_price": 10.0,
             "quantity": 20}]
     }
@@ -190,7 +189,7 @@ def test_delete_invoice(authenticated_api_client):
 def test_add_single_invoice_entry(authenticated_api_client, invoice):
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -222,9 +221,9 @@ def test_try_to_get_invoice_entries(authenticated_api_client, invoice):
 def test_add_multiple_invoice_entries(authenticated_api_client, invoice):
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
-        "quantity": text_type('20.0'),
+        "quantity": '20.0',
     }
 
     entries_count = 10
@@ -248,7 +247,7 @@ def test_delete_invoice_entry(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -274,7 +273,7 @@ def test_add_invoice_entry_in_issued_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -298,7 +297,7 @@ def test_add_invoice_entry_in_canceled_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
         "quantity": 20
     }
@@ -322,7 +321,7 @@ def test_add_invoice_entry_in_paid_state(authenticated_api_client):
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
-        "description": text_type("Page views"),
+        "description": "Page views",
         "unit_price": 10.0,
         "quantity": 20
     }

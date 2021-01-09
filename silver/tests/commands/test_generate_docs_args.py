@@ -16,10 +16,10 @@
 from __future__ import absolute_import
 
 from decimal import Decimal
+from io import StringIO
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.utils.six import StringIO
 
 from silver.management.commands.generate_docs import date as generate_docs_date
 from silver.models import (Plan)
