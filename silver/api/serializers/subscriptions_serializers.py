@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import
 
+from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework import serializers
 from rest_framework.fields import JSONField
 from rest_framework.reverse import reverse
@@ -67,7 +68,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
-    meta = JSONField(required=False)
+    meta = JSONField(required=False, encoder=DjangoJSONEncoder)
 
     class Meta:
         model = Subscription

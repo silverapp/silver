@@ -16,8 +16,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.db import migrations
-import jsonfield.fields
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -30,16 +29,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='customer',
             name='meta',
-            field=jsonfield.fields.JSONField(null=True, blank=True),
+            field=models.JSONField(null=True, blank=True),
         ),
         migrations.AddField(
             model_name='provider',
             name='meta',
-            field=jsonfield.fields.JSONField(null=True, blank=True),
+            field=models.JSONField(null=True, blank=True),
         ),
         migrations.AddField(
             model_name='subscription',
             name='meta',
-            field=jsonfield.fields.JSONField(null=True, blank=True),
+            field=models.JSONField(null=True, blank=True),
         ),
     ]
