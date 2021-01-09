@@ -18,12 +18,10 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 
 from silver.utils.decorators import require_transaction_currency_and_xe_rate
 
 
-@python_2_unicode_compatible
 class DocumentEntry(models.Model):
     description = models.CharField(max_length=1024)
     unit = models.CharField(max_length=1024, blank=True, null=True)

@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.utils import timezone
-from django.utils.six import text_type
 
 from silver.tests.api.specs.url import (
     spec_invoice_url, spec_customer_url, spec_provider_url, spec_proforma_url, spec_transaction_url,
@@ -16,33 +15,33 @@ from silver.tests.api.specs.utils import (
 transaction_definition = ResourceDefinition("transaction", {
     'id': {
         'read_only': True,
-        'output': lambda transaction: text_type(transaction.uuid),
+        'output': lambda transaction: transaction.uuid,
     },
     'url': {
         'read_only': True,
         'output': lambda transaction: spec_transaction_url(transaction),
     },
     'customer': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: spec_customer_url(transaction.customer),
         'assertions': [
             lambda input, transaction, output: input == output
         ]
     },
     'provider': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: spec_provider_url(transaction.provider),
         'assertions': [
             lambda input, transaction, output: input == output
         ]
     },
     'currency': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: transaction.currency,
     },
     'amount': {
         'required': False,
-        'expected_input_types': (int, float, text_type),
+        'expected_input_types': (int, float, str),
         'output': lambda transaction: "%.2f" % Decimal(transaction.amount),
         'assertions': [
             lambda input, transaction, output: (
@@ -53,7 +52,7 @@ transaction_definition = ResourceDefinition("transaction", {
     },
     'state': {
         'read_only': True,
-        'output': lambda transaction: text_type(transaction.state),
+        'output': lambda transaction: transaction.state,
         'assertions': [
             lambda input, transaction, output: output in [
                 'initial', 'pending', 'settled', 'failed', 'canceled', 'refunded'
@@ -61,7 +60,7 @@ transaction_definition = ResourceDefinition("transaction", {
         ]
     },
     'invoice': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: (
             spec_invoice_url(transaction.invoice) if transaction.invoice else None
         ),
@@ -72,7 +71,7 @@ transaction_definition = ResourceDefinition("transaction", {
         ]
     },
     'proforma': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: (
             spec_proforma_url(transaction.proforma) if transaction.proforma else None
         ),
@@ -120,7 +119,7 @@ transaction_definition = ResourceDefinition("transaction", {
         )
     },
     'payment_method': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda transaction: spec_payment_method_url(transaction.payment_method),
         'assertions': [
             lambda input, transaction, output: input == output

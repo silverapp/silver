@@ -22,7 +22,6 @@ from faker import Faker
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.utils.six import text_type
 
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode, PDF,
@@ -255,8 +254,8 @@ class DocumentEntryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = DocumentEntry
 
-    description = factory.Sequence(lambda n: text_type('Description{cnt}').format(cnt=n))
-    unit = factory.Sequence(lambda n: text_type('Unit{cnt}').format(cnt=n))
+    description = factory.Sequence(lambda n: 'Description{cnt}'.format(cnt=n))
+    unit = factory.Sequence(lambda n: 'Unit{cnt}'.format(cnt=n))
     quantity = factory.fuzzy.FuzzyDecimal(low=1.00, high=50000.00, precision=4)
     unit_price = factory.fuzzy.FuzzyDecimal(low=0.01, high=100.00, precision=4)
     product_code = factory.SubFactory(ProductCodeFactory)
