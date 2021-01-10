@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 
 from django.conf.urls import include, url
-from django.contrib import admin
 
 from silver.views import (pay_transaction_view, complete_payment_view,
                           InvoiceAutocomplete, ProformaAutocomplete,
@@ -26,11 +25,7 @@ from silver.views import (pay_transaction_view, complete_payment_view,
                           CustomerAutocomplete, ProviderAutocomplete)
 
 
-admin.autodiscover()
-
-
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
     url(r'^api-auth/', include('rest_framework.urls',
                                namespace='rest_framework')),
     url(r'', include('silver.api.urls')),
