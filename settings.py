@@ -67,7 +67,7 @@ INTERNAL_APPS = [
 
 INSTALLED_APPS = EXTERNAL_APPS + INTERNAL_APPS
 
-ROOT_URLCONF = 'silver.urls'
+ROOT_URLCONF = 'silver.urls_project'
 PROJECT_ROOT = os.path.dirname(__file__)
 
 FIXTURE_DIRS = (
