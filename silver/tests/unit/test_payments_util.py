@@ -62,7 +62,7 @@ class TestPaymentsUtilMethods(TestCase):
         token = _get_jwt_token(transaction)
 
         self.assertEqual(get_transaction_from_token(mocked_view)(None, token),
-                          mocked_view())
+                         mocked_view())
         mocked_view.has_calls([call(None, transaction, False), call()])
 
     def test_get_transaction_from_expired_token(self):
@@ -74,5 +74,5 @@ class TestPaymentsUtilMethods(TestCase):
             token = _get_jwt_token(transaction)
 
         self.assertEqual(get_transaction_from_token(mocked_view)(None, token),
-                          mocked_view())
+                         mocked_view())
         mocked_view.has_calls([call(None, transaction, True), call()])

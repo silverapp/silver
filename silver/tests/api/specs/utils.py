@@ -1,7 +1,6 @@
 import inspect
 
 
-
 datetime_to_str = lambda input_date: input_date.isoformat()[:-6] + 'Z'
 datetime_to_str_or_none = lambda input_date: datetime_to_str(input_date) if input_date else None
 date_to_str = lambda input_date: input_date.isoformat()
