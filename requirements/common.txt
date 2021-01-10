@@ -3,31 +3,31 @@
 # UNMAINTAINED means the package owner is no longer maintaining it
 
 # Core
-Django = "^3.1.5"
-sqlparse = "^0.4.1"   # (required for some old migrations)
+Django~=3.1.5
+sqlparse~=0.4.1   # (required for some old migrations)
 
 # Django Utils
-django-fsm = "^2.7.1"
-django-filter = "^2.4.0"
-django-livefield = "^3.3.0"
-django-model-utils = "^4.1.1"
-django-annoying = "^0.10.6"
-django-autocomplete-light = "^3.8.1"
+django-fsm~=2.7.1
+django-filter~=2.4.0
+django-livefield~=3.3.0
+django-model-utils~=4.1.1
+django-annoying~=0.10.6
+django-autocomplete-light~=3.8.1
 
 # API
-djangorestframework = "^3.12.2"
-djangorestframework-bulk = "^0.2.1"
+djangorestframework~=3.12.2
+djangorestframework-bulk~=0.2.1
 
 # I18n
-pycountry = "^20.7.3"
-python-dateutil = "^2.8.1"
-pyvat = "^1.3.13"
+pycountry~=20.7.3
+python-dateutil~=2.8.1
+pyvat~=1.3.13
 
 # Crypto
-cryptography = "^3.3.1"
-PyJWT = "^2.0.0"
+cryptography~=3.3.1
+PyJWT~=2.0.0
 
 # Other
-furl = "^2.1.0"
-xhtml2pdf = "^0.2.5"
-PyPDF2 = "^1.26.0"
+furl~=2.1.0
+xhtml2pdf~=0.2.5
+PyPDF2~=1.26.0
