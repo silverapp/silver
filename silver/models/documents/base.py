@@ -18,7 +18,8 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from annoying.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
 from model_utils import Choices
 
@@ -34,9 +35,9 @@ from django.db import transaction as db_transaction
 from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible, force_text
+from django.utils.encoding import force_str
 from django.utils.text import slugify
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils.module_loading import import_string
 
 from silver.currencies import CurrencyConverter, RateNotFound
@@ -59,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 def documents_pdf_path(document, filename):
     path = '{prefix}{company}/{doc_name}/{date}/{filename}'.format(
-        company=slugify(force_text(
+        company=slugify(force_str(
             document.provider.company or document.provider.name)),
         date=document.issue_date.strftime('%Y/%m'),
         doc_name=('%ss' % document.__class__.__name__).lower(),
@@ -106,7 +107,6 @@ def get_billing_documents_kinds():
             for subclass in BillingDocumentBase.__subclasses__())
 
 
-@python_2_unicode_compatible
 class BillingDocumentBase(models.Model):
     objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 
@@ -132,8 +132,8 @@ class BillingDocumentBase(models.Model):
     number = models.IntegerField(blank=True, null=True, db_index=True)
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
     provider = models.ForeignKey('Provider', on_delete=models.CASCADE)
-    archived_customer = JSONField(default=dict, null=True, blank=True)
-    archived_provider = JSONField(default=dict, null=True, blank=True)
+    archived_customer = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
+    archived_provider = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
     due_date = models.DateField(null=True, blank=True)
     issue_date = models.DateField(null=True, blank=True, db_index=True)
     paid_date = models.DateField(null=True, blank=True)

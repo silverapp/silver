@@ -19,19 +19,19 @@ import logging
 
 from decimal import Decimal
 
-from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
+from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, post_transition, transition
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Q, JSONField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible, force_text
-from django.utils.translation import ugettext_lazy as _
+from django.utils.encoding import force_str
+from django.utils.translation import gettext_lazy as _
 
 from silver.models import Invoice, Proforma
 from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
@@ -41,7 +41,6 @@ from silver.utils.models import AutoDateTimeField, AutoCleanModelMixin
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class Transaction(AutoCleanModelMixin,
                   models.Model):
     _provider = None
@@ -78,7 +77,7 @@ class Transaction(AutoCleanModelMixin,
             )
 
     external_reference = models.CharField(max_length=256, null=True, blank=True)
-    data = JSONField(default={}, null=True, blank=True)
+    data = JSONField(default=dict, null=True, blank=True, encoder=DjangoJSONEncoder)
     state = FSMField(max_length=8, choices=States.as_choices(),
                      default=States.Initial)
 
@@ -96,7 +95,7 @@ class Transaction(AutoCleanModelMixin,
     updated_at = AutoDateTimeField(default=timezone.now)
 
     fail_code = models.CharField(
-        choices=[(code, code) for code in FAIL_CODES.keys()], max_length=32,
+        choices=[(code, code) for code in FAIL_CODES.keys()], max_length=64,
         null=True, blank=True
     )
     refund_code = models.CharField(
@@ -288,7 +287,7 @@ class Transaction(AutoCleanModelMixin,
             self.document.pay()
 
     def __str__(self):
-        return force_text(self.uuid)
+        return force_str(self.uuid)
 
 
 @receiver(post_transition)

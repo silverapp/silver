@@ -19,8 +19,7 @@ from model_utils import Choices
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from silver.utils.international import currencies
 from silver.utils.models import UnsavedForeignKey
@@ -31,7 +30,6 @@ class PlanManager(models.Manager):
         return super(PlanManager, self).get_queryset().select_related('product_code')
 
 
-@python_2_unicode_compatible
 class Plan(models.Model):
     objects = PlanManager()
 
@@ -74,15 +72,18 @@ class Plan(models.Model):
                   'customer to this plan.',
         verbose_name='Trial days'
     )
-    generate_documents_on_trial_end = models.NullBooleanField(
+    generate_documents_on_trial_end = models.BooleanField(
+        null=True,
         help_text="If this is set to True, then billing documents will be generated when the "
                   "subscription trial ends, instead of waiting for the end of the billing cycle."
     )
-    separate_cycles_during_trial = models.NullBooleanField(
+    separate_cycles_during_trial = models.BooleanField(
+        null=True,
         help_text="If this is set to True, then the trial period cycle will be split if it spans "
                   "across multiple billing intervals."
     )
-    prebill_plan = models.NullBooleanField(
+    prebill_plan = models.BooleanField(
+        null=True,
         help_text="If this is set to True, then the plan base amount will be billed at the"
                   "beginning of the billing cycle rather than after the end."
     )
@@ -138,7 +139,6 @@ class Plan(models.Model):
         return self.provider.flow
 
 
-@python_2_unicode_compatible
 class MeteredFeature(models.Model):
     name = models.CharField(
         max_length=200,

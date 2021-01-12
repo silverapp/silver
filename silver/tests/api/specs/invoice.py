@@ -2,7 +2,6 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
-from django.utils.six import text_type
 
 from silver.tests.api.specs.customer import spec_archived_customer
 from silver.tests.api.specs.document_entry import spec_document_entry, document_entry_definition
@@ -22,7 +21,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'proforma': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: (
             spec_proforma_url(invoice.related_document) if invoice.related_document else None
         ),
@@ -47,14 +46,14 @@ invoice_definition = ResourceDefinition("invoice", {
         ),
     },
     'customer': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: spec_customer_url(invoice.customer),
         'assertions': [
             lambda input, invoice, output: input == output
         ]
     },
     'provider': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: spec_provider_url(invoice.provider),
         'assertions': [
             lambda input, invoice, output: input == output
@@ -62,7 +61,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'series': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: invoice.provider.invoice_series,
         'assertions': [
             lambda input, invoice, output: input == output if input else True
@@ -77,7 +76,7 @@ invoice_definition = ResourceDefinition("invoice", {
         ]
     },
     'currency': {
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: invoice.currency,
         'assertions': [
             lambda input, invoice, output: input == output
@@ -85,7 +84,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'transaction_currency': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: invoice.transaction_currency or invoice.currency,
         'assertions': [
             lambda input, invoice, output: input == output if input else True
@@ -105,7 +104,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'transaction_xe_rate': {
         'required': False,
-        'expected_input_types': (int, float, text_type),
+        'expected_input_types': (int, float, str),
         'output': lambda invoice: (
             "%.4f" % invoice.transaction_xe_rate if invoice.transaction_xe_rate else None
         ),
@@ -119,7 +118,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'state': {
         'read_only': True,
-        'output': lambda invoice: text_type(invoice.state),
+        'output': lambda invoice: invoice.state,
         'assertions': [
             lambda output, **kw: output in ['draft', 'issued', 'canceled', 'paid']
         ]
@@ -205,7 +204,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'sales_tax_percent': {
         'required': False,
-        'expected_input_types': (int, float, text_type),
+        'expected_input_types': (int, float, str),
         'output': lambda invoice: "%.2f" % invoice.sales_tax_percent,
         'assertions': [
             lambda input, invoice, output: (
@@ -216,7 +215,7 @@ invoice_definition = ResourceDefinition("invoice", {
     },
     'sales_tax_name': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda invoice: invoice.sales_tax_name,
         'assertions': [
             lambda input, invoice, output: input == output if input else output == 'VAT'

@@ -56,7 +56,7 @@ class PaymentMethodList(ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PaymentMethodSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = PaymentMethodFilter
+    filterset_class = PaymentMethodFilter
 
     def get_queryset(self):
         return PaymentMethod.objects.filter(customer=self.customer)

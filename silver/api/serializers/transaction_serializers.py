@@ -50,7 +50,8 @@ class TransactionPaymentUrl(serializers.HyperlinkedIdentityField):
     def get_object(self, view_name, view_args, view_kwargs):
         try:
             transaction_uuid = jwt.decode(view_kwargs['token'],
-                                          settings.PAYMENT_METHOD_SECRET)['transaction']
+                                          settings.PAYMENT_METHOD_SECRET,
+                                          algorithms=['HS256'])['transaction']
             return self.queryset.get(uuid=transaction_uuid)
         except (jwt.ExpiredSignatureError, jwt.DecodeError, jwt.InvalidTokenError):
             return None

@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='subscription',
             name='meta',
-            field=annoying.fields.JSONField(blank=True, default={}, null=True),
+            field=models.JSONField(blank=True, default={}, null=True),
         ),
     ]

@@ -61,8 +61,8 @@ class TestPaymentsUtilMethods(TestCase):
         mocked_view = MagicMock()
         token = _get_jwt_token(transaction)
 
-        self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
-                          mocked_view())
+        self.assertEqual(get_transaction_from_token(mocked_view)(None, token),
+                         mocked_view())
         mocked_view.has_calls([call(None, transaction, False), call()])
 
     def test_get_transaction_from_expired_token(self):
@@ -73,6 +73,6 @@ class TestPaymentsUtilMethods(TestCase):
             mocked_datetime.utcnow.return_value = datetime.utcnow() - timedelta(days=2 * 365)
             token = _get_jwt_token(transaction)
 
-        self.assertEquals(get_transaction_from_token(mocked_view)(None, token),
-                          mocked_view())
+        self.assertEqual(get_transaction_from_token(mocked_view)(None, token),
+                         mocked_view())
         mocked_view.has_calls([call(None, transaction, True), call()])

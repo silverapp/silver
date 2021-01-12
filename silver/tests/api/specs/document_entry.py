@@ -1,7 +1,6 @@
 from datetime import date
 from decimal import Decimal
 
-from django.utils.six import text_type
 
 from silver.tests.api.specs.utils import ResourceDefinition
 
@@ -17,20 +16,20 @@ document_entry_definition = ResourceDefinition("document_entry", {
     },
     'description': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda entry: entry.description
     },
     'unit': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda entry: entry.unit,
     },
     'unit_price': {
-        'expected_input_types': (int, float, text_type),
+        'expected_input_types': (int, float, str),
         'output': lambda entry: "%.4f" % Decimal(entry.unit_price)
     },
     'quantity': {
-        'expected_input_types': (int, float, text_type),
+        'expected_input_types': (int, float, str),
         'output': lambda entry: "%.4f" % Decimal(entry.quantity)
     },
     'total_before_tax': {
@@ -60,7 +59,7 @@ document_entry_definition = ResourceDefinition("document_entry", {
     },
     'product_code': {
         'required': False,
-        'expected_input_types': text_type,
+        'expected_input_types': str,
         'output': lambda entry: entry.product_code,
     }
 })

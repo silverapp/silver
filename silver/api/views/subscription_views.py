@@ -23,7 +23,7 @@ from annoying.functions import get_object_or_None
 from django_filters.rest_framework import DjangoFilterBackend
 
 from django.utils import timezone
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from rest_framework import generics, permissions, status
 from rest_framework.generics import get_object_or_404
@@ -46,7 +46,7 @@ class MeteredFeatureList(generics.ListCreateAPIView):
     serializer_class = MeteredFeatureSerializer
     queryset = MeteredFeature.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_class = MeteredFeaturesFilter
+    filterset_class = MeteredFeaturesFilter
 
 
 class MeteredFeatureDetail(generics.RetrieveAPIView):
@@ -63,7 +63,7 @@ class SubscriptionList(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = SubscriptionSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = SubscriptionFilter
+    filterset_class = SubscriptionFilter
 
     def get_queryset(self):
         customer_pk = self.kwargs.get('customer_pk', None)
@@ -74,7 +74,7 @@ class SubscriptionList(generics.ListCreateAPIView):
         customer_pk = self.kwargs.get('customer_pk', None)
         url = reverse('customer-detail', kwargs={'customer_pk': customer_pk},
                       request=request)
-        request.data.update({force_text('customer'): force_text(url)})
+        request.data.update({force_str('customer'): force_str(url)})
 
         return super(SubscriptionList, self).post(request, *args, **kwargs)
 

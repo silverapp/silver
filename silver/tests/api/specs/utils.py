@@ -1,7 +1,5 @@
 import inspect
 
-from django.utils.six import text_type
-
 
 datetime_to_str = lambda input_date: input_date.isoformat()[:-6] + 'Z'
 datetime_to_str_or_none = lambda input_date: datetime_to_str(input_date) if input_date else None
@@ -9,7 +7,6 @@ date_to_str = lambda input_date: input_date.isoformat()
 decimal_string_or_none = lambda input_decimal: (
     None if input_decimal is None else "%.2f" % input_decimal
 )
-text_type_or_none = lambda input: text_type(input) if input else None
 
 
 class ResourceDefinition(object):

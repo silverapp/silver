@@ -21,9 +21,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from functools import reduce
 
-from annoying.fields import JSONField
 from annoying.functions import get_object_or_None
 from dateutil import rrule
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from model_utils import Choices
 
@@ -36,9 +37,8 @@ from django.dispatch import receiver
 from django.template import TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import utc
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
@@ -61,7 +61,6 @@ def field_template_path(field, provider=None):
     return 'billing_documents/{field}.html'.format(field=field)
 
 
-@python_2_unicode_compatible
 class MeteredFeatureUnitsLog(models.Model):
     metered_feature = models.ForeignKey('MeteredFeature', related_name='consumed',
                                         on_delete=models.CASCADE)
@@ -121,7 +120,6 @@ class MeteredFeatureUnitsLog(models.Model):
         return self.metered_feature.name
 
 
-@python_2_unicode_compatible
 class Subscription(models.Model):
     class STATES(object):
         ACTIVE = 'active'
@@ -181,7 +179,7 @@ class Subscription(models.Model):
         choices=STATE_CHOICES, max_length=12, default=STATES.INACTIVE,
         help_text='The state the subscription is in.'
     )
-    meta = JSONField(blank=True, null=True, default={})
+    meta = JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     def clean(self):
         errors = dict()
@@ -1015,7 +1013,6 @@ class Subscription(models.Model):
         return u'%s (%s)' % (self.customer, self.plan.name)
 
 
-@python_2_unicode_compatible
 class BillingLog(models.Model):
     subscription = models.ForeignKey('Subscription', on_delete=models.CASCADE,
                                      related_name='billing_logs')

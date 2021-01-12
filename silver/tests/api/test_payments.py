@@ -20,7 +20,7 @@ from mock import patch
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.test import override_settings
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -47,7 +47,7 @@ class TestPaymentUrls(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/expired_payment.html', {
                              'document': transaction.document,
                          }))
@@ -57,7 +57,7 @@ class TestPaymentUrls(APITestCase):
 
         response = self.client.get(get_payment_url(transaction, None))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/complete_payment.html', {
                              'transaction': transaction,
                              'document': transaction.document,
@@ -70,7 +70,7 @@ class TestPaymentUrls(APITestCase):
 
         response = self.client.get(get_payment_url(transaction, None))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/expired_payment.html', {
                              'document': transaction.document,
                          }))
@@ -88,7 +88,7 @@ class TestPaymentUrls(APITestCase):
             response = self.client.get(get_payment_url(transaction, None))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/expired_payment.html', {
                              'document': transaction.document,
                          }))
@@ -106,7 +106,7 @@ class TestPaymentUrls(APITestCase):
             response = self.client.get(get_payment_url(transaction, None))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/expired_payment.html', {
                              'document': transaction.document,
                          }))
@@ -130,7 +130,7 @@ class TestPaymentUrls(APITestCase):
         response = self.client.get(get_payment_complete_url(transaction, None))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(force_text(response.content),
+        self.assertEqual(force_str(response.content),
                          render_to_string('transactions/complete_payment.html', {
                              'expired': False,
                              'transaction': transaction,

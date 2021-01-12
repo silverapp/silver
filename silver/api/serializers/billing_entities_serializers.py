@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import
 
+from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework import serializers
 from rest_framework.fields import JSONField
 from rest_framework.relations import HyperlinkedRelatedField
@@ -85,7 +86,7 @@ class CustomerSerializer(serializers.HyperlinkedModelSerializer):
         view_name='transaction-list', source='*',
         lookup_url_kwarg='customer_pk'
     )
-    meta = JSONField(required=False)
+    meta = JSONField(required=False, encoder=DjangoJSONEncoder)
     url = CustomerUrl(view_name='customer-detail', read_only=True, source='*')
 
     class Meta:
