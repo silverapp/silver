@@ -68,7 +68,7 @@ def metadata(obj):
         d = u''
         for key, value in obj.meta.items():
             d += u'%s: <code>%s</code><br>' % (escape(key), escape(value))
-    return d
+    return mark_safe(d)
 metadata.allow_tags = True
 
 
@@ -134,18 +134,18 @@ class PlanAdmin(ModelAdmin):
 
     def description(self, obj):
         d = u'Subscription: <code>{:.2f} {}</code><br>'.format(obj.amount,
-                                                               obj.currency)
+                                                               escape(obj.currency))
         fmt = u'{name}: <code>{price:.2f} {currency}</code>'
         for f in obj.metered_features.all():
             d += fmt.format(
-                name=f.name,
+                name=escape(f.name),
                 price=f.price_per_unit,
-                currency=obj.currency,
+                currency=escape(obj.currency),
             )
             if f.included_units > 0:
                 d += u'<code> ({:.2f} included)</code>'.format(f.included_units)
             d += u'<br>'
-        return d
+        return mark_safe(d)
 
     description.allow_tags = True
 
@@ -174,9 +174,11 @@ class MeteredFeatureUnitsLogInLine(TabularInline):
             request, obj, **kwargs)
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+        db = kwargs.get('using')
+
         if db_field.name == 'metered_feature' and hasattr(self, 'parent_obj'):
             if self.parent_obj:
-                kwargs['queryset'] = db_field.rel.to.objects.filter(**{
+                kwargs['queryset'] = db_field.remote_field.model.objects.using(db).filter(**{
                     'plan': self.parent_obj.plan
                 })
         return super(MeteredFeatureUnitsLogInLine,
@@ -192,7 +194,7 @@ class BillingLogInLine(TabularInline):
     verbose_name = 'Automatic billing log'
     verbose_name_plural = verbose_name
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -890,10 +892,10 @@ class BillingDocumentAdmin(ModelAdmin):
             url = furl(reverse(url_base))
             url.add(args={obj.__class__.__name__.lower() + "__id__exact": obj.pk})
 
-            return '<a href="{url}" target="_blank">{total:.2f} {currency}</a>'.format(
+            return mark_safe('<a href="{url}" target="_blank">{total:.2f} {currency}</a>'.format(
                 url=url.url, total=obj.total_in_transaction_currency,
                 currency=obj.transaction_currency
-            )
+            ))
 
         return None
 
@@ -1035,7 +1037,7 @@ class InvoiceAdmin(BillingDocumentAdmin):
     def get_invoice_pdf(self, invoice):
         if invoice.pdf:
             url = reverse('invoice-pdf', kwargs={'invoice_id': invoice.id})
-            return '<a href="{url}" target="_blank">Download</a>'.format(url=url)
+            return mark_safe('<a href="{url}" target="_blank">Download</a>'.format(url=url))
         else:
             return None
 
@@ -1096,7 +1098,7 @@ class ProformaAdmin(BillingDocumentAdmin):
     def get_proforma_pdf(self, proforma):
         if proforma.pdf:
             url = reverse('proforma-pdf', kwargs={'proforma_id': proforma.id})
-            return '<a href="{url}" target="_blank">Download</a>'.format(url=url)
+            return mark_safe('<a href="{url}" target="_blank">Download</a>'.format(url=url))
         else:
             return None
 
@@ -1181,8 +1183,8 @@ class TransactionAdmin(ModelAdmin):
         return self.form.Meta.readonly_fields
 
     def get_pay_url(self, obj):
-        return u'<a href="%s">%s</a>' % (get_payment_url(obj, None),
-                                         obj.payment_processor)
+        return mark_safe('<a href="%s">%s</a>' % (get_payment_url(obj, None),
+                                                  obj.payment_processor))
 
     get_pay_url.allow_tags = True
     get_pay_url.short_description = 'Pay URL'
@@ -1202,7 +1204,7 @@ class TransactionAdmin(ModelAdmin):
 
     def get_payment_method(self, obj):
         link = reverse("admin:silver_paymentmethod_change", args=[obj.payment_method.pk])
-        return u'<a href="%s">%s</a>' % (link, obj.payment_method)
+        return mark_safe('<a href="%s">%s</a>' % (link, obj.payment_method))
 
     get_payment_method.allow_tags = True
     get_payment_method.short_description = 'Payment Method'
