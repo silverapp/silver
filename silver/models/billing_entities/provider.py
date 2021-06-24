@@ -24,6 +24,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from silver.models.billing_entities.base import BaseBillingEntity
@@ -147,7 +148,7 @@ class Provider(BaseBillingEntity):
             display += "<hr> " + escape(self.company)
 
         link = reverse("admin:silver_provider_change", args=[self.pk])
-        return u'<a href="%s">%s</a>' % (link, display)
+        return mark_safe('<a href="%s">%s</a>' % (link, display))
 
     def __str__(self):
         return self.name

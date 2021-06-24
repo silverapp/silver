@@ -18,16 +18,16 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
 from model_utils import Choices
 
 from django.apps import apps
+from django.db.models import JSONField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import reverse
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -36,6 +36,7 @@ from django.db.models import Max, ForeignKey, F
 from django.template.loader import select_template
 from django.utils import timezone
 from django.utils.encoding import force_str
+from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django.utils.module_loading import import_string
@@ -428,8 +429,8 @@ class BillingDocumentBase(models.Model):
             app_label=self._meta.app_label,
             klass=self.__class__.__name__.lower())
         url = reverse(url_base, args=(self.pk,))
-        return '<a href="{url}">{display_series}</a>'.format(
-            url=url, display_series=self.series_number)
+        return mark_safe('<a href="{url}">{display_series}</a>'.format(
+            url=url, display_series=self.series_number))
 
     @property
     def _entries(self):
@@ -500,7 +501,7 @@ class BillingDocumentBase(models.Model):
             'filename': self.get_pdf_filename(),
             'provider': self.provider.slug,
             'customer': self.customer.slug,
-            'issue_date': self.issue_date.strftime('%Y/%m/%d')
+            'issue_date': self.issue_date.strftime('%Y/%m/%d') if self.issue_date else "draft"
         }
 
         return path_template.format(**context)
