@@ -15,6 +15,7 @@
 from __future__ import absolute_import
 
 import json
+import os
 from datetime import timedelta
 
 from annoying.functions import get_object_or_None
@@ -140,9 +141,10 @@ class TestProformaEndpoints(APITestCase):
     def test_get_proforma(self, mocked_settings):
         ProformaFactory.reset_sequence(1)
 
-        upload_path = '%s/documents/' % settings.MEDIA_ROOT
-        proforma = ProformaFactory.create(pdf=PDF.objects.create(upload_path=upload_path))
+        proforma = ProformaFactory.create()
+        proforma.pdf = PDF.objects.create(upload_path=proforma.get_pdf_upload_path())
         proforma.generate_pdf()
+        proforma.save()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
 
