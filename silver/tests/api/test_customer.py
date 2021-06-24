@@ -104,7 +104,7 @@ class TestCustomerEndpoints(APITestCase):
             full_url = full_url.split(domain)[0] + domain + url
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.headers['link'] == \
+        assert response['link'] == \
             ('<' + full_url + '?page=2>; rel="next", ' +
              '<' + full_url + '?page=1>; rel="first", ' +
              '<' + full_url + '?page=2> rel="last"')
@@ -112,7 +112,7 @@ class TestCustomerEndpoints(APITestCase):
         response = self.client.get(url + '?page=2')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.headers['link'] == \
+        assert response['link'] == \
             ('<' + full_url + '>; rel="prev", ' +
              '<' + full_url + '?page=1>; rel="first", ' +
              '<' + full_url + '?page=2> rel="last"')
