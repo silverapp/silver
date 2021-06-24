@@ -48,6 +48,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         return payment_method
 
     def test_get_listing(self):
+        PaymentMethod.objects.filter(customer=self.customer).delete()
         PaymentMethodFactory.create(customer=CustomerFactory.create())
         payment_method = self.create_payment_method(customer=self.customer)
 
@@ -77,7 +78,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
             'payment_processor_name': manual_processor
         }, format='json')
 
-        payment_method = PaymentMethod.objects.get(customer=self.customer)
+        payment_method = PaymentMethod.objects.filter(customer=self.customer).order_by("pk").last()
         self.assert_get_data(response.data['url'], payment_method)
 
     def test_put_detail_ignore_customer_change(self):
@@ -254,6 +255,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_no_output, [])
 
     def test_filter_canceled(self):
+        PaymentMethod.objects.filter(customer=self.customer).delete()
         payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={
@@ -267,6 +269,7 @@ class TestPaymentMethodEndpoints(APIGetAssert):
         self.assert_get_data(url_no_output, [])
 
     def test_filter_verified(self):
+        PaymentMethod.objects.filter(customer=self.customer).delete()
         payment_method = self.create_payment_method(customer=self.customer)
 
         url = reverse('payment-method-list', kwargs={

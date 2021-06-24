@@ -442,7 +442,6 @@ class TestTransactionEndpoint(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        print(response.data)
         self.assertEqual(response.data, {
             'proforma': [u'This field may not be modified.'],
             'invoice': [u'This field may not be modified.'],

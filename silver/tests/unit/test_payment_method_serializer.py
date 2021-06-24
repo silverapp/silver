@@ -49,7 +49,8 @@ class TestPaymentMethodSerializer(TestCase):
         self_url = build_absolute_test_url(url)
         transactions_url = build_absolute_test_url(
             reverse('payment-method-transaction-list',
-                    [payment_method.pk, payment_method.customer.pk])
+                    kwargs={"payment_method_id": payment_method.pk,
+                            "customer_pk": payment_method.customer.pk})
         )
         customer_url = build_absolute_test_url(
             reverse('customer-detail', [payment_method.customer.pk])
