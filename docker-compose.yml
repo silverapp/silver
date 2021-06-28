@@ -10,7 +10,7 @@ services:
       - .:/silver
 
   db:
-    image: mysql:5.5
+    image: mysql:5.7
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: silver
