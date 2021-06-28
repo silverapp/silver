@@ -1,21 +1,33 @@
 # Changelog
 
-## Unrealeased changes
 
-- Adding Django 3 support
-- Updating all dependencies to latest versions
-- Dropping Python 2 compatibility
+## Unrealeased changes
+_Nothing yet_
+
+
+## 0.11 (2021-06-28)
+
+### General
+- Added Python>=3.7,<3.9 and Django>3.1,<3.3 support. Older versions are dropped. **(BREAKING)**
+- Bumped some dependencies versions.
+
+### REST API
 - Proforma API fields `archived_provider` and `archived_customer` now correctly return JSON objects rather than 
   stringified JSON objects
-  
 
-## 0.10.1
-Fixed issue in autocomplete views where user.is_authenticated is no longer a function call and instead an attribute 
+### Library API
+- PaymentMethod `encrypt_data` and `decrypt_data` methods are now type hinted. **(WARNING)**. `decrypt_data` will 
+  no longer catches `InvalidToken` exception and returns `None`, but will instead let the exception pass.
+
+
+## 0.10.1 (UNRELEASED)
+- Fixed issue in autocomplete views where user.is_authenticated is no longer a function call and instead an attribute 
+
 
 ## 0.10 (2019-09-03)
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**
 
-### API
+### REST API
 - `Invoice` and `Proforma` fields `archived_provider` and `archived_customer` are now represented
   as JSON instead of a string. **(BREAKING)**
 - Decimal numbers are now always properly typed as string. **(BREAKING)**

@@ -1,4 +1,4 @@
-FROM python:3.6-alpine
+FROM python:3.7-alpine
 MAINTAINER Presslabs ping@presslabs.com
 
 # Ensure that Python outputs everything that's printed inside
