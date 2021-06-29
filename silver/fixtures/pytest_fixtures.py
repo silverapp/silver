@@ -1,47 +1,33 @@
 import factory
 import pytest
 
-from rest_framework.test import APIClient
-
-from django.conf import settings as django_settings
-from django.contrib.auth import get_user_model
-from django.test import Client
-
-from silver.models import Invoice
-from silver.fixtures.factories import CustomerFactory, ProviderFactory, InvoiceFactory
-from silver.tests.api.utils.client import JSONApiClient
-
-User = get_user_model()
-
 
 @pytest.fixture()
-def settings():
-    return django_settings
-
-
-@pytest.fixture()
-def user(db):
-    return User.objects.create(username='user')
+def user(db, django_user_model):
+    return django_user_model.objects.create(username='user')
 
 
 @pytest.fixture()
 def anonymous_api_client():
+    from rest_framework.test import APIClient
+
     return APIClient()
 
 
 @pytest.fixture()
 def authenticated_api_client(user):
+    from silver.tests.api.utils.client import JSONApiClient
+
     client = JSONApiClient()
     client.force_authenticate(user=user)
     return client
 
 
 @pytest.fixture()
-def authenticated_client(user):
+def authenticated_client(user, client):
     user.set_password("password")
     user.save()
 
-    client = Client()
     client.login(username=user.username, password="password")
 
     return client
@@ -49,26 +35,38 @@ def authenticated_client(user):
 
 @pytest.fixture()
 def customer(db):
+    from silver.fixtures.factories import CustomerFactory
+
     return CustomerFactory.create()
 
 
 @pytest.fixture()
 def provider(db):
+    from silver.fixtures.factories import ProviderFactory
+
     return ProviderFactory.create()
 
 
 @pytest.fixture()
 def invoice(db):
+    from silver.fixtures.factories import InvoiceFactory
+
     return InvoiceFactory.create()
 
 
 @pytest.fixture()
 def issued_invoice(db):
+    from silver.models import Invoice
+    from silver.fixtures.factories import InvoiceFactory
+
     return InvoiceFactory.create(state=Invoice.STATES.ISSUED)
 
 
 @pytest.fixture()
 def two_pages_of_invoices(db, settings):
+    from silver.models import Invoice
+    from silver.fixtures.factories import InvoiceFactory
+
     allowed_states = [Invoice.STATES.ISSUED, Invoice.STATES.PAID, Invoice.STATES.CANCELED]
     return InvoiceFactory.create_batch(
         settings.API_PAGE_SIZE * 2,

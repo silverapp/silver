@@ -4,12 +4,17 @@
 ## Unrealeased changes
 _Nothing yet_
 
+## 0.11.1 (2021-06-29)
+
+### Tests
+- Expose django-silver as a pytest plugin to fix tests when installed as package. Fixtures wouldn't be detected otherwise.
+
 
 ## 0.11 (2021-06-28)
 
-### General
+### Dependencies
 - Added Python>=3.7,<3.9 and Django>3.1,<3.3 support. Older versions are dropped. **(BREAKING)**
-- Bumped some dependencies versions.
+- Bumped some other dependencies versions.
 
 ### REST API
 - Proforma API fields `archived_provider` and `archived_customer` now correctly return JSON objects rather than 
