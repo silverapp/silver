@@ -35,20 +35,19 @@ local Pipeline(python_version, django_version) = {
                 "tags": [
                     "${DRONE_BRANCH/master/latest}",
                     "${DRONE_COMMIT_SHA:0:7}"
-                ]
-            },
-            "environment": {
-                "DOCKER_PASSWORD": {
-                    "from_secret": "DOCKER_PASSWORD"
-                },
-                "DOCKER_USERNAME": {
-                    "from_secret": "DOCKER_USERNAME"
+                ],
+                "username": "_json_key",
+                "password": {
+                    "from_secret": "DOCKERHUB_CONFIG_JSON"
                 }
             },
             "when": {
                 "event": [
                     "push",
                     "tag"
+                ],
+                "branch": [
+                    "master"
                 ]
             }
         },
