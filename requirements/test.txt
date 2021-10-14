@@ -11,3 +11,5 @@ pytest-django==4.2.0
 factory-boy==3.2.0
 pep8==1.7.1
 faker==8.2.1
+django-environ==0.7
+PyMySQL==1.0.2

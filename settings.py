@@ -15,6 +15,8 @@ import os
 import datetime
 import sys
 
+import environ
+
 from silver import HOOK_EVENTS as _HOOK_EVENTS
 from django.utils.log import DEFAULT_LOGGING as LOGGING
 
@@ -23,6 +25,8 @@ These settings are used by the ``manage.py`` command.
 
 """
 
+env = environ.Env()
+
 DEBUG = False
 
 SITE_ID = 1
@@ -30,12 +34,33 @@ SITE_ID = 1
 USE_TZ = True
 TIME_ZONE = 'UTC'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite',
+try:
+    import environ
+
+    DATABASES = {
+        'default': env.db("SILVER_DB_URL",
+                          "sqlite:///%s" % os.path.join(os.path.dirname(__file__), "db.sqlite"))
     }
-}
+except ImportError:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': 'db.sqlite',
+        }
+    }
+
+if "mysql" in DATABASES["default"]["ENGINE"]:
+    try:
+        # https://adamj.eu/tech/2020/02/04/how-to-use-pymysql-with-django/
+        import pymysql
+
+        # change mysqlclient version to work with Django 3+,
+        # as stated on https://github.com/PyMySQL/PyMySQL/issues/790
+        pymysql.version_info = (1, 4, 6, 'final', 0)
+
+        pymysql.install_as_MySQLdb()
+    except ImportError:
+        pass
 
 EXTERNAL_APPS = [
     # Django autocomplete
