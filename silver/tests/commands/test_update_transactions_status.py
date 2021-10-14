@@ -83,8 +83,8 @@ class TestUpdateTransactionsStatusCommand(TestCase):
             payment_processor=triggered_processor
         )
 
-        TransactionFactory.create(payment_method=payment_method,
-                                  state=Transaction.States.Pending)
+        transaction = TransactionFactory.create(payment_method=payment_method,
+                                                state=Transaction.States.Pending)
 
         mock_fetch_status = MagicMock()
         mock_fetch_status.side_effect = Exception('This happened.')
@@ -94,7 +94,7 @@ class TestUpdateTransactionsStatusCommand(TestCase):
             call_command('fetch_transactions_status')
             expected_call = call(
                 'Encountered exception while updating transaction with id=%s.',
-                1, exc_info=True
+                transaction.id, exc_info=True
             )
 
             self.assertEqual(expected_call, mock_logger.call_args)
