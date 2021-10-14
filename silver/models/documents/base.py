@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django_fsm import FSMField, transition, TransitionNotAllowed, post_transition
+from django_fsm import FSMField, TransitionNotAllowed, post_transition
 from model_utils import Choices
 
 from django.apps import apps
@@ -47,7 +47,7 @@ from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.pdf import PDF
 from silver.utils.decorators import require_transaction_currency_and_xe_rate
 from silver.utils.international import currencies
-
+from silver.utils.transition import transactional_transition
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
@@ -249,8 +249,12 @@ class BillingDocumentBase(models.Model):
         self._total = self.compute_total()
         self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
 
-    @transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
+    @transactional_transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
+        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
+        if locked_self.state != BillingDocumentBase.STATES.DRAFT:
+            raise TransitionNotAllowed
+
         self._issue(issue_date=issue_date, due_date=due_date)
 
     def _pay(self, paid_date=None):
@@ -259,9 +263,13 @@ class BillingDocumentBase(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-    @transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
+    @transactional_transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
     def pay(self, paid_date=None):
-        self._pay(paid_date=paid_date)
+        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
+        if locked_self.state != BillingDocumentBase.STATES.ISSUED:
+            raise TransitionNotAllowed
+
+        self._pay(paid_date)
 
     def _cancel(self, cancel_date=None):
         if cancel_date:
@@ -269,8 +277,12 @@ class BillingDocumentBase(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-    @transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
+    @transactional_transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
     def cancel(self, cancel_date=None):
+        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
+        if locked_self.state != BillingDocumentBase.STATES.ISSUED:
+            raise TransitionNotAllowed
+
         self._cancel(cancel_date=cancel_date)
 
     def sync_related_document_state(self):
