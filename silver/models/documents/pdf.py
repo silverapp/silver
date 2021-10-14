@@ -23,9 +23,9 @@ from xhtml2pdf import pisa
 from django.conf import settings
 from django.db import transaction
 from django.db.models import (
-    Model, FileField, TextField, UUIDField, PositiveIntegerField, F
+    Model, FileField, TextField, UUIDField, PositiveIntegerField, F, IntegerField
 )
-from django.db.models.functions import Greatest
+from django.db.models.functions import Greatest, Cast
 from django.utils.module_loading import import_string
 from django.core.files import File
 
@@ -101,5 +101,7 @@ class PDF(Model):
 
     def mark_as_clean(self):
         with transaction.atomic():
-            PDF.objects.filter(id=self.id).update(dirty=Greatest(F('dirty') - self.dirty, 0))
+            PDF.objects.filter(id=self.id).update(
+                dirty=Greatest(Cast('dirty', IntegerField()) - self.dirty, 0)
+            )
             self.refresh_from_db(fields=['dirty'])
