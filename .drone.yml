@@ -47,27 +47,26 @@
          }
       },
       {
-         "environment": {
-            "DOCKER_PASSWORD": {
-               "from_secret": "DOCKER_PASSWORD"
-            },
-            "DOCKER_USERNAME": {
-               "from_secret": "DOCKER_USERNAME"
-            }
-         },
          "image": "plugins/docker",
          "name": "publish-docker",
          "pull": "if-not-exists",
          "settings": {
             "force_tag": true,
             "group": "publish",
+            "password": {
+               "from_secret": "DOCKERHUB_CONFIG_JSON"
+            },
             "repo": "presslabs/silver",
             "tags": [
                "${DRONE_BRANCH/master/latest}",
                "${DRONE_COMMIT_SHA:0:7}"
-            ]
+            ],
+            "username": "_json_key"
          },
          "when": {
+            "branch": [
+               "master"
+            ],
             "event": [
                "push",
                "tag"
@@ -150,27 +149,26 @@
          }
       },
       {
-         "environment": {
-            "DOCKER_PASSWORD": {
-               "from_secret": "DOCKER_PASSWORD"
-            },
-            "DOCKER_USERNAME": {
-               "from_secret": "DOCKER_USERNAME"
-            }
-         },
          "image": "plugins/docker",
          "name": "publish-docker",
          "pull": "if-not-exists",
          "settings": {
             "force_tag": true,
             "group": "publish",
+            "password": {
+               "from_secret": "DOCKERHUB_CONFIG_JSON"
+            },
             "repo": "presslabs/silver",
             "tags": [
                "${DRONE_BRANCH/master/latest}",
                "${DRONE_COMMIT_SHA:0:7}"
-            ]
+            ],
+            "username": "_json_key"
          },
          "when": {
+            "branch": [
+               "master"
+            ],
             "event": [
                "push",
                "tag"
@@ -253,27 +251,26 @@
          }
       },
       {
-         "environment": {
-            "DOCKER_PASSWORD": {
-               "from_secret": "DOCKER_PASSWORD"
-            },
-            "DOCKER_USERNAME": {
-               "from_secret": "DOCKER_USERNAME"
-            }
-         },
          "image": "plugins/docker",
          "name": "publish-docker",
          "pull": "if-not-exists",
          "settings": {
             "force_tag": true,
             "group": "publish",
+            "password": {
+               "from_secret": "DOCKERHUB_CONFIG_JSON"
+            },
             "repo": "presslabs/silver",
             "tags": [
                "${DRONE_BRANCH/master/latest}",
                "${DRONE_COMMIT_SHA:0:7}"
-            ]
+            ],
+            "username": "_json_key"
          },
          "when": {
+            "branch": [
+               "master"
+            ],
             "event": [
                "push",
                "tag"
@@ -356,27 +353,26 @@
          }
       },
       {
-         "environment": {
-            "DOCKER_PASSWORD": {
-               "from_secret": "DOCKER_PASSWORD"
-            },
-            "DOCKER_USERNAME": {
-               "from_secret": "DOCKER_USERNAME"
-            }
-         },
          "image": "plugins/docker",
          "name": "publish-docker",
          "pull": "if-not-exists",
          "settings": {
             "force_tag": true,
             "group": "publish",
+            "password": {
+               "from_secret": "DOCKERHUB_CONFIG_JSON"
+            },
             "repo": "presslabs/silver",
             "tags": [
                "${DRONE_BRANCH/master/latest}",
                "${DRONE_COMMIT_SHA:0:7}"
-            ]
+            ],
+            "username": "_json_key"
          },
          "when": {
+            "branch": [
+               "master"
+            ],
             "event": [
                "push",
                "tag"
@@ -412,6 +408,6 @@
 }
 ---
 kind: signature
-hmac: 33fa92cc6c9d87235974c9dfb5896504f609735bee8fa452731760aaeb050e09
+hmac: 34fb8b2fc2223e640dc5029e90ee3c7c3758e30398183738b6fd4b9647c2b81c
 
 ...
