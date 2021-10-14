@@ -1,65 +1,417 @@
-pipeline:
-  test:
-    image: python:${PYTHON_VERSION}
-    pull: true
-    group: build
-    environment:
-      - SILVER_DB_ENGINE=django.db.backends.mysql
-      - SILVER_DB_NAME=test_db
-      - SILVER_DB_HOST=mysql
-      - SILVER_DB_USER=silver
-      - SILVER_DB_PASSWORD=silver
-    commands:
-      - make dependencies
-      - pip install -U "Django${DJANGO_VERSION}"
-      - mkdir /var/log/silver
-      - make lint
-      - make test
+---
+{
+   "kind": "pipeline",
+   "name": "python:3.7,django>=3.1,<3.2",
+   "platform": {
+      "arch": "amd64",
+      "os": "linux"
+   },
+   "services": [
+      {
+         "command": [
+            "--character-set-server=utf8mb4"
+         ],
+         "environment": {
+            "MYSQL_DATABASE": "test_db",
+            "MYSQL_PASSWORD": "silver",
+            "MYSQL_ROOT_PASSWORD": "secret",
+            "MYSQL_USER": "silver"
+         },
+         "image": "mysql:5.7",
+         "name": "mysql",
+         "pull": "if-not-exists"
+      },
+      {
+         "image": "redis:3-alpine",
+         "name": "redis",
+         "pull": "if-not-exists"
+      }
+   ],
+   "steps": [
+      {
+         "commands": [
+            "make dependencies",
+            "pip install -U \"Django>=3.1,<3.2\"",
+            "mkdir /var/log/silver",
+            "make lint",
+            "make test"
+         ],
+         "environment": {
+            "SILVER_DB_URL": "mysql://silver:silver@mysql/db"
+         },
+         "image": "python:3.7",
+         "name": "test",
+         "pull": "always",
+         "settings": {
+            "group": "build"
+         }
+      },
+      {
+         "environment": {
+            "DOCKER_PASSWORD": {
+               "from_secret": "DOCKER_PASSWORD"
+            },
+            "DOCKER_USERNAME": {
+               "from_secret": "DOCKER_USERNAME"
+            }
+         },
+         "image": "plugins/docker",
+         "name": "publish-docker",
+         "pull": "if-not-exists",
+         "settings": {
+            "force_tag": true,
+            "group": "publish",
+            "repo": "presslabs/silver",
+            "tags": [
+               "${DRONE_BRANCH/master/latest}",
+               "${DRONE_COMMIT_SHA:0:7}"
+            ]
+         },
+         "when": {
+            "event": [
+               "push",
+               "tag"
+            ]
+         }
+      },
+      {
+         "environment": {
+            "DRONE_TOKEN": {
+               "from_secret": "DRONE_TOKEN"
+            }
+         },
+         "image": "plugins/downstream",
+         "name": "trigger-docs-build",
+         "pull": "if-not-exists",
+         "settings": {
+            "fork": true,
+            "repositories": [
+               "presslabs/docs"
+            ],
+            "server": "https://drone.presslabs.net"
+         },
+         "when": {
+            "branch": [
+               "master"
+            ],
+            "event": [
+               "push"
+            ]
+         }
+      }
+   ]
+}
+---
+{
+   "kind": "pipeline",
+   "name": "python:3.8,django>=3.1,<3.2",
+   "platform": {
+      "arch": "amd64",
+      "os": "linux"
+   },
+   "services": [
+      {
+         "command": [
+            "--character-set-server=utf8mb4"
+         ],
+         "environment": {
+            "MYSQL_DATABASE": "test_db",
+            "MYSQL_PASSWORD": "silver",
+            "MYSQL_ROOT_PASSWORD": "secret",
+            "MYSQL_USER": "silver"
+         },
+         "image": "mysql:5.7",
+         "name": "mysql",
+         "pull": "if-not-exists"
+      },
+      {
+         "image": "redis:3-alpine",
+         "name": "redis",
+         "pull": "if-not-exists"
+      }
+   ],
+   "steps": [
+      {
+         "commands": [
+            "make dependencies",
+            "pip install -U \"Django>=3.1,<3.2\"",
+            "mkdir /var/log/silver",
+            "make lint",
+            "make test"
+         ],
+         "environment": {
+            "SILVER_DB_URL": "mysql://silver:silver@mysql/db"
+         },
+         "image": "python:3.8",
+         "name": "test",
+         "pull": "always",
+         "settings": {
+            "group": "build"
+         }
+      },
+      {
+         "environment": {
+            "DOCKER_PASSWORD": {
+               "from_secret": "DOCKER_PASSWORD"
+            },
+            "DOCKER_USERNAME": {
+               "from_secret": "DOCKER_USERNAME"
+            }
+         },
+         "image": "plugins/docker",
+         "name": "publish-docker",
+         "pull": "if-not-exists",
+         "settings": {
+            "force_tag": true,
+            "group": "publish",
+            "repo": "presslabs/silver",
+            "tags": [
+               "${DRONE_BRANCH/master/latest}",
+               "${DRONE_COMMIT_SHA:0:7}"
+            ]
+         },
+         "when": {
+            "event": [
+               "push",
+               "tag"
+            ]
+         }
+      },
+      {
+         "environment": {
+            "DRONE_TOKEN": {
+               "from_secret": "DRONE_TOKEN"
+            }
+         },
+         "image": "plugins/downstream",
+         "name": "trigger-docs-build",
+         "pull": "if-not-exists",
+         "settings": {
+            "fork": true,
+            "repositories": [
+               "presslabs/docs"
+            ],
+            "server": "https://drone.presslabs.net"
+         },
+         "when": {
+            "branch": [
+               "master"
+            ],
+            "event": [
+               "push"
+            ]
+         }
+      }
+   ]
+}
+---
+{
+   "kind": "pipeline",
+   "name": "python:3.7,django>=3.2,<3.3",
+   "platform": {
+      "arch": "amd64",
+      "os": "linux"
+   },
+   "services": [
+      {
+         "command": [
+            "--character-set-server=utf8mb4"
+         ],
+         "environment": {
+            "MYSQL_DATABASE": "test_db",
+            "MYSQL_PASSWORD": "silver",
+            "MYSQL_ROOT_PASSWORD": "secret",
+            "MYSQL_USER": "silver"
+         },
+         "image": "mysql:5.7",
+         "name": "mysql",
+         "pull": "if-not-exists"
+      },
+      {
+         "image": "redis:3-alpine",
+         "name": "redis",
+         "pull": "if-not-exists"
+      }
+   ],
+   "steps": [
+      {
+         "commands": [
+            "make dependencies",
+            "pip install -U \"Django>=3.2,<3.3\"",
+            "mkdir /var/log/silver",
+            "make lint",
+            "make test"
+         ],
+         "environment": {
+            "SILVER_DB_URL": "mysql://silver:silver@mysql/db"
+         },
+         "image": "python:3.7",
+         "name": "test",
+         "pull": "always",
+         "settings": {
+            "group": "build"
+         }
+      },
+      {
+         "environment": {
+            "DOCKER_PASSWORD": {
+               "from_secret": "DOCKER_PASSWORD"
+            },
+            "DOCKER_USERNAME": {
+               "from_secret": "DOCKER_USERNAME"
+            }
+         },
+         "image": "plugins/docker",
+         "name": "publish-docker",
+         "pull": "if-not-exists",
+         "settings": {
+            "force_tag": true,
+            "group": "publish",
+            "repo": "presslabs/silver",
+            "tags": [
+               "${DRONE_BRANCH/master/latest}",
+               "${DRONE_COMMIT_SHA:0:7}"
+            ]
+         },
+         "when": {
+            "event": [
+               "push",
+               "tag"
+            ]
+         }
+      },
+      {
+         "environment": {
+            "DRONE_TOKEN": {
+               "from_secret": "DRONE_TOKEN"
+            }
+         },
+         "image": "plugins/downstream",
+         "name": "trigger-docs-build",
+         "pull": "if-not-exists",
+         "settings": {
+            "fork": true,
+            "repositories": [
+               "presslabs/docs"
+            ],
+            "server": "https://drone.presslabs.net"
+         },
+         "when": {
+            "branch": [
+               "master"
+            ],
+            "event": [
+               "push"
+            ]
+         }
+      }
+   ]
+}
+---
+{
+   "kind": "pipeline",
+   "name": "python:3.8,django>=3.2,<3.3",
+   "platform": {
+      "arch": "amd64",
+      "os": "linux"
+   },
+   "services": [
+      {
+         "command": [
+            "--character-set-server=utf8mb4"
+         ],
+         "environment": {
+            "MYSQL_DATABASE": "test_db",
+            "MYSQL_PASSWORD": "silver",
+            "MYSQL_ROOT_PASSWORD": "secret",
+            "MYSQL_USER": "silver"
+         },
+         "image": "mysql:5.7",
+         "name": "mysql",
+         "pull": "if-not-exists"
+      },
+      {
+         "image": "redis:3-alpine",
+         "name": "redis",
+         "pull": "if-not-exists"
+      }
+   ],
+   "steps": [
+      {
+         "commands": [
+            "make dependencies",
+            "pip install -U \"Django>=3.2,<3.3\"",
+            "mkdir /var/log/silver",
+            "make lint",
+            "make test"
+         ],
+         "environment": {
+            "SILVER_DB_URL": "mysql://silver:silver@mysql/db"
+         },
+         "image": "python:3.8",
+         "name": "test",
+         "pull": "always",
+         "settings": {
+            "group": "build"
+         }
+      },
+      {
+         "environment": {
+            "DOCKER_PASSWORD": {
+               "from_secret": "DOCKER_PASSWORD"
+            },
+            "DOCKER_USERNAME": {
+               "from_secret": "DOCKER_USERNAME"
+            }
+         },
+         "image": "plugins/docker",
+         "name": "publish-docker",
+         "pull": "if-not-exists",
+         "settings": {
+            "force_tag": true,
+            "group": "publish",
+            "repo": "presslabs/silver",
+            "tags": [
+               "${DRONE_BRANCH/master/latest}",
+               "${DRONE_COMMIT_SHA:0:7}"
+            ]
+         },
+         "when": {
+            "event": [
+               "push",
+               "tag"
+            ]
+         }
+      },
+      {
+         "environment": {
+            "DRONE_TOKEN": {
+               "from_secret": "DRONE_TOKEN"
+            }
+         },
+         "image": "plugins/downstream",
+         "name": "trigger-docs-build",
+         "pull": "if-not-exists",
+         "settings": {
+            "fork": true,
+            "repositories": [
+               "presslabs/docs"
+            ],
+            "server": "https://drone.presslabs.net"
+         },
+         "when": {
+            "branch": [
+               "master"
+            ],
+            "event": [
+               "push"
+            ]
+         }
+      }
+   ]
+}
+---
+kind: signature
+hmac: 33fa92cc6c9d87235974c9dfb5896504f609735bee8fa452731760aaeb050e09
 
-  publish-docker:
-    image: plugins/docker
-    group: publish
-    repo: presslabs/silver
-    tags: ["${DRONE_BRANCH/master/latest}", "${DRONE_COMMIT_SHA:0:7}"]
-    force_tag: true
-    secrets:
-      - DOCKER_USERNAME
-      - DOCKER_PASSWORD
-    when:
-      event: [push, tag]
-
-  trigger-docs-build:
-    image: plugins/downstream
-    server: https://drone.presslabs.net
-    fork: true
-    secrets: [DRONE_TOKEN]
-    repositories:
-      - presslabs/docs
-    when:
-      branch: master
-      event: push
-      matrix:
-        PYTHON_VERSION: 3.8
-        DJANGO_VERSION: ">=3.1,<3.2"
-
-services:
-  mysql:
-    image: mysql:5.7
-    environment:
-      - MYSQL_DATABASE=test_db
-      - MYSQL_ROOT_PASSWORD=secret
-      - MYSQL_USER=silver
-      - MYSQL_PASSWORD=silver
-  redis:
-    image: redis:3-alpine
-
-matrix:
-  include:
-    - PYTHON_VERSION: 3.7
-      DJANGO_VERSION: ">=3.1,<3.2"
-    - PYTHON_VERSION: 3.8
-      DJANGO_VERSION: ">=3.1,<3.2"
-    - PYTHON_VERSION: 3.7
-      DJANGO_VERSION: ">=3.2,<3.3"
-    - PYTHON_VERSION: 3.8
-      DJANGO_VERSION: ">=3.2,<3.3"
+...
