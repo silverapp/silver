@@ -2,7 +2,7 @@
 
 
 ## Unrealeased changes
-_Nothing yet_
+- Fixed a race condition when paying invoices.
 
 ## 0.11.1 (2021-06-29)
 

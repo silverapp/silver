@@ -14,8 +14,11 @@
 
 from __future__ import absolute_import
 
+import threading
 from decimal import Decimal
 
+import time
+from django.db import transaction, OperationalError, connection
 from six.moves import zip
 
 from django.core.exceptions import ValidationError
@@ -37,6 +40,41 @@ class TestProforma(TestCase):
 
         assert proforma.related_document.state == Invoice.STATES.PAID
         assert proforma.state == Invoice.STATES.PAID
+
+    def test_pay_proforma_with_no_related_invoice_race_condition(self):
+        if connection.vendor == "sqlite":
+            self.skipTest("select_for_update is ignored when using sqlite")
+
+        proforma = ProformaFactory.create()
+        proforma.issue()
+
+        proforma_alternate = Proforma.objects.get(id=proforma.id)
+
+        def pay_thread_1(proforma):
+            with transaction.atomic():
+                proforma.pay()
+                time.sleep(1)
+
+        exceptions = []
+
+        def pay_thread_2(proforma_alternate):
+            with transaction.atomic():
+                try:
+                    proforma_alternate.pay()
+                except Exception as e:
+                    exceptions.append(e)
+
+        t1 = threading.Thread(target=pay_thread_1, args=[proforma])
+        t2 = threading.Thread(target=pay_thread_2, args=[proforma_alternate])
+
+        t1.start()
+        t2.start()
+
+        t1.join()
+        t2.join()
+
+        assert len(exceptions) == 1
+        assert isinstance(exceptions[0], OperationalError)
 
     def test_clone_proforma_into_draft(self):
         proforma = ProformaFactory.create()
