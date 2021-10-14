@@ -1,7 +1,6 @@
 # [silver](https://www.presslabs.com/code/silver/)
 
-[![Build Status](https://travis-ci.org/silverapp/silver.svg?branch=master)](https://travis-ci.org/silverapp/silver)
-[![Build Status](https://drone.presslabs.net/api/badges/silverapp/silver/status.svg?branch=master)](https://drone.presslabs.net/silverapp/silver)
+[![Build Status](https://ci.presslabs.net/api/badges/silverapp/silver/status.svg?ref=refs/heads/master)](https://ci.presslabs.net/silverapp/silver)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fsilverapp%2Fsilver?ref=badge_shield)
 
 **A Django automated billing system with a REST API.**
