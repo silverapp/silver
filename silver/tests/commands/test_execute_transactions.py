@@ -81,7 +81,7 @@ class TestExecuteTransactionsCommand(TestCase):
             verified=True
         )
 
-        TransactionFactory.create(payment_method=payment_method)
+        transaction = TransactionFactory.create(payment_method=payment_method)
 
         mock_execute = MagicMock()
         mock_execute.side_effect = Exception('This happened.')
@@ -91,7 +91,7 @@ class TestExecuteTransactionsCommand(TestCase):
             call_command('execute_transactions')
             expected_call = call(
                 'Encountered exception while executing transaction with id=%s.',
-                1, exc_info=True
+                transaction.id, exc_info=True
             )
 
             self.assertEqual(expected_call, mock_logger.call_args)
