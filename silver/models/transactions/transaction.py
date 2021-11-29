@@ -284,7 +284,8 @@ class Transaction(AutoCleanModelMixin,
             not self.document.amount_to_be_charged_in_transaction_currency and
             self.document.state != self.document.STATES.PAID
         ):
-            self.document.pay()
+            with transaction.atomic():
+                self.document.pay()
 
     def __str__(self):
         return force_str(self.uuid)

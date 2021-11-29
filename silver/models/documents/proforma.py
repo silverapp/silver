@@ -92,14 +92,11 @@ class Proforma(BillingDocumentBase):
 
         if not self.related_document and not locked_self.related_document:
             self.related_document = self._new_invoice()
-            self.related_document.issue()
-            self.related_document.pay(paid_date=paid_date)
-
-            # if the proforma is paid, the invoice due_date should be issue_date
-            self.related_document.due_date = self.related_document.issue_date
-
-            self.related_document.save()
             self.save()
+
+            self.related_document.due_date = self.due_date
+            self.related_document.issue()
+            self.related_document.save()
 
     def create_invoice(self):
         if self.state != BillingDocumentBase.STATES.ISSUED:

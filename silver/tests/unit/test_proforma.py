@@ -75,6 +75,7 @@ class TestProforma(TestCase):
 
         assert len(exceptions) == 1
         assert isinstance(exceptions[0], OperationalError)
+        assert Invoice.objects.filter(related_document=proforma).count() == 1
 
     def test_clone_proforma_into_draft(self):
         proforma = ProformaFactory.create()
