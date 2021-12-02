@@ -18,11 +18,12 @@ import threading
 from decimal import Decimal
 
 import time
-from django.db import transaction, OperationalError, connection
+from django.db import transaction, connection
+from django_fsm import TransitionNotAllowed
 from six.moves import zip
 
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 from silver.models import DocumentEntry, Invoice, Proforma
 from silver.fixtures.factories import (
@@ -30,7 +31,7 @@ from silver.fixtures.factories import (
 )
 
 
-class TestProforma(TestCase):
+class TestProforma(TransactionTestCase):
     def test_pay_proforma_related_invoice_state_change_to_paid(self):
         proforma = ProformaFactory.create()
         proforma.issue()
@@ -50,31 +51,34 @@ class TestProforma(TestCase):
 
         proforma_alternate = Proforma.objects.get(id=proforma.id)
 
-        def pay_thread_1(proforma):
-            with transaction.atomic():
-                proforma.pay()
-                time.sleep(1)
-
-        exceptions = []
+        exceptions_thread_2 = []
 
         def pay_thread_2(proforma_alternate):
-            with transaction.atomic():
-                try:
-                    proforma_alternate.pay()
-                except Exception as e:
-                    exceptions.append(e)
+            time.sleep(1.0)
+            try:
+                proforma_alternate.pay()
+            except Exception as e:
+                exceptions_thread_2.append(e)
 
-        t1 = threading.Thread(target=pay_thread_1, args=[proforma])
         t2 = threading.Thread(target=pay_thread_2, args=[proforma_alternate])
 
-        t1.start()
         t2.start()
 
-        t1.join()
+        with transaction.atomic():
+            proforma.pay()
+            time.sleep(2.0)
+
         t2.join()
 
-        assert len(exceptions) == 1
-        assert isinstance(exceptions[0], OperationalError)
+        assert len(exceptions_thread_2) == 1
+        assert isinstance(exceptions_thread_2[0], TransitionNotAllowed)
+
+        proforma = Proforma.objects.get(id=proforma.id)
+        assert proforma.state == Proforma.STATES.PAID
+
+        assert proforma.related_document is not None
+        assert proforma.related_document.state == Invoice.STATES.PAID
+
         assert Invoice.objects.filter(related_document=proforma).count() == 1
 
     def test_clone_proforma_into_draft(self):
