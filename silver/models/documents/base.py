@@ -289,7 +289,16 @@ class BillingDocumentBase(models.Model):
         if self.is_storno:
             return
 
-        if self.related_document and self.state != self.related_document.state:
+        if not self.related_document:
+            return
+
+        if self.related_document.is_storno:
+            return
+
+        if self.related_document.state == BillingDocumentBase.STATES.PAID:
+            return
+
+        if self.state != self.related_document.state:
             state_transition_map = {
                 BillingDocumentBase.STATES.ISSUED: 'issue',
                 BillingDocumentBase.STATES.CANCELED: 'cancel',
