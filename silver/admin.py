@@ -165,7 +165,7 @@ class PlanAdmin(ModelAdmin):
 class MeteredFeatureUnitsLogInLine(TabularInline):
     model = MeteredFeatureUnitsLog
     list_display = ['metered_feature']
-    readonly_fields = ('start_date', 'end_date',)
+    fields = ['metered_feature', 'annotation', 'consumed_units', 'start_datetime', 'end_datetime']
     extra = 0
 
     def get_formset(self, request, obj=None, **kwargs):

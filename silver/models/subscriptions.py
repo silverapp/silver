@@ -68,12 +68,14 @@ class MeteredFeatureUnitsLog(models.Model):
                                      on_delete=models.CASCADE)
     consumed_units = models.DecimalField(max_digits=19, decimal_places=4,
                                          validators=[MinValueValidator(0.0)])
-    start_date = models.DateField(editable=False)
-    end_date = models.DateField(editable=False)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+
+    annotation = models.CharField(max_length=256, null=True, blank=True)
 
     class Meta:
-        unique_together = ('metered_feature', 'subscription', 'start_date',
-                           'end_date')
+        unique_together = ('metered_feature', 'subscription', 'start_datetime', 'end_datetime',
+                           'annotation')
 
     def clean(self):
         super(MeteredFeatureUnitsLog, self).clean()
@@ -89,10 +91,10 @@ class MeteredFeatureUnitsLog(models.Model):
             raise ValidationError(err_msg)
 
         if not self.id:
-            start_date = self.subscription.bucket_start_date()
-            end_date = self.subscription.bucket_end_date()
-            if get_object_or_None(MeteredFeatureUnitsLog, start_date=start_date,
-                                  end_date=end_date,
+            start_datetime = self.subscription.bucket_start_datetime()
+            end_datetime = self.subscription.bucket_end_datetime()
+            if get_object_or_None(MeteredFeatureUnitsLog, start_datetime=start_datetime,
+                                  end_datetime=end_datetime,
                                   metered_feature=self.metered_feature,
                                   subscription=self.subscription):
                 err_msg = 'A %s units log for the current date already exists.'\
@@ -100,11 +102,14 @@ class MeteredFeatureUnitsLog(models.Model):
                 raise ValidationError(err_msg)
 
     def save(self, *args, **kwargs):
+        if self.annotation == "":
+            self.annotation = None
+
         if not self.id:
-            if not self.start_date:
-                self.start_date = self.subscription.bucket_start_date()
-            if not self.end_date:
-                self.end_date = self.subscription.bucket_end_date()
+            if not self.start_datetime:
+                self.start_datetime = self.subscription.bucket_start_datetime()
+            if not self.end_datetime:
+                self.end_datetime = self.subscription.bucket_end_datetime()
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
         else:
@@ -387,6 +392,24 @@ class Subscription(models.Model):
         return self._cycle_end_date(reference_date=reference_date,
                                     ignore_trial=False, granulate=True)
 
+    def bucket_start_datetime(self, reference_datetime=None):
+        return datetime.combine(
+            self._cycle_start_date(reference_date=reference_datetime.date(),
+                                   ignore_trial=False,
+                                   granulate=True),
+            datetime.min.time(),
+            tzinfo=timezone.utc,
+        )
+
+    def bucket_end_datetime(self, reference_datetime=None):
+        return datetime.combine(
+            self._cycle_end_date(reference_date=reference_datetime.date(),
+                                 ignore_trial=False,
+                                 granulate=True),
+            datetime.max.time(),
+            tzinfo=timezone.utc,
+        ).replace(microsecond=0)
+
     def updateable_buckets(self):
         buckets = []
 
@@ -411,8 +434,10 @@ class Subscription(models.Model):
                     tzinfo=timezone.get_current_timezone())):
             end_date = start_date - ONE_DAY
             start_date = self.bucket_start_date(end_date)
+
             if start_date is None:
                 return buckets
+
             buckets.append({'start_date': start_date, 'end_date': end_date})
 
         return buckets
@@ -598,7 +623,7 @@ class Subscription(models.Model):
                     metered_feature=metered_feature.pk,
                     subscription=self.pk).first()
                 if log:
-                    log.end_date = now
+                    log.end_datetime = now
                     log.save()
             if self.on_trial(now):
                 self.trial_end = now
@@ -769,6 +794,18 @@ class Subscription(models.Model):
 
     def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
                            proforma=None):
+        start_datetime = datetime.combine(
+            start_date,
+            datetime.min.time(),
+            tzinfo=timezone.utc,
+        ).replace(microsecond=0)
+
+        end_datetime = datetime.combine(
+            end_date,
+            datetime.max.time(),
+            tzinfo=timezone.utc,
+        ).replace(microsecond=0)
+
         prorated, percent = self._get_proration_status_and_percent(start_date,
                                                                    end_date)
         context = self._build_entry_context({
@@ -792,8 +829,8 @@ class Subscription(models.Model):
             unit = self._entry_unit(context)
 
             qs = self.mf_log_entries.filter(metered_feature=metered_feature,
-                                            start_date__gte=start_date,
-                                            end_date__lte=end_date)
+                                            start_datetime__gte=start_datetime,
+                                            end_datetime__lte=end_datetime)
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = sum(log)
 
@@ -894,12 +931,12 @@ class Subscription(models.Model):
         ).total
 
     def _get_consumed_units(self, metered_feature, proration_percent,
-                            start_date, end_date):
+                            start_datetime, end_datetime):
         included_units = (proration_percent * metered_feature.included_units)
 
         qs = self.mf_log_entries.filter(metered_feature=metered_feature,
-                                        start_date__gte=start_date,
-                                        end_date__lte=end_date)
+                                        start_datetime__gte=start_datetime,
+                                        end_datetime__lte=end_datetime)
         log = [qs_item.consumed_units for qs_item in qs]
         total_consumed_units = reduce(lambda x, y: x + y, log, 0)
 
@@ -908,8 +945,19 @@ class Subscription(models.Model):
         return 0
 
     def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
-        prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date)
+        start_datetime = datetime.combine(
+            start_date,
+            datetime.min.time(),
+            tzinfo=timezone.utc,
+        ).replace(microsecond=0)
+
+        end_datetime = datetime.combine(
+            end_date,
+            datetime.max.time(),
+            tzinfo=timezone.utc,
+        ).replace(microsecond=0)
+
+        prorated, percent = self._get_proration_status_and_percent(start_date, end_date)
 
         context = self._build_entry_context({
             'name': self.plan.name,
@@ -925,7 +973,7 @@ class Subscription(models.Model):
         mfs_total = Decimal('0.00')
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
-                metered_feature, percent, start_date, end_date)
+                metered_feature, percent, start_datetime, end_datetime)
 
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
@@ -935,7 +983,7 @@ class Subscription(models.Model):
             description = self._entry_description(context)
             unit = self._entry_unit(context)
 
-            mf = DocumentEntry.objects.create(
+            de = DocumentEntry.objects.create(
                 invoice=invoice, proforma=proforma,
                 description=description, unit=unit,
                 quantity=consumed_units, prorated=prorated,
@@ -944,7 +992,7 @@ class Subscription(models.Model):
                 start_date=start_date, end_date=end_date
             )
 
-            mfs_total += mf.total
+            mfs_total += de.total
 
         return mfs_total
 

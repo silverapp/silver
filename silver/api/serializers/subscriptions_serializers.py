@@ -46,12 +46,12 @@ class MeteredFeatureInSubscriptionSerializer(MeteredFeatureSerializer):
 
 class MFUnitsLogSerializer(serializers.HyperlinkedModelSerializer):
     # The 2 lines below are needed because of a DRF3 bug
-    start_date = serializers.DateField(read_only=True)
-    end_date = serializers.DateField(read_only=True)
+    start_datetime = serializers.DateTimeField(read_only=True)
+    end_datetime = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = MeteredFeatureUnitsLog
-        fields = ('consumed_units', 'start_date', 'end_date')
+        fields = ('consumed_units', 'start_datetime', 'end_datetime', 'annotation')
 
 
 class SubscriptionUrl(serializers.HyperlinkedRelatedField):
