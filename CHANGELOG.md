@@ -2,7 +2,29 @@
 
 
 ## Unrealeased changes
-- Fixed a race condition when paying invoices.
+Some of these changes are considered to be breaking and were marked with **(BREAKING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
+
+- Fixed a race condition when paying invoices. (not yet)
+
+### General
+- MeteredFeatureUnitsLogs can now be annotated. This is a way to separate units from different sources, that use the 
+  same metered feature.
+- Replaced MeteredFeatureUnitsLogs `start_date` and `end_date` fields with `start_datetime` and `end_datetime` **(BREAKING)**:
+  - The precission is limited to seconds for practical reasons, meaning microseconds will be stripped. A full day used 
+    to be represented by `2022-05-01` to `2022-05-01`, now it will be represented by `2022-05-01T00:00:00Z` to `2022-05-01T23:59:59Z`. **(BREAKING)**
+  - They are now made editable from the admin view.
+  - They are no longer restricted to the billing interval, but may form any interval inside the billing interval 
+    (e.g. half a day during a daily billed subscription). The only restriction is intervals from different related MFULs
+    may not overlap. **(WARNING)**
+
+### REST API
+- The API endpoints regarding MeteredFeatureUnitsLogs were reworked, to address some inconsistencies (sometimes 
+  `count` was used instead of `consumed_units`), and also to include the above mentioned changes.
+- A `end_log` field (`bool`) may be used to modify the targeted MeteredFeatureUnitLog's end_date into the provided `date`.
+  This should help with a usecase when sending units gathered from different time intervals, which should not be mixed 
+  together (for some arbitrary reason).
+
 
 ## 0.11.1 (2021-06-29)
 
@@ -87,7 +109,7 @@ This is a beta release. It's not recommended to use it in production environment
 ## 0.8b1 (2019-06-03)
 This is a beta release. It's not recommended to use it in production environments.
 
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Added Django2.0 and Django2.1 compatibility
 - If you are using Python2.7 and Django 1.11 you'll probably have to manually pin `django-filters==1.1` in your project's requirements. **(WARNING)**
 - Transaction objects are now automatically cleaned before saving. **(WARNING)**
@@ -111,7 +133,7 @@ Some of these changes that were considered to be possibly breaking were marked w
 - Fixed typo and obsolete keys in users endpoint API documentation
 
 ## 0.7 (2019-01-07)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Added Python 3.5 and 3.6 compatibility while maintaining Python 2.7 compatibility for now. **(WARNING)**
 - Fixed not being able to later settle a transaction related to a manually paid document.
 - Removed pytz dependency.
@@ -124,12 +146,12 @@ later than the cancel date.
 pinned to known working versions.
 
 ## 0.6.1 (2018-05-08)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Subscription's meta field now defaults to an empty dict. **(WARNING)**
 - Added cancel_date to SubscriptionSerializer.
 
 ## 0.6 (2018-04-25)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Dropped Django 1.8 support, meaning only Django 1.11 is currently supported. **(WARNING)**
 - PDF generate method will no longer mark the `PDF` object as clean if the file is not saved
   (through the `upload` method) **(WARNING)**
@@ -208,13 +230,13 @@ their concrete class, depending on their `kind` field. **(BREAKING)**
 - Fixed updateable_buckets end_date not being the bucket_end_date for a canceled subscription.
 
 ## 0.3.8 (2017-11-01)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Fixed not being able to create Metered Feature Units Logs through the API if the subscription
 is canceled but not past the cancel_date.
 - Updateable buckets past the subscription cancel date are no longer valid. **(WARNING)**
 
 ## 0.3.7 (2017-10-27)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Old PDFs are no longer deleted on PDF regeneration. **(WARNING)**
 
 ## 0.3.6 (2017-10-17)
@@ -250,7 +272,7 @@ The right behavior is generating the documents after the cancel_date.
 
 ## 0.3.2 (2017-09-28)
 *Version 0.3.0 and 0.3.1 were published with errors.*
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Celery and Redis are no longer a requirement, as the django commands and celery tasks
 that are supposed to be run periodically now have equivalents in both versions.
 Using celery tasks is still the recommended way to go.
@@ -310,12 +332,12 @@ be to set the PDF.pdf_file.name value from the old Invoice.pdf_file.name.
 - Removed default value for document's transaction_currency. **(WARNING)**
 
 ## 0.2.2 (2017-02-03)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Added total_in_transaction_currency field to Invoice and Proforma serializers.
 - Created template blocks for Issuer and Customer in transaction_form.html template. **(WARNING)**
 
 ## 0.2.1 (2017-02-03)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Admin UI fixes and usability improvements.
 - Billing documents transaction_xe_date will have the same value as issue_date by default. **(WARNING)**
 - Other currency related fixes.
@@ -325,7 +347,7 @@ Some of these changes that were considered to be possibly breaking were marked w
 
 ## 0.2 (2017-02-02)
 Some of these changes were part of 0.1.5b (2016-11-18)
-Some of these changes that were considered to be possibly breaking were marked with **(WARNING)**.
+Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 - Added payments models, logic and API endpoints.
 - Split models into separate files. **(WARNING)**
 - Added a readonly documents API endpoint, exposing both Invoices and Proformas.

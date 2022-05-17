@@ -16,7 +16,10 @@ from __future__ import absolute_import
 
 import datetime
 import json
+from collections import OrderedDict
+
 from django.conf import settings
+from django.utils.timezone import utc
 
 from freezegun import freeze_time
 
@@ -123,7 +126,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == {'state': 'active'}
 
     def test_activate_subscription_from_terminal_state(self):
@@ -156,7 +159,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "end_of_billing_cycle"}), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == {'state': Subscription.STATES.CANCELED}
 
         subscription = Subscription.objects.get(pk=subscription.pk)
@@ -192,7 +195,7 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.post(url, json.dumps({
             "when": "now"}), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == {'state': 'canceled'}
 
     def test_end_subscription_from_terminal_state(self):
@@ -222,7 +225,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.post(url, content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == {'state': Subscription.STATES.ACTIVE}
 
     def test_reactivate_subscription_from_terminal_state(self):
@@ -261,7 +264,7 @@ class TestSubscriptionEndpoint(APITestCase):
             domain = full_url.split('/')[2]
             full_url = full_url.split(domain)[0] + domain + url
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response['link'] == \
             ('<' + full_url + '?page=2>; rel="next", ' +
              '<' + full_url + '?page=1>; rel="first", ' +
@@ -269,7 +272,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.get(url + '?page=2')
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response['link'] == \
             ('<' + full_url + '>; rel="prev", ' +
              '<' + full_url + '?page=1>; rel="first", ' +
@@ -292,18 +295,18 @@ class TestSubscriptionEndpoint(APITestCase):
         response = self.client.get(url + reference)
 
         assert len(response.data) == 1
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         reference = '?reference=' + ','.join(references)
         response = self.client.get(url + reference)
 
         assert len(response.data) == 3
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         reference = '?reference=' + ','.join(references[:-1]) + ',invalid'
         response = self.client.get(url + reference)
         assert len(response.data) == 2
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
 
         for subscription_data in response.data:
             subscription = Subscription.objects.get(id=subscription_data['id'])
@@ -318,7 +321,7 @@ class TestSubscriptionEndpoint(APITestCase):
 
         response = self.client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == spec_subscription(subscription, detail=True)
 
     def test_get_subscription_detail_unexisting(self):
@@ -332,6 +335,7 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data == {u'detail': u'Not found.'}
 
+    @freeze_time('2022-05-02')
     def test_create_subscription_mf_units_log_active_sub(self):
         subscription = SubscriptionFactory.create()
         metered_feature = MeteredFeatureFactory.create()
@@ -349,28 +353,38 @@ class TestSubscriptionEndpoint(APITestCase):
         date = str(datetime.date.today())
 
         response = self.client.patch(url, json.dumps({
-            "count": 150,
+            "consumed_units": '150.0000',
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 150}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '150.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A successive request
 
         response = self.client.patch(url, json.dumps({
-            "count": 29,
+            "consumed_units": 29,
             "date": date,
             "update_type": "relative"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 179}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '179.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
 
-    @freeze_time('2017-01-01')
-    def test_create_subscription_mf_units_log_sub_canceled_at_end_of_month(self):
-        subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
-                                                  start_date=datetime.date(2016, 1, 1),
-                                                  cancel_date=datetime.date(2017, 1, 31))
+    @freeze_time('2022-05-02')
+    def test_create_subscription_mf_units_log_with_annotation(self):
+        subscription = SubscriptionFactory.create()
         metered_feature = MeteredFeatureFactory.create()
 
         subscription.plan.metered_features.add(metered_feature)
@@ -386,28 +400,233 @@ class TestSubscriptionEndpoint(APITestCase):
         date = str(datetime.date.today())
 
         response = self.client.patch(url, json.dumps({
-            "count": 150,
+            "consumed_units": '150.0000',
+            "date": date,
+            "update_type": "absolute",
+            "annotation": "test",
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '150.0000',
+            'annotation': "test",
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A successive relative request
+
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": 29,
+            "date": date,
+            "update_type": "relative",
+            "annotation": "test",
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '179.0000',
+            'annotation': "test",
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A third request on a different annotation
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": 42,
+            "date": date,
+            "update_type": "relative",
+            "annotation": "different",
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '42.0000',
+            'annotation': "different",
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A forth request with no annotation
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": 99,
+            "date": date,
+            "update_type": "absolute",
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '99.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A fifth GET request with all buckets
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == [
+            OrderedDict([
+                ('consumed_units', '99.0000'),
+                ('start_datetime', '2022-05-02T00:00:00Z'),
+                ('end_datetime', '2022-05-31T23:59:59Z'),
+                ('annotation', None)
+            ]),
+            OrderedDict([
+                ('consumed_units', '42.0000'),
+                ('start_datetime', '2022-05-02T00:00:00Z'),
+                ('end_datetime', '2022-05-31T23:59:59Z'),
+                ('annotation', 'different')
+            ]),
+            OrderedDict([
+                ('consumed_units', '179.0000'),
+                ('start_datetime', '2022-05-02T00:00:00Z'),
+                ('end_datetime', '2022-05-31T23:59:59Z'),
+                ('annotation', 'test')
+            ]),
+        ]
+
+    @freeze_time('2022-05-15')
+    def test_create_subscription_mf_units_log_with_end_log(self):
+        subscription = SubscriptionFactory.create(
+            start_date=datetime.date(2022, 5, 2),
+        )
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        date = str(datetime.date.today())
+
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": '150.0000',
+            "date": date,
+            "update_type": "absolute",
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '150.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A second relative request with end bucket
+
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": 29,
+            "date": date,
+            "update_type": "relative",
+            "end_log": True,
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '179.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-15T00:00:00Z',
+        }
+
+        # A third request matching a new bucket in the same month
+
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": 50,
+            "date": str(datetime.date.today() + datetime.timedelta(days=1)),
+            "update_type": "absolute",
+            "end_log": True,
+        }), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '50.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-15T00:00:01Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A forth GET request with all buckets
+        response = self.client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == [
+            OrderedDict(
+                [('consumed_units', '179.0000'),
+                 ('start_datetime', '2022-05-02T00:00:00Z'),
+                 ('end_datetime', '2022-05-15T00:00:00Z'),
+                 ('annotation', None)]
+            ),
+            OrderedDict(
+                [('consumed_units', '50.0000'),
+                 ('start_datetime', '2022-05-15T00:00:01Z'),
+                 ('end_datetime', '2022-05-31T23:59:59Z'),
+                 ('annotation', None)]
+            ),
+        ]
+
+    @freeze_time('2022-05-02')
+    def test_create_subscription_mf_units_log_sub_canceled_at_end_of_month(self):
+        subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
+                                                  start_date=datetime.date(2022, 5, 2),
+                                                  cancel_date=datetime.date(2022, 5, 31))
+        metered_feature = MeteredFeatureFactory.create()
+
+        subscription.plan.metered_features.add(metered_feature)
+
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('mf-log-units',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk,
+                              'mf_product_code': metered_feature.product_code})
+
+        date = str(datetime.date.today())
+
+        response = self.client.patch(url, json.dumps({
+            "consumed_units": '150.0000',
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 150}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '150.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A successive request
 
         response = self.client.patch(url, json.dumps({
-            "count": 29,
+            "consumed_units": 29,
             "date": date,
             "update_type": "relative"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 179}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '179.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
 
-    @freeze_time('2017-01-01')
+    @freeze_time('2022-05-02')
     def test_create_subscription_mf_units_log_with_sub_canceled_now(self):
         subscription = SubscriptionFactory.create(state=Subscription.STATES.CANCELED,
-                                                  start_date=datetime.date(2016, 1, 1),
-                                                  cancel_date=datetime.date(2017, 1, 1))
+                                                  start_date=datetime.date(2022, 5, 2),
+                                                  cancel_date=datetime.date(2022, 5, 2))
         metered_feature = MeteredFeatureFactory.create()
         subscription.plan.metered_features.add(metered_feature)
 
@@ -419,22 +638,34 @@ class TestSubscriptionEndpoint(APITestCase):
         date = str(datetime.date.today())
 
         response = self.client.patch(url, json.dumps({
-            "count": 150,
+            "consumed_units": '150.0000',
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 150}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '150.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
+
+        # A successive request
 
         response = self.client.patch(url, json.dumps({
-            "count": 29,
+            "consumed_units": 29,
             "date": date,
             "update_type": "relative"
         }), content_type='application/json')
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {'count': 179}
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {
+            "consumed_units": '179.0000',
+            'annotation': None,
+            'start_datetime': '2022-05-02T00:00:00Z',
+            'end_datetime': '2022-05-31T23:59:59Z',
+        }
 
     @freeze_time('2017-01-01')
     def test_create_subscription_mf_units_log_with_sub_canceled_before(self):
@@ -452,7 +683,7 @@ class TestSubscriptionEndpoint(APITestCase):
         date = str(datetime.date.today())
 
         response = self.client.patch(url, json.dumps({
-            "count": 150,
+            "consumed_units": '150.0000',
             "date": date,
             "update_type": "absolute"
         }), content_type='application/json')
@@ -521,7 +752,7 @@ class TestSubscriptionEndpoint(APITestCase):
                               'mf_product_code': metered_feature.product_code})
 
         response = self.client.patch(url, json.dumps({
-            "count": 150,
+            "consumed_units": '150.0000',
             "date": "2008-12-24",
             "update_type": "absolute"
         }), content_type='application/json')
@@ -543,18 +774,13 @@ class TestSubscriptionEndpoint(APITestCase):
                               'customer_pk': subscription.customer.pk,
                               'mf_product_code': metered_feature.product_code})
 
-        data = {
-            "count": 150,
-            "date": "2008-12-24",
-            "update_type": "absolute"
-        }
+        data = {}
 
-        for field in data:
-            data_copy = data.copy()
-            data_copy.pop(field)
+        response = self.client.patch(url, json.dumps(data),
+                                     content_type='application/json')
 
-            response = self.client.patch(url, json.dumps(data_copy),
-                                         content_type='application/json')
-
-            assert response.status_code == status.HTTP_400_BAD_REQUEST
-            assert response.data == {field: ['This field is required.']}
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {
+            "consumed_units": ['This field is required.'],
+            'date': ['This field is required.'],
+            'update_type': ['This field is required.']}

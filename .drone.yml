@@ -9,7 +9,9 @@
    "services": [
       {
          "command": [
-            "--character-set-server=utf8mb4"
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--default-storage-engine=InnoDB"
          ],
          "environment": {
             "MYSQL_DATABASE": "test_db",
@@ -111,7 +113,9 @@
    "services": [
       {
          "command": [
-            "--character-set-server=utf8mb4"
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--default-storage-engine=InnoDB"
          ],
          "environment": {
             "MYSQL_DATABASE": "test_db",
@@ -213,7 +217,9 @@
    "services": [
       {
          "command": [
-            "--character-set-server=utf8mb4"
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--default-storage-engine=InnoDB"
          ],
          "environment": {
             "MYSQL_DATABASE": "test_db",
@@ -315,7 +321,9 @@
    "services": [
       {
          "command": [
-            "--character-set-server=utf8mb4"
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--default-storage-engine=InnoDB"
          ],
          "environment": {
             "MYSQL_DATABASE": "test_db",
@@ -408,6 +416,6 @@
 }
 ---
 kind: signature
-hmac: 34fb8b2fc2223e640dc5029e90ee3c7c3758e30398183738b6fd4b9647c2b81c
+hmac: beee66896031cb6802633da0a02d083cff16b93f6787729fd5d58b5710e543e0
 
 ...

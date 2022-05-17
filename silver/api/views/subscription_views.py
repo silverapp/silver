@@ -19,6 +19,9 @@ import logging
 
 from decimal import Decimal
 
+import dateutil
+import dateutil.parser
+
 from annoying.functions import get_object_or_None
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -264,7 +267,7 @@ class MeteredFeatureUnitsLogDetail(APIView):
             return Response({"detail": "Subscription is %s." % subscription.state},
                             status=status.HTTP_403_FORBIDDEN)
 
-        required_fields = ['date', 'count', 'update_type']
+        required_fields = ['consumed_units', 'date', 'update_type']
         provided_fields = {}
         errors = {}
         for field in required_fields:
@@ -280,34 +283,38 @@ class MeteredFeatureUnitsLogDetail(APIView):
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-        date = request.data['date']
-        consumed_units = request.data['count']
+        consumed_units = request.data['consumed_units']
+        annotation = request.data.get('annotation')
         update_type = request.data['update_type']
+        end_log = request.data.get('end_log', False)
 
         consumed_units = Decimal(consumed_units)
 
+        log_datetime = request.data['date']
+
         try:
-            date = datetime.datetime.strptime(date,
-                                              '%Y-%m-%d').date()
+            log_datetime = dateutil.parser.isoparse(log_datetime).replace(microsecond=0)
+            if timezone.is_naive(log_datetime):
+                log_datetime = timezone.make_aware(log_datetime, timezone.utc)
         except TypeError:
             return Response({'detail': 'Invalid date format. Please '
                             'use the ISO 8601 date format.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if date < subscription.start_date:
+        if log_datetime.date() < subscription.start_date:
             return Response({"detail": "Date is out of bounds."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        bsd = subscription.bucket_start_date(date)
-        bed = subscription.bucket_end_date(date)
-        if not bsd or not bed:
+        bsdt = subscription.bucket_start_datetime(log_datetime)
+        bedt = subscription.bucket_end_datetime(log_datetime)
+        if not bsdt or not bedt:
             return Response(
                 {'detail': 'An error has been encountered.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         interval = next(
             (i for i in subscription.updateable_buckets()
-                if i['start_date'] == bsd and i['end_date'] == bed),
+                if i['start_date'] == bsdt.date() and i['end_date'] == bedt.date()),
             None)
 
         if not interval:
@@ -323,26 +330,48 @@ class MeteredFeatureUnitsLogDetail(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        log = MeteredFeatureUnitsLog.objects.filter(
-            start_date=bsd,
-            end_date=bed,
+        logs = MeteredFeatureUnitsLog.objects.filter(
+            start_datetime__gte=bsdt,
+            end_datetime__lte=bedt,
             metered_feature=metered_feature.pk,
-            subscription=subscription_pk
-        ).first()
+            subscription=subscription_pk,
+            annotation=annotation
+        )
 
-        if log is not None:
+        matching_log = None
+        for log in logs:
+            if log.start_datetime <= log_datetime <= log.end_datetime:
+                matching_log = log
+                break
+
+        if matching_log:
+            if end_log:
+                matching_log.end_datetime = log_datetime
+                matching_log.save()
+
             if update_type == 'absolute':
-                log.consumed_units = consumed_units
+                matching_log.consumed_units = consumed_units
             elif update_type == 'relative':
-                log.consumed_units += consumed_units
-            log.save()
+                matching_log.consumed_units += consumed_units
+
+            matching_log.save()
         else:
-            log = MeteredFeatureUnitsLog.objects.create(
+            start_datetime = max([
+                bsdt,
+                *[log.end_datetime + datetime.timedelta(seconds=1)
+                  for log in logs if log.end_datetime < bedt]
+            ])
+
+            matching_log = MeteredFeatureUnitsLog.objects.create(
                 metered_feature=metered_feature,
                 subscription=subscription,
-                start_date=bsd,
-                end_date=bed,
-                consumed_units=consumed_units
+                start_datetime=start_datetime,
+                end_datetime=bedt,
+                consumed_units=consumed_units,
+                annotation=annotation,
             )
-        return Response({"count": log.consumed_units},
-                        status=status.HTTP_200_OK)
+
+        return Response(
+            MFUnitsLogSerializer(matching_log).data,
+            status=status.HTTP_200_OK
+        )

@@ -89,7 +89,9 @@ local Pipeline(python_version, django_version) = {
                 "MYSQL_USER": "silver"
             },
             "command": [
-                "--character-set-server=utf8mb4"
+                "--character-set-server=utf8mb4",
+                "--collation-server=utf8mb4_unicode_ci",
+                "--default-storage-engine=InnoDB"
             ]
         },
         {
