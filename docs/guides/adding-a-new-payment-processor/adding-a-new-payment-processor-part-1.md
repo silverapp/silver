@@ -192,8 +192,6 @@ class TriggeredPaymentProcessor(PaymentProcessorBase, TriggeredProcessorMixin):
             transaction.cancel()
         elif status == 'refunded':
             transaction.refund()
-
-        transaction.save()
 ```
 
 You can specify codes and reason messages for the sad path transitions (fail, cancel, refund).

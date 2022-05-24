@@ -64,7 +64,6 @@ class TestInvoice(TestCase):
         assert clone.provider == invoice.provider
 
         assert clone.currency == invoice.currency
-        assert clone._last_state == clone.state
         assert clone.pk != invoice.pk
         assert clone.id != invoice.id
         assert not clone.pdf

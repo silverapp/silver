@@ -106,7 +106,7 @@ def pay_transaction_view(request, transaction, expired=None):
                       })
 
     transaction.last_access = timezone.now()
-    transaction.save()
+    transaction.save(update_fields=transaction.get_unsaved_fields())
 
     try:
         return view(request)

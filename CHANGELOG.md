@@ -5,9 +5,11 @@
 Some of these changes are considered to be breaking and were marked with **(BREAKING)**.
 Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 
-- Fixed a race condition when paying invoices. (not yet)
+- Fixed a race condition when paying invoices, by using DB locks. (hopefully)
 
 ### General
+- Transactions will automatically save when they transition to another state (`transaction.settle()` will also call `transaction.save()`). **(WARNING)**
+- Transactions will automatically be validated upon save (`transaction.save()` will also call `transaction.full_clean()`). **(WARNING)**
 - MeteredFeatureUnitsLogs can now be annotated. This is a way to separate units from different sources, that use the 
   same metered feature.
 - Replaced MeteredFeatureUnitsLogs `start_date` and `end_date` fields with `start_datetime` and `end_datetime` **(BREAKING)**:

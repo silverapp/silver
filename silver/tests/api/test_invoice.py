@@ -351,7 +351,7 @@ def test_edit_invoice_in_issued_state(authenticated_api_client):
     invoice.issue()
 
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
-    data = {"description": "New Page views"}
+    data = {"currency": "EUR"}
     response = authenticated_api_client.patch(url, data=json.dumps(data),
                                               content_type='application/json')
 
@@ -367,7 +367,7 @@ def test_edit_invoice_in_canceled_state(authenticated_api_client):
     invoice.cancel()
 
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
-    data = {"description": "New Page views"}
+    data = {"currency": "EUR"}
     response = authenticated_api_client.patch(url, data=json.dumps(data),
                                               content_type='application/json')
 
@@ -383,7 +383,7 @@ def test_edit_invoice_in_paid_state(authenticated_api_client):
     invoice.pay()
 
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
-    data = {"description": "New Page views"}
+    data = {"currency": "EUR"}
     response = authenticated_api_client.patch(url, data=json.dumps(data),
                                               content_type='application/json')
 

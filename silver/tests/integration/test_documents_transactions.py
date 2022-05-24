@@ -33,7 +33,6 @@ class TestDocumentsTransactions(TestCase):
             state=Transaction.States.Pending
         )
         transaction.settle()
-        transaction.save()
 
         proforma = transaction.proforma
         invoice = transaction.invoice
@@ -209,7 +208,6 @@ class TestDocumentsTransactions(TestCase):
         # DB due to the way transition callbacks and saves are called
 
         transaction.settle()
-        transaction.save()
 
         self.assertEqual(proforma.state, proforma.STATES.PAID)
 
@@ -234,7 +232,6 @@ class TestDocumentsTransactions(TestCase):
         # if the transition callbacks would be handled in post_save
 
         transaction.settle()
-        transaction.save()
 
         transaction.refresh_from_db()
 
@@ -251,7 +248,6 @@ class TestDocumentsTransactions(TestCase):
         transaction.invoice.pay()
 
         transaction.settle()
-        transaction.save()
 
         transaction.invoice.refresh_from_db()
         transaction.refresh_from_db()

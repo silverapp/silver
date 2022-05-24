@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django_fsm import FSMField, TransitionNotAllowed, post_transition
+from django_fsm import FSMField, TransitionNotAllowed
 from model_utils import Choices
 
 from django.apps import apps
@@ -47,7 +47,8 @@ from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.pdf import PDF
 from silver.utils.decorators import require_transaction_currency_and_xe_rate
 from silver.utils.international import currencies
-from silver.utils.transition import transactional_transition
+from silver.utils.models import AutoCleanModelMixin
+from silver.utils.transition import locking_atomic_transition
 
 _storage = getattr(settings, 'SILVER_DOCUMENT_STORAGE', None)
 if _storage:
@@ -108,7 +109,7 @@ def get_billing_documents_kinds():
             for subclass in BillingDocumentBase.__subclasses__())
 
 
-class BillingDocumentBase(models.Model):
+class BillingDocumentBase(AutoCleanModelMixin, models.Model):
     objects = BillingDocumentManager.from_queryset(BillingDocumentQuerySet)()
 
     class STATES(object):
@@ -174,8 +175,14 @@ class BillingDocumentBase(models.Model):
 
     is_storno = models.BooleanField(default=False)
 
-    _last_state = None
     _document_entries = None
+
+    # These fields are not allowed to change after issuing the document, or be different in DB when
+    # issuing the document
+    strict_fields = [
+        currency, _total, _total_in_transaction_currency, series, number, customer, provider,
+        is_storno
+    ]
 
     class Meta:
         unique_together = ('kind', 'provider', 'series', 'number')
@@ -190,8 +197,6 @@ class BillingDocumentBase(models.Model):
             for subclass in BillingDocumentBase.__subclasses__():
                 if subclass.__name__.lower() == self.kind:
                     self.__class__ = subclass
-
-        self._last_state = self.state
 
     def _get_entries(self):
         if not self._document_entries:
@@ -249,12 +254,8 @@ class BillingDocumentBase(models.Model):
         self._total = self.compute_total()
         self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
 
-    @transactional_transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
+    @locking_atomic_transition(field=state, source=STATES.DRAFT, target=STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
-        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.DRAFT:
-            raise TransitionNotAllowed
-
         self._issue(issue_date=issue_date, due_date=due_date)
 
     def _pay(self, paid_date=None):
@@ -263,12 +264,8 @@ class BillingDocumentBase(models.Model):
         if not self.paid_date and not paid_date:
             self.paid_date = timezone.now().date()
 
-    @transactional_transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
+    @locking_atomic_transition(field=state, source=STATES.ISSUED, target=STATES.PAID)
     def pay(self, paid_date=None):
-        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.ISSUED:
-            raise TransitionNotAllowed
-
         self._pay(paid_date)
 
     def _cancel(self, cancel_date=None):
@@ -277,12 +274,8 @@ class BillingDocumentBase(models.Model):
         if not self.cancel_date and not cancel_date:
             self.cancel_date = timezone.now().date()
 
-    @transactional_transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
+    @locking_atomic_transition(field=state, source=STATES.ISSUED, target=STATES.CANCELED)
     def cancel(self, cancel_date=None):
-        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.ISSUED:
-            raise TransitionNotAllowed
-
         self._cancel(cancel_date=cancel_date)
 
     def sync_related_document_state(self):
@@ -332,30 +325,32 @@ class BillingDocumentBase(models.Model):
 
         return clone
 
+    def full_clean(self, *args, **kwargs):
+        self.clean_defaults()
+
+        super().full_clean(*args, **kwargs)
+
     def clean(self):
         super(BillingDocumentBase, self).clean()
 
-        # The only change that is allowed if the document is in issued state
-        # is the state chage from issued to paid
-        # !! TODO: If _last_state == 'issued' and self.state == 'paid' || 'canceled'
-        # it should also be checked that the other fields are the same bc.
-        # right now a document can be in issued state and someone could
-        # send a request which contains the state = 'paid' and also send
-        # other changed fields and the request would be accepted bc. only
-        # the state is verified.
-        if self._last_state == self.STATES.ISSUED and\
-           self.state not in [self.STATES.PAID, self.STATES.CANCELED]:
-            msg = 'You cannot edit the document once it is in issued state.'
-            raise ValidationError({NON_FIELD_ERRORS: msg})
+        # Some fields should not be allowed to change after the document transitions to certain
+        # states.
+        # @Incomplete ToDo: Needs more strict checking.
+        fields_allowed_to_change = {'state', 'related_document', 'paid_date', 'cancel_date'}
+        if set(self.get_unsaved_fields()) - fields_allowed_to_change:
+            if self.saved_state.get('state') == self.STATES.ISSUED and\
+               self.state not in [self.STATES.PAID, self.STATES.CANCELED]:
+                msg = 'You cannot edit the document once it is in issued state.'
+                raise ValidationError({NON_FIELD_ERRORS: msg})
 
-        if self._last_state == self.STATES.CANCELED:
-            msg = 'You cannot edit the document once it is in canceled state.'
-            raise ValidationError({NON_FIELD_ERRORS: msg})
+            if self.saved_state.get('state') == self.STATES.CANCELED:
+                msg = 'You cannot edit the document once it is in canceled state.'
+                raise ValidationError({NON_FIELD_ERRORS: msg})
 
-        # If it's in paid state => don't allow any changes
-        if self._last_state == self.STATES.PAID:
-            msg = 'You cannot edit the document once it is in paid state.'
-            raise ValidationError(msg)
+            # If it's in paid state => don't allow any changes
+            if self.saved_state.get('state') == self.STATES.PAID:
+                msg = 'You cannot edit the document once it is in paid state.'
+                raise ValidationError(msg)
 
         if self.transactions.exclude(currency=self.transaction_currency).exists():
             message = 'There are unfinished transactions of this document that use a ' \
@@ -380,10 +375,6 @@ class BillingDocumentBase(models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
     def save(self, *args, **kwargs):
-        # ToDo: Use AutoCleanModelMixin for this class and move clean_defaults() call
-        # to full_clean
-        self.clean_defaults()
-
         self._last_state = self.state
 
         with db_transaction.atomic():
@@ -646,17 +637,6 @@ def create_transaction_for_document(document):
             continue
 
 
-@receiver(post_transition)
-def post_transition_callback(sender, instance, name, source, target, **kwargs):
-    if not isinstance(instance, BillingDocumentBase):
-        return
-
-    document = instance
-    setattr(document, '.recently_transitioned', target)
-
-    document.save()
-
-
 @receiver(post_save)
 def post_document_save(sender, instance, created=False, **kwargs):
     if not isinstance(instance, BillingDocumentBase):
@@ -664,11 +644,11 @@ def post_document_save(sender, instance, created=False, **kwargs):
 
     document = instance
 
-    if not hasattr(document, '.recently_transitioned'):
+    if not hasattr(document, 'state_recently_transitioned_to'):
         return
 
     # The document has been transitioned before being saved
-    delattr(document, '.recently_transitioned')
+    delattr(document, 'state_recently_transitioned_to')
 
     # Transition related document too, if needed
     document.sync_related_document_state()
