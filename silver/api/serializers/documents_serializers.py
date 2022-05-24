@@ -188,10 +188,7 @@ class InvoiceSerializer(AutoCleanSerializerMixin,
     def validate(self, data):
         data = super(InvoiceSerializer, self).validate(data)
 
-        if self.instance:
-            self.instance.clean()
-
-        if self.instance and data['state'] != self.instance.state:
+        if self.instance and 'state' in data and data['state'] != self.instance.state:
             msg = "Direct state modification is not allowed." \
                   " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)
@@ -266,7 +263,7 @@ class ProformaSerializer(AutoCleanSerializerMixin,
     def validate(self, data):
         data = super(ProformaSerializer, self).validate(data)
 
-        if self.instance and data['state'] != self.instance.state:
+        if self.instance and 'state' in data and data['state'] != self.instance.state:
             msg = "Direct state modification is not allowed." \
                   " Use the corresponding endpoint to update the state."
             raise serializers.ValidationError(msg)

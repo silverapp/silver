@@ -98,7 +98,6 @@ class TransactionAction(APIView):
 
         try:
             errors = action_to_execute()
-            transaction.save()
         except TransitionNotAllowed:
             errors = "Can't execute action because the transaction is in an " \
                      "incorrect state: {}".format(transaction.state)

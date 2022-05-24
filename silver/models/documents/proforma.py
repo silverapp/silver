@@ -25,7 +25,7 @@ from silver.models.documents.base import (
     BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet)
 from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.invoice import Invoice
-from silver.utils.transition import transactional_transition
+from silver.utils.transition import locking_atomic_transition
 
 
 class ProformaManager(BillingDocumentManager):
@@ -70,27 +70,19 @@ class Proforma(BillingDocumentBase):
                                      'provider.'}
                 raise ValidationError(err_msg)
 
-    @transactional_transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
-                              target=BillingDocumentBase.STATES.ISSUED)
+    @locking_atomic_transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
+                               target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
-        locked_self = Proforma.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.DRAFT:
-            raise TransitionNotAllowed
-
         self.archived_provider = self.provider.get_archivable_field_values()
 
         self._issue(issue_date, due_date)
 
-    @transactional_transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
-                              target=BillingDocumentBase.STATES.PAID)
+    @locking_atomic_transition(field='state', source=BillingDocumentBase.STATES.ISSUED,
+                               target=BillingDocumentBase.STATES.PAID)
     def pay(self, paid_date=None):
-        locked_self = Proforma.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.ISSUED:
-            raise TransitionNotAllowed
-
         self._pay(paid_date)
 
-        if not self.related_document and not locked_self.related_document:
+        if not self.related_document:
             self.related_document = self._new_invoice()
             self.save()
 

@@ -137,13 +137,11 @@ class PaymentMethod(models.Model):
                 except TransitionNotAllowed:
                     errors.append("Transaction {} couldn't be canceled".format(transaction.uuid))
 
-            if transaction.state == Transaction.States.Pending:
+            elif transaction.state == Transaction.States.Pending:
                 payment_processor = self.get_payment_processor()
                 if (hasattr(payment_processor, 'void_transaction') and
                         not payment_processor.void_transaction(transaction)):
                     errors.append("Transaction {} couldn't be voided".format(transaction.uuid))
-
-            transaction.save()
 
         if errors:
             return errors

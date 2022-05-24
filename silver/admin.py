@@ -1222,7 +1222,6 @@ class TransactionAdmin(ModelAdmin):
         for transaction in queryset:
             try:
                 method(transaction)
-                transaction.save()
             except TransitionNotAllowed:
                 failed_count += 1
 

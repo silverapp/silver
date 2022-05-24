@@ -106,7 +106,6 @@ class TestProforma(TransactionTestCase):
         assert clone.provider == proforma.provider
 
         assert clone.currency == proforma.currency
-        assert clone._last_state == clone.state
         assert clone.pk != proforma.pk
         assert clone.id != proforma.id
         assert not clone.pdf
@@ -201,6 +200,4 @@ class TestProforma(TransactionTestCase):
         self.assertEqual(proforma.transaction_currency, 'EUR')
 
     def test_proforma_is_storno_not_allowed(self):
-        proforma = ProformaFactory.create(is_storno=True)
-
-        self.assertRaises(ValidationError, proforma.clean)
+        self.assertRaises(ValidationError, lambda: ProformaFactory.create(is_storno=True))

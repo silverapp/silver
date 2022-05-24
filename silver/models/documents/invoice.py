@@ -18,14 +18,13 @@ from django.apps import apps
 from django.db import transaction
 from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
-from django_fsm import TransitionNotAllowed
 
 from silver.models.documents.base import (
     BillingDocumentBase, BillingDocumentManager, BillingDocumentQuerySet
 )
 from silver.models.documents.entries import DocumentEntry
 from silver.models.billing_entities import Provider
-from silver.utils.transition import transactional_transition
+from silver.utils.transition import locking_atomic_transition
 
 
 class InvoiceManager(BillingDocumentManager):
@@ -53,13 +52,9 @@ class Invoice(BillingDocumentBase):
     def transactions(self):
         return self.invoice_transactions.all()
 
-    @transactional_transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
-                              target=BillingDocumentBase.STATES.ISSUED)
+    @locking_atomic_transition(field='state', source=BillingDocumentBase.STATES.DRAFT,
+                               target=BillingDocumentBase.STATES.ISSUED)
     def issue(self, issue_date=None, due_date=None):
-        locked_self = self.__class__.objects.filter(id=self.id).select_for_update().first()
-        if locked_self.state != BillingDocumentBase.STATES.DRAFT:
-            raise TransitionNotAllowed
-
         self.archived_provider = self.provider.get_archivable_field_values()
 
         super(Invoice, self)._issue(issue_date, due_date)

@@ -414,7 +414,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A successive relative request
+        # A successive relative patch request
 
         response = self.client.patch(url, json.dumps({
             "consumed_units": 29,
@@ -431,7 +431,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A third request on a different annotation
+        # A third patch request on a different annotation
         response = self.client.patch(url, json.dumps({
             "consumed_units": 42,
             "date": date,
@@ -447,7 +447,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A forth request with no annotation
+        # A fourth patch request with no annotation
         response = self.client.patch(url, json.dumps({
             "consumed_units": 99,
             "date": date,
@@ -462,7 +462,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A fifth GET request with all buckets
+        # A fifth GET request for all buckets
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK, response.data
@@ -520,7 +520,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A second relative request with end bucket
+        # A second relative patch request with end bucket
 
         response = self.client.patch(url, json.dumps({
             "consumed_units": 29,
@@ -537,7 +537,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-15T00:00:00Z',
         }
 
-        # A third request matching a new bucket in the same month
+        # A third patch request matching a new bucket in the same month
 
         response = self.client.patch(url, json.dumps({
             "consumed_units": 50,
@@ -554,7 +554,7 @@ class TestSubscriptionEndpoint(APITestCase):
             'end_datetime': '2022-05-31T23:59:59Z',
         }
 
-        # A forth GET request with all buckets
+        # A fourth GET request for all buckets
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK, response.data

@@ -351,7 +351,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.issue()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
-        data = {"description": "New Page views"}
+        data = {"currency": "EUR"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 
@@ -365,7 +365,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.cancel()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
-        data = {"description": "New Page views"}
+        data = {"currency": "EUR"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 
@@ -379,7 +379,7 @@ class TestProformaEndpoints(APITestCase):
         proforma.pay()
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
-        data = {"description": "New Page views"}
+        data = {"currency": "EUR"}
         response = self.client.patch(url, data=json.dumps(data),
                                      content_type='application/json')
 

@@ -19,9 +19,8 @@ import logging
 
 from decimal import Decimal
 
-from annoying.functions import get_object_or_None
 from django.core.serializers.json import DjangoJSONEncoder
-from django_fsm import FSMField, post_transition, transition
+from django_fsm import FSMField
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -37,12 +36,12 @@ from silver.models import Invoice, Proforma
 from silver.models.transactions.codes import FAIL_CODES, REFUND_CODES, CANCEL_CODES
 from silver.utils.international import currencies
 from silver.utils.models import AutoDateTimeField, AutoCleanModelMixin
+from silver.utils.transition import locking_atomic_transition
 
 logger = logging.getLogger(__name__)
 
 
-class Transaction(AutoCleanModelMixin,
-                  models.Model):
+class Transaction(AutoCleanModelMixin, models.Model):
     _provider = None
 
     amount = models.DecimalField(
@@ -108,6 +107,8 @@ class Transaction(AutoCleanModelMixin,
         null=True, blank=True
     )
 
+    strict_fields = [amount, currency, payment_method]
+
     @property
     def final_fields(self):
         fields = ['proforma', 'invoice', 'uuid', 'payment_method', 'amount',
@@ -120,28 +121,28 @@ class Transaction(AutoCleanModelMixin,
 
         super(Transaction, self).__init__(*args, **kwargs)
 
-    @transition(field=state, source=States.Initial, target=States.Pending)
+    @locking_atomic_transition(field=state, source=States.Initial, target=States.Pending)
     def process(self):
         pass
 
-    @transition(field=state, source=[States.Initial, States.Pending],
-                target=States.Settled)
+    @locking_atomic_transition(field=state,
+                               source=[States.Initial, States.Pending], target=States.Settled)
     def settle(self):
         pass
 
-    @transition(field=state, source=[States.Initial, States.Pending],
-                target=States.Canceled)
+    @locking_atomic_transition(field=state,
+                               source=[States.Initial, States.Pending], target=States.Canceled)
     def cancel(self, cancel_code='default', cancel_reason='Unknown cancel reason'):
         self.cancel_code = cancel_code
         logger.error(str(cancel_reason))
 
-    @transition(field=state, source=[States.Initial, States.Pending],
-                target=States.Failed)
+    @locking_atomic_transition(field=state,
+                               source=[States.Initial, States.Pending], target=States.Failed)
     def fail(self, fail_code='default', fail_reason='Unknown fail reason'):
         self.fail_code = fail_code
         logger.error(str(fail_reason))
 
-    @transition(field=state, source=States.Settled, target=States.Refunded)
+    @locking_atomic_transition(field=state, source=States.Settled, target=States.Refunded)
     def refund(self, refund_code='default', refund_reason='Unknown refund reason'):
         self.refund_code = refund_code
         logger.error(str(refund_reason))
@@ -149,7 +150,7 @@ class Transaction(AutoCleanModelMixin,
     @transaction.atomic()
     def save(self, *args, **kwargs):
         if not self.pk:
-            # Creating a new Transaction so we lock the DB rows for related billing documents and
+            # Creating a new Transaction, so we lock the DB rows for related billing documents and
             # transactions
             if self.proforma:
                 Proforma.objects.select_for_update().filter(pk=self.proforma.pk)
@@ -290,18 +291,12 @@ class Transaction(AutoCleanModelMixin,
         return force_str(self.uuid)
 
 
-@receiver(post_transition)
-def post_transition_callback(sender, instance, name, source, target, **kwargs):
-    if issubclass(sender, Transaction):
-        setattr(instance, '.recently_transitioned', target)
-
-
 @receiver(post_save, sender=Transaction)
 def post_transaction_save(sender, instance, **kwargs):
     transaction = instance
 
-    if hasattr(transaction, '.recently_transitioned'):
-        delattr(transaction, '.recently_transitioned')
+    if hasattr(transaction, 'state_recently_transitioned_to'):
+        delattr(transaction, 'state_recently_transitioned_to')
         transaction.update_document_state()
 
     if hasattr(transaction, '.cleaned'):
