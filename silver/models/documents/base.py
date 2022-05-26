@@ -239,7 +239,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
             if due_date:
                 self.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
             elif not self.due_date and not due_date:
-                delta = timedelta(days=PAYMENT_DUE_DAYS)
+                delta = timedelta(days=self.customer.payment_due_days or PAYMENT_DUE_DAYS)
                 self.due_date = timezone.now().date() + delta
 
         if not self.sales_tax_name:
