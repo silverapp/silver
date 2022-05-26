@@ -101,13 +101,17 @@ class SubscriptionDetail(generics.RetrieveUpdateAPIView):
                                 pk=self.kwargs.get('subscription_pk', None))
         state = sub.state
         meta = request.data.pop('meta', None)
+        reference = request.data.pop('reference', None)
+
         if request.data:
             message = "Cannot update a subscription when it's in %s state." \
                       % state
             return Response({"detail": message},
                             status=status.HTTP_400_BAD_REQUEST)
+
         request.data.clear()
         request.data.update({'meta': meta} if meta else {})
+        request.data.update({'reference': reference} if reference else {})
         return super(SubscriptionDetail, self).patch(request,
                                                      *args, **kwargs)
 

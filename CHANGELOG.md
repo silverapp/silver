@@ -12,6 +12,7 @@ Some of these changes that were considered to be potentially breaking were marke
 - Transactions will automatically be validated upon save (`transaction.save()` will also call `transaction.full_clean()`). **(WARNING)**
 - MeteredFeatureUnitsLogs can now be annotated. This is a way to separate units from different sources, that use the 
   same metered feature.
+- BillingLogs can now be created/edited/deleted from the admin Subscription view. **(WARNING)**
 - Replaced MeteredFeatureUnitsLogs `start_date` and `end_date` fields with `start_datetime` and `end_datetime` **(BREAKING)**:
   - The precission is limited to seconds for practical reasons, meaning microseconds will be stripped. A full day used 
     to be represented by `2022-05-01` to `2022-05-01`, now it will be represented by `2022-05-01T00:00:00Z` to `2022-05-01T23:59:59Z`. **(BREAKING)**
@@ -26,6 +27,7 @@ Some of these changes that were considered to be potentially breaking were marke
 - A `end_log` field (`bool`) may be used to modify the targeted MeteredFeatureUnitLog's end_date into the provided `date`.
   This should help with a usecase when sending units gathered from different time intervals, which should not be mixed 
   together (for some arbitrary reason).
+- The Subscription reference is now allowed to be changed, even after the subscription has been activated.
 
 
 ## 0.11.1 (2021-06-29)
