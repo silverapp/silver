@@ -611,9 +611,9 @@ class Subscription(models.Model):
 
     @transition(field=state, source=STATES.ACTIVE, target=STATES.CANCELED)
     def cancel(self, when):
-        now = timezone.now().date()
-        bsd = self.bucket_start_date()
-        bed = self.bucket_end_date()
+        now = timezone.now()
+        bsdt = self.bucket_start_datetime()
+        bedt = self.bucket_end_datetime()
 
         if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
@@ -622,16 +622,15 @@ class Subscription(models.Model):
                 self.cancel_date = self.cycle_end_date()
         elif when == self.CANCEL_OPTIONS.NOW:
             for metered_feature in self.plan.metered_features.all():
-                log = MeteredFeatureUnitsLog.objects.filter(
-                    start_date=bsd, end_date=bed,
+                MeteredFeatureUnitsLog.objects.filter(
+                    start_datetime__gte=bsdt, end_datetime=bedt,
                     metered_feature=metered_feature.pk,
-                    subscription=self.pk).first()
-                if log:
-                    log.end_datetime = now
-                    log.save()
-            if self.on_trial(now):
-                self.trial_end = now
-            self.cancel_date = now
+                    subscription=self.pk
+                ).update(end_datetime=now)
+
+            if self.on_trial(now.date()):
+                self.trial_end = now.date()
+            self.cancel_date = now.date()
 
         self.save()
 
