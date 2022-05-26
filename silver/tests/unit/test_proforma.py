@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import
 
+import datetime
 import threading
 from decimal import Decimal
 
@@ -41,6 +42,20 @@ class TestProforma(TransactionTestCase):
 
         assert proforma.related_document.state == Invoice.STATES.PAID
         assert proforma.state == Invoice.STATES.PAID
+
+    def test_pay_proforma_with_no_related_invoice_creates_invoice(self):
+        proforma = ProformaFactory.create()
+        proforma.customer.payment_due_days = 30
+        proforma.issue()
+
+        proforma.pay()
+
+        invoice = proforma.related_document
+
+        assert proforma.state == Invoice.STATES.PAID
+        assert invoice.state == Invoice.STATES.PAID
+        assert invoice.total == proforma.total
+        assert invoice.due_date - invoice.issue_date == datetime.timedelta(days=30)
 
     def test_pay_proforma_with_no_related_invoice_race_condition(self):
         if connection.vendor == "sqlite":

@@ -6,16 +6,20 @@ Some of these changes are considered to be breaking and were marked with **(BREA
 Some of these changes that were considered to be potentially breaking were marked with **(WARNING)**.
 
 - Fixed a race condition when paying invoices, by using DB locks. (hopefully)
+- Fixed a case when issuing Invoices (occuring from a paid Proforma) would ignore the customer's `payment_due_date` field
 
 ### General
-- Transactions will automatically save when they transition to another state (`transaction.settle()` will also call `transaction.save()`). **(WARNING)**
-- Transactions will automatically be validated upon save (`transaction.save()` will also call `transaction.full_clean()`). **(WARNING)**
+- Transactions will automatically save when they transition to another state (`transaction.settle()` will also call 
+  `transaction.save()`). **(WARNING)**
+- Transactions will automatically be validated upon save (`transaction.save()` will also call
+  `transaction.full_clean()`). **(WARNING)**
 - MeteredFeatureUnitsLogs can now be annotated. This is a way to separate units from different sources, that use the 
   same metered feature.
 - BillingLogs can now be created/edited/deleted from the admin Subscription view. **(WARNING)**
 - Replaced MeteredFeatureUnitsLogs `start_date` and `end_date` fields with `start_datetime` and `end_datetime` **(BREAKING)**:
   - The precission is limited to seconds for practical reasons, meaning microseconds will be stripped. A full day used 
-    to be represented by `2022-05-01` to `2022-05-01`, now it will be represented by `2022-05-01T00:00:00Z` to `2022-05-01T23:59:59Z`. **(BREAKING)**
+    to be represented by `2022-05-01` to `2022-05-01`, now it will be represented by `2022-05-01T00:00:00Z` to
+    `2022-05-01T23:59:59Z`. **(BREAKING)**
   - They are now made editable from the admin view.
   - They are no longer restricted to the billing interval, but may form any interval inside the billing interval 
     (e.g. half a day during a daily billed subscription). The only restriction is intervals from different related MFULs
