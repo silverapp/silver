@@ -20,6 +20,7 @@ COPY ./requirements /silver/requirements
 RUN set -ex \
     && apk update \
     && apk add --no-cache \
+        freetype-dev \
         mariadb-client \
         libjpeg-turbo \
         jpeg \
