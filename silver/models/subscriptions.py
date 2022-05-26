@@ -393,8 +393,10 @@ class Subscription(models.Model):
                                     ignore_trial=False, granulate=True)
 
     def bucket_start_datetime(self, reference_datetime=None):
+        reference_date = reference_datetime.date() if reference_datetime else None
+
         return datetime.combine(
-            self._cycle_start_date(reference_date=reference_datetime.date(),
+            self._cycle_start_date(reference_date=reference_date,
                                    ignore_trial=False,
                                    granulate=True),
             datetime.min.time(),
@@ -402,8 +404,10 @@ class Subscription(models.Model):
         )
 
     def bucket_end_datetime(self, reference_datetime=None):
+        reference_date = reference_datetime.date() if reference_datetime else None
+
         return datetime.combine(
-            self._cycle_end_date(reference_date=reference_datetime.date(),
+            self._cycle_end_date(reference_date=reference_date,
                                  ignore_trial=False,
                                  granulate=True),
             datetime.max.time(),
