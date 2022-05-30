@@ -189,8 +189,8 @@ class MeteredFeatureUnitsLogInLine(TabularInline):
 class BillingLogInLine(TabularInline):
     model = BillingLog
     fields = ['billing_date', 'plan_billed_up_to', 'metered_features_billed_up_to',
-              'created_at', 'proforma', 'invoice']
-    readonly_fields = ['created_at']
+              'created_at', 'proforma_link', 'invoice_link']
+    readonly_fields = ['created_at', 'proforma_link', 'invoice_link']
     verbose_name = 'Automatic billing log'
     verbose_name_plural = verbose_name
 
