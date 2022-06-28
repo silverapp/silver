@@ -53,7 +53,7 @@ from silver.models import (
     Plan, MeteredFeature, Subscription, Customer, Provider,
     MeteredFeatureUnitsLog, Invoice, DocumentEntry,
     ProductCode, Proforma, BillingLog, BillingDocumentBase,
-    Transaction, PaymentMethod
+    Transaction, PaymentMethod, Discount
 )
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.utils.international import currencies
@@ -710,6 +710,10 @@ class ProformaFilter(SimpleListFilter):
         return queryset
 
 
+class DiscountAdmin(ModelAdmin):
+    pass
+
+
 class BillingDocumentAdmin(ModelAdmin):
     list_display = ['series_number', 'get_customer', 'state',
                     'get_provider', 'issue_date', 'due_date', 'paid_date',
@@ -1354,5 +1358,6 @@ site.register(Customer, CustomerAdmin)
 site.register(Provider, ProviderAdmin)
 site.register(Invoice, InvoiceAdmin)
 site.register(Proforma, ProformaAdmin)
+site.register(Discount, DiscountAdmin)
 site.register(ProductCode)
 site.register(MeteredFeature)
