@@ -20,6 +20,7 @@ import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from functools import reduce
+from typing import Tuple, List
 
 from annoying.functions import get_object_or_None
 from dateutil import rrule
@@ -28,37 +29,24 @@ from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed
 from model_utils import Choices
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
-from django.template import TemplateDoesNotExist
-from django.template.loader import get_template, render_to_string
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.timezone import utc
 from django.utils.translation import gettext_lazy as _
 
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
+from silver.models.fields import field_template_path
 from silver.utils.dates import ONE_DAY, relativedelta, first_day_of_month
 from silver.validators import validate_reference
 
 
 logger = logging.getLogger(__name__)
-
-
-def field_template_path(field, provider=None):
-    if provider:
-        provider_template_path = 'billing_documents/{provider}/{field}.html'.\
-            format(provider=provider, field=field)
-        try:
-            get_template(provider_template_path)
-            return provider_template_path
-        except TemplateDoesNotExist:
-            pass
-    return 'billing_documents/{field}.html'.format(field=field)
 
 
 class MeteredFeatureUnitsLog(models.Model):
@@ -900,38 +888,52 @@ class Subscription(models.Model):
 
         return total
 
-    def _add_plan_value(self, start_date, end_date, invoice=None,
-                        proforma=None):
+    def _add_plan_entries(self, start_date, end_date, invoice=None, proforma=None) \
+            -> Tuple[Decimal, List['silver.models.DocumentEntry']]:
         """
-        Adds to the document the value of the plan.
+        Adds to the document the cost of the plan.
+        :returns: A tuple consisting of:
+            - The plan cost after proration and PER ENTRY discounts have been applied.
+            - A list of entries that have been added to the documents. The first one is the (prorated)
+              cost of the plan, followed by PER ENTRY discount entries if applicable. It is possible
+              that PER DOCUMENT or PER ENTRY TYPE discount entries to be created later down the
+              document generation process.
         """
 
-        prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date)
+        prorated, proration_percentage = self._get_proration_status_and_percent(start_date,
+                                                                                end_date)
 
-        context = self._build_entry_context({
+        plan_price = self.plan.amount * proration_percentage
+
+        base_context = {
             'name': self.plan.name,
             'unit': self.plan.interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
-            'proration_percentage': percent,
+            'proration_percentage': proration_percentage,
+        }
+
+        plan_context = base_context.copy()
+        plan_context.update({
             'context': 'plan'
         })
+
+        context = self._build_entry_context(plan_context)
         description = self._entry_description(context)
-
-        # Get the plan's prorated value
-        plan_price = self.plan.amount * percent
-
         unit = self._entry_unit(context)
 
-        return DocumentEntry.objects.create(
-            invoice=invoice, proforma=proforma, description=description,
-            unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
-            product_code=self.plan.product_code, prorated=prorated,
-            start_date=start_date, end_date=end_date
-        ).total
+        entries = [
+            DocumentEntry.objects.create(
+                invoice=invoice, proforma=proforma, description=description,
+                unit=unit, unit_price=plan_price, quantity=Decimal('1.00'),
+                product_code=self.plan.product_code, prorated=prorated,
+                start_date=start_date, end_date=end_date
+            )
+        ]
+
+        return entries[0].total, entries
 
     def _get_consumed_units(self, metered_feature, proration_percent,
                             start_datetime, end_datetime):
@@ -947,7 +949,8 @@ class Subscription(models.Model):
             return total_consumed_units - included_units
         return 0
 
-    def _add_mfs(self, start_date, end_date, invoice=None, proforma=None):
+    def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None) \
+            -> Tuple[Decimal, List['silver.models.DocumentEntry']]:
         start_datetime = datetime.combine(
             start_date,
             datetime.min.time(),
@@ -974,6 +977,7 @@ class Subscription(models.Model):
         })
 
         mfs_total = Decimal('0.00')
+        entries = []
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
                 metered_feature, percent, start_datetime, end_datetime)
@@ -994,19 +998,20 @@ class Subscription(models.Model):
                 product_code=metered_feature.product_code,
                 start_date=start_date, end_date=end_date
             )
+            entries.append(de)
 
             mfs_total += de.total
 
-        return mfs_total
+        return mfs_total, entries
 
-    def _get_proration_status_and_percent(self, start_date, end_date):
+    def _get_proration_status_and_percent(self, start_date, end_date) -> Tuple[bool, Decimal]:
         """
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
 
-        :returns: a tuple containing (Decimal(percent), status) where status
-            can be one of [True, False]. The decimal value will from the
-            interval [0.00; 1.00].
+        :returns: a tuple containing (status, Decimal(percent)) where status
+            can be one of [True, False]. The Decimal will have values in the
+            [0.00, 1.00] range.
         :rtype: tuple
         """
 

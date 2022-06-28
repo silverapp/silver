@@ -19,3 +19,4 @@ from silver.models.product_codes import ProductCode
 from silver.models.subscriptions import Subscription, MeteredFeatureUnitsLog, BillingLog
 from silver.models.payment_methods import PaymentMethod
 from silver.models.transactions import Transaction
+from silver.models.discounts import Discount

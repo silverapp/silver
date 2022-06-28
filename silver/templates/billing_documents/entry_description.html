@@ -24,6 +24,9 @@
 {% elif context == 'metered-feature-trial-not-discounted' %}
     Extra {{ name }} During Trial ({{ start_date }} - {{ end_date }})
 
+{% elif context == 'discount' %}
+    {{ name }} Discount ({{ start_date }} - {{ end_date }})
+
 {% else %}
     {{ name }} ({{ start_date }} - {{ end_date }}).
 

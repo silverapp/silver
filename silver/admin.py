@@ -725,7 +725,7 @@ class BillingDocumentAdmin(ModelAdmin):
     provider_search_fields = ['provider__{field}'.format(field=field)
                               for field in common_fields + ['name']]
     search_fields = (customer_search_fields + provider_search_fields +
-                     ['series', 'number', '_total', '_total_in_transaction_currency'])
+                     ['series', 'number', '_total', '_total_in_transaction_currency', 'id'])
 
     date_hierarchy = 'issue_date'
 

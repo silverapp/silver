@@ -95,9 +95,10 @@ class Invoice(BillingDocumentBase):
                 transaction_currency=self.transaction_currency,
             )
             storno_invoice.invoice_entries.add(*[DocumentEntry.objects.create(
-                unit_price=entry.unit_price,
+                description="Storno " + entry.description,
+                unit_price=-entry.unit_price,
                 unit=entry.unit,
-                quantity=entry.quantity * -1,
+                quantity=entry.quantity,
                 product_code=entry.product_code,
                 start_date=entry.start_date,
                 end_date=entry.end_date,

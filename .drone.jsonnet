@@ -105,6 +105,8 @@ local Pipeline(python_version, django_version) = {
 [
     Pipeline("3.7", ">=3.1,<3.2"),
     Pipeline("3.8", ">=3.1,<3.2"),
+    Pipeline("3.9", ">=3.1,<3.2"),
     Pipeline("3.7", ">=3.2,<3.3"),
     Pipeline("3.8", ">=3.2,<3.3"),
+    Pipeline("3.9", ">=3.2,<3.3"),
 ]

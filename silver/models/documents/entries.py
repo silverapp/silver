@@ -16,6 +16,7 @@ from __future__ import absolute_import, unicode_literals
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -41,6 +42,19 @@ class DocumentEntry(models.Model):
     class Meta:
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
+
+    def full_clean(self, *args, **kwargs):
+        quantized_unit_price = Decimal(self.unit_price).quantize(Decimal('0.0000'))
+
+        if self.unit_price == quantized_unit_price:
+            self.unit_price = quantized_unit_price
+
+        quantized_quantity = Decimal(self.quantity).quantize(Decimal('0.0000'))
+
+        if self.quantity == quantized_quantity:
+            self.quantity = quantized_quantity
+
+        super().full_clean(*args, **kwargs)
 
     @property
     def document(self):

@@ -26,7 +26,7 @@ from django.utils import timezone
 from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Subscription, Invoice, ProductCode, PDF,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
-                           Transaction, PaymentMethod, BillingLog)
+                           Transaction, PaymentMethod, BillingLog, Discount)
 from silver.fixtures.test_fixtures import manual_processor
 from silver.utils.dates import last_day_of_month, prev_month
 
@@ -63,6 +63,14 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     sales_tax_percent = Decimal("1.00")
     sales_tax_name = factory.Sequence(lambda n: 'VAT')
     payment_due_days = 5
+
+
+class DiscountFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Discount
+
+    name = factory.Sequence(lambda n: "20% OFF " + faker.first_name())
+    percentage = Decimal("20.00")
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):
