@@ -202,7 +202,7 @@ class TestInvoiceGenerationCommand(TestCase):
                     assert entry.quantity == consumed_mfs
                     assert entry.unit_price == metered_feature.price_per_unit
 
-    def test_gen_for_non_consolidated_billing_without_consumed_units(self):
+    def test_gen_for_non_consolidated_monthly_billing_without_consumed_units(self):
         """
         A customer  has 3 subscriptions for which he does not have any
         consumed units => 3 different proformas, each containing only the
@@ -1982,6 +1982,227 @@ class TestInvoiceGenerationCommand(TestCase):
 
         call_command('generate_docs', date=generate_docs_date('2015-02-10'), stdout=self.output)
         assert Proforma.objects.all().count() == 3
+
+    def test_weekly_subscription_with_documents_generation_during_and_after_trial(self):
+        separate_cycles_during_trial = True
+        generate_documents_on_trial_end = False
+
+        metered_feature = MeteredFeatureFactory(
+            included_units_during_trial=Decimal('5.00'),
+            price_per_unit=Decimal('1.00')
+        )
+        plan = PlanFactory.create(interval=Plan.INTERVALS.WEEK,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, trial_period_days=15,
+                                  amount=Decimal('200.00'),
+                                  separate_cycles_during_trial=separate_cycles_during_trial,
+                                  generate_documents_on_trial_end=generate_documents_on_trial_end,
+                                  metered_features=[metered_feature])
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=dt.date(2015, 1, 23))
+        subscription.activate()
+        subscription.save()
+        subscription.customer.sales_tax_percent = None
+        subscription.customer.save()
+
+        mf_log_first_week = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=subscription.start_date, end_datetime=dt.date(2015, 1, 25),
+            consumed_units=Decimal('5.00')
+        )
+
+        # generate for first week
+        call_command('generate_docs', date=generate_docs_date('2015-01-23'), stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.total == Decimal('0.00')
+
+        # plan trial for first week (+-)
+        assert proforma.proforma_entries.count() == 2
+        for entry in proforma.proforma_entries.all():
+            assert entry.start_date == subscription.start_date
+            # align to next week start
+            assert entry.end_date == dt.date(2015, 1, 25)
+            # only 3 days are prorated
+            unit_price = Decimal(3 / 7.0).quantize(Decimal('0.0000')) * plan.amount
+
+            if entry.unit_price < 0:
+                unit_price *= -1
+
+            assert entry.quantity == 1
+            assert entry.unit_price == unit_price
+            assert entry.prorated
+
+        mf_log_second_week = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 1, 26), end_datetime=dt.date(2015, 2, 1),
+            consumed_units=Decimal('5.00')
+        )
+        # generate for second week
+        call_command('generate_docs', date=generate_docs_date('2015-01-27'), stdout=self.output)
+
+        assert Proforma.objects.all().count() == 2
+
+        proforma = Proforma.objects.all()[1]
+        assert proforma.total == Decimal('0.00')
+
+        # mfs for first week (+-)
+        # plan trial for second week (+-)
+        assert proforma.proforma_entries.count() == 4
+        for entry in proforma.proforma_entries.all():
+            if entry.product_code == plan.product_code:
+                # full week plan
+                assert entry.quantity == 1
+                unit_price = plan.amount
+                assert not entry.prorated
+            else:
+                # 3 days from first week metered feature
+                assert entry.quantity == mf_log_first_week.consumed_units
+                unit_price = metered_feature.price_per_unit
+                assert entry.prorated
+
+            if entry.unit_price < 0:  # discount
+                unit_price *= -1
+
+            assert entry.unit_price == unit_price
+
+        # generate for third week
+        call_command('generate_docs', date=generate_docs_date('2015-02-03'), stdout=self.output)
+        assert Proforma.objects.all().count() == 3
+
+        trial_end = dt.date(2015, 2, 6)
+        assert trial_end == subscription.trial_end
+
+        proforma = Proforma.objects.all()[2]
+        paid_plan_amount = Decimal(2 / 7.0).quantize(Decimal('0.0000')) * plan.amount
+        entries_amount = Decimal(5) * metered_feature.price_per_unit
+        assert proforma.total == paid_plan_amount + entries_amount
+
+        # mfs for second week (+) (no discount because included trial units were consumed)
+        # plan trial for third week (+-)
+        # remaining plan
+        assert proforma.proforma_entries.count() == 4
+
+        for entry in proforma.proforma_entries.all():
+            if entry.product_code == plan.product_code:
+                assert entry.quantity == 1
+
+                if entry.end_date == trial_end:
+                    unit_price = plan.amount - paid_plan_amount
+                else:
+                    unit_price = paid_plan_amount
+
+                if entry.unit_price < 0:  # discount
+                    unit_price *= -1
+
+                assert entry.prorated is True
+            else:
+                assert entry.quantity == mf_log_second_week.consumed_units
+                unit_price = metered_feature.price_per_unit
+                assert entry.prorated is False
+            assert entry.unit_price == unit_price
+
+        # no proforma is created if trying to generate for the same billing cycle
+        call_command('generate_docs', date=generate_docs_date('2015-02-08'), stdout=self.output)
+        assert Proforma.objects.all().count() == 3
+
+    def test_anual_subscription_with_documents_generation_during_and_after_trial(self):
+        separate_cycles_during_trial = True
+        generate_documents_on_trial_end = True
+
+        metered_feature = MeteredFeatureFactory(
+            included_units_during_trial=Decimal('5.00'),
+            price_per_unit=Decimal('1.00')
+        )
+        plan = PlanFactory.create(interval=Plan.INTERVALS.YEAR,
+                                  interval_count=1, generate_after=120,
+                                  enabled=True, trial_period_days=30,
+                                  amount=Decimal('200.00'),
+                                  separate_cycles_during_trial=separate_cycles_during_trial,
+                                  generate_documents_on_trial_end=generate_documents_on_trial_end,
+                                  metered_features=[metered_feature])
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=dt.date(2015, 1, 23))
+        subscription.activate()
+        subscription.save()
+        subscription.customer.sales_tax_percent = None
+        subscription.customer.save()
+
+        # create some metered feature logs that are not perfectly aligned to billing cycle but are
+        # still within the cycle limits
+
+        # covered by trial units
+        first_mf_log = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=subscription.start_date, end_datetime=dt.date(2015, 1, 29),
+            consumed_units=Decimal('5.00')
+        )
+
+        # extra consumed units, not covered by trial
+        second_mf_log = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 2, 2), end_datetime=dt.date(2015, 2, 19),
+            consumed_units=Decimal('5.00')
+        )
+
+        # generate for first year
+        call_command('generate_docs', date=generate_docs_date('2015-01-23'), stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.total == Decimal('0.00')
+
+        # plan trial for first 30 days (+-)
+        assert proforma.proforma_entries.count() == 2
+        for entry in proforma.proforma_entries.all():
+            assert entry.start_date == subscription.start_date
+            assert entry.end_date == dt.date(2015, 2, 21) == subscription.trial_end
+            # only 30 days of trial out of 365 are prorated
+            unit_price = Decimal(30 / 365.0).quantize(Decimal('0.0000')) * plan.amount
+
+            if entry.unit_price < 0:
+                unit_price *= -1
+
+            assert entry.quantity == 1
+            assert entry.unit_price == unit_price
+            assert entry.prorated
+
+        # generate for the remaining year
+        call_command('generate_docs', date=generate_docs_date('2015-02-22'), stdout=self.output)
+
+        assert Proforma.objects.all().count() == 2
+
+        proforma = Proforma.objects.all()[1]
+
+        # (365 days - 30 trial days - subscription start_date offset) / 365 days
+        plan_amount = Decimal(313 / 365.0).quantize(Decimal('0.0000')) * plan.amount
+        # 5 units consumed from second_mf_log
+        entries_amount = Decimal(5) * metered_feature.price_per_unit
+        assert proforma.total == plan_amount + entries_amount
+
+        # first_mf_log during trial (+-)
+        # second_mf_log during trial (+)
+        # plan prepay for remaining year (+)
+        assert proforma.proforma_entries.count() == 4
+        for entry in proforma.proforma_entries.all():
+            if entry.product_code == plan.product_code:
+                assert entry.quantity == 1
+                unit_price = plan_amount
+                assert entry.prorated
+            else:
+                assert entry.quantity == 5
+                unit_price = metered_feature.price_per_unit
+                # since the mf logs have intervals that don't match the trial cycle perfectly
+                # they appear as prorated, but it doesn't mean much anyway
+                assert entry.prorated
+
+            if entry.unit_price < 0:  # discount
+                unit_price *= -1
+
+            assert entry.unit_price == unit_price
 
     def test_subscription_cycle_billing_duration(self):
         plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,

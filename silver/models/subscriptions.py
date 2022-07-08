@@ -14,10 +14,9 @@
 
 from __future__ import absolute_import, unicode_literals
 
-import calendar
 import logging
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import reduce
 from typing import Tuple, List
@@ -42,7 +41,7 @@ from django.utils.translation import gettext_lazy as _
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
 from silver.models.fields import field_template_path
-from silver.utils.dates import ONE_DAY, relativedelta, first_day_of_month
+from silver.utils.dates import ONE_DAY, first_day_of_month, first_day_of_interval, end_of_interval
 from silver.validators import validate_reference
 
 
@@ -235,15 +234,20 @@ class Subscription(models.Model):
 
         return aligned_start_date if not dates else dates[-1].date()
 
-    def _cycle_start_date(self, reference_date=None, ignore_trial=None, granulate=None):
+    def _cycle_start_date(self, reference_date=None, ignore_trial=None, granulate=None,
+                          ignore_start_date=None):
         ignore_trial_default = False
         granulate_default = False
+        ignore_start_date_default = False
 
         ignore_trial = ignore_trial_default or ignore_trial
         granulate = granulate_default or granulate
+        ignore_start_date = ignore_start_date_default or ignore_start_date
 
         if reference_date is None:
             reference_date = timezone.now().date()
+
+        start_date = reference_date
 
         if not self.start_date or reference_date < self.start_date:
             return None
@@ -304,16 +308,9 @@ class Subscription(models.Model):
                                                   granulate):
             return min(self.trial_end, (self.ended_at or datetime.max.date()))
 
-        if self.plan.interval == self.plan.INTERVALS.YEAR:
-            relative_delta = {'years': self.plan.interval_count}
-        elif self.plan.interval == self.plan.INTERVALS.MONTH:
-            relative_delta = {'months': self.plan.interval_count}
-        elif self.plan.interval == self.plan.INTERVALS.WEEK:
-            relative_delta = {'weeks': self.plan.interval_count}
-        else:  # plan.INTERVALS.DAY
-            relative_delta = {'days': self.plan.interval_count}
-
-        maximum_cycle_end_date = real_cycle_start_date + relativedelta(**relative_delta) - ONE_DAY
+        maximum_cycle_end_date = end_of_interval(
+            real_cycle_start_date, self.plan.interval, self.plan.interval_count
+        )
 
         # We know that the cycle end_date is the day before the next cycle start_date,
         # therefore we check if the cycle start_date for our maximum cycle end_date is the same
@@ -1008,6 +1005,8 @@ class Subscription(models.Model):
         """
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
+        If start_date and end_date are not from the same billing cycle, you are entering
+        undefined behaviour territory.
 
         :returns: a tuple containing (status, Decimal(percent)) where status
             can be one of [True, False]. The Decimal will have values in the
@@ -1015,21 +1014,25 @@ class Subscription(models.Model):
         :rtype: tuple
         """
 
-        first_day_of_month = date(start_date.year, start_date.month, 1)
-        last_day_index = calendar.monthrange(start_date.year,
-                                             start_date.month)[1]
-        last_day_of_month = date(start_date.year, start_date.month,
-                                 last_day_index)
+        cycle_start_date = self._cycle_start_date(
+            ignore_trial=True,
+            reference_date=start_date
+        )
 
-        if start_date == first_day_of_month and end_date == last_day_of_month:
+        first_day_of_full_interval = first_day_of_interval(cycle_start_date, self.plan.interval)
+        last_day_of_full_interval = end_of_interval(
+            first_day_of_full_interval, self.plan.interval, self.plan.interval_count
+        )
+
+        if start_date == first_day_of_full_interval and end_date == last_day_of_full_interval:
             return False, Decimal('1.0000')
         else:
-            days_in_full_interval = (last_day_of_month - first_day_of_month).days + 1
-            days_in_interval = (end_date - start_date).days + 1
-            percent = 1.0 * days_in_interval / days_in_full_interval
-            percent = Decimal(percent).quantize(Decimal('0.0000'))
-
-            return True, percent
+            full_interval_days = (last_day_of_full_interval - first_day_of_full_interval).days + 1
+            billing_cycle_days = (end_date - start_date).days + 1
+            return (
+                True,
+                Decimal(1.0 * billing_cycle_days / full_interval_days).quantize(Decimal('.0000'))
+            )
 
     def _entry_unit(self, context):
         unit_template_path = field_template_path(
