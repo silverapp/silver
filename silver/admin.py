@@ -711,7 +711,7 @@ class ProformaFilter(SimpleListFilter):
 
 
 class DiscountAdmin(ModelAdmin):
-    pass
+    filter_horizontal = ["subscriptions", "customers", "plans"]
 
 
 class BillingDocumentAdmin(ModelAdmin):
