@@ -52,12 +52,21 @@ class Plan(models.Model):
         help_text='The frequency with which a subscription should be billed.'
     )
     interval_count = models.PositiveIntegerField(
-        help_text='The number of intervals between each subscription billing'
+        help_text='The number of intervals between each subscription billing.'
     )
+
+    separate_metered_features_interval = models.CharField(
+        null=True, blank=True, choices=INTERVAL_CHOICES, max_length=12,
+        help_text='Optional frequency with which a subscription\'s metered features should be billed.'
+    )
+    separate_metered_features_interval_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='Optional number of intervals between each subscription\'s metered feature billing.'
+    )
+
     amount = models.DecimalField(
         max_digits=19, decimal_places=4, validators=[MinValueValidator(0.0)],
-        help_text='The amount in the specified currency to be charged on the '
-                  'interval specified.'
+        help_text='The amount in the specified currency to be charged on the interval specified.'
     )
     currency = models.CharField(
         choices=currencies, max_length=4, default='USD',
@@ -65,8 +74,7 @@ class Plan(models.Model):
     )
     trial_period_days = models.PositiveIntegerField(
         null=True, blank=True,
-        help_text='Number of trial period days granted when subscribing a '
-                  'customer to this plan.',
+        help_text='Number of trial period days granted when subscribing a customer to this plan.',
         verbose_name='Trial days'
     )
     generate_documents_on_trial_end = models.BooleanField(
@@ -134,6 +142,22 @@ class Plan(models.Model):
     @property
     def provider_flow(self):
         return self.provider.flow
+
+    @property
+    def base_interval(self):
+        return self.interval
+
+    @property
+    def metered_features_interval(self):
+        return self.separate_metered_features_interval or self.interval
+
+    @property
+    def base_interval_count(self):
+        return self.interval_count
+
+    @property
+    def metered_features_interval_count(self):
+        return self.separate_metered_features_interval_count or self.interval_count
 
 
 class MeteredFeature(models.Model):

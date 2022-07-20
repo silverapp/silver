@@ -13,15 +13,16 @@
 # limitations under the License.
 
 from decimal import Decimal
-from functools import reduce
 from typing import List, Iterable, Tuple
 
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, F
 from django.template.loader import render_to_string
 
+from silver.models.documents.entries import OriginType
 from silver.models.fields import field_template_path
+from silver.utils.dates import end_of_interval
 from silver.utils.models import AutoCleanModelMixin
 
 
@@ -49,24 +50,35 @@ class DiscountTarget(models.TextChoices):
     METERED_FEATURES = "metered_features"
 
 
+class DurationIntervals(models.TextChoices):
+    BILLING_CYCLE = 'billing_cycle'
+    DAY = 'day'
+    WEEK = 'week'
+    MONTH = 'month'
+    YEAR = 'year'
+
+
 class Discount(AutoCleanModelMixin, models.Model):
     STATES = DiscountState
     STACKING_TYPES = DiscountStackingType
     ENTRY_BEHAVIOR = DocumentEntryBehavior
     TARGET = DiscountTarget
+    DURATION_INTERVALS = DurationIntervals
 
     name = models.CharField(
         max_length=200,
-        help_text='The discount\'s display name.',
+        help_text='The discount\'s name. May be used for identification or displaying in an invoice.',
     )
     product_code = models.ForeignKey('ProductCode', null=True, blank=True,
-                                     related_name='discounts', on_delete=models.PROTECT)
+                                     related_name='discounts', on_delete=models.PROTECT,
+                                     help_text="The discount's product code.")
 
     customers = models.ManyToManyField("silver.Customer", related_name='discounts', null=True, blank=True)
     subscriptions = models.ManyToManyField("silver.Subscription", related_name='discounts', null=True, blank=True)
     plans = models.ManyToManyField("silver.Plan", related_name='discounts', null=True, blank=True)
 
-    percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                     help_text="A percentage to be discounted. For example 25 (%)")
     applies_to = models.CharField(choices=TARGET.choices, max_length=24,
                                   help_text="Defines what the discount applies to.",
                                   default=TARGET.ALL)
@@ -91,9 +103,11 @@ class Discount(AutoCleanModelMixin, models.Model):
                                 help_text="When set, the discount will only apply to entries with a greater "
                                           "or equal end_date. Otherwise, a prorated discount may still apply, but"
                                           "only if the entries start_date is lower than the discount's end_date.")
-    duration = models.DurationField(null=True, blank=True,
-                                    help_text="Indicate the duration for which the discount is available, "
-                                              "after a subscription started. If not set, the duration is indefinite.")
+
+    duration_count = models.IntegerField(null=True, blank=True,
+                                         help_text="Indicate the duration for which the discount is available, after "
+                                                   "a subscription started. If not set, the duration is indefinite.")
+    duration_interval = models.CharField(null=True, blank=True, max_length=16, choices=DURATION_INTERVALS.choices)
 
     def clean(self):
         if (
@@ -226,15 +240,18 @@ class Discount(AutoCleanModelMixin, models.Model):
         return [discount for discount in discounts
                 if discount.discount_stacking_type == DiscountStackingType.NONCUMULATIVE]
 
-    def proration_multiplier(self, subscription, start_date, end_date) -> Tuple[Decimal, bool]:
+    def proration_multiplier(self, subscription, start_date, end_date, entry_type: OriginType) -> Tuple[Decimal, bool]:
         if self.start_date and start_date < self.start_date:
             start_date = self.start_date
 
         if self.end_date and end_date > self.end_date:
             end_date = self.end_date
 
-        if self.duration:
-            duration_end_date = subscription.start_date + self.duration
+        if self.duration_count and self.duration_interval:
+            interval = (subscription.plan.interval if self.duration_interval == DurationIntervals.BILLING_CYCLE
+                        else self.duration_interval)
+
+            duration_end_date = end_of_interval(subscription.start_date, interval, self.duration_count)
             if end_date > duration_end_date:
                 end_date = duration_end_date
 
@@ -244,7 +261,7 @@ class Discount(AutoCleanModelMixin, models.Model):
         if sub_csd <= start_date and sub_ced >= end_date:
             return Decimal(1), False
 
-        status, percent = subscription._get_proration_status_and_percent(start_date, end_date)
+        status, percent = subscription._get_proration_status_and_percent(start_date, end_date, entry_type)
 
         return percent, status
 
