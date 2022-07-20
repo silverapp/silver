@@ -14,9 +14,12 @@
 
 from __future__ import absolute_import, unicode_literals
 
-from decimal import Decimal
+import datetime as dt
+from dataclasses import dataclass
 
-from django.core.exceptions import ValidationError
+from decimal import Decimal
+from enum import Enum
+
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -144,3 +147,17 @@ class DocumentEntry(models.Model):
             quantity=self.quantity,
             product_code=self.product_code
         )
+
+
+class OriginType(str, Enum):
+    Plan = "plan"
+    MeteredFeature = "metered_feature"
+
+
+@dataclass(frozen=True, eq=True)
+class EntryInfo:
+    start_date: dt.date
+    end_date: dt.date
+    origin_type: OriginType
+    subscription: "silver.models.Subscription"
+    amount: Decimal

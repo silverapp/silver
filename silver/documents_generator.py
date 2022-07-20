@@ -20,7 +20,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from decimal import Decimal
-from enum import Enum
 from typing import Tuple, Dict, List, Union
 
 from django.utils import timezone
@@ -29,24 +28,11 @@ from silver.models import (
     Customer, Subscription, Proforma, Invoice, Provider, BillingLog, DocumentEntry
 )
 from silver.models.discounts import Discount
+from silver.models.documents.entries import OriginType, EntryInfo
 from silver.utils.dates import ONE_DAY
 
 
 logger = logging.getLogger(__name__)
-
-
-class OriginType(str, Enum):
-    Plan = "plan"
-    MeteredFeature = "metered_feature"
-
-
-@dataclass(frozen=True, eq=True)
-class EntryInfo:
-    start_date: dt.date
-    end_date: dt.date
-    origin_type: OriginType
-    subscription: Subscription
-    amount: Decimal
 
 
 @dataclass
@@ -234,7 +220,7 @@ class DocumentsGenerator(object):
 
             for entry in entries:
                 proration_multiplier, _ = discount.proration_multiplier(
-                    entry.subscription, start_date, end_date
+                    entry.subscription, start_date, end_date, entry.origin_type
                 )
 
                 discounts[discount] += entry.amount * discount.as_additive * proration_multiplier
@@ -385,103 +371,51 @@ class DocumentsGenerator(object):
     ) -> Tuple[BillingLog, List[EntryInfo]]:
         entries_info: List[EntryInfo] = []
 
-        relative_start_date = metered_features_billed_up_to + ONE_DAY
         plan_now_billed_up_to = plan_billed_up_to
         metered_features_now_billed_up_to = metered_features_billed_up_to
 
-        prebill_plan = subscription.prebill_plan
-
         plan_amount = Decimal('0.00')
         metered_features_amount = Decimal('0.00')
-
-        last_cycle_end_date = subscription.cycle_end_date(billing_date)
 
         # We iterate through each cycle (multiple bucket cycles can be contained within a billing
         # cycle) and add the entries to the document
 
         # relative_start_date and relative_end_date define the cycle that is billed within the
         # loop's iteration (referred throughout the comments as the cycle)
-        while relative_start_date <= last_cycle_end_date:
-            relative_end_date = subscription.bucket_end_date(
-                reference_date=relative_start_date
-            )
+        still_billing_plan = True
+        still_billing_mfs = True
+        while still_billing_mfs or still_billing_plan:
+            # skip billing the plan during this loop if metered features have to catch up
+            skip_billing_plan = (still_billing_mfs and plan_now_billed_up_to > metered_features_now_billed_up_to)
 
-            if not relative_end_date:
-                # There was no cycle for the given billing date
-                break
+            if still_billing_plan and not skip_billing_plan:
+                billed_up_to, entry_info = self._add_plan_cycle(
+                    billing_date, plan_now_billed_up_to, subscription, proforma=proforma, invoice=invoice
+                )
 
-            # This is here in order to separate the trial entries from the paid ones
-            if (subscription.trial_end and
-                    relative_start_date <= subscription.trial_end <= relative_end_date):
-                relative_end_date = subscription.trial_end
-
-            # This cycle decision, based on cancel_date, should be moved into `cycle_start_date` and
-            # `cycle_end_date`
-            if subscription.cancel_date:
-                relative_end_date = min(subscription.cancel_date, relative_end_date)
-
-            # If the plan is prebilled we can only bill it if the cycle hasn't been billed before;
-            # If the plan is not prebilled we can only bill it if the cycle has ended before the
-            # billing date.
-            should_bill_plan = ((plan_billed_up_to < relative_start_date) if prebill_plan else
-                                (relative_end_date < billing_date))
-
-            # Bill the plan amount
-            if should_bill_plan:
-                if subscription.on_trial(relative_start_date):
-                    plan_amount += subscription._add_plan_trial(start_date=relative_start_date,
-                                                                end_date=relative_end_date,
-                                                                invoice=invoice, proforma=proforma)
+                if not billed_up_to:
+                    still_billing_plan = False
                 else:
-                    amount, _ = subscription._add_plan_entries(start_date=relative_start_date,
-                                                               end_date=relative_end_date,
-                                                               proforma=proforma, invoice=invoice)
-                    plan_amount += amount
+                    plan_now_billed_up_to = billed_up_to
+                    if entry_info:
+                        plan_amount += entry_info.amount
+                        entries_info.append(entry_info)
 
-                    entry_info = EntryInfo(
-                        start_date=relative_start_date,
-                        end_date=relative_end_date,
-                        origin_type=OriginType.Plan,
-                        subscription=subscription,
-                        amount=amount
-                    )
-                    entries_info.append(entry_info)
+            skip_billing_mfs = (still_billing_plan and metered_features_now_billed_up_to > plan_now_billed_up_to)
+            if still_billing_mfs and not skip_billing_mfs:
+                billed_up_to, entry_info = self._add_mf_cycle(
+                    billing_date, metered_features_now_billed_up_to, subscription, proforma=proforma, invoice=invoice
+                )
 
-                plan_now_billed_up_to = relative_end_date
-
-            # Only bill metered features if the cycle the metered features belong to has ended
-            # before the billing date.
-            should_bill_metered_features = relative_end_date < billing_date
-
-            # Bill the metered features
-            if should_bill_metered_features:
-                if subscription.on_trial(relative_start_date):
-                    metered_features_amount += subscription._add_mfs_for_trial(
-                        start_date=relative_start_date, end_date=relative_end_date,
-                        invoice=invoice, proforma=proforma
-                    )
+                if not billed_up_to:
+                    still_billing_mfs = False
                 else:
-                    amount, _ = subscription._add_mfs_entries(
-                        start_date=relative_start_date, end_date=relative_end_date,
-                        proforma=proforma, invoice=invoice
-                    )
-                    metered_features_amount += amount
+                    metered_features_now_billed_up_to = billed_up_to
+                    if entry_info:
+                        metered_features_amount += entry_info.amount
+                        entries_info.append(entry_info)
 
-                    entry_info = EntryInfo(
-                        start_date=relative_start_date,
-                        end_date=relative_end_date,
-                        origin_type=OriginType.MeteredFeature,
-                        subscription=subscription,
-                        amount=amount
-                    )
-                    entries_info.append(entry_info)
-
-                metered_features_now_billed_up_to = relative_end_date
-
-            # Obtain a start date for the next iteration (cycle)
-            relative_start_date = relative_end_date + ONE_DAY
-
-            if relative_end_date == subscription.cancel_date:
+            if metered_features_now_billed_up_to == subscription.cancel_date:
                 break
 
         billing_log = BillingLog.objects.create(
@@ -496,6 +430,122 @@ class DocumentsGenerator(object):
         )
 
         return billing_log, entries_info
+
+    def _add_plan_cycle(self, billing_date, plan_billed_up_to, subscription, proforma=None, invoice=None):
+        relative_start_date = plan_billed_up_to + ONE_DAY
+        relative_end_date = subscription.bucket_end_date(
+            reference_date=relative_start_date, origin_type=OriginType.Plan
+        )
+        last_cycle_end_date = subscription.cycle_end_date(origin_type=OriginType.Plan,
+                                                          reference_date=billing_date)
+
+        if not (relative_start_date <= last_cycle_end_date):
+            return None, None
+
+        if not relative_end_date:
+            # There was no cycle for the given billing date
+            return None, None
+
+        # This is here in order to separate the trial entries from the paid ones
+        if (subscription.trial_end and
+                relative_start_date <= subscription.trial_end <= relative_end_date):
+            relative_end_date = subscription.trial_end
+
+        # This cycle decision, based on cancel_date, should be moved into `cycle_start_date` and
+        # `cycle_end_date`
+        if subscription.cancel_date:
+            relative_end_date = min(subscription.cancel_date, relative_end_date)
+
+        # If the plan is prebilled we can only bill it if the cycle hasn't been billed before;
+        # If the plan is not prebilled we can only bill it if the cycle has ended before the
+        # billing date.
+        should_bill_plan = (
+            (plan_billed_up_to < relative_start_date) if subscription.prebill_plan else
+            (relative_end_date < billing_date)
+        )
+
+        # Bill the plan amount
+        if not should_bill_plan:
+            return None, None
+
+        if subscription.on_trial(relative_start_date):
+            subscription._add_plan_trial(start_date=relative_start_date,
+                                         end_date=relative_end_date,
+                                         invoice=invoice, proforma=proforma)
+
+            # Should return an entry info for trial as well, but need to filter it out from discounts
+            entry_info = None
+        else:
+            amount, _ = subscription._add_plan_entries(start_date=relative_start_date,
+                                                       end_date=relative_end_date,
+                                                       proforma=proforma, invoice=invoice)
+
+            entry_info = EntryInfo(
+                start_date=relative_start_date,
+                end_date=relative_end_date,
+                origin_type=OriginType.Plan,
+                subscription=subscription,
+                amount=amount
+            )
+
+        return relative_end_date, entry_info
+
+    def _add_mf_cycle(self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None):
+        relative_start_date = metered_features_billed_up_to + ONE_DAY
+        relative_end_date = subscription.bucket_end_date(
+            reference_date=relative_start_date, origin_type=OriginType.MeteredFeature
+        )
+        last_cycle_end_date = subscription.cycle_end_date(origin_type=OriginType.MeteredFeature,
+                                                          reference_date=billing_date)
+
+        if not (relative_start_date <= last_cycle_end_date):
+            return None, None
+
+        if not relative_end_date:
+            # There was no cycle for the given billing date
+            return None, None
+
+        # This is here in order to separate the trial entries from the paid ones
+        if (subscription.trial_end and
+                relative_start_date <= subscription.trial_end <= relative_end_date):
+            relative_end_date = subscription.trial_end
+
+        # This cycle decision, based on cancel_date, should be moved into `cycle_start_date` and
+        # `cycle_end_date`
+        if subscription.cancel_date:
+            relative_end_date = min(subscription.cancel_date, relative_end_date)
+
+        # Only bill metered features if the cycle the metered features belong to has ended
+        # before the billing date.
+        should_bill_metered_features = relative_end_date < billing_date
+
+        # Bill the metered features
+        if not should_bill_metered_features:
+            return None, None
+
+        if subscription.on_trial(relative_start_date):
+            subscription._add_mfs_for_trial(
+                start_date=relative_start_date, end_date=relative_end_date,
+                invoice=invoice, proforma=proforma
+            )
+
+            # Should return an entry info for trial as well, but need to filter it out from discounts
+            entry_info = None
+        else:
+            amount, _ = subscription._add_mfs_entries(
+                start_date=relative_start_date, end_date=relative_end_date,
+                proforma=proforma, invoice=invoice
+            )
+
+            entry_info = EntryInfo(
+                start_date=relative_start_date,
+                end_date=relative_end_date,
+                origin_type=OriginType.MeteredFeature,
+                subscription=subscription,
+                amount=amount
+            )
+
+        return relative_end_date, entry_info
 
     def _create_document(self, subscription, billing_date) -> Union[Invoice, Proforma]:
         provider = subscription.provider

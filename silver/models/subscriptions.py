@@ -38,6 +38,7 @@ from django.utils import timezone
 from django.utils.timezone import utc
 from django.utils.translation import gettext_lazy as _
 
+from silver.models.documents.entries import OriginType
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
 from silver.models.fields import field_template_path
@@ -78,8 +79,8 @@ class MeteredFeatureUnitsLog(models.Model):
             raise ValidationError(err_msg)
 
         if not self.id:
-            start_datetime = self.subscription.bucket_start_datetime()
-            end_datetime = self.subscription.bucket_end_datetime()
+            start_datetime = self.subscription.bucket_start_datetime(origin_type=OriginType.MeteredFeature)
+            end_datetime = self.subscription.bucket_end_datetime(origin_type=OriginType.MeteredFeature)
             if get_object_or_None(MeteredFeatureUnitsLog, start_datetime=start_datetime,
                                   end_datetime=end_datetime,
                                   metered_feature=self.metered_feature,
@@ -94,9 +95,9 @@ class MeteredFeatureUnitsLog(models.Model):
 
         if not self.id:
             if not self.start_datetime:
-                self.start_datetime = self.subscription.bucket_start_datetime()
+                self.start_datetime = self.subscription.bucket_start_datetime(origin_type=OriginType.MeteredFeature)
             if not self.end_datetime:
-                self.end_datetime = self.subscription.bucket_end_datetime()
+                self.end_datetime = self.subscription.bucket_end_datetime(origin_type=OriginType.MeteredFeature)
             super(MeteredFeatureUnitsLog, self).save(*args, **kwargs)
 
         else:
@@ -235,7 +236,10 @@ class Subscription(models.Model):
         return aligned_start_date if not dates else dates[-1].date()
 
     def _cycle_start_date(self, reference_date=None, ignore_trial=None, granulate=None,
-                          ignore_start_date=None):
+                          ignore_start_date=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         ignore_trial_default = False
         granulate_default = False
         ignore_start_date_default = False
@@ -252,15 +256,19 @@ class Subscription(models.Model):
         if not self.start_date or reference_date < self.start_date:
             return None
 
+        interval = self.plan.base_interval if origin_type == OriginType.Plan else self.plan.metered_features_interval
+        interval_count = (self.plan.base_interval_count if origin_type == OriginType.Plan
+                          else self.plan.metered_features_interval_count)
+
         rules = {
-            'interval_type': self._INTERVALS_CODES[self.plan.interval],
-            'interval_count': 1 if granulate else self.plan.interval_count,
+            'interval_type': self._INTERVALS_CODES[interval],
+            'interval_count': 1 if granulate else interval_count,
         }
-        if self.plan.interval == self.plan.INTERVALS.MONTH:
+        if interval == self.plan.INTERVALS.MONTH:
             rules['bymonthday'] = 1  # first day of the month
-        elif self.plan.interval == self.plan.INTERVALS.WEEK:
+        elif interval == self.plan.INTERVALS.WEEK:
             rules['byweekday'] = 0  # first day of the week (Monday)
-        elif self.plan.interval == self.plan.INTERVALS.YEAR:
+        elif interval == self.plan.INTERVALS.YEAR:
             # first day of the first month (1 Jan)
             rules['bymonth'] = 1
             rules['bymonthday'] = 1
@@ -287,7 +295,10 @@ class Subscription(models.Model):
                     # Otherwise, the start date of the trial period is the subscription start date
                     return self.start_date
 
-    def _cycle_end_date(self, reference_date=None, ignore_trial=None, granulate=None):
+    def _cycle_end_date(self, reference_date=None, ignore_trial=None, granulate=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         ignore_trial_default = False
         granulate_default = False
 
@@ -297,19 +308,22 @@ class Subscription(models.Model):
         if reference_date is None:
             reference_date = timezone.now().date()
 
-        real_cycle_start_date = self._cycle_start_date(reference_date, ignore_trial, granulate)
+        real_cycle_start_date = self._cycle_start_date(reference_date, ignore_trial, granulate, origin_type=origin_type)
 
         # we need a current start date in order to compute a current end date
         if not real_cycle_start_date:
             return None
 
         # during trial and trial cycle is not separated into intervals
-        if self.on_trial(reference_date) and not (self.separate_cycles_during_trial or
-                                                  granulate):
+        if self.on_trial(reference_date) and not (self.separate_cycles_during_trial or granulate):
             return min(self.trial_end, (self.ended_at or datetime.max.date()))
 
+        interval = self.plan.base_interval if origin_type == OriginType.Plan else self.plan.metered_features_interval
+        interval_count = (self.plan.base_interval_count if origin_type == OriginType.Plan
+                          else self.plan.metered_features_interval_count)
+
         maximum_cycle_end_date = end_of_interval(
-            real_cycle_start_date, self.plan.interval, self.plan.interval_count
+            real_cycle_start_date, interval, interval_count
         )
 
         # We know that the cycle end_date is the day before the next cycle start_date,
@@ -317,7 +331,7 @@ class Subscription(models.Model):
         # as the initial cycle start_date.
         while True:
             reference_cycle_start_date = self._cycle_start_date(maximum_cycle_end_date,
-                                                                ignore_trial, granulate)
+                                                                ignore_trial, granulate, origin_type=origin_type)
             # it means the cycle end_date we got is the right one
             if reference_cycle_start_date == real_cycle_start_date:
                 return min(maximum_cycle_end_date, (self.ended_at or datetime.max.date()))
@@ -359,42 +373,66 @@ class Subscription(models.Model):
     def _ignore_trial_end(self):
         return not self.generate_documents_on_trial_end
 
-    def cycle_start_date(self, reference_date=None):
+    def cycle_start_date(self, reference_date=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         return self._cycle_start_date(ignore_trial=self._ignore_trial_end,
                                       granulate=False,
-                                      reference_date=reference_date)
+                                      reference_date=reference_date,
+                                      origin_type=origin_type)
 
-    def cycle_end_date(self, reference_date=None):
+    def cycle_end_date(self, reference_date=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         return self._cycle_end_date(ignore_trial=self._ignore_trial_end,
                                     granulate=False,
-                                    reference_date=reference_date)
+                                    reference_date=reference_date,
+                                    origin_type=origin_type)
 
-    def bucket_start_date(self, reference_date=None):
+    def bucket_start_date(self, reference_date=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         return self._cycle_start_date(reference_date=reference_date,
-                                      ignore_trial=False, granulate=True)
+                                      ignore_trial=False, granulate=True,
+                                      origin_type=origin_type)
 
-    def bucket_end_date(self, reference_date=None):
+    def bucket_end_date(self, reference_date=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         return self._cycle_end_date(reference_date=reference_date,
-                                    ignore_trial=False, granulate=True)
+                                    ignore_trial=False, granulate=True,
+                                    origin_type=origin_type)
 
-    def bucket_start_datetime(self, reference_datetime=None):
+    def bucket_start_datetime(self, reference_datetime=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         reference_date = reference_datetime.date() if reference_datetime else None
 
         return datetime.combine(
             self._cycle_start_date(reference_date=reference_date,
                                    ignore_trial=False,
-                                   granulate=True),
+                                   granulate=True,
+                                   origin_type=origin_type),
             datetime.min.time(),
             tzinfo=timezone.utc,
         )
 
-    def bucket_end_datetime(self, reference_datetime=None):
+    def bucket_end_datetime(self, reference_datetime=None, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
         reference_date = reference_datetime.date() if reference_datetime else None
 
         return datetime.combine(
             self._cycle_end_date(reference_date=reference_date,
                                  ignore_trial=False,
-                                 granulate=True),
+                                 granulate=True,
+                                 origin_type=origin_type),
             datetime.max.time(),
             tzinfo=timezone.utc,
         ).replace(microsecond=0)
@@ -405,8 +443,8 @@ class Subscription(models.Model):
         if self.state in ['ended', 'inactive']:
             return buckets
 
-        start_date = self.bucket_start_date()
-        end_date = self.bucket_end_date()
+        start_date = self.bucket_start_date(origin_type=OriginType.MeteredFeature)
+        end_date = self.bucket_end_date(origin_type=OriginType.MeteredFeature)
 
         if start_date is None or end_date is None:
             return buckets
@@ -422,7 +460,7 @@ class Subscription(models.Model):
                 datetime.combine(start_date, datetime.min.time()).replace(
                     tzinfo=timezone.get_current_timezone())):
             end_date = start_date - ONE_DAY
-            start_date = self.bucket_start_date(end_date)
+            start_date = self.bucket_start_date(end_date, origin_type=OriginType.MeteredFeature)
 
             if start_date is None:
                 return buckets
@@ -476,6 +514,12 @@ class Subscription(models.Model):
         }
 
     def should_be_billed(self, billing_date, generate_documents_datetime=None):
+        return (
+            self.should_plan_be_billed(billing_date, generate_documents_datetime=generate_documents_datetime) or
+            self.should_mfs_be_billed(billing_date, generate_documents_datetime=generate_documents_datetime)
+        )
+
+    def should_plan_be_billed(self, billing_date, generate_documents_datetime=None):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
 
@@ -518,22 +562,70 @@ class Subscription(models.Model):
         if generate_documents_datetime < cycle_start_datetime + generate_after:
             return False
 
-        billed_up_to_dates = self.billed_up_to_dates
-        plan_billed_up_to = billed_up_to_dates['plan_billed_up_to']
-        metered_features_billed_up_to = billed_up_to_dates['metered_features_billed_up_to']
+        plan_billed_up_to = self.billed_up_to_dates['plan_billed_up_to']
 
         # We want to bill the subscription if the plan hasn't been billed for this cycle or
         # if the subscription has been canceled and the plan won't be billed for this cycle.
         if self.prebill_plan or self.state == self.STATES.CANCELED:
-            plan_should_be_billed = plan_billed_up_to < cycle_start_date
-
-            if self.state == self.STATES.CANCELED:
-                return metered_features_billed_up_to < cycle_start_date or plan_should_be_billed
-
-            return plan_should_be_billed
+            return plan_billed_up_to < cycle_start_date
 
         # wait until the cycle that is going to be billed ends:
         billed_cycle_end_date = self.cycle_end_date(plan_billed_up_to + ONE_DAY)
+        return billed_cycle_end_date < cycle_start_date
+
+    def should_mfs_be_billed(self, billing_date, generate_documents_datetime=None):
+        if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
+            return False
+
+        if not generate_documents_datetime:
+            generate_documents_datetime = timezone.now()
+
+        if self.cycle_billing_duration:
+            if self.start_date > first_day_of_month(billing_date) + self.cycle_billing_duration:
+                # There was nothing to bill on the last day of the first cycle billing duration
+                return False
+
+            # We need the full cycle here (ignoring trial ends)
+            cycle_start_datetime_ignoring_trial = self._cycle_start_date(billing_date,
+                                                                         ignore_trial=False,
+                                                                         origin_type=OriginType.MeteredFeature)
+            latest_possible_billing_datetime = (
+                cycle_start_datetime_ignoring_trial + self.cycle_billing_duration
+            )
+
+            billing_date = min(billing_date, latest_possible_billing_datetime)
+
+        if billing_date > generate_documents_datetime.date():
+            return False
+
+        cycle_start_date = self.cycle_start_date(billing_date, origin_type=OriginType.MeteredFeature)
+
+        if not cycle_start_date:
+            return False
+
+        if self.state == self.STATES.CANCELED:
+            if billing_date <= self.cancel_date:
+                return False
+
+            cycle_start_date = self.cancel_date + ONE_DAY
+
+        cycle_start_datetime = datetime.combine(cycle_start_date,
+                                                datetime.min.time()).replace(tzinfo=utc)
+
+        generate_after = timedelta(seconds=self.plan.generate_after)
+
+        if generate_documents_datetime < cycle_start_datetime + generate_after:
+            return False
+
+        metered_features_billed_up_to = self.billed_up_to_dates['metered_features_billed_up_to']
+
+        # We want to bill the subscription if the subscription has been canceled.
+        if self.state == self.STATES.CANCELED:
+            return metered_features_billed_up_to < cycle_start_date
+
+        # wait until the cycle that is going to be billed ends:
+        billed_cycle_end_date = self.cycle_end_date(metered_features_billed_up_to + ONE_DAY,
+                                                    origin_type=OriginType.MeteredFeature)
         return billed_cycle_end_date < cycle_start_date
 
     @property
@@ -671,12 +763,13 @@ class Subscription(models.Model):
         """
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date)
+                                                                   end_date,
+                                                                   OriginType.Plan)
         plan_price = self.plan.amount * percent
 
         context = self._build_entry_context({
             'name': self.plan.name,
-            'unit': self.plan.interval,
+            'unit': self.plan.base_interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
@@ -719,17 +812,15 @@ class Subscription(models.Model):
         :returns: (consumed_units, free_units)
         """
 
-        if metered_feature.included_units_during_trial:
-            included_units_during_trial = metered_feature.included_units_during_trial
-            if consumed_units > included_units_during_trial:
-                extra_consumed = consumed_units - included_units_during_trial
-                return extra_consumed, included_units_during_trial
-            else:
-                return 0, consumed_units
-        elif metered_feature.included_units_during_trial == Decimal('0.0000'):
-            return consumed_units, 0
-        elif metered_feature.included_units_during_trial is None:
+        included_units_during_trial = metered_feature.included_units_during_trial
+
+        if included_units_during_trial is None:
             return 0, consumed_units
+
+        if consumed_units <= included_units_during_trial:
+            return 0, consumed_units
+
+        return consumed_units - included_units_during_trial, included_units_during_trial
 
     def _get_extra_consumed_units_during_trial(self, metered_feature,
                                                consumed_units):
@@ -795,7 +886,8 @@ class Subscription(models.Model):
         ).replace(microsecond=0)
 
         prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date)
+                                                                   end_date,
+                                                                   OriginType.MeteredFeature)
         context = self._build_entry_context({
             'product_code': self.plan.product_code,
             'start_date': start_date,
@@ -898,13 +990,14 @@ class Subscription(models.Model):
         """
 
         prorated, proration_percentage = self._get_proration_status_and_percent(start_date,
-                                                                                end_date)
+                                                                                end_date,
+                                                                                OriginType.Plan)
 
         plan_price = self.plan.amount * proration_percentage
 
         base_context = {
             'name': self.plan.name,
-            'unit': self.plan.interval,
+            'unit': self.plan.base_interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
@@ -944,6 +1037,7 @@ class Subscription(models.Model):
 
         if total_consumed_units > included_units:
             return total_consumed_units - included_units
+
         return 0
 
     def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None) \
@@ -960,11 +1054,11 @@ class Subscription(models.Model):
             tzinfo=timezone.utc,
         ).replace(microsecond=0)
 
-        prorated, percent = self._get_proration_status_and_percent(start_date, end_date)
+        prorated, percent = self._get_proration_status_and_percent(start_date, end_date, OriginType.MeteredFeature)
 
         context = self._build_entry_context({
             'name': self.plan.name,
-            'unit': self.plan.interval,
+            'unit': self.plan.metered_features_interval,
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
@@ -1001,7 +1095,7 @@ class Subscription(models.Model):
 
         return mfs_total, entries
 
-    def _get_proration_status_and_percent(self, start_date, end_date) -> Tuple[bool, Decimal]:
+    def _get_proration_status_and_percent(self, start_date, end_date, entry_type: OriginType) -> Tuple[bool, Decimal]:
         """
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
@@ -1014,14 +1108,19 @@ class Subscription(models.Model):
         :rtype: tuple
         """
 
+        interval = self.plan.base_interval if entry_type == OriginType.Plan else self.plan.metered_features_interval
+        interval_count = (self.plan.base_interval_count if entry_type == OriginType.Plan else
+                          self.plan.metered_features_interval_count)
+
         cycle_start_date = self._cycle_start_date(
             ignore_trial=True,
-            reference_date=start_date
+            reference_date=start_date,
+            origin_type=entry_type
         )
 
-        first_day_of_full_interval = first_day_of_interval(cycle_start_date, self.plan.interval)
+        first_day_of_full_interval = first_day_of_interval(cycle_start_date, interval)
         last_day_of_full_interval = end_of_interval(
-            first_day_of_full_interval, self.plan.interval, self.plan.interval_count
+            first_day_of_full_interval, interval, interval_count
         )
 
         if start_date == first_day_of_full_interval and end_date == last_day_of_full_interval:

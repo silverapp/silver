@@ -445,8 +445,10 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.proforma_entries.all().count() == 2
         assert proforma.total == plan.amount + mf_price * 2
         # mfs for last month
+        assert proforma.proforma_entries.all()[0].total == mf_price * 2
         assert proforma.proforma_entries.all()[0].prorated is True
         # plan for upcoming month
+        assert proforma.proforma_entries.all()[1].total == plan.amount
         assert proforma.proforma_entries.all()[1].prorated is False
 
     def test_subscription_with_trial_without_metered_features_to_draft(self):
@@ -478,20 +480,20 @@ class TestInvoiceGenerationCommand(TestCase):
         # Plan Trial (+-), Plan Prorated (+), Plan for next month(+)
         assert len(document_entries) == 4
 
-        doc = document_entries[0]
-        assert doc.unit_price == Decimal(14.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[0]
+        assert entry.unit_price == Decimal(14.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[1]
-        assert doc.unit_price == - Decimal(14.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[1]
+        assert entry.unit_price == - Decimal(14.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[2]
-        assert doc.unit_price == Decimal(11.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[2]
+        assert entry.unit_price == Decimal(11.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[3]
-        assert doc.unit_price == plan.amount
+        entry = document_entries[3]
+        assert entry.unit_price == plan.amount
 
         # And quantity 1
-        assert doc.quantity == 1
+        assert entry.quantity == 1
 
     def test_subscription_with_trial_with_metered_features_underflow_to_draft(self):
         included_units_during_trial = Decimal('5.00')
@@ -536,34 +538,34 @@ class TestInvoiceGenerationCommand(TestCase):
         # Expect 7 entries:
         # Plan Trial (+-), Plan Trial Metered Feature (+-), Plan After Trial (+)
         # Metered Features After Trial (+), Plan for next month (+)
+        entry = document_entries[0]
+        assert entry.unit_price == Decimal('50.00')  # 7 / 28 * 200
+
+        entry = document_entries[1]
+        assert entry.unit_price == Decimal('-50.00')
+
+        entry = document_entries[2]
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == consumed_mfs_during_trial
+
+        entry = document_entries[3]
+        assert entry.unit_price == - metered_feature.price_per_unit
+        assert entry.quantity == consumed_mfs_during_trial
+
+        entry = document_entries[4]
+        assert entry.unit_price == Decimal('150.00')  # 21 / 28 * 200
+
+        entry = document_entries[5]
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_after_trial.consumed_units
+
+        entry = document_entries[6]
+        assert entry.unit_price == plan.amount
+
         assert len(document_entries) == 7
 
-        doc = document_entries[0]
-        assert doc.unit_price == Decimal('50.00')  # 7 / 28 * 200
-
-        doc = document_entries[1]
-        assert doc.unit_price == Decimal('-50.00')
-
-        doc = document_entries[2]
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == consumed_mfs_during_trial
-
-        doc = document_entries[3]
-        assert doc.unit_price == - metered_feature.price_per_unit
-        assert doc.quantity == consumed_mfs_during_trial
-
-        doc = document_entries[4]
-        assert doc.unit_price == Decimal('150.00')  # 21 / 28 * 200
-
-        doc = document_entries[5]
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_after_trial.consumed_units
-
-        doc = document_entries[6]
-        assert doc.unit_price == plan.amount
-
         # And quantity 1
-        assert doc.quantity == 1
+        assert entry.quantity == 1
 
     def test_subscription_with_trial_with_metered_features_overflow_to_draft(self):
         billing_date = generate_docs_date('2015-03-01')
@@ -612,40 +614,40 @@ class TestInvoiceGenerationCommand(TestCase):
         # Extra units consumed during trial (+)
         # Plan After Trial (+)
         # Metered Features After Trial (+), Plan for next month (+)
-        assert len(document_entries) == 8
+        entry = document_entries[0]
+        assert entry.unit_price == Decimal('57.14')
 
-        doc = document_entries[0]
-        assert doc.unit_price == Decimal('57.14')
+        entry = document_entries[1]
+        assert entry.unit_price == Decimal('-57.14')
 
-        doc = document_entries[1]
-        assert doc.unit_price == Decimal('-57.14')
+        entry = document_entries[2]
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == metered_feature.included_units_during_trial
 
-        doc = document_entries[2]
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == metered_feature.included_units_during_trial
+        entry = document_entries[3]
+        assert entry.unit_price == - metered_feature.price_per_unit
+        assert entry.quantity == metered_feature.included_units_during_trial
 
-        doc = document_entries[3]
-        assert doc.unit_price == - metered_feature.price_per_unit
-        assert doc.quantity == metered_feature.included_units_during_trial
-
-        doc = document_entries[4]
-        assert doc.unit_price == metered_feature.price_per_unit
+        entry = document_entries[4]
+        assert entry.unit_price == metered_feature.price_per_unit
 
         included_trial_units = metered_feature.included_units_during_trial
-        assert doc.quantity == units_consumed_during_trial - included_trial_units
+        assert entry.quantity == units_consumed_during_trial - included_trial_units
 
-        doc = document_entries[5]
-        assert doc.unit_price == Decimal('142.8600')  # 20 / 28 * 200
+        entry = document_entries[5]
+        assert entry.unit_price == Decimal('142.8600')  # 20 / 28 * 200
 
-        doc = document_entries[6]
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_after_trial.consumed_units
+        entry = document_entries[6]
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_after_trial.consumed_units
 
-        doc = document_entries[7]
-        assert doc.unit_price == Decimal('200.00')
+        entry = document_entries[7]
+        assert entry.unit_price == Decimal('200.00')
+
+        assert len(document_entries) == 8
 
         # And quantity 1
-        assert doc.quantity == 1
+        assert entry.quantity == 1
 
     def test_on_trial_with_consumed_units_underflow(self):
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
@@ -1426,26 +1428,26 @@ class TestInvoiceGenerationCommand(TestCase):
         document_entries = DocumentEntry.objects.all()
         assert len(document_entries) == 6
 
-        doc = document_entries[0]  # Plan trial (+)
-        assert doc.unit_price == Decimal('57.14')
+        entry = document_entries[0]  # Plan trial (+)
+        assert entry.unit_price == Decimal('57.14')
 
-        doc = document_entries[1]  # Plan trial (-)
-        assert doc.unit_price == Decimal('-57.14')
+        entry = document_entries[1]  # Plan trial (-)
+        assert entry.unit_price == Decimal('-57.14')
 
-        doc = document_entries[2]  # Consumed mf (+)
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_during_trial.consumed_units
+        entry = document_entries[2]  # Consumed mf (+)
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_during_trial.consumed_units
 
-        doc = document_entries[3]  # Consumed mf (-)
-        assert doc.unit_price == - metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_during_trial.consumed_units
+        entry = document_entries[3]  # Consumed mf (-)
+        assert entry.unit_price == - metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_during_trial.consumed_units
 
-        doc = document_entries[4]  # Plan after trial end
-        assert doc.unit_price == Decimal(20.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[4]  # Plan after trial end
+        assert entry.unit_price == Decimal(20.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[5]  # Consumed mf after trial
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_after_trial.consumed_units
+        entry = document_entries[5]  # Consumed mf after trial
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_after_trial.consumed_units
 
     def test_canceled_subscription_with_metered_features_to_draft(self):
         """
@@ -1491,9 +1493,9 @@ class TestInvoiceGenerationCommand(TestCase):
         # Extra Metered Features (+)
         assert DocumentEntry.objects.all().count() == 1
 
-        doc = DocumentEntry.objects.all()[0]
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log.consumed_units
+        entry = DocumentEntry.objects.all()[0]
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log.consumed_units
 
     def test_canceled_subscription_with_trial_and_trial_underflow(self):
         """
@@ -1548,26 +1550,26 @@ class TestInvoiceGenerationCommand(TestCase):
         # Plan After Trial (+),  Metered Features After Trial (+)
         assert len(document_entries) == 6
 
-        doc = document_entries[0]  # Plan trial (+)
-        assert doc.unit_price == Decimal(7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[0]  # Plan trial (+)
+        assert entry.unit_price == Decimal(7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[1]  # Plan trial (-)
-        assert doc.unit_price == Decimal(-7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[1]  # Plan trial (-)
+        assert entry.unit_price == Decimal(-7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[2]  # Consumed mf (+)
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == trial_quantity
+        entry = document_entries[2]  # Consumed mf (+)
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == trial_quantity
 
-        doc = document_entries[3]  # Consumed mf (-)
-        assert doc.unit_price == - metered_feature.price_per_unit
-        assert doc.quantity == trial_quantity
+        entry = document_entries[3]  # Consumed mf (-)
+        assert entry.unit_price == - metered_feature.price_per_unit
+        assert entry.quantity == trial_quantity
 
-        doc = document_entries[4]  # Plan after trial end
-        assert doc.unit_price == Decimal(21.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[4]  # Plan after trial end
+        assert entry.unit_price == Decimal(21.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[5]  # Consumed mf after trial
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_after_trial.consumed_units
+        entry = document_entries[5]  # Consumed mf after trial
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_after_trial.consumed_units
 
     def test_canceled_subscription_with_trial_and_trial_overflow(self):
         billing_date = generate_docs_date('2015-03-01')
@@ -1621,30 +1623,30 @@ class TestInvoiceGenerationCommand(TestCase):
         # Plan After Trial (+),  Metered Features After Trial (+)
         assert len(document_entries) == 7
 
-        doc = document_entries[0]  # Plan trial (+)
-        assert doc.unit_price == Decimal(7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[0]  # Plan trial (+)
+        assert entry.unit_price == Decimal(7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[1]  # Plan trial (-)
-        assert doc.unit_price == Decimal(-7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[1]  # Plan trial (-)
+        assert entry.unit_price == Decimal(-7.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[2]  # Consumed mf (+)
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == units_included_during_trial
+        entry = document_entries[2]  # Consumed mf (+)
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == units_included_during_trial
 
-        doc = document_entries[3]  # Consumed mf (-)
-        assert doc.unit_price == - metered_feature.price_per_unit
-        assert doc.quantity == units_included_during_trial
+        entry = document_entries[3]  # Consumed mf (-)
+        assert entry.unit_price == - metered_feature.price_per_unit
+        assert entry.quantity == units_included_during_trial
 
-        doc = document_entries[4]  # Consumed mf (-)
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == units_consumed_during_trial - units_included_during_trial
+        entry = document_entries[4]  # Consumed mf (-)
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == units_consumed_during_trial - units_included_during_trial
 
-        doc = document_entries[5]  # Plan after trial end
-        assert doc.unit_price == Decimal(21.0 / 28).quantize(Decimal('0.0000')) * plan.amount
+        entry = document_entries[5]  # Plan after trial end
+        assert entry.unit_price == Decimal(21.0 / 28).quantize(Decimal('0.0000')) * plan.amount
 
-        doc = document_entries[6]  # Consumed mf after trial
-        assert doc.unit_price == metered_feature.price_per_unit
-        assert doc.quantity == mf_units_log_after_trial.consumed_units
+        entry = document_entries[6]  # Consumed mf after trial
+        assert entry.unit_price == metered_feature.price_per_unit
+        assert entry.quantity == mf_units_log_after_trial.consumed_units
 
     def test_gen_for_single_canceled_subscription_during_trial(self):
         plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
@@ -1778,9 +1780,7 @@ class TestInvoiceGenerationCommand(TestCase):
         proforma = Proforma.objects.all()[1]
 
         billed_plan_amount = Decimal(20 / 28.0).quantize(Decimal('0.0000')) * plan.amount
-        assert proforma.total == billed_plan_amount
-
-        assert proforma.proforma_entries.count() == 4  # plan trial (+-), plan (+) and mfs (0)
+        # plan trial (+-), plan (+) and mfs (0)
         for entry in proforma.proforma_entries.all():
             if entry.product_code == plan.product_code:
                 assert entry.quantity == 1
@@ -1802,6 +1802,9 @@ class TestInvoiceGenerationCommand(TestCase):
 
             assert entry.unit_price == unit_price
             assert entry.prorated
+
+        assert proforma.proforma_entries.count() == 4
+        assert proforma.total == billed_plan_amount
 
         call_command('generate_docs', date=generate_docs_date('2015-02-10'),
                      subscription=subscription.pk, stdout=self.output)
@@ -2203,6 +2206,78 @@ class TestInvoiceGenerationCommand(TestCase):
                 unit_price *= -1
 
             assert entry.unit_price == unit_price
+
+    def test_subscription_with_anual_base_plan_and_monthly_metered_features(self):
+        metered_feature = MeteredFeatureFactory(
+            included_units=Decimal('0.00'),
+            price_per_unit=Decimal('1.00')
+        )
+        plan = PlanFactory.create(interval=Plan.INTERVALS.YEAR,
+                                  interval_count=1, generate_after=120,
+                                  separate_metered_features_interval=Plan.INTERVALS.MONTH,
+                                  separate_metered_features_interval_count=1,
+                                  enabled=True,
+                                  amount=Decimal('200.00'),
+                                  metered_features=[metered_feature])
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=dt.date(2015, 1, 23))
+        subscription.activate()
+        subscription.save()
+        subscription.customer.sales_tax_percent = None
+        subscription.customer.save()
+
+        # create some metered feature logs that are not perfectly aligned to billing cycle but are
+        # still within the cycle limits
+
+        first_mf_log = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=subscription.start_date, end_datetime=dt.date(2015, 1, 31),
+            consumed_units=Decimal('15.00')
+        )
+
+        second_mf_log = MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 2, 1), end_datetime=dt.date(2015, 2, 28),
+            consumed_units=Decimal('15.00')
+        )
+
+        # generate for first year's base plan amount
+        call_command('generate_docs', date=generate_docs_date('2015-01-30'), stdout=self.output)
+
+        billing_log = BillingLog.objects.filter(subscription=subscription).first()
+        assert billing_log.plan_billed_up_to == dt.date(2015, 12, 31)
+        assert billing_log.metered_features_billed_up_to == subscription.start_date - ONE_DAY
+
+        assert Proforma.objects.all().count() == 1
+
+        proforma = Proforma.objects.all()[0]
+
+        # (365 days - subscription start_date offset) / 365 days
+        plan_amount = Decimal(343 / 365.0).quantize(Decimal('0.0000')) * plan.amount
+
+        # first_mf_log during trial (+-)
+        # second_mf_log during trial (+)
+        # plan prepay for remaining year (+)
+        assert proforma.proforma_entries.count() == 1
+        assert proforma.total == plan_amount
+
+        # generate for first month's metered features
+        call_command('generate_docs', date=generate_docs_date('2015-02-22'), stdout=self.output)
+        billing_log = BillingLog.objects.filter(subscription=subscription).first()
+        assert billing_log.plan_billed_up_to == dt.date(2015, 12, 31)
+        assert billing_log.metered_features_billed_up_to == dt.date(2015, 1, 31)
+
+        assert Proforma.objects.all().count() == 2
+
+        proforma = Proforma.objects.all()[1]
+        entries = list(proforma.proforma_entries.all())
+        assert len(entries) == 1
+
+        assert entries[0].quantity == 15
+
+        assert entries[0].unit_price == metered_feature.price_per_unit
+        # 15 units consumed from first_mf_log
+        assert proforma.total == Decimal(15) * metered_feature.price_per_unit
 
     def test_subscription_cycle_billing_duration(self):
         plan = PlanFactory.create(interval=Plan.INTERVALS.MONTH,
