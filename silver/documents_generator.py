@@ -20,17 +20,18 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from decimal import Decimal
+from fractions import Fraction
 from typing import Tuple, Dict, List, Union
 
 from django.utils import timezone
 
 from silver.models import (
-    Customer, Subscription, Proforma, Invoice, Provider, BillingLog, DocumentEntry
+    Customer, Subscription, Proforma, Invoice, Provider, BillingLog, DocumentEntry, Plan
 )
 from silver.models.discounts import Discount
 from silver.models.documents.entries import OriginType, EntryInfo
 from silver.utils.dates import ONE_DAY
-
+from silver.utils.numbers import quantize_fraction
 
 logger = logging.getLogger(__name__)
 
@@ -219,11 +220,13 @@ class DocumentsGenerator(object):
                 discount_infos[discount].applies_to_all_discountable_entries_in_interval = True
 
             for entry in entries:
-                proration_multiplier, _ = discount.proration_multiplier(
+                proration_fraction, _ = discount.proration_fraction(
                     entry.subscription, start_date, end_date, entry.origin_type
                 )
 
-                discounts[discount] += entry.amount * discount.as_additive * proration_multiplier
+                discounts[discount] += quantize_fraction(
+                    Fraction(str(discount.as_additive)) * Fraction(str(entry.amount)) * proration_fraction
+                )
 
         max_noncumulative_discount_per_document = Decimal(0.0)
         noncumulative_discount_per_document = None
@@ -382,8 +385,9 @@ class DocumentsGenerator(object):
 
         # relative_start_date and relative_end_date define the cycle that is billed within the
         # loop's iteration (referred throughout the comments as the cycle)
-        still_billing_plan = True
-        still_billing_mfs = True
+        still_billing_plan = subscription.should_plan_be_billed(billing_date)
+        still_billing_mfs = subscription.should_mfs_be_billed(billing_date)
+
         while still_billing_mfs or still_billing_plan:
             # skip billing the plan during this loop if metered features have to catch up
             skip_billing_plan = (still_billing_mfs and plan_now_billed_up_to > metered_features_now_billed_up_to)
@@ -401,7 +405,8 @@ class DocumentsGenerator(object):
                         plan_amount += entry_info.amount
                         entries_info.append(entry_info)
 
-            skip_billing_mfs = (still_billing_plan and metered_features_now_billed_up_to > plan_now_billed_up_to)
+            skip_billing_mfs = still_billing_plan and metered_features_now_billed_up_to > plan_now_billed_up_to
+
             if still_billing_mfs and not skip_billing_mfs:
                 billed_up_to, entry_info = self._add_mf_cycle(
                     billing_date, metered_features_now_billed_up_to, subscription, proforma=proforma, invoice=invoice
@@ -411,6 +416,7 @@ class DocumentsGenerator(object):
                     still_billing_mfs = False
                 else:
                     metered_features_now_billed_up_to = billed_up_to
+                    still_billing_mfs = subscription.should_mfs_be_billed(billing_date, billed_up_to=billed_up_to)
                     if entry_info:
                         metered_features_amount += entry_info.amount
                         entries_info.append(entry_info)
@@ -492,8 +498,10 @@ class DocumentsGenerator(object):
 
     def _add_mf_cycle(self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None):
         relative_start_date = metered_features_billed_up_to + ONE_DAY
+
         relative_end_date = subscription.bucket_end_date(
-            reference_date=relative_start_date, origin_type=OriginType.MeteredFeature
+            reference_date=relative_start_date,
+            origin_type=OriginType.MeteredFeature,
         )
         last_cycle_end_date = subscription.cycle_end_date(origin_type=OriginType.MeteredFeature,
                                                           reference_date=billing_date)

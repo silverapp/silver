@@ -14,8 +14,6 @@
 
 from __future__ import absolute_import, unicode_literals
 
-from model_utils import Choices
-
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -31,35 +29,41 @@ class PlanManager(models.Manager):
         return super(PlanManager, self).get_queryset().select_related('product_code')
 
 
+class IntervalChoices(models.TextChoices):
+    DAY = DATE_INTERVALS.DAY, _('Day')
+    WEEK = DATE_INTERVALS.WEEK, _('Week')
+    MONTH = DATE_INTERVALS.MONTH, _('Month')
+    YEAR = DATE_INTERVALS.YEAR, _('Year')
+
+
+class SeparateEntriesByIntervalChoices(models.TextChoices):
+    DISABLED = 'disabled', _('Disabled')
+    INHERIT = 'inherit', _('Inherit')
+
+
 class Plan(models.Model):
     objects = PlanManager()
 
-    INTERVALS = DATE_INTERVALS
-
-    INTERVAL_CHOICES = Choices(
-        (INTERVALS.DAY, _('Day')),
-        (INTERVALS.WEEK, _('Week')),
-        (INTERVALS.MONTH, _('Month')),
-        (INTERVALS.YEAR, _('Year'))
-    )
+    INTERVALS = IntervalChoices
+    SEPARATE_ENTRIES_BY_INTERVAL = SeparateEntriesByIntervalChoices
 
     name = models.CharField(
         max_length=200, help_text='Display name of the plan.',
         db_index=True
     )
     interval = models.CharField(
-        choices=INTERVAL_CHOICES, max_length=12, default=INTERVALS.MONTH,
+        choices=INTERVALS.choices, max_length=12, default=INTERVALS.MONTH,
         help_text='The frequency with which a subscription should be billed.'
     )
     interval_count = models.PositiveIntegerField(
         help_text='The number of intervals between each subscription billing.'
     )
 
-    separate_metered_features_interval = models.CharField(
-        null=True, blank=True, choices=INTERVAL_CHOICES, max_length=12,
+    alternative_metered_features_interval = models.CharField(
+        null=True, blank=True, choices=INTERVALS.choices, max_length=12,
         help_text='Optional frequency with which a subscription\'s metered features should be billed.'
     )
-    separate_metered_features_interval_count = models.PositiveIntegerField(
+    alternative_metered_features_interval_count = models.PositiveIntegerField(
         null=True, blank=True,
         help_text='Optional number of intervals between each subscription\'s metered feature billing.'
     )
@@ -87,11 +91,25 @@ class Plan(models.Model):
         help_text="If this is set to True, then the trial period cycle will be split if it spans "
                   "across multiple billing intervals."
     )
+    separate_plan_entries_per_base_interval = models.CharField(
+        choices=SEPARATE_ENTRIES_BY_INTERVAL.choices, default=SEPARATE_ENTRIES_BY_INTERVAL.INHERIT,
+        max_length=16,
+        help_text="If not disabled, this will cause the plan entries to be separated by the base interval. "
+                  "For example a plan with interval=month, interval_count=3, will cause the entries to be split "
+                  "by each month, resulting in 3 entries with "
+    )
     prebill_plan = models.BooleanField(
         null=True,
-        help_text="If this is set to True, then the plan base amount will be billed at the"
+        help_text="If this is set to True, then the plan base amount will be billed at the "
                   "beginning of the billing cycle rather than after the end."
     )
+    only_bill_metered_features_with_base_amount = models.BooleanField(
+        default=False,
+        help_text="When set to True, Metered Features will only be billed when the base plan's amount "
+                  "is billed. For example, for a plan with interval=month, interval_count=3, metered "
+                  "features will only be billed every 3 months, along with the base amount."
+    )
+
     metered_features = models.ManyToManyField(
         'MeteredFeature', blank=True,
         help_text="A list of the plan's metered features."
@@ -149,7 +167,7 @@ class Plan(models.Model):
 
     @property
     def metered_features_interval(self):
-        return self.separate_metered_features_interval or self.interval
+        return self.alternative_metered_features_interval or self.interval
 
     @property
     def base_interval_count(self):
@@ -157,7 +175,7 @@ class Plan(models.Model):
 
     @property
     def metered_features_interval_count(self):
-        return self.separate_metered_features_interval_count or self.interval_count
+        return self.alternative_metered_features_interval_count or self.interval_count
 
 
 class MeteredFeature(models.Model):

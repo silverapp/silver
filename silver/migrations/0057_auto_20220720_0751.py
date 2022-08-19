@@ -26,17 +26,32 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='plan',
-            name='separate_metered_features_interval',
+            name='alternative_metered_features_interval',
             field=models.CharField(blank=True, choices=[('day', 'Day'), ('week', 'Week'), ('month', 'Month'), ('year', 'Year')], help_text="Optional frequency with which a subscription's metered features should be billed.", max_length=12, null=True),
         ),
         migrations.AddField(
             model_name='plan',
-            name='separate_metered_features_interval_count',
+            name='alternative_metered_features_interval_count',
             field=models.PositiveIntegerField(blank=True, help_text="Optional number of intervals between each subscription's metered feature billing.", null=True),
         ),
         migrations.AlterField(
             model_name='plan',
             name='interval_count',
             field=models.PositiveIntegerField(help_text='The number of intervals between each subscription billing.'),
+        ),
+        migrations.AlterField(
+            model_name='discount',
+            name='customers',
+            field=models.ManyToManyField(blank=True, related_name='discounts', to='silver.Customer'),
+        ),
+        migrations.AlterField(
+            model_name='discount',
+            name='plans',
+            field=models.ManyToManyField(blank=True, related_name='discounts', to='silver.Plan'),
+        ),
+        migrations.AlterField(
+            model_name='discount',
+            name='subscriptions',
+            field=models.ManyToManyField(blank=True, related_name='discounts', to='silver.Subscription'),
         ),
     ]

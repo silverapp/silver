@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from decimal import Decimal
+from fractions import Fraction
 from typing import List, Iterable, Tuple
 
 from django.core.exceptions import ValidationError
@@ -73,9 +74,9 @@ class Discount(AutoCleanModelMixin, models.Model):
                                      related_name='discounts', on_delete=models.PROTECT,
                                      help_text="The discount's product code.")
 
-    customers = models.ManyToManyField("silver.Customer", related_name='discounts', null=True, blank=True)
-    subscriptions = models.ManyToManyField("silver.Subscription", related_name='discounts', null=True, blank=True)
-    plans = models.ManyToManyField("silver.Plan", related_name='discounts', null=True, blank=True)
+    customers = models.ManyToManyField("silver.Customer", related_name='discounts', blank=True)
+    subscriptions = models.ManyToManyField("silver.Subscription", related_name='discounts', blank=True)
+    plans = models.ManyToManyField("silver.Plan", related_name='discounts', blank=True)
 
     percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
                                      help_text="A percentage to be discounted. For example 25 (%)")
@@ -240,7 +241,7 @@ class Discount(AutoCleanModelMixin, models.Model):
         return [discount for discount in discounts
                 if discount.discount_stacking_type == DiscountStackingType.NONCUMULATIVE]
 
-    def proration_multiplier(self, subscription, start_date, end_date, entry_type: OriginType) -> Tuple[Decimal, bool]:
+    def proration_fraction(self, subscription, start_date, end_date, entry_type: OriginType) -> Tuple[Fraction, bool]:
         if self.start_date and start_date < self.start_date:
             start_date = self.start_date
 
@@ -259,11 +260,11 @@ class Discount(AutoCleanModelMixin, models.Model):
         sub_ced = subscription._cycle_start_date(ignore_trial=True, granulate=False, reference_date=end_date)
 
         if sub_csd <= start_date and sub_ced >= end_date:
-            return Decimal(1), False
+            return Fraction(1), False
 
-        status, percent = subscription._get_proration_status_and_percent(start_date, end_date, entry_type)
+        status, fraction = subscription._get_proration_status_and_fraction(start_date, end_date, entry_type)
 
-        return percent, status
+        return fraction, status
 
     def _entry_description(self, provider, customer, extra_context=None):
         context = {

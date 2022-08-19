@@ -18,11 +18,13 @@ import logging
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from fractions import Fraction
 from functools import reduce
 from typing import Tuple, List
 
 from annoying.functions import get_object_or_None
 from dateutil import rrule
+from dateutil.relativedelta import relativedelta
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import JSONField
 from django_fsm import FSMField, transition, TransitionNotAllowed
@@ -38,11 +40,14 @@ from django.utils import timezone
 from django.utils.timezone import utc
 from django.utils.translation import gettext_lazy as _
 
+from silver.models import Plan
 from silver.models.documents.entries import OriginType
 from silver.models.billing_entities import Customer
 from silver.models.documents import DocumentEntry
 from silver.models.fields import field_template_path
-from silver.utils.dates import ONE_DAY, first_day_of_month, first_day_of_interval, end_of_interval
+from silver.utils.dates import ONE_DAY, first_day_of_month, first_day_of_interval, end_of_interval, monthdiff, \
+    monthdiff_as_fraction
+from silver.utils.numbers import quantize_fraction
 from silver.validators import validate_reference
 
 
@@ -235,6 +240,29 @@ class Subscription(models.Model):
 
         return aligned_start_date if not dates else dates[-1].date()
 
+    def _get_interval_rules(self, granulate, origin_type: OriginType = None):
+        if not origin_type:
+            origin_type = OriginType.Plan
+
+        interval = self.plan.base_interval if origin_type == OriginType.Plan else self.plan.metered_features_interval
+        interval_count = (self.plan.base_interval_count if origin_type == OriginType.Plan
+                          else self.plan.metered_features_interval_count)
+
+        rules = {
+            'interval_type': self._INTERVALS_CODES[interval],
+            'interval_count': 1 if granulate else interval_count,
+        }
+        if interval == self.plan.INTERVALS.MONTH:
+            rules['bymonthday'] = 1  # first day of the month
+        elif interval == self.plan.INTERVALS.WEEK:
+            rules['byweekday'] = 0  # first day of the week (Monday)
+        elif interval == self.plan.INTERVALS.YEAR:
+            # first day of the first month (1 Jan)
+            rules['bymonth'] = 1
+            rules['bymonthday'] = 1
+
+        return rules
+
     def _cycle_start_date(self, reference_date=None, ignore_trial=None, granulate=None,
                           ignore_start_date=None, origin_type: OriginType = None):
         if not origin_type:
@@ -256,22 +284,7 @@ class Subscription(models.Model):
         if not self.start_date or reference_date < self.start_date:
             return None
 
-        interval = self.plan.base_interval if origin_type == OriginType.Plan else self.plan.metered_features_interval
-        interval_count = (self.plan.base_interval_count if origin_type == OriginType.Plan
-                          else self.plan.metered_features_interval_count)
-
-        rules = {
-            'interval_type': self._INTERVALS_CODES[interval],
-            'interval_count': 1 if granulate else interval_count,
-        }
-        if interval == self.plan.INTERVALS.MONTH:
-            rules['bymonthday'] = 1  # first day of the month
-        elif interval == self.plan.INTERVALS.WEEK:
-            rules['byweekday'] = 0  # first day of the week (Monday)
-        elif interval == self.plan.INTERVALS.YEAR:
-            # first day of the first month (1 Jan)
-            rules['bymonth'] = 1
-            rules['bymonthday'] = 1
+        rules = self._get_interval_rules(granulate, origin_type)
 
         start_date_ignoring_trial = self._get_last_start_date_within_range(
             range_start=self.start_date,
@@ -395,16 +408,28 @@ class Subscription(models.Model):
         if not origin_type:
             origin_type = OriginType.Plan
 
+        granulate = True
+        if origin_type == OriginType.Plan:
+            granulate = (
+                self.plan.separate_plan_entries_per_base_interval != Plan.SEPARATE_ENTRIES_BY_INTERVAL.DISABLED
+            )
+
         return self._cycle_start_date(reference_date=reference_date,
-                                      ignore_trial=False, granulate=True,
+                                      ignore_trial=False, granulate=granulate,
                                       origin_type=origin_type)
 
     def bucket_end_date(self, reference_date=None, origin_type: OriginType = None):
         if not origin_type:
             origin_type = OriginType.Plan
 
+        granulate = True
+        if origin_type == OriginType.Plan:
+            granulate = (
+                self.plan.separate_plan_entries_per_base_interval != Plan.SEPARATE_ENTRIES_BY_INTERVAL.DISABLED
+            )
+
         return self._cycle_end_date(reference_date=reference_date,
-                                    ignore_trial=False, granulate=True,
+                                    ignore_trial=False, granulate=granulate,
                                     origin_type=origin_type)
 
     def bucket_start_datetime(self, reference_datetime=None, origin_type: OriginType = None):
@@ -573,12 +598,18 @@ class Subscription(models.Model):
         billed_cycle_end_date = self.cycle_end_date(plan_billed_up_to + ONE_DAY)
         return billed_cycle_end_date < cycle_start_date
 
-    def should_mfs_be_billed(self, billing_date, generate_documents_datetime=None):
+    def should_mfs_be_billed(self, billing_date, generate_documents_datetime=None, billed_up_to=None):
         if self.state not in [self.STATES.ACTIVE, self.STATES.CANCELED]:
             return False
 
         if not generate_documents_datetime:
             generate_documents_datetime = timezone.now()
+
+        if (
+            self.plan.only_bill_metered_features_with_base_amount and
+            not self.should_plan_be_billed(billing_date, generate_documents_datetime)
+        ):
+            return False
 
         if self.cycle_billing_duration:
             if self.start_date > first_day_of_month(billing_date) + self.cycle_billing_duration:
@@ -617,7 +648,7 @@ class Subscription(models.Model):
         if generate_documents_datetime < cycle_start_datetime + generate_after:
             return False
 
-        metered_features_billed_up_to = self.billed_up_to_dates['metered_features_billed_up_to']
+        metered_features_billed_up_to = billed_up_to or self.billed_up_to_dates['metered_features_billed_up_to']
 
         # We want to bill the subscription if the subscription has been canceled.
         if self.state == self.STATES.CANCELED:
@@ -626,7 +657,8 @@ class Subscription(models.Model):
         # wait until the cycle that is going to be billed ends:
         billed_cycle_end_date = self.cycle_end_date(metered_features_billed_up_to + ONE_DAY,
                                                     origin_type=OriginType.MeteredFeature)
-        return billed_cycle_end_date < cycle_start_date
+
+        return billed_cycle_end_date < cycle_start_date and billed_cycle_end_date < billing_date
 
     @property
     def _has_existing_customer_with_consolidated_billing(self):
@@ -762,10 +794,10 @@ class Subscription(models.Model):
         the discount for the trial period.
         """
 
-        prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date,
-                                                                   OriginType.Plan)
-        plan_price = self.plan.amount * percent
+        prorated, fraction = self._get_proration_status_and_fraction(start_date,
+                                                                     end_date,
+                                                                     OriginType.Plan)
+        plan_price = quantize_fraction(Fraction(str(self.plan.amount)) * fraction)
 
         context = self._build_entry_context({
             'name': self.plan.name,
@@ -774,7 +806,7 @@ class Subscription(models.Model):
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
-            'proration_percentage': percent,
+            'proration_percentage': plan_price,
             'context': 'plan-trial'
         })
 
@@ -885,15 +917,15 @@ class Subscription(models.Model):
             tzinfo=timezone.utc,
         ).replace(microsecond=0)
 
-        prorated, percent = self._get_proration_status_and_percent(start_date,
-                                                                   end_date,
-                                                                   OriginType.MeteredFeature)
+        prorated, fraction = self._get_proration_status_and_fraction(start_date,
+                                                                     end_date,
+                                                                     OriginType.MeteredFeature)
         context = self._build_entry_context({
             'product_code': self.plan.product_code,
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
-            'proration_percentage': percent,
+            'proration_percentage': quantize_fraction(fraction),
             'context': 'metered-feature-trial'
         })
 
@@ -989,11 +1021,11 @@ class Subscription(models.Model):
               document generation process.
         """
 
-        prorated, proration_percentage = self._get_proration_status_and_percent(start_date,
-                                                                                end_date,
-                                                                                OriginType.Plan)
+        prorated, fraction = self._get_proration_status_and_fraction(start_date,
+                                                                     end_date,
+                                                                     OriginType.Plan)
 
-        plan_price = self.plan.amount * proration_percentage
+        plan_price = quantize_fraction(Fraction(str(self.plan.amount)) * fraction)
 
         base_context = {
             'name': self.plan.name,
@@ -1002,7 +1034,7 @@ class Subscription(models.Model):
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
-            'proration_percentage': proration_percentage,
+            'proration_percentage': quantize_fraction(fraction),
         }
 
         plan_context = base_context.copy()
@@ -1025,9 +1057,9 @@ class Subscription(models.Model):
 
         return entries[0].total, entries
 
-    def _get_consumed_units(self, metered_feature, proration_percent,
+    def _get_consumed_units(self, metered_feature, proration_fraction: Fraction,
                             start_datetime, end_datetime):
-        included_units = (proration_percent * metered_feature.included_units)
+        included_units = quantize_fraction(proration_fraction * Fraction(metered_feature.included_units))
 
         qs = self.mf_log_entries.filter(metered_feature=metered_feature,
                                         start_datetime__gte=start_datetime,
@@ -1054,7 +1086,7 @@ class Subscription(models.Model):
             tzinfo=timezone.utc,
         ).replace(microsecond=0)
 
-        prorated, percent = self._get_proration_status_and_percent(start_date, end_date, OriginType.MeteredFeature)
+        prorated, fraction = self._get_proration_status_and_fraction(start_date, end_date, OriginType.MeteredFeature)
 
         context = self._build_entry_context({
             'name': self.plan.name,
@@ -1063,7 +1095,7 @@ class Subscription(models.Model):
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
-            'proration_percentage': percent,
+            'proration_percentage': quantize_fraction(fraction),
             'context': 'metered-feature'
         })
 
@@ -1071,7 +1103,7 @@ class Subscription(models.Model):
         entries = []
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
-                metered_feature, percent, start_datetime, end_datetime)
+                metered_feature, fraction, start_datetime, end_datetime)
 
             context.update({'metered_feature': metered_feature,
                             'unit': metered_feature.unit,
@@ -1095,7 +1127,7 @@ class Subscription(models.Model):
 
         return mfs_total, entries
 
-    def _get_proration_status_and_percent(self, start_date, end_date, entry_type: OriginType) -> Tuple[bool, Decimal]:
+    def _get_proration_status_and_fraction(self, start_date, end_date, entry_type: OriginType) -> Tuple[bool, Fraction]:
         """
         Returns the proration percent (how much of the interval will be billed)
         and the status (if the subscription is prorated or not).
@@ -1124,14 +1156,21 @@ class Subscription(models.Model):
         )
 
         if start_date == first_day_of_full_interval and end_date == last_day_of_full_interval:
-            return False, Decimal('1.0000')
+            return False, Fraction(1, 1)
         else:
-            full_interval_days = (last_day_of_full_interval - first_day_of_full_interval).days + 1
-            billing_cycle_days = (end_date - start_date).days + 1
-            return (
-                True,
-                Decimal(1.0 * billing_cycle_days / full_interval_days).quantize(Decimal('.0000'))
-            )
+            if interval in (Plan.INTERVALS.DAY, Plan.INTERVALS.WEEK, Plan.INTERVALS.YEAR):
+                full_interval_days = (last_day_of_full_interval - first_day_of_full_interval).days + 1
+                billing_cycle_days = (end_date - start_date).days + 1
+                return (
+                    True,
+                    Fraction(billing_cycle_days, full_interval_days)
+                )
+            elif interval == Plan.INTERVALS.MONTH:
+                billing_cycle_months = monthdiff_as_fraction(end_date + ONE_DAY, start_date)
+                full_interval_months = monthdiff_as_fraction(last_day_of_full_interval + ONE_DAY,
+                                                             first_day_of_full_interval)
+
+                return True, billing_cycle_months / full_interval_months
 
     def _entry_unit(self, context):
         unit_template_path = field_template_path(
