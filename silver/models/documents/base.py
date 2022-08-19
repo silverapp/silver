@@ -375,8 +375,6 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
     def save(self, *args, **kwargs):
-        self._last_state = self.state
-
         with db_transaction.atomic():
             # Create pdf object
             if not self.pdf and self.state != self.STATES.DRAFT:

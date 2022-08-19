@@ -14,7 +14,11 @@
 
 from __future__ import absolute_import
 
-from datetime import timedelta
+from datetime import timedelta, date
+from decimal import Decimal
+from fractions import Fraction
+from typing import Tuple
+
 from dateutil.relativedelta import *
 
 
@@ -85,3 +89,33 @@ def last_day_of_year(date):
 
 def prev_month(date):
     return date - ONE_MONTH
+
+
+def monthdiff_as_fraction(end_date: date, start_date: date) -> Fraction:
+    if start_date > end_date:
+        return -monthdiff_as_fraction(start_date, end_date)
+
+    months = (end_date.year - start_date.year) * 12 + end_date.month - start_date.month
+
+    intermediary_date = start_date + months * ONE_MONTH
+    if intermediary_date == end_date:
+        return Fraction(months)
+
+    if intermediary_date < end_date:
+        month_before_end_date = intermediary_date
+        month_after_end_date = intermediary_date + ONE_MONTH
+    else:
+        month_before_end_date = intermediary_date - ONE_MONTH
+        month_after_end_date = intermediary_date
+        months -= 1
+
+    return Fraction(months) + Fraction(
+        (end_date - month_before_end_date).days,
+        (month_after_end_date - month_before_end_date).days
+    )
+
+
+def monthdiff(end_date: date, start_date: date) -> Decimal:
+    fraction = monthdiff_as_fraction(end_date, start_date)
+
+    return Decimal(fraction.numerator) / Decimal(fraction.denominator)
