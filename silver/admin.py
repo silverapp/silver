@@ -108,7 +108,9 @@ class PlanForm(forms.ModelForm):
         model = Plan
         fields = ('provider', 'name', 'product_code', 'interval',
                   'interval_count', 'amount', 'currency', 'trial_period_days',
-                  'generate_documents_on_trial_end', 'separate_cycles_during_trial', 'prebill_plan',
+                  'generate_documents_on_trial_end', 'separate_cycles_during_trial',
+                  'separate_plan_entries_per_base_interval', 'prebill_plan',
+                  'only_bill_metered_features_with_base_amount',
                   'cycle_billing_duration', 'generate_after', 'metered_features', 'enabled',
                   'private')
 
@@ -124,6 +126,57 @@ class PlanAdmin(ModelAdmin):
     search_fields = ['name']
     list_filter = ['provider']
     form = PlanForm
+    fieldsets = (
+        (
+            "Plan Identity",
+            {
+                "fields": (
+                    ("provider",),
+                    ("name", "product_code"),
+                )
+            },
+        ),
+        (
+            "Charges",
+            {
+                "fields": (
+                    ("amount", "currency"),
+                    ("interval", "interval_count",),
+                    ("trial_period_days",),
+                    ("prebill_plan",),
+                )
+            }
+        ),
+        (
+            "Metered Features (extra charges)",
+            {
+                "fields": (
+                    ("metered_features",),
+                    ("alternative_metered_features_interval", "alternative_metered_features_interval_count"),
+                    ("only_bill_metered_features_with_base_amount",),
+                )
+            }
+        ),
+        (
+            "Billing Documents",
+            {
+                "fields": (
+                    ("separate_plan_entries_per_base_interval"),
+                    ("generate_documents_on_trial_end", "separate_cycles_during_trial"),
+                    ("cycle_billing_duration", "generate_after",),
+                )
+            }
+        ),
+        (
+            "Manage",
+            {
+                "fields": (
+                    ("enabled",),
+                    ("private",),
+                )
+            },
+        ),
+    )
 
     def interval_display(self, obj):
         return ('{:d} {}s'.format(obj.interval_count, obj.interval)
