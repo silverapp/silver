@@ -780,7 +780,24 @@ class ProformaFilter(SimpleListFilter):
 
 
 class DiscountAdmin(ModelAdmin):
+    list_display = ["__str__", "get_amount_description", "get_matching_subscriptions"]
     filter_horizontal = ["subscriptions", "customers", "plans"]
+
+    def get_matching_subscriptions(self, discount):
+        count = discount.matching_subscriptions().count()
+
+        return mark_safe(
+            f'<a href="{get_admin_url(Subscription, anchored=False)}?discount={discount.id}">'
+            f"{count} {model_ngettext(Subscription, count)}"
+            f"</a>"
+        )
+
+    get_matching_subscriptions.short_description = "Matching Subscriptions"
+
+    def get_amount_description(self, discount):
+        return discount.amount_description
+
+    get_amount_description.short_description = "Amount"
 
 
 class BillingDocumentAdmin(ModelAdmin):
