@@ -24,6 +24,7 @@ from decimal import Decimal
 import requests
 from PyPDF2 import PdfFileReader, PdfFileMerger
 from dal import autocomplete
+from django.contrib.admin.utils import model_ngettext
 from django_fsm import TransitionNotAllowed
 from furl import furl
 
@@ -56,6 +57,7 @@ from silver.models import (
     Transaction, PaymentMethod, Discount
 )
 from silver.payment_processors.mixins import PaymentProcessorTypes
+from silver.utils.admin import get_admin_url
 from silver.utils.international import currencies
 from silver.utils.payments import get_payment_url
 
@@ -300,13 +302,26 @@ class PlanFilter(SimpleListFilter):
         if self.value():
             return queryset.filter(plan__id=self.value())
         return queryset
+
+
+class DiscountFilter(SimpleListFilter):
+    title = _('discount')
+    parameter_name = 'discount'
+
+    def lookups(self, request, model_admin):
+        return list(Discount.objects.all().values_list('id', 'name'))
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return Discount.objects.get(pk=self.value()).matching_subscriptions() & queryset
+
         return queryset
 
 
 class SubscriptionAdmin(ModelAdmin):
     list_display = ['customer', 'get_plan_name', 'last_billing_date', 'trial_end',
                     'start_date', 'ended_at', 'state', metadata]
-    list_filter = [PlanFilter, 'state', 'plan__provider', 'customer']
+    list_filter = [PlanFilter, 'state', 'plan__provider', 'customer', DiscountFilter]
     actions = ['activate', 'cancel_now', 'cancel_at_end_of_cycle', 'end']
     search_fields = ['customer__first_name', 'customer__last_name',
                      'customer__company', 'plan__name', 'meta']
