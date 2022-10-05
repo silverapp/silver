@@ -284,21 +284,22 @@ class PlanFilter(SimpleListFilter):
     parameter_name = 'plan'
 
     def lookups(self, request, model_admin):
-        queryset = model_admin.get_queryset(request).distinct() \
+        queryset = model_admin.get_queryset(request) \
             .annotate(
                 _name_provider=Concat(
                     F('plan__name'), Value(' ('), F('plan__provider__name'), Value(')'),
                     output_field=fields.CharField()
                 ),
         ) \
-            .values_list('id', '_name_provider') \
+            .values_list('plan__id', '_name_provider') \
             .distinct()
 
         return list(queryset)
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(invoice__exact=self.value())
+            return queryset.filter(plan__id=self.value())
+        return queryset
         return queryset
 
 
