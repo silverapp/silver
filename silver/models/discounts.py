@@ -21,8 +21,9 @@ from django.db import models
 from django.db.models import Q, F
 from django.template.loader import render_to_string
 
-from silver.models.documents.entries import OriginType
-from silver.models.fields import field_template_path
+from .subscriptions import Subscription
+from .documents.entries import OriginType
+from .fields import field_template_path
 from silver.utils.dates import end_of_interval
 from silver.utils.models import AutoCleanModelMixin
 
@@ -131,7 +132,11 @@ class Discount(AutoCleanModelMixin, models.Model):
     #             {NON_FIELD_ERRORS: "Per entry Discounts cannot stack successively."}
     #         )
 
-    def __str__(self):
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def amount_description(self) -> str:
         discount = []
         if self.applies_to in [self.TARGET.ALL, self.TARGET.PLAN_AMOUNT]:
             discount.append(f"{self.percentage}% off Plan")
@@ -140,6 +145,21 @@ class Discount(AutoCleanModelMixin, models.Model):
             discount.append(f"{self.percentage}% off Metered Features")
 
         return ", ".join(discount)
+
+    def matching_subscriptions(self):
+        subscriptions = self.subscriptions.all()
+        if not subscriptions:
+            subscriptions = Subscription.objects.all()
+
+        customers = self.customers.all()
+        plans = self.plans.all()
+        if customers:
+            subscriptions = subscriptions.filter(customer__in=customers)
+
+        if plans:
+            subscriptions = subscriptions.filter(plan__in=plans)
+
+        return subscriptions
 
     @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):
