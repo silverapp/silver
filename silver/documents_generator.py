@@ -562,11 +562,8 @@ class DocumentsGenerator(object):
         DocumentModel = (Proforma if provider.flow == provider.FLOWS.PROFORMA
                          else Invoice)
 
-        payment_due_days = dt.timedelta(days=customer.payment_due_days)
-        due_date = billing_date + payment_due_days
         document = DocumentModel.objects.create(provider=provider,
                                                 customer=customer,
-                                                due_date=due_date,
                                                 currency=subscription.plan.currency)
 
         return document

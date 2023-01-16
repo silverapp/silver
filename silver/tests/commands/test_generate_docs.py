@@ -473,7 +473,9 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         # In draft state
-        assert Proforma.objects.all()[0].state == Proforma.STATES.DRAFT
+        proforma = Proforma.objects.all()[0]
+        assert proforma.state == Proforma.STATES.DRAFT
+        assert not proforma.due_date
 
         document_entries = DocumentEntry.objects.all()
         # Expect 4 entries:
@@ -1244,7 +1246,9 @@ class TestInvoiceGenerationCommand(TestCase):
             assert Proforma.objects.all().count() == 1
             assert Invoice.objects.all().count() == 0
 
-            assert Proforma.objects.all().first().state == Proforma.STATES.ISSUED
+            proforma = Proforma.objects.all().first()
+            assert proforma.state == Proforma.STATES.ISSUED
+            assert proforma.due_date == proforma.issue_date + dt.timedelta(days=customer.payment_due_days)
 
     def test_gen_mixed_states_for_multiple_providers(self):
         billing_date = generate_docs_date('2015-03-02')
