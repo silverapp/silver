@@ -7,6 +7,7 @@ Some of these changes that were considered to be potentially breaking were marke
 
 - Fixed a race condition when paying invoices, by using DB locks. (hopefully)
 - Fixed a case when issuing Invoices (occuring from a paid Proforma) would ignore the customer's `payment_due_date` field
+- Fixed documents `due_date` being set even in draft, which was incorrect. Now it will only be set after the document has been issued. **(WARNING)**
 
 ### General
 - Transactions will automatically save when they transition to another state (`transaction.settle()` will also call 
