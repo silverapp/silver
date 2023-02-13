@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from decimal import Decimal
+from django.utils import timezone
 from fractions import Fraction
 from typing import List, Iterable, Tuple
 
@@ -36,7 +37,7 @@ class DocumentEntryBehavior(models.TextChoices):
 
 
 class DiscountStackingType(models.TextChoices):
-    # SUCCESSIVE = "successive", "Successive"
+    MULTIPLICATIVE = "multiplicative", "Multiplicative"
     ADDITIVE = "additive", "Additive"
     NONCUMULATIVE = "noncumulative", "Noncumulative"
 
@@ -134,6 +135,40 @@ class Discount(AutoCleanModelMixin, models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def is_active_for_subscription(self, subscription):
+        if not self.state == self.STATES.ACTIVE:
+            return False
+
+        period = self.period_applied_to_subscription(subscription)
+
+        return period["start_date"] <= timezone.now().date() <= period["end_date"]
+
+    def period_applied_to_subscription(self, subscription):
+        start_date = subscription.start_date
+        end_date = subscription.ended_at
+
+        if self.duration_count and self.duration_interval:
+            interval = (subscription.plan.interval if self.duration_interval == DurationIntervals.BILLING_CYCLE
+                        else self.duration_interval)
+
+            duration_end_date = end_of_interval(subscription.start_date, interval, self.duration_count)
+            if not end_date:
+                end_date = duration_end_date
+
+            if duration_end_date < end_date:
+                end_date = duration_end_date
+
+        if self.start_date and self.start_date > start_date:
+            start_date = self.start_date
+
+        if self.end_date and self.end_date < end_date:
+            end_date = self.end_date
+
+        return {
+            "start_date": start_date,
+            "end_date": end_date
+        }
 
     @property
     def amount_description(self) -> str:
@@ -251,10 +286,10 @@ class Discount(AutoCleanModelMixin, models.Model):
         return [discount for discount in discounts
                 if discount.discount_stacking_type == DiscountStackingType.ADDITIVE]
 
-    # @classmethod
-    # def filter_successive(cls, discounts: Iterable["Discount"]) -> List["Discount"]:
-    #     return [discount for discount in discounts
-    #             if discount.discount_stacking_type == DiscountStackingType.SUCCESSIVE]
+    @classmethod
+    def filter_multiplicative(cls, discounts: Iterable["Discount"]) -> List["Discount"]:
+        return [discount for discount in discounts
+                if discount.discount_stacking_type == DiscountStackingType.MULTIPLICATIVE]
 
     @classmethod
     def filter_noncumulative(cls, discounts: Iterable["Discount"]) -> List["Discount"]:

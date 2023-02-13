@@ -18,6 +18,7 @@ import logging
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from django.apps import apps
 from fractions import Fraction
 from functools import reduce
 from typing import Tuple, List
@@ -692,6 +693,12 @@ class Subscription(models.Model):
             state__in=[Subscription.STATES.ACTIVE, Subscription.STATES.CANCELED,
                        Subscription.STATES.ENDED]
         ).count() == 0
+
+    @property
+    def applied_discounts(self):
+        Discount = apps.get_model('silver.Discount')
+
+        return Discount.for_subscription(self)
 
     ##########################################################################
     # STATE MACHINE TRANSITIONS

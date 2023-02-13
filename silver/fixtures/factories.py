@@ -69,8 +69,10 @@ class DiscountFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Discount
 
-    name = factory.Sequence(lambda n: "20% OFF " + faker.first_name())
-    percentage = Decimal("20.00")
+    name = factory.Sequence(lambda n: "MEGA DISCOUNT " + faker.first_name())
+    percentage = factory.Sequence(lambda n: (n + 42) % 100)
+    duration_count = factory.Sequence(lambda n: n + 1)
+    duration_interval = Discount.DURATION_INTERVALS.BILLING_CYCLE
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):

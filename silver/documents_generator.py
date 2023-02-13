@@ -197,6 +197,7 @@ class DocumentsGenerator(object):
             for discount in matching_discounts
         }
 
+        # Populate discount_to_entries and entry_to_discounts maps
         for entry_info in entries_info:
             if entry_info.origin_type == OriginType.Plan:
                 for discount in discounts_affecting_plan:
@@ -215,7 +216,16 @@ class DocumentsGenerator(object):
 
         discounts = defaultdict(lambda: Decimal(0.0))
 
+        additive_discounts_amount = Decimal(0.0)
+        # cumulative_entries_discount_amounts keeps track of how much entries have been discounted
+        # it is used mainly for calculating multiplicative discounts
+        cumulative_entries_discount_amounts = defaultdict(lambda: Decimal("0.0"))
+
+        # TODO: only add noncum and additive here, and then add multiplicative based on additive
         for discount, entries in discount_to_entries.items():
+            if discount.discount_stacking_type == Discount.STACKING_TYPES.MULTIPLICATIVE:
+                continue
+
             if len(entries) == len(entries_info):
                 discount_infos[discount].applies_to_all_discountable_entries_in_interval = True
 
@@ -224,14 +234,50 @@ class DocumentsGenerator(object):
                     entry.subscription, start_date, end_date, entry.origin_type
                 )
 
-                discounts[discount] += quantize_fraction(
+                entry_discount_amount = quantize_fraction(
                     Fraction(str(discount.as_additive)) * Fraction(str(entry.amount)) * proration_fraction
                 )
+
+                discounts[discount] += entry_discount_amount
+
+                if discount.discount_stacking_type != Discount.STACKING_TYPES.NONCUMULATIVE:
+                    cumulative_entries_discount_amounts[entry] += entry_discount_amount
+
+                if discount.discount_stacking_type == Discount.STACKING_TYPES.ADDITIVE:
+                    additive_discounts_amount += entry_discount_amount
+
+        multiplicative_discounts_amount = Decimal(0.0)
+
+        for discount, entries in discount_to_entries.items():
+            if discount.discount_stacking_type != Discount.STACKING_TYPES.MULTIPLICATIVE:
+                continue
+
+            if len(entries) == len(entries_info):
+                discount_infos[discount].applies_to_all_discountable_entries_in_interval = True
+
+            for entry in entries:
+                proration_fraction, _ = discount.proration_fraction(
+                    entry.subscription, start_date, end_date, entry.origin_type
+                )
+
+                remaining_entry_amount = max(Decimal(0.0), entry.amount - cumulative_entries_discount_amounts[entry])
+                if not remaining_entry_amount:
+                    continue
+
+                entry_discount_amount = quantize_fraction(
+                    Fraction(str(discount.as_additive)) * Fraction(str(remaining_entry_amount)) * proration_fraction
+                )
+
+                discounts[discount] += entry_discount_amount
+
+                cumulative_entries_discount_amounts[entry] += entry_discount_amount
+                multiplicative_discounts_amount += entry_discount_amount
 
         max_noncumulative_discount_per_document = Decimal(0.0)
         noncumulative_discount_per_document = None
         for discount in Discount.filter_noncumulative(discounts):
             amount = discounts[discount]
+
             if amount > max_noncumulative_discount_per_document:
                 max_noncumulative_discount_per_document = amount
                 noncumulative_discount_per_document = discount
@@ -240,13 +286,22 @@ class DocumentsGenerator(object):
         for discount in Discount.filter_additive(discounts):
             additive_discounts[discount] = discounts[discount]
 
+        multiplicative_discounts = {}
+        for discount in Discount.filter_multiplicative(discounts):
+            multiplicative_discounts[discount] = discounts[discount]
+
         extra_context = {
             'start_date': start_date,
             'end_date': end_date,
             'context': 'discount',
         }
 
-        if max_noncumulative_discount_per_document > sum(additive_discounts.values()):
+        cumulative_discounts_amount = additive_discounts_amount + multiplicative_discounts_amount
+
+        if (
+                max_noncumulative_discount_per_document and
+                max_noncumulative_discount_per_document > cumulative_discounts_amount
+        ):
             extra_context['subscriptions'] = set(
                 entry.subscription
                 for entry in discount_to_entries[noncumulative_discount_per_document]
@@ -267,7 +322,7 @@ class DocumentsGenerator(object):
             ]
 
         entries = []
-        for discount, amount in additive_discounts.items():
+        for discount, amount in {**additive_discounts, **multiplicative_discounts}.items():
             if amount <= 0:
                 continue
 
