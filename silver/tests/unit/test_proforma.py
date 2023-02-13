@@ -20,12 +20,14 @@ from decimal import Decimal
 
 import time
 from django.db import transaction, connection
+from django.utils import timezone
 from django_fsm import TransitionNotAllowed
 from six.moves import zip
 
 from django.core.exceptions import ValidationError
 from django.test import TransactionTestCase
 
+import settings
 from silver.models import DocumentEntry, Invoice, Proforma
 from silver.fixtures.factories import (
     ProformaFactory, DocumentEntryFactory, CustomerFactory
@@ -35,12 +37,18 @@ from silver.fixtures.factories import (
 class TestProforma(TransactionTestCase):
     def test_pay_proforma_related_invoice_state_change_to_paid(self):
         proforma = ProformaFactory.create()
-        proforma.issue()
-        proforma.create_invoice()
+        proforma.issue(issue_date=(timezone.now() - datetime.timedelta(days=14)).date())
+        invoice = proforma.create_invoice()
+
+        payment_due_days = datetime.timedelta(days=settings.PAYMENT_DUE_DAYS)
+
+        assert invoice.due_date == invoice.issue_date + payment_due_days
 
         proforma.pay()
 
         assert proforma.related_document.state == Invoice.STATES.PAID
+        assert proforma.related_document.due_date == invoice.issue_date + payment_due_days
+
         assert proforma.state == Invoice.STATES.PAID
 
     def test_pay_proforma_with_no_related_invoice_creates_invoice(self):
