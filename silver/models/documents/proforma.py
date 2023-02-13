@@ -86,7 +86,6 @@ class Proforma(BillingDocumentBase):
             self.related_document = self._new_invoice()
             self.save()
 
-            self.related_document.due_date = self.due_date
             self.related_document.issue()
             self.related_document.save()
 
