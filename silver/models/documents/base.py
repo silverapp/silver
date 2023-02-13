@@ -15,7 +15,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 
 from django_fsm import FSMField, TransitionNotAllowed
@@ -217,7 +217,10 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
 
     def _issue(self, issue_date=None, due_date=None):
         if issue_date:
-            self.issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+            if not isinstance(issue_date, date):
+                issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+
+            self.issue_date = issue_date
         elif not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
 
