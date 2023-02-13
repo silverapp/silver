@@ -26,7 +26,7 @@ from django.test import TestCase
 
 from silver.management.commands.generate_docs import date as generate_docs_date
 from silver.models import (Proforma, DocumentEntry, Invoice, Subscription, Customer, Plan,
-                           BillingLog)
+                           BillingLog, Discount)
 from silver.fixtures.factories import (SubscriptionFactory, PlanFactory,
                                        MeteredFeatureFactory,
                                        MeteredFeatureUnitsLogFactory,
@@ -2619,7 +2619,7 @@ class TestInvoiceGenerationCommand(TestCase):
         billing_date = generate_docs_date('2015-07-01')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
-        discount = DiscountFactory.create(percentage=Decimal('25'))
+        discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None)
         discount.customers.add(customer)
 
         mf_price = Decimal('2.5')
@@ -2670,6 +2670,69 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_discounts_additive(self):
         pass
+
+    def test_discounts_additive_and_multiplicative(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+        # two additive discounts (20% total)
+        discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.ADDITIVE,
+                                          percentage=Decimal('10'), duration_count=None, duration_interval=None)
+        discount.customers.add(customer)
+
+        discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.ADDITIVE,
+                                          percentage=Decimal('10'), duration_count=None, duration_interval=None)
+        discount.customers.add(customer)
+
+        # two multiplicative discounts (8% + 7.2% = 15.2% total)
+        discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
+                                          percentage=Decimal('10'), duration_count=None, duration_interval=None)
+        discount.customers.add(customer)
+
+        discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
+                                          percentage=Decimal('10'), duration_count=None, duration_interval=None)
+        discount.customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 10
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units) * mf_price
+
+        assert proforma.total == (plan.amount + consumed_mfs_value) * Decimal('0.648')
 
     def test_discounts_additive_no_overflow(self):
         pass

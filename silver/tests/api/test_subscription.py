@@ -19,7 +19,6 @@ import json
 from collections import OrderedDict
 
 from django.conf import settings
-from django.utils.timezone import utc
 
 from freezegun import freeze_time
 
@@ -31,12 +30,14 @@ from silver.models import Subscription
 from silver.tests.api.specs.subscription import spec_subscription
 from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
                                        PlanFactory, SubscriptionFactory,
-                                       MeteredFeatureFactory)
+                                       MeteredFeatureFactory, DiscountFactory)
+from silver.tests.api.utils.client import JSONApiClient
 
 
 class TestSubscriptionEndpoint(APITestCase):
     def setUp(self):
         admin_user = AdminUserFactory.create()
+        self.client = JSONApiClient()
         self.client.force_authenticate(user=admin_user)
 
     def test_create_subscription(self):
@@ -314,6 +315,8 @@ class TestSubscriptionEndpoint(APITestCase):
 
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
+        discount = DiscountFactory.create()
+        discount.subscriptions.add(subscription)
 
         url = reverse('subscription-detail',
                       kwargs={'subscription_pk': subscription.pk,

@@ -16,10 +16,11 @@ from __future__ import absolute_import
 
 from django.core.serializers.json import DjangoJSONEncoder
 from rest_framework import serializers
-from rest_framework.fields import JSONField
+from rest_framework.fields import JSONField, SerializerMethodField
 from rest_framework.reverse import reverse
 
 from silver.api.serializers.common import CustomerUrl, MeteredFeatureSerializer
+from silver.api.serializers.discount_serializer import DiscountSerializer
 from silver.api.serializers.plans_serializer import PlanSerializer
 from silver.models import MeteredFeatureUnitsLog, Subscription, Customer
 
@@ -69,11 +70,12 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
     meta = JSONField(required=False, encoder=DjangoJSONEncoder)
+    discounts = SerializerMethodField()
 
     class Meta:
         model = Subscription
         fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date', 'cancel_date',
-                  'ended_at', 'state', 'reference', 'updateable_buckets', 'meta', 'description')
+                  'ended_at', 'state', 'reference', 'updateable_buckets', 'meta', 'description', 'discounts')
         read_only_fields = ('state', 'updateable_buckets')
         extra_kwargs = {'customer': {'lookup_url_kwarg': 'customer_pk'}}
 
@@ -83,6 +85,14 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
         instance = Subscription(**attrs)
         instance.clean()
         return attrs
+
+    def get_discounts(self, subscription):
+        context = self.context
+        context["subscription"] = subscription
+
+        return [
+            DiscountSerializer(discount, context=context).data for discount in subscription.applied_discounts
+        ]
 
 
 class SubscriptionDetailSerializer(SubscriptionSerializer):
