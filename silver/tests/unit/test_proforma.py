@@ -19,6 +19,7 @@ import threading
 from decimal import Decimal
 
 import time
+from django.conf import settings
 from django.db import transaction, connection
 from django.utils import timezone
 from django_fsm import TransitionNotAllowed
@@ -27,7 +28,6 @@ from six.moves import zip
 from django.core.exceptions import ValidationError
 from django.test import TransactionTestCase
 
-import settings
 from silver.models import DocumentEntry, Invoice, Proforma
 from silver.fixtures.factories import (
     ProformaFactory, DocumentEntryFactory, CustomerFactory
