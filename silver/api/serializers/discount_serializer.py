@@ -18,7 +18,8 @@ class DiscountSerializer(AutoCleanSerializerMixin,
 
     class Meta:
         model = Discount
-        fields = [
+        fields = read_only_fields = [
+            "id",
             "name",
             "product_code",
             "percentage",

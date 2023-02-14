@@ -1,5 +1,6 @@
 def spec_discount(discount, subscription=None):
     return {
+        'id': discount.id,
         'name': discount.name,
         'product_code': discount.product_code.value if discount.product_code else None,
         'percentage': str(discount.percentage),
