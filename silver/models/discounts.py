@@ -137,6 +137,9 @@ class Discount(AutoCleanModelMixin, models.Model):
         return self.name
 
     def is_active_for_subscription(self, subscription):
+        if not subscription.state == subscription.STATES.ACTIVE:
+            return False
+
         if not self.state == self.STATES.ACTIVE:
             return False
 
@@ -159,10 +162,10 @@ class Discount(AutoCleanModelMixin, models.Model):
             if duration_end_date < end_date:
                 end_date = duration_end_date
 
-        if self.start_date and self.start_date > start_date:
+        if start_date and self.start_date and self.start_date > start_date:
             start_date = self.start_date
 
-        if self.end_date and self.end_date < end_date:
+        if end_date and self.end_date and self.end_date < end_date:
             end_date = self.end_date
 
         return {
