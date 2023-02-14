@@ -40,7 +40,7 @@ class TestProforma(TransactionTestCase):
         proforma.issue(issue_date=(timezone.now() - datetime.timedelta(days=14)).date())
         invoice = proforma.create_invoice()
 
-        payment_due_days = datetime.timedelta(days=settings.PAYMENT_DUE_DAYS)
+        payment_due_days = datetime.timedelta(days=getattr(settings, 'SILVER_DEFAULT_DUE_DAYS', 5))
 
         assert invoice.due_date == invoice.issue_date + payment_due_days
 
