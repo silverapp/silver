@@ -152,6 +152,9 @@ class Discount(AutoCleanModelMixin, models.Model):
         start_date = subscription.start_date
         end_date = subscription.ended_at
 
+        if not start_date:
+            return None
+
         if self.duration_count and self.duration_interval:
             interval = (subscription.plan.interval if self.duration_interval == DurationIntervals.BILLING_CYCLE
                         else self.duration_interval)
@@ -163,7 +166,7 @@ class Discount(AutoCleanModelMixin, models.Model):
             if duration_end_date < end_date:
                 end_date = duration_end_date
 
-        if start_date and self.start_date and self.start_date > start_date:
+        if self.start_date and self.start_date > start_date:
             start_date = self.start_date
 
         if end_date and self.end_date and self.end_date < end_date:
