@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from datetime import datetime
 from decimal import Decimal
 from django.utils import timezone
 from fractions import Fraction
@@ -144,8 +144,9 @@ class Discount(AutoCleanModelMixin, models.Model):
             return False
 
         period = self.period_applied_to_subscription(subscription)
+        start_date, end_date = period["start_date"], period["end_date"]
 
-        return period["start_date"] <= timezone.now().date() <= period["end_date"]
+        return (start_date or datetime.min.date()) <= timezone.now().date() <= (end_date or datetime.max.date())
 
     def period_applied_to_subscription(self, subscription):
         start_date = subscription.start_date
