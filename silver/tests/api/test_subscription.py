@@ -30,7 +30,7 @@ from silver.models import Subscription
 from silver.tests.api.specs.subscription import spec_subscription
 from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
                                        PlanFactory, SubscriptionFactory,
-                                       MeteredFeatureFactory, DiscountFactory)
+                                       MeteredFeatureFactory, DiscountFactory, BonusFactory)
 from silver.tests.api.utils.client import JSONApiClient
 
 
@@ -317,6 +317,9 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription = SubscriptionFactory.create()
         discount = DiscountFactory.create()
         discount.subscriptions.add(subscription)
+
+        bonus = BonusFactory.create(amount=1234)
+        bonus.filter_subscriptions.add(subscription)
 
         url = reverse('subscription-detail',
                       kwargs={'subscription_pk': subscription.pk,

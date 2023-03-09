@@ -28,6 +28,7 @@ from django.utils import timezone
 from silver.models import (
     Customer, Subscription, Proforma, Invoice, Provider, BillingLog, DocumentEntry, Plan
 )
+from silver.models.bonuses import Bonus
 from silver.models.discounts import Discount
 from silver.models.documents.entries import OriginType, EntryInfo
 from silver.utils.dates import ONE_DAY
@@ -582,14 +583,15 @@ class DocumentsGenerator(object):
         # before the billing date.
         should_bill_metered_features = relative_end_date < billing_date
 
-        # Bill the metered features
         if not should_bill_metered_features:
             return None, None
+
+        bonuses = Bonus.for_subscription(subscription)
 
         if subscription.on_trial(relative_start_date):
             subscription._add_mfs_for_trial(
                 start_date=relative_start_date, end_date=relative_end_date,
-                invoice=invoice, proforma=proforma
+                invoice=invoice, proforma=proforma, bonuses=bonuses
             )
 
             # Should return an entry info for trial as well, but need to filter it out from discounts
@@ -597,7 +599,7 @@ class DocumentsGenerator(object):
         else:
             amount, _ = subscription._add_mfs_entries(
                 start_date=relative_start_date, end_date=relative_end_date,
-                proforma=proforma, invoice=invoice
+                proforma=proforma, invoice=invoice, bonuses=bonuses
             )
 
             entry_info = EntryInfo(

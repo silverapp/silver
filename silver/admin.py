@@ -56,6 +56,7 @@ from silver.models import (
     ProductCode, Proforma, BillingLog, BillingDocumentBase,
     Transaction, PaymentMethod, Discount
 )
+from silver.models.bonuses import Bonus
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.utils.admin import get_admin_url
 from silver.utils.international import currencies
@@ -318,10 +319,24 @@ class DiscountFilter(SimpleListFilter):
         return queryset
 
 
+class BonusFilter(SimpleListFilter):
+    title = _('bonus')
+    parameter_name = 'bonus'
+
+    def lookups(self, request, model_admin):
+        return list(Bonus.objects.all().values_list('id', 'name'))
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return Bonus.objects.get(pk=self.value()).matching_subscriptions() & queryset
+
+        return queryset
+
+
 class SubscriptionAdmin(ModelAdmin):
     list_display = ['customer', 'get_plan_name', 'last_billing_date', 'trial_end',
                     'start_date', 'ended_at', 'state', metadata]
-    list_filter = [PlanFilter, 'state', 'plan__provider', 'customer', DiscountFilter]
+    list_filter = [PlanFilter, 'state', 'plan__provider', 'customer', DiscountFilter, BonusFilter]
     actions = ['activate', 'cancel_now', 'cancel_at_end_of_cycle', 'end']
     search_fields = ['customer__first_name', 'customer__last_name',
                      'customer__company', 'plan__name', 'meta']
@@ -796,6 +811,27 @@ class DiscountAdmin(ModelAdmin):
 
     def get_amount_description(self, discount):
         return discount.amount_description
+
+    get_amount_description.short_description = "Amount"
+
+
+class BonusAdmin(ModelAdmin):
+    list_display = ["__str__", "get_amount_description", "get_matching_subscriptions"]
+    filter_horizontal = ["filter_subscriptions", "filter_customers", "filter_plans", "filter_product_codes"]
+
+    def get_matching_subscriptions(self, bonus):
+        count = bonus.matching_subscriptions().count()
+
+        return mark_safe(
+            f'<a href="{get_admin_url(Subscription, anchored=False)}?bonus={bonus.id}">'
+            f"{count} {model_ngettext(Subscription, count)}"
+            f"</a>"
+        )
+
+    get_matching_subscriptions.short_description = "Matching Subscriptions"
+
+    def get_amount_description(self, bonus):
+        return bonus.amount_description
 
     get_amount_description.short_description = "Amount"
 
@@ -1445,5 +1481,6 @@ site.register(Provider, ProviderAdmin)
 site.register(Invoice, InvoiceAdmin)
 site.register(Proforma, ProformaAdmin)
 site.register(Discount, DiscountAdmin)
+site.register(Bonus, BonusAdmin)
 site.register(ProductCode)
 site.register(MeteredFeature)

@@ -20,3 +20,4 @@ from silver.models.subscriptions import Subscription, MeteredFeatureUnitsLog, Bi
 from silver.models.payment_methods import PaymentMethod
 from silver.models.transactions import Transaction
 from silver.models.discounts import Discount
+from silver.models.bonuses import Bonus

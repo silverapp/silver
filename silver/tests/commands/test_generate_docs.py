@@ -30,7 +30,8 @@ from silver.models import (Proforma, DocumentEntry, Invoice, Subscription, Custo
 from silver.fixtures.factories import (SubscriptionFactory, PlanFactory,
                                        MeteredFeatureFactory,
                                        MeteredFeatureUnitsLogFactory,
-                                       CustomerFactory, ProviderFactory, DiscountFactory)
+                                       CustomerFactory, ProviderFactory, DiscountFactory, BonusFactory)
+from silver.models.bonuses import Bonus
 from silver.utils.dates import ONE_DAY
 
 
@@ -2736,3 +2737,59 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_discounts_additive_no_overflow(self):
         pass
+
+    def test_bonuses_metered_features(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+        # two additive discounts (10 + 20% * 20 = 14)
+        bonus_fixed = BonusFactory.create(amount=Decimal('10'), duration_count=None, duration_interval=None)
+        bonus_fixed.filter_customers.add(customer)
+
+        bonus_percentage = BonusFactory.create(amount_percentage=Decimal('20'))
+        bonus_percentage.filter_customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+
+        bonus_included_units = Decimal('14')
+        assert bonus_included_units == bonus_fixed.amount + bonus_percentage.amount_percentage * included_units / 100
+
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 2
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
+
+        assert proforma.total == plan.amount + consumed_mfs_value
