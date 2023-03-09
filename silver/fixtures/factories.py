@@ -28,6 +28,7 @@ from silver.models import (Provider, Plan, MeteredFeature, Customer,
                            Proforma, MeteredFeatureUnitsLog, DocumentEntry,
                            Transaction, PaymentMethod, BillingLog, Discount)
 from silver.fixtures.test_fixtures import manual_processor
+from silver.models.bonuses import Bonus
 from silver.utils.dates import last_day_of_month, prev_month
 
 faker = Faker(locale='hu_HU')
@@ -73,6 +74,13 @@ class DiscountFactory(factory.django.DjangoModelFactory):
     percentage = factory.Sequence(lambda n: (n + 42) % 100)
     duration_count = factory.Sequence(lambda n: n + 1)
     duration_interval = Discount.DURATION_INTERVALS.BILLING_CYCLE
+
+
+class BonusFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Bonus
+
+    name = factory.Sequence(lambda n: "Bonus " + faker.first_name())
 
 
 class MeteredFeatureFactory(factory.django.DjangoModelFactory):

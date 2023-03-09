@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 from django.urls import reverse
 
+from silver.tests.api.specs.bonus import spec_bonus
 from silver.tests.api.specs.discount import spec_discount
 from silver.tests.api.specs.plan import spec_plan
 from silver.tests.api.utils.path import absolute_url
@@ -38,5 +39,8 @@ def spec_subscription(subscription, detail=False):
         "updateable_buckets": subscription.updateable_buckets(),
         "meta": subscription.meta,
         "description": subscription.description,
-        "discounts": [spec_discount(discount, subscription=subscription) for discount in subscription.applied_discounts]
+        "discounts": [
+            spec_discount(discount, subscription=subscription) for discount in subscription.applied_discounts
+        ],
+        "bonuses": [spec_bonus(bonus, subscription=subscription) for bonus in subscription.applied_bonuses]
     }

@@ -700,6 +700,12 @@ class Subscription(models.Model):
 
         return Discount.for_subscription(self)
 
+    @property
+    def applied_bonuses(self):
+        Bonus = apps.get_model('silver.Bonus')
+
+        return Bonus.for_subscription(self)
+
     ##########################################################################
     # STATE MACHINE TRANSITIONS
     ##########################################################################
@@ -760,13 +766,6 @@ class Subscription(models.Model):
 
     def _cancel_at_end_of_billing_cycle(self):
         self.cancel(when=self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE)
-
-    def _add_trial_value(self, start_date, end_date, invoice=None,
-                         proforma=None):
-        self._add_plan_trial(start_date=start_date, end_date=end_date,
-                             invoice=invoice, proforma=proforma)
-        self._add_mfs_for_trial(start_date=start_date, end_date=end_date,
-                                invoice=invoice, proforma=proforma)
 
     def _get_interval_end_date(self, date=None):
         """
@@ -845,11 +844,35 @@ class Subscription(models.Model):
 
         return Decimal("0.00")
 
-    def _get_consumed_units_from_total_included_in_trial(self, metered_feature,
-                                                         consumed_units):
+    # def _get_proration_status_and_fraction_during_trial(self, start_date, end_date) -> Tuple[bool, Fraction]:
+    #     """
+    #     Returns the proration percent (how much of the interval will be billed)
+    #     and the status (if the subscription is prorated or not) during the trial period.
+    #     If start_date and end_date are not from the trial period, you are entering
+    #     undefined behaviour territory.
+    #
+    #     :returns: a tuple containing (status, Decimal(percent)) where status
+    #         can be one of [True, False]. The Decimal will have values in the
+    #         [0.00, 1.00] range.
+    #     :rtype: tuple
+    #     """
+    #
+    #     if self.on_trial(end_date):
+    #         fraction = Fraction((end_date - start_date).days + 1, (self.start_date - self.trial_end).days + 1)
+    #
+    #         return fraction != Fraction(1), fraction
+    #
+    #     return False, Fraction(1)
+
+    def _get_consumed_units_from_total_included_in_trial(self, metered_feature, start_date, end_date,
+                                                         consumed_units, bonuses=None):
         """
         :returns: (consumed_units, free_units)
         """
+
+        # _, extra_proration_fraction = self._get_proration_status_and_fraction_during_trial(start_date, end_date)
+        #
+        # included_units_during_trial = quantize_fraction(Fraction(str(metered_feature.included_units_during_trial)) * extra_proration_fraction)
 
         included_units_during_trial = metered_feature.included_units_during_trial
 
@@ -861,8 +884,8 @@ class Subscription(models.Model):
 
         return consumed_units - included_units_during_trial, included_units_during_trial
 
-    def _get_extra_consumed_units_during_trial(self, metered_feature,
-                                               consumed_units):
+    def _get_extra_consumed_units_during_trial(self, metered_feature, start_date, end_date,
+                                               consumed_units, bonuses=None):
         """
         :returns: (extra_consumed, free_units)
             extra_consumed - units consumed extra during trial that will be
@@ -873,7 +896,8 @@ class Subscription(models.Model):
         if self.is_billed_first_time:
             # It's on trial and is billed first time
             return self._get_consumed_units_from_total_included_in_trial(
-                metered_feature, consumed_units)
+                metered_feature, start_date, end_date, consumed_units, bonuses=bonuses
+            )
         else:
             # It's still on trial but has been billed before
             # The following part tries to handle the case when the trial
@@ -892,26 +916,25 @@ class Subscription(models.Model):
 
             if not qs.exists():
                 return self._get_consumed_units_from_total_included_in_trial(
-                    metered_feature, consumed_units)
+                    metered_feature, start_date, end_date, consumed_units, bonuses=bonuses
+                )
 
             consumed = [qs_item.quantity
                         for qs_item in qs if qs_item.unit_price >= 0]
             consumed_in_last_billing_cycle = sum(consumed)
 
-            if metered_feature.included_units_during_trial:
-                included_during_trial = metered_feature.included_units_during_trial
-                if consumed_in_last_billing_cycle > included_during_trial:
-                    return consumed_units, 0
-                else:
-                    remaining = included_during_trial - consumed_in_last_billing_cycle
-                    if consumed_units > remaining:
-                        return consumed_units - remaining, remaining
-                    elif consumed_units <= remaining:
-                        return 0, consumed_units
+            included_during_trial = metered_feature.included_units_during_trial or Decimal(0)
+
+            if consumed_in_last_billing_cycle > included_during_trial:
+                return consumed_units, 0
+
+            remaining = included_during_trial - consumed_in_last_billing_cycle
+            if consumed_units > remaining:
+                return consumed_units - remaining, remaining
+
             return 0, consumed_units
 
-    def _add_mfs_for_trial(self, start_date, end_date, invoice=None,
-                           proforma=None):
+    def _add_mfs_for_trial(self, start_date, end_date, invoice=None, proforma=None, bonuses=None):
         start_datetime = datetime.combine(
             start_date,
             datetime.min.time(),
@@ -933,6 +956,7 @@ class Subscription(models.Model):
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': quantize_fraction(fraction),
+            'bonuses': bonuses,
             'context': 'metered-feature-trial'
         })
 
@@ -953,8 +977,11 @@ class Subscription(models.Model):
             log = [qs_item.consumed_units for qs_item in qs]
             total_consumed_units = sum(log)
 
+            mf_bonuses = [bonus for bonus in bonuses if bonus.applies_to_metered_feature(metered_feature)]
+
             extra_consumed, free = self._get_extra_consumed_units_during_trial(
-                metered_feature, total_consumed_units)
+                metered_feature, start_date, end_date, total_consumed_units, bonuses=mf_bonuses
+            )
 
             if extra_consumed > 0:
                 charged_units = extra_consumed
@@ -1064,9 +1091,27 @@ class Subscription(models.Model):
 
         return entries[0].total, entries
 
-    def _get_consumed_units(self, metered_feature, proration_fraction: Fraction,
-                            start_datetime, end_datetime):
-        included_units = quantize_fraction(proration_fraction * Fraction(metered_feature.included_units))
+    def _get_consumed_units(self, metered_feature, extra_proration_fraction: Fraction,
+                            start_datetime, end_datetime, bonuses=None):
+        included_units = extra_proration_fraction * Fraction(metered_feature.included_units or Decimal(0))
+
+        start_date = start_datetime.date()
+        end_date = end_datetime.date()
+
+        if bonuses:
+            included_from_bonuses = sum(
+                [
+                    (
+                        Fraction(str(bonus.amount)) if bonus.amount else
+                        Fraction(str(bonus.amount_percentage)) / 100 * included_units
+                    ) * bonus.extra_proration_fraction(self, start_date, end_date, OriginType.MeteredFeature)[0]
+                    for bonus in bonuses
+                ]
+            )
+
+            included_units += included_from_bonuses
+
+        included_units = quantize_fraction(included_units)
 
         qs = self.mf_log_entries.filter(metered_feature=metered_feature,
                                         start_datetime__gte=start_datetime,
@@ -1079,7 +1124,7 @@ class Subscription(models.Model):
 
         return 0
 
-    def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None) \
+    def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None, bonuses=None) \
             -> Tuple[Decimal, List['silver.models.DocumentEntry']]:
         start_datetime = datetime.combine(
             start_date,
@@ -1103,6 +1148,7 @@ class Subscription(models.Model):
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': quantize_fraction(fraction),
+            'bonuses': bonuses,
             'context': 'metered-feature'
         })
 
@@ -1110,12 +1156,15 @@ class Subscription(models.Model):
         entries = []
         for metered_feature in self.plan.metered_features.all():
             consumed_units = self._get_consumed_units(
-                metered_feature, fraction, start_datetime, end_datetime)
+                metered_feature, fraction, start_datetime, end_datetime, bonuses=bonuses
+            )
 
-            context.update({'metered_feature': metered_feature,
-                            'unit': metered_feature.unit,
-                            'name': metered_feature.name,
-                            'product_code': metered_feature.product_code})
+            context.update({
+                'metered_feature': metered_feature,
+                'unit': metered_feature.unit,
+                'name': metered_feature.name,
+                'product_code': metered_feature.product_code
+            })
 
             description = self._entry_description(context)
             unit = self._entry_unit(context)
@@ -1164,20 +1213,20 @@ class Subscription(models.Model):
 
         if start_date == first_day_of_full_interval and end_date == last_day_of_full_interval:
             return False, Fraction(1, 1)
-        else:
-            if interval in (Plan.INTERVALS.DAY, Plan.INTERVALS.WEEK, Plan.INTERVALS.YEAR):
-                full_interval_days = (last_day_of_full_interval - first_day_of_full_interval).days + 1
-                billing_cycle_days = (end_date - start_date).days + 1
-                return (
-                    True,
-                    Fraction(billing_cycle_days, full_interval_days)
-                )
-            elif interval == Plan.INTERVALS.MONTH:
-                billing_cycle_months = monthdiff_as_fraction(end_date + ONE_DAY, start_date)
-                full_interval_months = monthdiff_as_fraction(last_day_of_full_interval + ONE_DAY,
-                                                             first_day_of_full_interval)
 
-                return True, billing_cycle_months / full_interval_months
+        if interval in (Plan.INTERVALS.DAY, Plan.INTERVALS.WEEK, Plan.INTERVALS.YEAR):
+            full_interval_days = (last_day_of_full_interval - first_day_of_full_interval).days + 1
+            billing_cycle_days = (end_date - start_date).days + 1
+            return (
+                True,
+                Fraction(billing_cycle_days, full_interval_days)
+            )
+        elif interval == Plan.INTERVALS.MONTH:
+            billing_cycle_months = monthdiff_as_fraction(end_date + ONE_DAY, start_date)
+            full_interval_months = monthdiff_as_fraction(last_day_of_full_interval + ONE_DAY,
+                                                         first_day_of_full_interval)
+
+            return True, Fraction(billing_cycle_months, full_interval_months)
 
     def _entry_unit(self, context):
         unit_template_path = field_template_path(
