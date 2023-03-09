@@ -2664,12 +2664,15 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total == (plan.amount + consumed_mfs_value) * Decimal('0.75')
 
     def test_discounts_noncumulative(self):
+        # TODO
         pass
 
     def test_discounts_noncumulative_choose_other_greater_discounts(self):
+        # TODO
         pass
 
     def test_discounts_additive(self):
+        # TODO
         pass
 
     def test_discounts_additive_and_multiplicative(self):
@@ -2720,7 +2723,8 @@ class TestInvoiceGenerationCommand(TestCase):
         MeteredFeatureUnitsLogFactory.create(
             subscription=subscription, metered_feature=metered_feature,
             start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
-            consumed_units=consumed_units)
+            consumed_units=consumed_units
+        )
 
         call_command('generate_docs', date=billing_date, stdout=self.output)
 
@@ -2736,7 +2740,167 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total == (plan.amount + consumed_mfs_value) * Decimal('0.648')
 
     def test_discounts_additive_no_overflow(self):
+        # TODO
         pass
+
+    def test_discounts_percentage_in_fractional_billing_cycle(self):
+        billing_date = generate_docs_date('2015-06-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        discount = DiscountFactory.create(
+            discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
+            percentage=Decimal('10'),
+            duration_count=3, duration_interval=Discount.DURATION_INTERVALS.MONTH
+        )
+        discount.customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 14)
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 5, 14), end_datetime=dt.date(2015, 5, 31),
+            consumed_units=consumed_units
+        )
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        entries = proforma.proforma_entries.all()
+        assert len(entries) == 5
+
+        # The first two months are prorated
+        assert all([entry.prorated for entry in entries[:2]])
+        # But the discount is not prorated (along with next month, and it's discount)
+        assert all([not entry.prorated for entry in entries[2:]])
+
+        consumed_mfs_value = consumed_units * mf_price
+
+        assert proforma.total == ((
+            plan.amount * Decimal(31 - 14 + 1) / Decimal(31) + consumed_mfs_value + plan.amount
+        ) * Decimal('0.9')).quantize(Decimal('0.00'))
+
+    def test_discounts_percentage_prorated_in_fractional_billing_cycle(self):
+        billing_date = generate_docs_date('2015-06-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        discount = DiscountFactory.create(
+            discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
+            percentage=Decimal('10'),
+            duration_count=1, duration_interval=Discount.DURATION_INTERVALS.WEEK
+        )
+        discount.customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 14)
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 5, 14), end_datetime=dt.date(2015, 5, 31),
+            consumed_units=consumed_units
+        )
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        entries = proforma.proforma_entries.all()
+        assert len(entries) == 4
+
+        # The first two months are prorated
+        assert all([entry.prorated for entry in entries[:2]])
+        # But the discount is not prorated (along with next month, and it's discount)
+        assert all([not entry.prorated for entry in entries[2:]])
+
+        consumed_mfs_value = consumed_units * mf_price
+
+        assert proforma.total == ((
+            plan.amount * Decimal(31 - 14 + 1) / Decimal(31) + consumed_mfs_value
+        ) * (1 - (Decimal(0.1) * Decimal(7 / (31 - 14 + 1)))) + plan.amount).quantize(Decimal('0.00'))
+
+    def test_discounts_percentage_prorated_in_full_billing_cycle(self):
+        billing_date = generate_docs_date('2015-06-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        discount = DiscountFactory.create(
+            discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
+            percentage=Decimal('10'),
+            duration_count=2, duration_interval=Discount.DURATION_INTERVALS.WEEK
+        )
+        discount.customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 5, 1)
+
+        subscription = SubscriptionFactory.create(plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 5, 14), end_datetime=dt.date(2015, 5, 31),
+            consumed_units=consumed_units
+        )
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        entries = proforma.proforma_entries.all()
+        assert len(entries) == 4
+
+        # The first two months are not prorated
+        assert all([not entry.prorated for entry in entries[:2]])
+        # But the discount is not prorated (along with next month, and it's discount)
+        assert all([not entry.prorated for entry in entries[2:]])
+
+        consumed_mfs_value = consumed_units * mf_price
+
+        assert proforma.total == ((
+            plan.amount + consumed_mfs_value
+        ) * (1 - Decimal(0.1) * Decimal(14) / Decimal(31)) + plan.amount).quantize(Decimal('0.00'))
 
     def test_bonuses_metered_features(self):
         billing_date = generate_docs_date('2015-07-01')

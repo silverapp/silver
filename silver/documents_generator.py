@@ -222,7 +222,7 @@ class DocumentsGenerator(object):
         # it is used mainly for calculating multiplicative discounts
         cumulative_entries_discount_amounts = defaultdict(lambda: Decimal("0.0"))
 
-        # TODO: only add noncum and additive here, and then add multiplicative based on additive
+        # Only calculate noncumulative and additive discounts here
         for discount, entries in discount_to_entries.items():
             if discount.discount_stacking_type == Discount.STACKING_TYPES.MULTIPLICATIVE:
                 continue
@@ -231,12 +231,12 @@ class DocumentsGenerator(object):
                 discount_infos[discount].applies_to_all_discountable_entries_in_interval = True
 
             for entry in entries:
-                proration_fraction, _ = discount.proration_fraction(
+                extra_proration_fraction, prorated, discount_interval = discount.extra_proration_fraction(
                     entry.subscription, start_date, end_date, entry.origin_type
                 )
 
                 entry_discount_amount = quantize_fraction(
-                    Fraction(str(discount.as_additive)) * Fraction(str(entry.amount)) * proration_fraction
+                    Fraction(str(discount.as_additive)) * Fraction(str(entry.amount)) * extra_proration_fraction
                 )
 
                 discounts[discount] += entry_discount_amount
@@ -247,6 +247,7 @@ class DocumentsGenerator(object):
                 if discount.discount_stacking_type == Discount.STACKING_TYPES.ADDITIVE:
                     additive_discounts_amount += entry_discount_amount
 
+        # Then calculate multiplicative discounts based on the additive ones
         multiplicative_discounts_amount = Decimal(0.0)
 
         for discount, entries in discount_to_entries.items():
@@ -257,7 +258,7 @@ class DocumentsGenerator(object):
                 discount_infos[discount].applies_to_all_discountable_entries_in_interval = True
 
             for entry in entries:
-                proration_fraction, _ = discount.proration_fraction(
+                extra_proration_fraction, prorated, discount_interval = discount.extra_proration_fraction(
                     entry.subscription, start_date, end_date, entry.origin_type
                 )
 
@@ -266,7 +267,9 @@ class DocumentsGenerator(object):
                     continue
 
                 entry_discount_amount = quantize_fraction(
-                    Fraction(str(discount.as_additive)) * Fraction(str(remaining_entry_amount)) * proration_fraction
+                    Fraction(str(discount.as_additive)) *
+                    Fraction(str(remaining_entry_amount)) *
+                    extra_proration_fraction
                 )
 
                 discounts[discount] += entry_discount_amount
@@ -274,6 +277,7 @@ class DocumentsGenerator(object):
                 cumulative_entries_discount_amounts[entry] += entry_discount_amount
                 multiplicative_discounts_amount += entry_discount_amount
 
+        # Then compare the noncumulative discounts with the cumulative ones, and decide which to keep
         max_noncumulative_discount_per_document = Decimal(0.0)
         noncumulative_discount_per_document = None
         for discount in Discount.filter_noncumulative(discounts):

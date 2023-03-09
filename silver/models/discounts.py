@@ -25,7 +25,7 @@ from django.template.loader import render_to_string
 from .subscriptions import Subscription
 from .documents.entries import OriginType
 from .fields import field_template_path
-from silver.utils.dates import end_of_interval
+from silver.utils.dates import end_of_interval, DateInterval
 from silver.utils.models import AutoCleanModelMixin
 
 
@@ -303,7 +303,12 @@ class Discount(AutoCleanModelMixin, models.Model):
         return [discount for discount in discounts
                 if discount.discount_stacking_type == DiscountStackingType.NONCUMULATIVE]
 
-    def proration_fraction(self, subscription, start_date, end_date, entry_type: OriginType) -> Tuple[Fraction, bool]:
+    def extra_proration_fraction(
+        self, subscription, start_date, end_date, entry_type: OriginType
+    ) -> Tuple[Fraction, bool, DateInterval]:
+        entry_start_date = start_date
+        entry_end_date = end_date
+
         if self.start_date and start_date < self.start_date:
             start_date = self.start_date
 
@@ -318,15 +323,21 @@ class Discount(AutoCleanModelMixin, models.Model):
             if end_date > duration_end_date:
                 end_date = duration_end_date
 
-        sub_csd = subscription._cycle_start_date(ignore_trial=True, granulate=False, reference_date=start_date)
-        sub_ced = subscription._cycle_start_date(ignore_trial=True, granulate=False, reference_date=end_date)
-
-        if sub_csd <= start_date and sub_ced >= end_date:
-            return Fraction(1), False
-
         status, fraction = subscription._get_proration_status_and_fraction(start_date, end_date, entry_type)
+        interval = DateInterval(start_date, end_date)
 
-        return fraction, status
+        if self.percentage:
+            if entry_start_date == start_date and entry_end_date == end_date:
+                return Fraction(1), False, interval
+
+            already_prorated, entry_proration_fraction = subscription._get_proration_status_and_fraction(
+                entry_start_date, entry_end_date, entry_type
+            )
+
+            if already_prorated:
+                fraction /= entry_proration_fraction
+
+        return fraction, status, interval
 
     def _entry_description(self, provider, customer, extra_context=None):
         context = {

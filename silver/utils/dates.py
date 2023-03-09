@@ -14,16 +14,23 @@
 
 from __future__ import absolute_import
 
+from dataclasses import dataclass
 from datetime import timedelta, date
 from decimal import Decimal
 from fractions import Fraction
-from typing import Tuple
+from typing import Tuple, Optional
 
 from dateutil.relativedelta import *
 
 
 ONE_DAY = timedelta(days=1)
 ONE_MONTH = relativedelta(months=1)
+
+
+@dataclass
+class DateInterval:
+    start_date: Optional[date]
+    end_date: Optional[date]
 
 
 class INTERVALS(object):
