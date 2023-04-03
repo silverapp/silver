@@ -15,6 +15,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import logging
+from dataclasses import dataclass
 
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -117,6 +118,14 @@ class MeteredFeatureUnitsLog(models.Model):
 
     def __str__(self):
         return self.metered_feature.name
+
+
+@dataclass
+class OverageInfo:
+    extra_consumed_units: Decimal
+    annotations: List[str]
+    directly_applied_bonuses: List["silver.models.Bonus"]
+    separately_applied_bonuses: List["silver.models.Bonus"]
 
 
 class Subscription(models.Model):
@@ -872,7 +881,9 @@ class Subscription(models.Model):
 
         # _, extra_proration_fraction = self._get_proration_status_and_fraction_during_trial(start_date, end_date)
         #
-        # included_units_during_trial = quantize_fraction(Fraction(str(metered_feature.included_units_during_trial)) * extra_proration_fraction)
+        # included_units_during_trial = quantize_fraction(
+        #     Fraction(str(metered_feature.included_units_during_trial)) * extra_proration_fraction
+        # )
 
         included_units_during_trial = metered_feature.included_units_during_trial
 
@@ -1091,38 +1102,63 @@ class Subscription(models.Model):
 
         return entries[0].total, entries
 
-    def _get_consumed_units(self, metered_feature, extra_proration_fraction: Fraction,
-                            start_datetime, end_datetime, bonuses=None):
+    def _included_units_from_bonuses(
+        self, metered_feature, start_date, end_date, extra_proration_fraction: Fraction, bonuses: List
+    ):
         included_units = extra_proration_fraction * Fraction(metered_feature.included_units or Decimal(0))
+
+        return sum(
+            [
+                (
+                    Fraction(str(bonus.amount)) if bonus.amount else
+                    Fraction(str(bonus.amount_percentage)) / 100 * included_units
+                ) * bonus.extra_proration_fraction(self, start_date, end_date, OriginType.MeteredFeature)[0]
+                for bonus in bonuses
+            ]
+        )
+
+    def _get_extra_consumed_units(self, metered_feature, extra_proration_fraction: Fraction,
+                                  start_datetime, end_datetime, bonuses=None) -> OverageInfo:
+        included_units = extra_proration_fraction * Fraction(metered_feature.included_units or Decimal(0))
+
+        log_entries = self.mf_log_entries.filter(
+            metered_feature=metered_feature,
+            start_datetime__gte=start_datetime,
+            end_datetime__lte=end_datetime
+        )
+
+        consumed_units = [entry.consumed_units for entry in log_entries]
+        total_consumed_units = reduce(lambda x, y: x + y, consumed_units, 0)
+
+        annotations = list({log_entry.annotation for log_entry in log_entries})
 
         start_date = start_datetime.date()
         end_date = end_datetime.date()
 
         if bonuses:
-            included_from_bonuses = sum(
-                [
-                    (
-                        Fraction(str(bonus.amount)) if bonus.amount else
-                        Fraction(str(bonus.amount_percentage)) / 100 * included_units
-                    ) * bonus.extra_proration_fraction(self, start_date, end_date, OriginType.MeteredFeature)[0]
-                    for bonus in bonuses
-                ]
-            )
+            bonuses = [bonus for bonus in bonuses if bonus.matches_metered_feature_units(metered_feature, annotations)]
 
-            included_units += included_from_bonuses
+        applied_directly_bonuses = [
+            bonus for bonus in bonuses
+            if bonus.document_entry_behavior == bonus.ENTRY_BEHAVIOR.APPLY_DIRECTLY_TO_TARGET_ENTRIES
+        ]
+
+        applied_separately_bonuses = [
+            bonus for bonus in bonuses
+            if bonus.document_entry_behavior == bonus.ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY
+        ]
+
+        included_units += self._included_units_from_bonuses(
+            metered_feature, start_date, end_date, extra_proration_fraction, applied_directly_bonuses
+        )
 
         included_units = quantize_fraction(included_units)
 
-        qs = self.mf_log_entries.filter(metered_feature=metered_feature,
-                                        start_datetime__gte=start_datetime,
-                                        end_datetime__lte=end_datetime)
-        log = [qs_item.consumed_units for qs_item in qs]
-        total_consumed_units = reduce(lambda x, y: x + y, log, 0)
+        extra_consumed_units = max(total_consumed_units - included_units, Decimal(0))
 
-        if total_consumed_units > included_units:
-            return total_consumed_units - included_units
-
-        return 0
+        return OverageInfo(
+            extra_consumed_units, annotations, applied_directly_bonuses, applied_separately_bonuses
+        )
 
     def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None, bonuses=None) \
             -> Tuple[Decimal, List['silver.models.DocumentEntry']]:
@@ -1140,46 +1176,86 @@ class Subscription(models.Model):
 
         prorated, fraction = self._get_proration_status_and_fraction(start_date, end_date, OriginType.MeteredFeature)
 
-        context = self._build_entry_context({
-            'name': self.plan.name,
-            'unit': self.plan.metered_features_interval,
-            'product_code': self.plan.product_code,
+        base_context = self._build_entry_context({
             'start_date': start_date,
             'end_date': end_date,
             'prorated': prorated,
             'proration_percentage': quantize_fraction(fraction),
-            'bonuses': bonuses,
             'context': 'metered-feature'
         })
 
         mfs_total = Decimal('0.00')
         entries = []
         for metered_feature in self.plan.metered_features.all():
-            consumed_units = self._get_consumed_units(
+            overage_info = self._get_extra_consumed_units(
                 metered_feature, fraction, start_datetime, end_datetime, bonuses=bonuses
             )
+            extra_consumed_units = overage_info.extra_consumed_units
 
-            context.update({
+            entry_context = base_context.copy()
+            entry_context.update({
                 'metered_feature': metered_feature,
                 'unit': metered_feature.unit,
                 'name': metered_feature.name,
-                'product_code': metered_feature.product_code
+                'product_code': metered_feature.product_code,
+                'annotations': overage_info.annotations,
+                'directly_applied_bonuses': overage_info.directly_applied_bonuses,
             })
 
-            description = self._entry_description(context)
-            unit = self._entry_unit(context)
+            description = self._entry_description(entry_context)
+            unit = self._entry_unit(entry_context)
 
-            de = DocumentEntry.objects.create(
+            entry = DocumentEntry.objects.create(
                 invoice=invoice, proforma=proforma,
                 description=description, unit=unit,
-                quantity=consumed_units, prorated=prorated,
+                quantity=overage_info.extra_consumed_units, prorated=prorated,
                 unit_price=metered_feature.price_per_unit,
                 product_code=metered_feature.product_code,
                 start_date=start_date, end_date=end_date
             )
-            entries.append(de)
+            entries.append(entry)
 
-            mfs_total += de.total
+            for separate_bonus in overage_info.separately_applied_bonuses:
+                if extra_consumed_units <= 0:
+                    break
+
+                bonus_included_units = quantize_fraction(
+                    self._included_units_from_bonuses(
+                        metered_feature, start_date, end_date,
+                        extra_proration_fraction=fraction, bonuses=[separate_bonus]
+                    )
+                )
+                if not bonus_included_units:
+                    continue
+
+                bonus_consumed_units = min(bonus_included_units, extra_consumed_units)
+                extra_consumed_units -= bonus_consumed_units
+
+                bonus_entry_context = base_context.copy()
+                bonus_entry_context.update({
+                    'metered_feature': metered_feature,
+                    'unit': metered_feature.unit,
+                    'name': metered_feature.name,
+                    'product_code': metered_feature.product_code,
+                    'annotations': overage_info.annotations,
+                    'directly_applied_bonuses': overage_info.directly_applied_bonuses,
+                    'context': 'metered-feature-bonus'
+                })
+
+                description = self._entry_description(bonus_entry_context)
+
+                bonus_entry = DocumentEntry.objects.create(
+                    invoice=invoice, proforma=proforma,
+                    description=description, unit=unit,
+                    quantity=bonus_consumed_units, prorated=prorated,
+                    unit_price=-metered_feature.price_per_unit,
+                    product_code=separate_bonus.product_code,
+                    start_date=start_date, end_date=end_date
+                )
+                entries.append(bonus_entry)
+                mfs_total += bonus_entry.total
+
+            mfs_total += entry.total
 
         return mfs_total, entries
 

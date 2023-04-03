@@ -24,7 +24,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from silver.documents_generator import DocumentsGenerator
-from silver.models import Invoice, Proforma, Transaction, BillingDocumentBase
+from silver.models import Invoice, Proforma, Transaction, BillingDocumentBase, Customer
 from silver.payment_processors.mixins import PaymentProcessorTypes
 from silver.vendors.redis_server import redis
 
@@ -55,13 +55,19 @@ DOCS_GENERATION_TIME_LIMIT = getattr(settings, 'DOCS_GENERATION_TIME_LIMIT',
                                      60 * 60)  # default 60m
 
 
-@shared_task(base=QueueOnce, once={'graceful': True},
+@shared_task(base=QueueOnce, once={'graceful': True, 'keys': ['billing_date']},
              time_limit=DOCS_GENERATION_TIME_LIMIT, ignore_result=True)
-def generate_billing_documents(billing_date=None):
+def generate_billing_documents(billing_date=None, customers_ids=None):
     if not billing_date:
         billing_date = timezone.now().date()
 
-    DocumentsGenerator().generate(billing_date=billing_date)
+    generate_kwargs = {
+        'billing_date': billing_date,
+    }
+    if customers_ids:
+        generate_kwargs['customers'] = Customer.objects.filter(id__in=customers_ids)
+
+    DocumentsGenerator().generate(**generate_kwargs)
 
 
 FETCH_TRANSACTION_STATUS_TIME_LIMIT = getattr(settings, 'FETCH_TRANSACTION_STATUS_TIME_LIMIT',

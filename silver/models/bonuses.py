@@ -31,10 +31,16 @@ class BonusTarget(models.TextChoices):
     METERED_FEATURES_UNITS = "metered_features_units"
 
 
+class DocumentEntryBehavior(models.TextChoices):
+    APPLY_DIRECTLY_TO_TARGET_ENTRIES = "apply_directly_to_target", "Apply directly to target entries"
+    APPLY_AS_SEPARATE_ENTRY_PER_ENTRY = "apply_separately_per_entry", "Apply as separate entry, per entry"
+
+
 class Bonus(AutoCleanModelMixin, models.Model):
     STATES = BonusState
     TARGET = BonusTarget
     DURATION_INTERVALS = DurationIntervals
+    ENTRY_BEHAVIOR = DocumentEntryBehavior
 
     name = models.CharField(
         max_length=200,
@@ -62,6 +68,11 @@ class Bonus(AutoCleanModelMixin, models.Model):
     applies_to = models.CharField(choices=TARGET.choices, max_length=24,
                                   help_text="Defines what the bonus applies to.",
                                   default=TARGET.METERED_FEATURES_UNITS)
+
+    document_entry_behavior = models.CharField(choices=ENTRY_BEHAVIOR.choices,
+                                               max_length=32, default=ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY,
+                                               help_text="Defines how the discount will be shown in the billing "
+                                                         "documents.")
 
     state = models.CharField(choices=STATES.choices, max_length=16, default=STATES.ACTIVE,
                              help_text="Can be used to easily toggle bonuses on or off.")
@@ -125,7 +136,7 @@ class Bonus(AutoCleanModelMixin, models.Model):
             Q(filter_subscriptions=subscription) | Q(filter_subscriptions=None),
             Q(filter_plans=subscription.plan) | Q(filter_plans=None),
             Q(filter_product_codes=subscription.plan.product_code) | Q(filter_product_codes=None),
-        )
+        ).annotate(_filtered_product_codes=F("filter_product_codes"))
 
     def is_active_for_subscription(self, subscription):
         if not subscription.state == subscription.STATES.ACTIVE:
@@ -200,11 +211,26 @@ class Bonus(AutoCleanModelMixin, models.Model):
 
         return subscriptions
 
+    def matches_metered_feature_units(self, metered_feature, annotations) -> bool:
+        if hasattr(self, "_filtered_product_codes"):
+            if self._filtered_product_codes and metered_feature.product_code not in self._filtered_product_codes:
+                return False
+
+        if self.filter_annotations:
+            if not set(self.filter_annotations).intersection(set(annotations)):
+                return False
+
+        return True
+
+    @property
     def amount_description(self) -> str:
         bonus = []
-        amount = bonus.amount or f"{bonus.amount_percentage}%"
+        amount = self.amount or f"{self.amount_percentage}%"
 
         if self.applies_to in [self.TARGET.METERED_FEATURES_UNITS]:
             bonus.append(f"{amount} off Metered Features")
 
         return ", ".join(bonus)
+
+    def __str__(self) -> str:
+        return self.name
