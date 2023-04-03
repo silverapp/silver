@@ -2902,25 +2902,31 @@ class TestInvoiceGenerationCommand(TestCase):
             plan.amount + consumed_mfs_value
         ) * (1 - Decimal(0.1) * Decimal(14) / Decimal(31)) + plan.amount).quantize(Decimal('0.00'))
 
-    def test_bonuses_metered_features(self):
+    def test_bonuses_applied_directly_to_metered_features(self):
         billing_date = generate_docs_date('2015-07-01')
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
-        # two additive discounts (10 + 20% * 20 = 14)
-        bonus_fixed = BonusFactory.create(amount=Decimal('10'), duration_count=None, duration_interval=None)
-        bonus_fixed.filter_customers.add(customer)
-
-        bonus_percentage = BonusFactory.create(amount_percentage=Decimal('20'))
-        bonus_percentage.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00')
+        )
+
+        # two additive discounts (10 + 20% * 20 = 14)
+        bonus_fixed = BonusFactory.create(amount=Decimal('10'), duration_count=None, duration_interval=None,
+                                          document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_DIRECTLY_TO_TARGET_ENTRIES)
+        bonus_fixed.filter_customers.add(customer)
+
+        bonus_percentage = BonusFactory.create(
+            amount_percentage=Decimal('20'),
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_DIRECTLY_TO_TARGET_ENTRIES
+        )
+        bonus_percentage.filter_customers.add(customer)
 
         bonus_included_units = Decimal('14')
         assert bonus_included_units == bonus_fixed.amount + bonus_percentage.amount_percentage * included_units / 100
 
-        metered_feature = MeteredFeatureFactory(
-            price_per_unit=mf_price, included_units=Decimal('20.00'))
         provider = ProviderFactory.create()
         plan = PlanFactory.create(interval='month', interval_count=1,
                                   generate_after=120, enabled=True,
@@ -2957,3 +2963,132 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
 
         assert proforma.total == plan.amount + consumed_mfs_value
+
+    def test_bonuses_applied_as_separate_entries_metered_features(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00')
+        )
+
+        # two additive discounts (10 + 20% * 20 = 14)
+        bonus_fixed = BonusFactory.create(
+            amount=Decimal('10'), duration_count=None, duration_interval=None,
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY
+        )
+        bonus_fixed.filter_customers.add(customer)
+
+        bonus_percentage = BonusFactory.create(
+            amount_percentage=Decimal('20'),
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY
+        )
+        bonus_percentage.filter_customers.add(customer)
+
+        bonus_included_units = Decimal('14')
+        assert bonus_included_units == bonus_fixed.amount + bonus_percentage.amount_percentage * included_units / 100
+
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        # plan, extra mfs, and 2 separate mf bonus entries
+        assert proforma.proforma_entries.all().count() == 4
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
+
+        assert proforma.total == plan.amount + consumed_mfs_value
+
+    def test_bonuses_applied_as_separate_entries_metered_features_no_overflow(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00')
+        )
+
+        # two additive discounts (10 + 20% * 20 = 14)
+        bonus_fixed = BonusFactory.create(
+            amount=Decimal('10'), duration_count=None, duration_interval=None,
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY
+        )
+        bonus_fixed.filter_customers.add(customer)
+
+        bonus_percentage = BonusFactory.create(
+            amount_percentage=Decimal('20'),
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_AS_SEPARATE_ENTRY_PER_ENTRY
+        )
+        bonus_percentage.filter_customers.add(customer)
+
+        bonus_included_units = Decimal('14')
+        assert bonus_included_units == bonus_fixed.amount + bonus_percentage.amount_percentage * included_units / 100
+
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('25.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        # plan, extra mfs, and 1 separate mf bonus entries (since the second is already unnecessary)
+        assert proforma.proforma_entries.all().count() == 3
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+
+        assert proforma.total == plan.amount
