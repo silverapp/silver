@@ -15,6 +15,9 @@
 {% elif context == 'metered-feature' %}
     Extra {{ name }} ({{ start_date }} - {{ end_date }}).
 
+{% elif context == 'metered-feature-bonus' %}
+    Discount from {{ name }} Bonus ({{ start_date }} - {{ end_date }}).
+
 {% elif context == 'metered-feature-trial' %}
     {{ name }} ({{ start_date }} - {{ end_date }}).
 
