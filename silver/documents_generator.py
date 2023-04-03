@@ -299,6 +299,7 @@ class DocumentsGenerator(object):
             'start_date': start_date,
             'end_date': end_date,
             'context': 'discount',
+            'unit': 'units',
         }
 
         cumulative_discounts_amount = additive_discounts_amount + multiplicative_discounts_amount
@@ -316,11 +317,12 @@ class DocumentsGenerator(object):
             description = noncumulative_discount_per_document._entry_description(
                 provider, customer, extra_context
             )
+            unit = discount._entry_unit(provider, extra_context)
 
             return [
                 DocumentEntry.objects.create(
                     invoice=invoice, proforma=proforma, description=description,
-                    unit_price=-max_noncumulative_discount_per_document, quantity=Decimal('1.00'),
+                    unit_price=-max_noncumulative_discount_per_document, unit=unit, quantity=Decimal('1.00'),
                     product_code=noncumulative_discount_per_document.product_code,
                     start_date=start_date, end_date=end_date,
                 )
@@ -337,10 +339,12 @@ class DocumentsGenerator(object):
             )
             context['discount_info'] = discount_infos[discount]
 
+            unit = discount._entry_unit(provider, context)
+
             entries.append(DocumentEntry.objects.create(
                 invoice=invoice, proforma=proforma,
                 description=discount._entry_description(provider, customer, context),
-                unit_price=-amount, quantity=Decimal('1.00'),
+                unit_price=-amount, unit=unit, quantity=Decimal('1.00'),
                 product_code=discount.product_code,
                 start_date=start_date, end_date=end_date,
             ))

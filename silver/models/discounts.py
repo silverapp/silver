@@ -357,3 +357,8 @@ class Discount(AutoCleanModelMixin, models.Model):
             field='entry_description', provider=provider.slug
         )
         return render_to_string(description_template_path, context)
+
+    def _entry_unit(self, provider, context):
+        unit_template_path = field_template_path(
+            field='entry_unit', provider=provider.slug)
+        return render_to_string(unit_template_path, context)
