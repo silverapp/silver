@@ -55,7 +55,7 @@ DOCS_GENERATION_TIME_LIMIT = getattr(settings, 'DOCS_GENERATION_TIME_LIMIT',
                                      60 * 60)  # default 60m
 
 
-@shared_task(base=QueueOnce, once={'graceful': True, 'keys': ['billing_date']},
+@shared_task(base=QueueOnce, once={'graceful': True},
              time_limit=DOCS_GENERATION_TIME_LIMIT, ignore_result=True)
 def generate_billing_documents(billing_date=None, customers_ids=None):
     if not billing_date:
