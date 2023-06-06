@@ -215,16 +215,14 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
     def mark_for_generation(self):
         self.pdf.mark_as_dirty()
 
-    def _issue(self, issue_date=None, due_date=None):
-        if issue_date:
-            if not isinstance(issue_date, date):
-                issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
-
-            self.issue_date = issue_date
-        elif not self.issue_date and not issue_date:
-            self.issue_date = timezone.now().date()
-
+    def _set_transaction_xe_if_missing(self):
         if not self.transaction_xe_rate:
+
+            if self.currency == self.transaction_currency:
+                self.transaction_xe_rate = Decimal('1')
+
+                return
+
             if not self.transaction_xe_date:
                 self.transaction_xe_date = self.issue_date
 
@@ -237,6 +235,17 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
                                            'exchange rate.')
 
             self.transaction_xe_rate = xe_rate
+
+    def _issue(self, issue_date=None, due_date=None):
+        if issue_date:
+            if not isinstance(issue_date, date):
+                issue_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+
+            self.issue_date = issue_date
+        elif not self.issue_date and not issue_date:
+            self.issue_date = timezone.now().date()
+
+        self._set_transaction_xe_if_missing()
 
         if not self.is_storno:
             if due_date:
@@ -378,6 +387,9 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
             self.sales_tax_percent = self.customer.sales_tax_percent
 
     def save(self, *args, **kwargs):
+        if self.state == self.STATES.ISSUED:
+            self._set_transaction_xe_if_missing()
+
         with db_transaction.atomic():
             # Create pdf object
             if not self.pdf and self.state != self.STATES.DRAFT:

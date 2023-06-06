@@ -186,7 +186,6 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
     transaction_currency = 'RON'
-    transaction_xe_rate = Decimal(1)
     state = Invoice.STATES.DRAFT
     issue_date = factory.LazyAttribute(
         lambda invoice: (faker.past_datetime(start_date="-200d", tzinfo=None).date()
@@ -229,7 +228,6 @@ class ProformaFactory(factory.django.DjangoModelFactory):
     provider = factory.SubFactory(ProviderFactory)
     currency = 'RON'
     transaction_currency = 'RON'
-    transaction_xe_rate = Decimal(1)
     state = Proforma.STATES.DRAFT
     issue_date = factory.LazyAttribute(
         lambda proforma: (faker.past_datetime(start_date="-200d", tzinfo=None).date()

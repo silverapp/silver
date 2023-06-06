@@ -93,6 +93,8 @@ class Invoice(BillingDocumentBase):
                 sales_tax_percent=self.sales_tax_percent,
                 currency=self.currency,
                 transaction_currency=self.transaction_currency,
+                transaction_xe_date=self.transaction_xe_date,
+                transaction_xe_rate=self.transaction_xe_rate,
             )
             storno_invoice.invoice_entries.add(*[DocumentEntry.objects.create(
                 description="Storno " + entry.description,

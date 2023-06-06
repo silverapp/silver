@@ -8,6 +8,7 @@ Some of these changes that were considered to be potentially breaking were marke
 - Fixed a race condition when paying invoices, by using DB locks. (hopefully)
 - Fixed a case when issuing Invoices (occuring from a paid Proforma) would ignore the customer's `payment_due_date` field
 - Fixed documents `due_date` being set even in draft, which was incorrect. Now it will only be set after the document has been issued. **(WARNING)**
+- Fixed `transaction_xe_rate` and `transaction_xe_date` not being properly set in some cases. **(WARNING)**
 
 ### General
 - Transactions will automatically save when they transition to another state (`transaction.settle()` will also call 
@@ -29,7 +30,7 @@ Some of these changes that were considered to be potentially breaking were marke
 ### REST API
 - The API endpoints regarding MeteredFeatureUnitsLogs were reworked, to address some inconsistencies (sometimes 
   `count` was used instead of `consumed_units`), and also to include the above mentioned changes.
-- A `end_log` field (`bool`) may be used to modify the targeted MeteredFeatureUnitLog's end_date into the provided `date`.
+- An `end_log` field (`bool`) may be used to modify the targeted MeteredFeatureUnitLog's end_date into the provided `date`.
   This should help with a usecase when sending units gathered from different time intervals, which should not be mixed 
   together (for some arbitrary reason).
 - The Subscription reference is now allowed to be changed, even after the subscription has been activated.
