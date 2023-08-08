@@ -1100,7 +1100,7 @@ class Subscription(models.Model):
             )
         ]
 
-        return entries[0].total, entries
+        return entries[0].total_before_tax, entries
 
     def _included_units_from_bonuses(
         self, metered_feature, start_date, end_date, extra_proration_fraction: Fraction, bonuses: List
@@ -1253,9 +1253,9 @@ class Subscription(models.Model):
                     start_date=start_date, end_date=end_date
                 )
                 entries.append(bonus_entry)
-                mfs_total += bonus_entry.total
+                mfs_total += bonus_entry.total_before_tax
 
-            mfs_total += entry.total
+            mfs_total += entry.total_before_tax
 
         return mfs_total, entries
 

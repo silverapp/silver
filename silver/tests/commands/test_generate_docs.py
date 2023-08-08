@@ -2619,7 +2619,7 @@ class TestInvoiceGenerationCommand(TestCase):
     def test_discounts_per_document(self):
         billing_date = generate_docs_date('2015-07-01')
 
-        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('19.00'))
         discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None)
         discount.customers.add(customer)
 
@@ -2661,7 +2661,10 @@ class TestInvoiceGenerationCommand(TestCase):
         assert all([not entry.prorated
                     for entry in proforma.proforma_entries.all()])
         consumed_mfs_value = (consumed_units - included_units) * mf_price
-        assert proforma.total == (plan.amount + consumed_mfs_value) * Decimal('0.75')
+        assert proforma.total_before_tax == (plan.amount + consumed_mfs_value) * Decimal('0.75')
+        assert proforma.total == (
+            (plan.amount + consumed_mfs_value) * Decimal('0.75') * Decimal('1.19')
+        ).quantize(Decimal('0.00'))
 
     def test_discounts_noncumulative(self):
         # TODO

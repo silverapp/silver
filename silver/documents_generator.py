@@ -605,7 +605,7 @@ class DocumentsGenerator(object):
             # Should return an entry info for trial as well, but need to filter it out from discounts
             entry_info = None
         else:
-            amount, _ = subscription._add_mfs_entries(
+            amount_before_tax, _ = subscription._add_mfs_entries(
                 start_date=relative_start_date, end_date=relative_end_date,
                 proforma=proforma, invoice=invoice, bonuses=bonuses
             )
@@ -615,7 +615,7 @@ class DocumentsGenerator(object):
                 end_date=relative_end_date,
                 origin_type=OriginType.MeteredFeature,
                 subscription=subscription,
-                amount=amount
+                amount=amount_before_tax
             )
 
         return relative_end_date, entry_info
