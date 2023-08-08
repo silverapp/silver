@@ -27,7 +27,7 @@ from silver.utils.decorators import require_transaction_currency_and_xe_rate
 
 
 class DocumentEntry(models.Model):
-    description = models.CharField(max_length=1024)
+    description = models.TextField()
     unit = models.CharField(max_length=1024, blank=True, null=True)
     quantity = models.DecimalField(max_digits=19, decimal_places=4,
                                    validators=[MinValueValidator(0.0)])

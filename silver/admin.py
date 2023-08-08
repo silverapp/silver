@@ -613,7 +613,7 @@ class DocumentEntryForm(forms.ModelForm):
         fields = ('description', 'prorated', 'product_code', 'unit',
                   'unit_price', 'quantity', 'start_date', 'end_date')
         widgets = {
-            'description': forms.Textarea(attrs={'cols': 50, 'rows': 3})
+            'description': forms.Textarea(attrs={'cols': 60, 'rows': 3})
         }
 
 

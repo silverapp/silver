@@ -157,7 +157,7 @@ class Subscription(models.Model):
         'Plan', on_delete=models.CASCADE,
         help_text='The plan the customer is subscribed to.'
     )
-    description = models.CharField(max_length=1024, blank=True, null=True)
+    description = models.TextField(max_length=1024, blank=True, null=True)
     customer = models.ForeignKey(
         'Customer', related_name='subscriptions', on_delete=models.CASCADE,
         help_text='The customer who is subscribed to the plan.'
