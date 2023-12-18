@@ -17,7 +17,7 @@ from __future__ import absolute_import, unicode_literals
 import logging
 from dataclasses import dataclass
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 from django.apps import apps
 from fractions import Fraction
@@ -743,15 +743,20 @@ class Subscription(models.Model):
     @transition(field=state, source=STATES.ACTIVE, target=STATES.CANCELED)
     def cancel(self, when):
         now = timezone.now()
-        bsdt = self.bucket_start_datetime()
-        bedt = self.bucket_end_datetime()
 
-        if when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
+        if isinstance(when, date):
+            self.cancel_date = when
+
+        elif when == self.CANCEL_OPTIONS.END_OF_BILLING_CYCLE:
             if self.is_on_trial:
                 self.cancel_date = self.bucket_end_date(reference_date=self.trial_end)
             else:
                 self.cancel_date = self.cycle_end_date()
+
         elif when == self.CANCEL_OPTIONS.NOW:
+            bsdt = self.bucket_start_datetime()
+            bedt = self.bucket_end_datetime()
+
             for metered_feature in self.plan.metered_features.all():
                 MeteredFeatureUnitsLog.objects.filter(
                     start_datetime__gte=bsdt, end_datetime=bedt,
@@ -759,9 +764,10 @@ class Subscription(models.Model):
                     subscription=self.pk
                 ).update(end_datetime=now)
 
-            if self.on_trial(now.date()):
-                self.trial_end = now.date()
             self.cancel_date = now.date()
+
+        if self.on_trial(now.date()):
+            self.trial_end = min(self.trial_end, self.cancel_date)
 
         self.save()
 

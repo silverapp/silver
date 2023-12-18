@@ -19,6 +19,7 @@ import json
 from collections import OrderedDict
 
 from django.conf import settings
+from django.utils import timezone
 
 from freezegun import freeze_time
 
@@ -148,7 +149,7 @@ class TestSubscriptionEndpoint(APITestCase):
         }
 
     @freeze_time('2017-02-05')
-    def test_cancel_subscription(self):
+    def test_cancel_subscription_end_of_billing_cycle(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
         subscription.save()
@@ -166,6 +167,26 @@ class TestSubscriptionEndpoint(APITestCase):
         subscription = Subscription.objects.get(pk=subscription.pk)
         assert subscription.state == Subscription.STATES.CANCELED
         assert subscription.cancel_date == datetime.date(2017, 2, 28)
+
+    @freeze_time('2023-09-29')
+    def test_cancel_subscription_at_older_date(self):
+        subscription = SubscriptionFactory.create()
+        subscription.activate()
+        subscription.save()
+
+        url = reverse('sub-cancel',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
+
+        response = self.client.post(url, json.dumps({
+            "when": datetime.date(2023, 9, 27).isoformat()}), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {'state': Subscription.STATES.CANCELED}
+
+        subscription = Subscription.objects.get(pk=subscription.pk)
+        assert subscription.state == Subscription.STATES.CANCELED
+        assert subscription.cancel_date == datetime.date(2023, 9, 27)
 
     def test_cancel_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()

@@ -23,6 +23,7 @@ import dateutil
 import dateutil.parser
 
 from annoying.functions import get_object_or_None
+from django.utils.dateparse import parse_datetime, parse_date
 from django_filters.rest_framework import DjangoFilterBackend
 
 from django.utils import timezone
@@ -175,28 +176,31 @@ class SubscriptionCancel(APIView):
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
-            if when in [Subscription.CANCEL_OPTIONS.NOW,
-                        Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE]:
-                sub.cancel(when=when)
-                sub.save()
+            if not when:
+                err = 'You must provide the `when` argument'
+                return Response({'error': err},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-                logger.debug('Canceled subscription: %s', {
-                    'subscription': sub.id,
-                    'date': timezone.now().date().strftime('%Y-%m-%d'),
-                    'when': when,
-                })
+            if when not in [Subscription.CANCEL_OPTIONS.NOW,
+                            Subscription.CANCEL_OPTIONS.END_OF_BILLING_CYCLE]:
+                when = parse_date(when)
 
-                return Response({"state": sub.state},
-                                status=status.HTTP_200_OK)
-            else:
-                if when is None:
-                    err = 'You must provide the `when` argument'
-                    return Response({'error': err},
-                                    status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    err = 'You must provide a correct value for the `when` argument'
-                    return Response({'error': err},
-                                    status=status.HTTP_400_BAD_REQUEST)
+            if not when:
+                err = 'You must provide a correct value for the `when` argument'
+                return Response({'error': err},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            sub.cancel(when=when)
+            sub.save()
+
+            logger.debug('Canceled subscription: %s', {
+                'subscription': sub.id,
+                'date': timezone.now().date().strftime('%Y-%m-%d'),
+                'when': when,
+            })
+
+            return Response({"state": sub.state},
+                            status=status.HTTP_200_OK)
 
 
 class SubscriptionReactivate(APIView):
