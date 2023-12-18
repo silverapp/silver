@@ -1726,6 +1726,47 @@ class TestInvoiceGenerationCommand(TestCase):
 
         assert Subscription.objects.filter(state='ended').count() == 3
 
+    def test_subscription_with_cancel_date_before_start_date(self):
+        """
+        Should not produce anything, just end the subscription.
+        """
+
+        subscription = SubscriptionFactory.create()
+        subscription.activate()
+        subscription.cancel(when=subscription.start_date - dt.timedelta(days=2))
+        subscription.save()
+
+        assert subscription.state == "canceled"
+
+        call_command('generate_docs',
+                     billing_date=subscription.start_date + dt.timedelta(days=9999),
+                     stdout=self.output)
+        assert Invoice.objects.all().count() == Proforma.objects.all().count() == 0
+
+        subscription.refresh_from_db()
+        assert subscription.state == "ended"
+
+    def test_subscription_with_cancel_date_before_start_date_and_with_specified_subscription_id(self):
+        """
+        Should not produce anything, just end the subscription.
+        """
+
+        subscription = SubscriptionFactory.create()
+        subscription.activate()
+        subscription.cancel(when=subscription.start_date - dt.timedelta(days=2))
+        subscription.save()
+
+        assert subscription.state == "canceled"
+
+        call_command('generate_docs',
+                     billing_date=subscription.start_date + dt.timedelta(days=9999),
+                     subscription=str(subscription.id),
+                     stdout=self.output)
+        assert Invoice.objects.all().count() == Proforma.objects.all().count() == 0
+
+        subscription.refresh_from_db()
+        assert subscription.state == "ended"
+
     def test_subscription_with_separate_cycles_during_trial(self):
         separate_cycles_during_trial = True
         prebill_plan = False

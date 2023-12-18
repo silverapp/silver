@@ -56,7 +56,7 @@ class DocumentsGenerator(object):
         :param customers: the customers for which one wants to generate the
             proformas/invoices.
         :param force_generate: if True, invoices are generated at the date
-            indicated by `billing_date` instead of the normal end of billing
+            indicated by `billing_date` instead of after the normal end of billing
             cycle.
 
         :note
@@ -114,7 +114,16 @@ class DocumentsGenerator(object):
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
                                   Subscription.STATES.CANCELED]}
         for subscription in customer.subscriptions.filter(**criteria):
-            if subscription.should_be_billed(billing_date) or force_generate:
+            to_bill = subscription.should_be_billed(billing_date) or force_generate
+
+            if not to_bill and subscription.cancel_date:
+                billing_up_to_dates = subscription.billed_up_to_dates
+                to_bill = (
+                    subscription.cancel_date < billing_up_to_dates["metered_features_billed_up_to"] and
+                    subscription.cancel_date < billing_up_to_dates["plan_billed_up_to"]
+                )
+
+            if to_bill:
                 subs_to_bill.append(subscription)
 
         return subs_to_bill
@@ -135,7 +144,6 @@ class DocumentsGenerator(object):
         })
 
         billing_log, entries_info = self.add_subscription_cycles_to_document(**kwargs)
-
         if subscription.state == Subscription.STATES.CANCELED:
             subscription.end()
             subscription.save()
@@ -382,6 +390,12 @@ class DocumentsGenerator(object):
 
             self._create_discount_entries(**kwargs)
 
+            # TODO: Creating and then deleting the document in the DB is not ideal and this whole logic
+            #       should be refactored.
+            if not document.entries.exists():
+                document.delete()
+                continue
+
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
@@ -405,6 +419,12 @@ class DocumentsGenerator(object):
 
             self._create_discount_entries(**kwargs)
 
+            # TODO: Creating and then deleting the document in the DB is not ideal and this whole logic
+            #       should be refactored.
+            if not document.entries.exists():
+                document.delete()
+                continue
+
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
@@ -419,13 +439,28 @@ class DocumentsGenerator(object):
 
         provider = subscription.provider
 
-        if not subscription.should_be_billed(billing_date) or force_generate:
+        to_bill = subscription.should_be_billed(billing_date) or force_generate
+
+        if not to_bill and subscription.cancel_date:
+            billing_up_to_dates = subscription.billed_up_to_dates
+            to_bill = (
+                subscription.cancel_date < billing_up_to_dates["metered_features_billed_up_to"] and
+                subscription.cancel_date < billing_up_to_dates["plan_billed_up_to"]
+            )
+
+        if not to_bill:
             return
 
         document, discount_amounts = self._bill_subscription_into_document(subscription, billing_date)
 
         kwargs = {'entries_info': discount_amounts,
                   provider.flow: document}
+
+        # TODO: Creating and then deleting the document in the DB is not ideal and this whole logic
+        #       should be refactored.
+        if not document.entries.exists():
+            document.delete()
+            return
 
         self._create_discount_entries(**kwargs)
 
