@@ -48,30 +48,35 @@ class Command(BaseCommand):
         parser.add_argument('--date',
                             action='store', dest='billing_date', type=date,
                             help='The billing date (format YYYY-MM-DD).')
+        parser.add_argument('--force',
+                            action='store', dest='force_generate', type=bool,
+                            help='Bill subscriptions even in situations when they would be skipped.')
 
     def handle(self, *args, **options):
         translation.activate('en-us')
 
         billing_date = options['billing_date']
+        force_generate = options.get('force_generate', False)
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
             try:
                 subscription_id = options['subscription_id']
                 logger.info('Generating for subscription with id=%s; '
-                            'billing_date=%s.', subscription_id,
-                            billing_date)
+                            'billing_date=%s; force_generate=%s.', subscription_id,
+                            billing_date, force_generate)
 
                 subscription = Subscription.objects.get(id=subscription_id)
                 docs_generator.generate(subscription=subscription,
-                                        billing_date=billing_date)
+                                        billing_date=billing_date,
+                                        force_generate=force_generate)
                 self.stdout.write('Done. You can have a Club-Mate now. :)')
             except Subscription.DoesNotExist:
                 msg = 'The subscription with the provided id does not exist.'
                 self.stdout.write(msg)
         else:
             logger.info('Generating for all the available subscriptions; '
-                        'billing_date=%s.', billing_date)
+                        'billing_date=%s; force_generate=%s.', billing_date, force_generate)
 
-            docs_generator.generate(billing_date=billing_date)
+            docs_generator.generate(billing_date=billing_date, force_generate=force_generate)
             self.stdout.write('Done. You can have a Club-Mate now. :)')
