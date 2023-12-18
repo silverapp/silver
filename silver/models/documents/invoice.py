@@ -50,6 +50,9 @@ class Invoice(BillingDocumentBase):
 
     @property
     def transactions(self):
+        if not self.pk:
+            return self.invoice_transactions.model.objects.none()
+
         return self.invoice_transactions.all()
 
     @locking_atomic_transition(field='state', source=BillingDocumentBase.STATES.DRAFT,

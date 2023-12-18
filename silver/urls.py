@@ -17,8 +17,9 @@
 
 from __future__ import absolute_import
 
-from django.conf.urls import include, re_path
+from django.conf.urls import include
 from django.contrib import admin
+from django.urls import re_path
 
 from silver.views import (pay_transaction_view, complete_payment_view,
                           InvoiceAutocomplete, ProformaAutocomplete,
