@@ -24,9 +24,10 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from silver.utils.decorators import require_transaction_currency_and_xe_rate
+from silver.utils.models import AutoCleanModelMixin
 
 
-class DocumentEntry(models.Model):
+class DocumentEntry(AutoCleanModelMixin, models.Model):
     description = models.TextField()
     unit = models.CharField(max_length=1024, blank=True, null=True)
     quantity = models.DecimalField(max_digits=19, decimal_places=4,
