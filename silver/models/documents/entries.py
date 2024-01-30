@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -48,7 +49,7 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
         verbose_name_plural = 'Entries'
 
     def full_clean(self, *args, **kwargs):
-        quantized_unit_price = Decimal(self.unit_price).quantize(Decimal('0.0000'))
+        quantized_unit_price = Decimal(self.unit_price).quantize(Decimal(f".{'0'*self.unit_price_decimals}"))
 
         if self.unit_price == quantized_unit_price:
             self.unit_price = quantized_unit_price
@@ -95,21 +96,34 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
                 self.tax_value_in_transaction_currency)
 
     @property
+    def unit_price_decimals(self) -> int:
+        return int(getattr(settings, 'SILVER_DEFAULT_UNIT_PRICE_DECIMALS', 4))
+
+    @property
+    def unit_price_in_transaction_currency(self):
+        result = Decimal(self.unit_price) * self.transaction_xe_rate
+        return result.quantize(Decimal(f".{'0'*self.unit_price_decimals}"))
+
+    @property
     @require_transaction_currency_and_xe_rate
     def total_before_tax_in_transaction_currency(self):
-        result = self.total_before_tax * self.transaction_xe_rate
+        result = Decimal(self.quantity) * self.unit_price_in_transaction_currency
         return result.quantize(Decimal('0.00'))
 
     @property
     @require_transaction_currency_and_xe_rate
-    def unit_price_in_transaction_currency(self):
-        result = Decimal(self.unit_price) * self.transaction_xe_rate
-        return result.quantize(Decimal('0.0000'))
-
-    @property
-    @require_transaction_currency_and_xe_rate
     def tax_value_in_transaction_currency(self):
-        result = self.tax_value * self.transaction_xe_rate
+        if self.invoice:
+            sales_tax_percent = self.invoice.sales_tax_percent
+        elif self.proforma:
+            sales_tax_percent = self.proforma.sales_tax_percent
+        else:
+            sales_tax_percent = None
+
+        if not sales_tax_percent:
+            return Decimal('0.00')
+
+        result = self.total_before_tax_in_transaction_currency * sales_tax_percent / 100
         return result.quantize(Decimal('0.00'))
 
     @property

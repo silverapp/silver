@@ -9,6 +9,7 @@ Some of these changes that were considered to be potentially breaking were marke
 - Fixed a case when issuing Invoices (occuring from a paid Proforma) would ignore the customer's `payment_due_date` field
 - Fixed documents `due_date` being set even in draft, which was incorrect. Now it will only be set after the document has been issued. **(WARNING)**
 - Fixed `transaction_xe_rate` and `transaction_xe_date` not being properly set in some cases. **(WARNING)**
+- Changed how sums in the transaction currency are calculated. Now, only the exchange rate is only applied to the base unit_price, instead of individually to each sums (before VAT, VAT only). This can result in small differences due to different rounding. **(WARNING)**.
 
 ### General
 - Transactions will automatically save when they transition to another state (`transaction.settle()` will also call 
@@ -26,6 +27,7 @@ Some of these changes that were considered to be potentially breaking were marke
   - They are no longer restricted to the billing interval, but may form any interval inside the billing interval 
     (e.g. half a day during a daily billed subscription). The only restriction is intervals from different related MFULs
     may not overlap. **(WARNING)**
+- Added a crude setting (`SILVER_DEFAULT_UNIT_PRICE_DECIMALS`) for specifying how many decimals the entry unit_price should be quantized to.
 
 ### REST API
 - The API endpoints regarding MeteredFeatureUnitsLogs were reworked, to address some inconsistencies (sometimes 
