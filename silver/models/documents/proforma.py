@@ -52,6 +52,9 @@ class Proforma(BillingDocumentBase):
 
     @property
     def transactions(self):
+        if not self.pk:
+            return self.proforma_transactions.model.objects.none()
+
         return self.proforma_transactions.all()
 
     def clean(self):
