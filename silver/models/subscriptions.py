@@ -1241,8 +1241,8 @@ class Subscription(models.Model):
                 bonus_entry_context.update({
                     'metered_feature': metered_feature,
                     'unit': metered_feature.unit,
-                    'name': metered_feature.name,
-                    'product_code': metered_feature.product_code,
+                    'name': separate_bonus.name,
+                    'product_code': separate_bonus.product_code,
                     'annotations': overage_info.annotations,
                     'directly_applied_bonuses': overage_info.directly_applied_bonuses,
                     'context': 'metered-feature-bonus'
