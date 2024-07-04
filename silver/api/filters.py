@@ -14,6 +14,9 @@
 
 from __future__ import absolute_import
 
+from django.db.models import Q
+from django.utils import timezone
+
 try:
     from django_filters import BaseInFilter
     _df_version = 2
@@ -26,7 +29,7 @@ from django_filters import FilterSet, CharFilter, BooleanFilter, DateFilter, Num
 
 from silver.models import (MeteredFeature, Subscription, Customer, Provider,
                            Plan, Invoice, Proforma, Transaction, PaymentMethod,
-                           BillingDocumentBase)
+                           BillingDocumentBase, Bonus, Discount)
 
 if _df_version >= 2:
     class MultipleCharFilter(BaseInFilter, CharFilter):
@@ -134,6 +137,60 @@ class BillingDocumentFilter(FilterSet):
                   'provider_name', 'provider_company', 'issue_date', 'due_date',
                   'paid_date', 'cancel_date', 'currency', 'sales_tax_name',
                   'is_overdue']
+
+
+class BonusFilter(FilterSet):
+    state = CharFilter(field_name='state', method='filter_state')
+
+    def filter_state(self, queryset, _, value):
+        if value:
+            now = timezone.now()
+
+            if value == "active":
+                return queryset.filter(
+                    Q(enabled=True) &
+                    (Q(start_date=None) | Q(start_date__lte=now)) &
+                    (Q(end_date=None) | Q(end_date__gte=now))
+                )
+            elif value == "inactive":
+                return queryset.filter(Q(enabled=False) | Q(end_date__lt=now) | Q(start_date__gt=now))
+            elif value == "ended":
+                return queryset.filter(end_date__lt=now)
+            elif value == "pending":
+                return queryset.filter(start_date__gt=now)
+
+        return queryset
+
+    class Meta:
+        model = Bonus
+        fields = ['id', "state", "enabled"]
+
+
+class DiscountFilter(FilterSet):
+    state = CharFilter(field_name='state', method='filter_state')
+
+    def filter_state(self, queryset, _, value):
+        if value:
+            now = timezone.now()
+
+            if value == "active":
+                return queryset.filter(
+                    Q(enabled=True) &
+                    (Q(start_date=None) | Q(start_date__lte=now)) &
+                    (Q(end_date=None) | Q(end_date__gte=now))
+                )
+            elif value == "inactive":
+                return queryset.filter(Q(enabled=False) | Q(end_date__lt=now) | Q(start_date__gt=now))
+            elif value == "ended":
+                return queryset.filter(end_date__lt=now)
+            elif value == "pending":
+                return queryset.filter(start_date__gt=now)
+
+        return queryset
+
+    class Meta:
+        model = Discount
+        fields = ['id', "state", "enabled"]
 
 
 class InvoiceFilter(BillingDocumentFilter):

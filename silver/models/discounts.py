@@ -22,6 +22,7 @@ from django.db import models
 from django.db.models import Q, F
 from django.template.loader import render_to_string
 
+from . import Plan
 from .subscriptions import Subscription
 from .documents.entries import OriginType
 from .fields import field_template_path
@@ -42,11 +43,6 @@ class DiscountStackingType(models.TextChoices):
     NONCUMULATIVE = "noncumulative", "Noncumulative"
 
 
-class DiscountState(models.TextChoices):
-    ACTIVE = "active", "Active"
-    INACTIVE = "inactive", "Inactive"
-
-
 class DiscountTarget(models.TextChoices):
     ALL = "all"
     PLAN_AMOUNT = "plan_amount"
@@ -62,7 +58,6 @@ class DurationIntervals(models.TextChoices):
 
 
 class Discount(AutoCleanModelMixin, models.Model):
-    STATES = DiscountState
     STACKING_TYPES = DiscountStackingType
     ENTRY_BEHAVIOR = DocumentEntryBehavior
     TARGET = DiscountTarget
@@ -95,8 +90,8 @@ class Discount(AutoCleanModelMixin, models.Model):
                                               max_length=24, default=STACKING_TYPES.ADDITIVE,
                                               help_text="Defines how the discount will interact with other discounts.")
 
-    state = models.CharField(choices=STATES.choices, max_length=16, default=STATES.ACTIVE,
-                             help_text="Can be used to easily toggle discounts on or off.")
+    enabled = models.BooleanField(default=True,
+                                  help_text="Can be used to easily toggle discounts on or off.")
 
     start_date = models.DateField(null=True, blank=True,
                                   help_text="When set, the discount will only apply to entries with a lower "
@@ -140,7 +135,7 @@ class Discount(AutoCleanModelMixin, models.Model):
         if not subscription.state == subscription.STATES.ACTIVE:
             return False
 
-        if not self.state == self.STATES.ACTIVE:
+        if not self.enabled:
             return False
 
         period = self.period_applied_to_subscription(subscription)
@@ -202,6 +197,16 @@ class Discount(AutoCleanModelMixin, models.Model):
             subscriptions = subscriptions.filter(plan__in=plans)
 
         return subscriptions
+
+    @classmethod
+    def for_customer(cls, customer: "silver.models.Customer"):
+        plans = Plan.objects.filter(subscription__customer=customer)
+
+        return Discount.objects.filter(
+            Q(customers=customer) | Q(customers=None),
+            Q(subscriptions__customer=customer) | Q(subscriptions=None),
+            Q(plans__in=plans) | Q(plans=None) | Q(plans__private=False),
+        )
 
     @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):

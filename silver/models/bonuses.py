@@ -8,15 +8,10 @@ from django.db import models
 from django.db.models import Q, F
 from django.utils import timezone
 
-from silver.models import Subscription
+from silver.models import Subscription, Plan
 from silver.models.documents.entries import OriginType
 from silver.utils.dates import end_of_interval
 from silver.utils.models import AutoCleanModelMixin
-
-
-class BonusState(models.TextChoices):
-    ACTIVE = "active", "Active"
-    INACTIVE = "inactive", "Inactive"
 
 
 class DurationIntervals(models.TextChoices):
@@ -37,7 +32,6 @@ class DocumentEntryBehavior(models.TextChoices):
 
 
 class Bonus(AutoCleanModelMixin, models.Model):
-    STATES = BonusState
     TARGET = BonusTarget
     DURATION_INTERVALS = DurationIntervals
     ENTRY_BEHAVIOR = DocumentEntryBehavior
@@ -74,8 +68,7 @@ class Bonus(AutoCleanModelMixin, models.Model):
                                                help_text="Defines how the discount will be shown in the billing "
                                                          "documents.")
 
-    state = models.CharField(choices=STATES.choices, max_length=16, default=STATES.ACTIVE,
-                             help_text="Can be used to easily toggle bonuses on or off.")
+    enabled = models.BooleanField(default=True, help_text="Can be used to easily toggle bonuses on or off.")
 
     start_date = models.DateField(null=True, blank=True,
                                   help_text="When set, the bonus will only apply to entries with a lower "
@@ -130,6 +123,17 @@ class Bonus(AutoCleanModelMixin, models.Model):
         }
 
     @classmethod
+    def for_customer(cls, customer: "silver.models.Customer"):
+        plans = Plan.objects.filter(subscription__customer=customer).select_related("product_code")
+
+        return Bonus.objects.filter(
+            Q(filter_customers=customer) | Q(filter_customers=None),
+            Q(filter_subscriptions__customer=customer) | Q(filter_subscriptions=None),
+            Q(filter_plans__in=plans) | Q(filter_plans=None) | Q(filter_plans__private=False),
+            Q(filter_product_codes__in=[plan.product_code for plan in plans]) | Q(filter_product_codes=None),
+        ).annotate(_filtered_product_codes=F("filter_product_codes"))
+
+    @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):
         return Bonus.objects.filter(
             Q(filter_customers=subscription.customer) | Q(filter_customers=None),
@@ -142,7 +146,7 @@ class Bonus(AutoCleanModelMixin, models.Model):
         if not subscription.state == subscription.STATES.ACTIVE:
             return False
 
-        if not self.state == self.STATES.ACTIVE:
+        if not self.enabled:
             return False
 
         period = self.period_applied_to_subscription(subscription)

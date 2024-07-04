@@ -156,7 +156,7 @@ class DocumentsGenerator(object):
         discounts = {}
         for subscription in subscriptions:
             sub_discounts = Discount.for_subscription(subscription).filter(
-                state=Discount.STATES.ACTIVE
+                enabled=True
             )
 
             for discount in sub_discounts:

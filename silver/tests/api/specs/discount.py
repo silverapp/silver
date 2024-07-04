@@ -7,7 +7,7 @@ def spec_discount(discount, subscription=None):
         'applies_to': discount.applies_to,
         'document_entry_behavior': discount.document_entry_behavior,
         'discount_stacking_type': discount.discount_stacking_type,
-        'state': discount.state,
+        'enabled': discount.enabled,
         'start_date': discount.start_date,
         'end_date': discount.end_date,
         'duration_count': discount.duration_count,

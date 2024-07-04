@@ -19,9 +19,9 @@ from rest_framework import serializers
 from rest_framework.fields import JSONField, SerializerMethodField
 from rest_framework.reverse import reverse
 
-from silver.api.serializers.bonus_serializer import BonusSerializer
+from silver.api.serializers.bonus_serializer import SubscriptionBonusSerializer
 from silver.api.serializers.common import CustomerUrl, MeteredFeatureSerializer
-from silver.api.serializers.discount_serializer import DiscountSerializer
+from silver.api.serializers.discount_serializer import SubscriptionDiscountSerializer
 from silver.api.serializers.plans_serializer import PlanSerializer
 from silver.models import MeteredFeatureUnitsLog, Subscription, Customer
 
@@ -94,7 +94,8 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
         context["subscription"] = subscription
 
         return [
-            DiscountSerializer(discount, context=context).data for discount in subscription.applied_discounts
+            SubscriptionDiscountSerializer(discount, context=context).data
+            for discount in subscription.applied_discounts
         ]
 
     def get_bonuses(self, subscription):
@@ -102,7 +103,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
         context["subscription"] = subscription
 
         return [
-            BonusSerializer(discount, context=context).data for discount in subscription.applied_bonuses
+            SubscriptionBonusSerializer(discount, context=context).data for discount in subscription.applied_bonuses
         ]
 
 

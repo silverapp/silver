@@ -17,9 +17,8 @@ from __future__ import absolute_import
 from django.conf.urls import re_path
 
 from silver import views as silver_views
-from silver.api.views import billing_entities_views, documents_views, payment_method_views, \
-    plan_views, product_code_views, subscription_views, transaction_views
-
+from silver.api.views import billing_entities_views, bonus_views, documents_views, payment_method_views, \
+    plan_views, product_code_views, subscription_views, transaction_views, discount_views
 
 urlpatterns = [
     re_path(r'^customers/$',
@@ -40,6 +39,7 @@ urlpatterns = [
     re_path(r'^customers/(?P<customer_pk>[0-9]+)/subscriptions/(?P<subscription_pk>[0-9]+)/reactivate/$',
             subscription_views.SubscriptionReactivate.as_view(), name='sub-reactivate'),
 
+
     re_path(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/$',
             payment_method_views.PaymentMethodList.as_view(), name='payment-method-list'),
     re_path(r'^customers/(?P<customer_pk>[0-9]+)/payment_methods/(?P<payment_method_id>[0-9]+)/$',
@@ -55,6 +55,11 @@ urlpatterns = [
             transaction_views.TransactionDetail.as_view(), name='transaction-detail'),
     re_path(r'^customers/(?P<customer_pk>[0-9]+)/transactions/(?P<transaction_uuid>[0-9a-z-]+)/(?P<requested_action>(cancel))_request/$',
             transaction_views.TransactionAction.as_view(), name='transaction-action'),
+
+    re_path(r'^customers/(?P<customer_pk>[0-9]+)/bonuses/$',
+            bonus_views.BonusList.as_view(), name='customer-bonus-list'),
+    re_path(r'^customers/(?P<customer_pk>[0-9]+)/discounts/$',
+            discount_views.DiscountList.as_view(), name='customer-discount-list'),
 
     re_path(r'^payment_processors/$',
             payment_method_views.PaymentProcessorList.as_view(), name='payment-processor-list'),
