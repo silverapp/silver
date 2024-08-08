@@ -197,10 +197,10 @@ class Discount(AutoCleanModelMixin, models.Model):
         product_codes = self.filter_product_codes.all()
 
         if customers:
-            subscriptions = subscriptions.filter(filter_customer__in=customers)
+            subscriptions = subscriptions.filter(customer__in=customers)
 
         if plans:
-            subscriptions = subscriptions.filter(filter_plan__in=plans)
+            subscriptions = subscriptions.filter(plan__in=plans)
 
         if product_codes:
             subscriptions = subscriptions.filter(
