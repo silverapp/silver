@@ -2715,7 +2715,8 @@ class TestInvoiceGenerationCommand(TestCase):
 
         plan_discount = DiscountFactory.create(percentage=Decimal('50'), duration_count=None, duration_interval=None)
 
-        mf_discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None, applies_to=Discount.TARGET.METERED_FEATURES)
+        mf_discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None,
+                                             applies_to=Discount.TARGET.METERED_FEATURES)
         mf_discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
@@ -2769,7 +2770,9 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_nondiscounted_mfs_value = (consumed_units - included_units) * mf_price
 
         assert proforma.total_before_tax == (
-            plan.amount * Decimal('0.5') + consumed_nondiscounted_mfs_value + consumed_discounted_mfs_value * Decimal('0.75')
+            plan.amount * Decimal('0.5') +
+            consumed_nondiscounted_mfs_value +
+            consumed_discounted_mfs_value * Decimal('0.75')
         )
         assert proforma.total == (
             proforma.total_before_tax * Decimal('1.19')
@@ -3139,7 +3142,6 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
 
         assert proforma.total == plan.amount + consumed_mfs_value
-
 
     def test_bonuses_applied_as_separate_entries_metered_features(self):
         billing_date = generate_docs_date('2015-07-01')
