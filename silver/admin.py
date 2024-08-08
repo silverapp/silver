@@ -794,9 +794,59 @@ class ProformaFilter(SimpleListFilter):
         return queryset
 
 
+class DiscountAdminForm(forms.ModelForm):
+    class Meta:
+        model = Discount
+        widgets = {
+            "product_code": autocomplete.ModelSelect2(),
+            "filter_subscriptions": autocomplete.ModelSelect2Multiple(),
+            "filter_customers": autocomplete.ModelSelect2Multiple(),
+            "filter_plans": autocomplete.ModelSelect2Multiple(),
+            "filter_product_codes": autocomplete.ModelSelect2Multiple(),
+        }
+        fields = "__all__"
+
+
 class DiscountAdmin(ModelAdmin):
+    form = DiscountAdminForm
+
     list_display = ["__str__", "get_amount_description", "get_matching_subscriptions"]
-    filter_horizontal = ["subscriptions", "customers", "plans"]
+
+    fieldsets = [
+        (
+            None,
+            {
+                "fields": [
+                    ("name", "product_code"),
+                    "percentage",
+                    "discount_stacking_type",
+                    "document_entry_behavior",
+                ]
+            }
+        ),
+        (
+            "What it affects",
+            {
+                "fields": [
+                    "applies_to",
+                    "filter_customers",
+                    "filter_plans",
+                    "filter_subscriptions",
+                    "filter_product_codes",
+                ]
+            },
+        ),
+        (
+            "Availability",
+            {
+                "fields": [
+                    "enabled",
+                    ("start_date", "end_date"),
+                    ("duration_count", "duration_interval"),
+                ]
+            },
+        ),
+    ]
 
     def get_matching_subscriptions(self, discount):
         count = discount.matching_subscriptions().count()
@@ -815,9 +865,59 @@ class DiscountAdmin(ModelAdmin):
     get_amount_description.short_description = "Amount"
 
 
+class BonusAdminForm(forms.ModelForm):
+    class Meta:
+        model = Bonus
+        widgets = {
+            "product_code": autocomplete.ModelSelect2(),
+            "filter_subscriptions": autocomplete.ModelSelect2Multiple(),
+            "filter_customers": autocomplete.ModelSelect2Multiple(),
+            "filter_plans": autocomplete.ModelSelect2Multiple(),
+            "filter_product_codes": autocomplete.ModelSelect2Multiple(),
+            'filter_annotations': forms.Textarea(attrs={'cols': 60, 'rows': 1})
+        }
+        fields = "__all__"
+
+
 class BonusAdmin(ModelAdmin):
+    form = BonusAdminForm
+
     list_display = ["__str__", "get_amount_description", "get_matching_subscriptions"]
-    filter_horizontal = ["filter_subscriptions", "filter_customers", "filter_plans", "filter_product_codes"]
+    fieldsets = [
+        (
+            None,
+            {
+                "fields": [
+                    ("name", "product_code"),
+                    ("amount", "amount_percentage"),
+                    "document_entry_behavior",
+                ]
+            }
+        ),
+        (
+            "What it affects",
+            {
+                "fields": [
+                    "applies_to",
+                    "filter_customers",
+                    "filter_plans",
+                    "filter_subscriptions",
+                    "filter_product_codes",
+                    "filter_annotations"
+                ]
+            },
+        ),
+        (
+            "Availability",
+            {
+                "fields": [
+                    "enabled",
+                    ("start_date", "end_date"),
+                    ("duration_count", "duration_interval"),
+                ]
+            },
+        ),
+    ]
 
     def get_matching_subscriptions(self, bonus):
         count = bonus.matching_subscriptions().count()
@@ -1472,6 +1572,12 @@ class PaymentMethodAdmin(ModelAdmin):
                      'customer__company']
 
 
+class MeteredFeatureAdmin(ModelAdmin):
+    list_display = ["__str__", "product_code"]
+    search_fields = ["name", "unit", "product_code__value"]
+    list_filter = ["product_code"]
+
+
 site.register(Transaction, TransactionAdmin)
 site.register(PaymentMethod, PaymentMethodAdmin)
 site.register(Plan, PlanAdmin)
@@ -1483,4 +1589,4 @@ site.register(Proforma, ProformaAdmin)
 site.register(Discount, DiscountAdmin)
 site.register(Bonus, BonusAdmin)
 site.register(ProductCode)
-site.register(MeteredFeature)
+site.register(MeteredFeature, MeteredFeatureAdmin)
