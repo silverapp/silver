@@ -13,6 +13,8 @@
 # limitations under the License.
 from datetime import datetime
 from decimal import Decimal
+
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from fractions import Fraction
 from typing import List, Iterable, Tuple
@@ -22,7 +24,7 @@ from django.db import models
 from django.db.models import Q, F
 from django.template.loader import render_to_string
 
-from . import Plan
+from . import Plan, MeteredFeature
 from .subscriptions import Subscription
 from .documents.entries import OriginType
 from .fields import field_template_path
@@ -71,9 +73,10 @@ class Discount(AutoCleanModelMixin, models.Model):
                                      related_name='discounts', on_delete=models.PROTECT,
                                      help_text="The discount's product code.")
 
-    customers = models.ManyToManyField("silver.Customer", related_name='discounts', blank=True)
-    subscriptions = models.ManyToManyField("silver.Subscription", related_name='discounts', blank=True)
-    plans = models.ManyToManyField("silver.Plan", related_name='discounts', blank=True)
+    filter_customers = models.ManyToManyField("silver.Customer", related_name='filtering_discounts', blank=True)
+    filter_subscriptions = models.ManyToManyField("silver.Subscription", related_name='filtering_discounts', blank=True)
+    filter_plans = models.ManyToManyField("silver.Plan", related_name='filtering_discounts', blank=True)
+    filter_product_codes = models.ManyToManyField("silver.ProductCode", related_name="filtering_discounts", blank=True)
 
     percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
                                      help_text="A percentage to be discounted. For example 25 (%)")
@@ -106,6 +109,7 @@ class Discount(AutoCleanModelMixin, models.Model):
                                          help_text="Indicate the duration for which the discount is available, after "
                                                    "a subscription started. If not set, the duration is indefinite.")
     duration_interval = models.CharField(null=True, blank=True, max_length=16, choices=DURATION_INTERVALS.choices)
+    meta = models.JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     def clean(self):
         if (
@@ -184,37 +188,60 @@ class Discount(AutoCleanModelMixin, models.Model):
         return ", ".join(discount)
 
     def matching_subscriptions(self):
-        subscriptions = self.subscriptions.all()
+        subscriptions = self.filter_subscriptions.all()
         if not subscriptions:
             subscriptions = Subscription.objects.all()
 
-        customers = self.customers.all()
-        plans = self.plans.all()
+        customers = self.filter_customers.all()
+        plans = self.filter_plans.all()
+        product_codes = self.filter_product_codes.all()
+
         if customers:
-            subscriptions = subscriptions.filter(customer__in=customers)
+            subscriptions = subscriptions.filter(filter_customer__in=customers)
 
         if plans:
-            subscriptions = subscriptions.filter(plan__in=plans)
+            subscriptions = subscriptions.filter(filter_plan__in=plans)
+
+        if product_codes:
+            subscriptions = subscriptions.filter(
+                Q(plan__product_code__in=product_codes) |
+                Q(plan__metered_features__product_code__in=product_codes)
+            )
 
         return subscriptions
 
+    def matches_product_code(self, product_code) -> bool:
+        filtered_product_codes = self.filter_product_codes.all()
+
+        return not filtered_product_codes or product_code in filtered_product_codes
+
     @classmethod
     def for_customer(cls, customer: "silver.models.Customer"):
-        plans = Plan.objects.filter(subscription__customer=customer)
+        plans = Plan.objects.filter(subscription__customer=customer).select_related("product_code")
+        metered_features = MeteredFeature.objects.filter(plan__in=plans).select_related("product_code")
+        product_codes = set(plan.product_code for plan in plans).union(
+            set(metered_feature.product_code for metered_feature in metered_features)
+        )
 
         return Discount.objects.filter(
-            Q(customers=customer) | Q(customers=None),
-            Q(subscriptions__customer=customer) | Q(subscriptions=None),
-            Q(plans__in=plans) | Q(plans=None) | Q(plans__private=False),
+            Q(filter_customers=customer) | Q(filter_customers=None),
+            Q(filter_subscriptions__customer=customer) | Q(filter_subscriptions=None),
+            Q(filter_plans__in=plans) | Q(filter_plans=None) | Q(filter_plans__private=False),
+            Q(filter_product_codes__in=product_codes) | Q(filter_product_codes=None),
         )
 
     @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):
+        metered_features = MeteredFeature.objects.filter(plan=subscription.plan).select_related("product_code")
+        product_codes = set(metered_feature.product_code for metered_feature in metered_features)
+        product_codes.add(subscription.plan.product_code)
+
         return Discount.objects.filter(
-            Q(customers=subscription.customer) | Q(customers=None),
-            Q(subscriptions=subscription) | Q(subscriptions=None),
-            Q(plans=subscription.plan) | Q(plans=None),
-        ).annotate(matched_subscriptions=F("subscriptions"))
+            Q(filter_customers=subscription.customer) | Q(filter_customers=None),
+            Q(filter_subscriptions=subscription) | Q(filter_subscriptions=None),
+            Q(filter_plans=subscription.plan) | Q(filter_plans=None),
+            Q(filter_product_codes__in=product_codes) | Q(filter_product_codes=None),
+        )
 
     # @classmethod
     # def for_subscription_per_entry(cls, subscription: "silver.models.Subscription"):

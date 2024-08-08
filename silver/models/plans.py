@@ -15,6 +15,7 @@
 from __future__ import absolute_import, unicode_literals
 
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -201,6 +202,7 @@ class MeteredFeature(models.Model):
     product_code = UnsavedForeignKey(
         'ProductCode', help_text='The product code for this plan.', on_delete=models.PROTECT,
     )
+    meta = models.JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     class Meta:
         ordering = ('name',)

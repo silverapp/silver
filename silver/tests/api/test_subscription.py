@@ -337,7 +337,7 @@ class TestSubscriptionEndpoint(APITestCase):
     def test_get_subscription_detail(self):
         subscription = SubscriptionFactory.create()
         discount = DiscountFactory.create()
-        discount.subscriptions.add(subscription)
+        discount.filter_subscriptions.add(subscription)
 
         bonus = BonusFactory.create(amount=1234)
         bonus.filter_subscriptions.add(subscription)

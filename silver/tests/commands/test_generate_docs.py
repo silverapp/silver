@@ -2662,7 +2662,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
         customer = CustomerFactory.create(sales_tax_percent=Decimal('19.00'))
         discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None)
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         included_units = Decimal('20.00')
@@ -2698,6 +2698,7 @@ class TestInvoiceGenerationCommand(TestCase):
         assert Invoice.objects.all().count() == 0
 
         proforma = Proforma.objects.all()[0]
+
         assert proforma.proforma_entries.all().count() == 4
         assert all([not entry.prorated
                     for entry in proforma.proforma_entries.all()])
@@ -2705,6 +2706,73 @@ class TestInvoiceGenerationCommand(TestCase):
         assert proforma.total_before_tax == (plan.amount + consumed_mfs_value) * Decimal('0.75')
         assert proforma.total == (
             (plan.amount + consumed_mfs_value) * Decimal('0.75') * Decimal('1.19')
+        ).quantize(Decimal('0.00'))
+
+    def test_discounts_applied_to_plan_product_code_and_metered_features_only_product_code(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('19.00'))
+
+        plan_discount = DiscountFactory.create(percentage=Decimal('50'), duration_count=None, duration_interval=None)
+
+        mf_discount = DiscountFactory.create(percentage=Decimal('25'), duration_count=None, duration_interval=None, applies_to=Discount.TARGET.METERED_FEATURES)
+        mf_discount.filter_customers.add(customer)
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        discounted_metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('20.00'))
+        mf_discount.filter_product_codes.add(discounted_metered_feature.product_code)
+
+        nondiscounted_metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('20.00'))
+
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[discounted_metered_feature, nondiscounted_metered_feature])
+        plan_discount.filter_product_codes.add(plan.product_code)
+
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=discounted_metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=nondiscounted_metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+
+        assert proforma.proforma_entries.all().count() == 5
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_discounted_mfs_value = (consumed_units - included_units) * mf_price
+        consumed_nondiscounted_mfs_value = (consumed_units - included_units) * mf_price
+
+        assert proforma.total_before_tax == (
+            plan.amount * Decimal('0.5') + consumed_nondiscounted_mfs_value + consumed_discounted_mfs_value * Decimal('0.75')
+        )
+        assert proforma.total == (
+            proforma.total_before_tax * Decimal('1.19')
         ).quantize(Decimal('0.00'))
 
     def test_discounts_noncumulative(self):
@@ -2726,20 +2794,20 @@ class TestInvoiceGenerationCommand(TestCase):
         # two additive discounts (20% total)
         discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.ADDITIVE,
                                           percentage=Decimal('10'), duration_count=None, duration_interval=None)
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.ADDITIVE,
                                           percentage=Decimal('10'), duration_count=None, duration_interval=None)
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         # two multiplicative discounts (8% + 7.2% = 15.2% total)
         discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
                                           percentage=Decimal('10'), duration_count=None, duration_interval=None)
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         discount = DiscountFactory.create(discount_stacking_type=Discount.STACKING_TYPES.MULTIPLICATIVE,
                                           percentage=Decimal('10'), duration_count=None, duration_interval=None)
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         included_units = Decimal('20.00')
@@ -2797,7 +2865,7 @@ class TestInvoiceGenerationCommand(TestCase):
             percentage=Decimal('10'),
             duration_count=3, duration_interval=Discount.DURATION_INTERVALS.MONTH
         )
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
@@ -2850,7 +2918,7 @@ class TestInvoiceGenerationCommand(TestCase):
             percentage=Decimal('10'),
             duration_count=1, duration_interval=Discount.DURATION_INTERVALS.WEEK
         )
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
@@ -2903,7 +2971,7 @@ class TestInvoiceGenerationCommand(TestCase):
             percentage=Decimal('10'),
             duration_count=2, duration_interval=Discount.DURATION_INTERVALS.WEEK
         )
-        discount.customers.add(customer)
+        discount.filter_customers.add(customer)
 
         mf_price = Decimal('2.5')
         metered_feature = MeteredFeatureFactory(price_per_unit=mf_price, included_units=Decimal('0.00'))
@@ -3007,6 +3075,71 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
 
         assert proforma.total == plan.amount + consumed_mfs_value
+
+    def test_bonuses_applied_directly_filter_product_code(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00')
+        )
+
+        # two additive discounts (10 + 20% * 20 = 14)
+        bonus_fixed = BonusFactory.create(amount=Decimal('10'), duration_count=None, duration_interval=None,
+                                          document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_DIRECTLY_TO_TARGET_ENTRIES)
+        bonus_fixed.filter_customers.add(customer)
+        bonus_fixed.filter_product_codes.add(metered_feature.product_code)
+
+        bonus_percentage = BonusFactory.create(
+            amount_percentage=Decimal('20'),
+            document_entry_behavior=Bonus.ENTRY_BEHAVIOR.APPLY_DIRECTLY_TO_TARGET_ENTRIES
+        )
+        bonus_percentage.filter_customers.add(customer)
+        bonus_fixed.filter_product_codes.add(metered_feature.product_code)
+
+        bonus_included_units = Decimal('14')
+        assert bonus_included_units == bonus_fixed.amount + bonus_percentage.amount_percentage * included_units / 100
+
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 2
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units - bonus_included_units) * mf_price
+
+        assert proforma.total == plan.amount + consumed_mfs_value
+
 
     def test_bonuses_applied_as_separate_entries_metered_features(self):
         billing_date = generate_docs_date('2015-07-01')

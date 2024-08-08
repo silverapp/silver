@@ -1166,7 +1166,7 @@ class Subscription(models.Model):
             extra_consumed_units, annotations, applied_directly_bonuses, applied_separately_bonuses
         )
 
-    def _add_mfs_entries(self, start_date, end_date, invoice=None, proforma=None, bonuses=None) \
+    def _add_mfs_entries(self, metered_feature, start_date, end_date, invoice=None, proforma=None, bonuses=None) \
             -> Tuple[Decimal, List['silver.models.DocumentEntry']]:
         start_datetime = datetime.combine(
             start_date,
@@ -1192,76 +1192,75 @@ class Subscription(models.Model):
 
         mfs_total = Decimal('0.00')
         entries = []
-        for metered_feature in self.plan.metered_features.all():
-            overage_info = self._get_extra_consumed_units(
-                metered_feature, fraction, start_datetime, end_datetime, bonuses=bonuses
-            )
-            extra_consumed_units = overage_info.extra_consumed_units
+        overage_info = self._get_extra_consumed_units(
+            metered_feature, fraction, start_datetime, end_datetime, bonuses=bonuses
+        )
+        extra_consumed_units = overage_info.extra_consumed_units
 
-            entry_context = base_context.copy()
-            entry_context.update({
+        entry_context = base_context.copy()
+        entry_context.update({
+            'metered_feature': metered_feature,
+            'unit': metered_feature.unit,
+            'name': metered_feature.name,
+            'product_code': metered_feature.product_code,
+            'annotations': overage_info.annotations,
+            'directly_applied_bonuses': overage_info.directly_applied_bonuses,
+        })
+
+        description = self._entry_description(entry_context)
+        unit = self._entry_unit(entry_context)
+
+        entry = DocumentEntry.objects.create(
+            invoice=invoice, proforma=proforma,
+            description=description, unit=unit,
+            quantity=overage_info.extra_consumed_units, prorated=prorated,
+            unit_price=metered_feature.price_per_unit,
+            product_code=metered_feature.product_code,
+            start_date=start_date, end_date=end_date
+        )
+        entries.append(entry)
+
+        for separate_bonus in overage_info.separately_applied_bonuses:
+            if extra_consumed_units <= 0:
+                break
+
+            bonus_included_units = quantize_fraction(
+                self._included_units_from_bonuses(
+                    metered_feature, start_date, end_date,
+                    extra_proration_fraction=fraction, bonuses=[separate_bonus]
+                )
+            )
+            if not bonus_included_units:
+                continue
+
+            bonus_consumed_units = min(bonus_included_units, extra_consumed_units)
+            extra_consumed_units -= bonus_consumed_units
+
+            bonus_entry_context = base_context.copy()
+            bonus_entry_context.update({
                 'metered_feature': metered_feature,
                 'unit': metered_feature.unit,
-                'name': metered_feature.name,
-                'product_code': metered_feature.product_code,
+                'name': separate_bonus.name,
+                'product_code': separate_bonus.product_code,
                 'annotations': overage_info.annotations,
                 'directly_applied_bonuses': overage_info.directly_applied_bonuses,
+                'context': 'metered-feature-bonus'
             })
 
-            description = self._entry_description(entry_context)
-            unit = self._entry_unit(entry_context)
+            description = self._entry_description(bonus_entry_context)
 
-            entry = DocumentEntry.objects.create(
+            bonus_entry = DocumentEntry.objects.create(
                 invoice=invoice, proforma=proforma,
                 description=description, unit=unit,
-                quantity=overage_info.extra_consumed_units, prorated=prorated,
-                unit_price=metered_feature.price_per_unit,
-                product_code=metered_feature.product_code,
+                quantity=bonus_consumed_units, prorated=prorated,
+                unit_price=-metered_feature.price_per_unit,
+                product_code=separate_bonus.product_code,
                 start_date=start_date, end_date=end_date
             )
-            entries.append(entry)
+            entries.append(bonus_entry)
+            mfs_total += bonus_entry.total_before_tax
 
-            for separate_bonus in overage_info.separately_applied_bonuses:
-                if extra_consumed_units <= 0:
-                    break
-
-                bonus_included_units = quantize_fraction(
-                    self._included_units_from_bonuses(
-                        metered_feature, start_date, end_date,
-                        extra_proration_fraction=fraction, bonuses=[separate_bonus]
-                    )
-                )
-                if not bonus_included_units:
-                    continue
-
-                bonus_consumed_units = min(bonus_included_units, extra_consumed_units)
-                extra_consumed_units -= bonus_consumed_units
-
-                bonus_entry_context = base_context.copy()
-                bonus_entry_context.update({
-                    'metered_feature': metered_feature,
-                    'unit': metered_feature.unit,
-                    'name': separate_bonus.name,
-                    'product_code': separate_bonus.product_code,
-                    'annotations': overage_info.annotations,
-                    'directly_applied_bonuses': overage_info.directly_applied_bonuses,
-                    'context': 'metered-feature-bonus'
-                })
-
-                description = self._entry_description(bonus_entry_context)
-
-                bonus_entry = DocumentEntry.objects.create(
-                    invoice=invoice, proforma=proforma,
-                    description=description, unit=unit,
-                    quantity=bonus_consumed_units, prorated=prorated,
-                    unit_price=-metered_feature.price_per_unit,
-                    product_code=separate_bonus.product_code,
-                    start_date=start_date, end_date=end_date
-                )
-                entries.append(bonus_entry)
-                mfs_total += bonus_entry.total_before_tax
-
-            mfs_total += entry.total_before_tax
+        mfs_total += entry.total_before_tax
 
         return mfs_total, entries
 

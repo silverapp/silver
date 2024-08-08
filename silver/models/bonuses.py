@@ -3,12 +3,13 @@ from fractions import Fraction
 from typing import Tuple
 
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q, F
 from django.utils import timezone
 
-from silver.models import Subscription, Plan
+from silver.models import Subscription, Plan, MeteredFeature
 from silver.models.documents.entries import OriginType
 from silver.utils.dates import end_of_interval
 from silver.utils.models import AutoCleanModelMixin
@@ -72,17 +73,18 @@ class Bonus(AutoCleanModelMixin, models.Model):
 
     start_date = models.DateField(null=True, blank=True,
                                   help_text="When set, the bonus will only apply to entries with a lower "
-                                            "or equal start_date. Otherwise, a prorated bonus may still apply, but"
+                                            "or equal start_date. Otherwise, a prorated bonus may still apply, but "
                                             "only if the entries end_date is greater than the bonus's start_date.")
     end_date = models.DateField(null=True, blank=True,
                                 help_text="When set, the bonus will only apply to entries with a greater "
-                                          "or equal end_date. Otherwise, a prorated bonus may still apply, but"
+                                          "or equal end_date. Otherwise, a prorated bonus may still apply, but "
                                           "only if the entries start_date is lower than the bonus's end_date.")
 
     duration_count = models.IntegerField(null=True, blank=True,
                                          help_text="Indicate the duration for which the bonus is available, after "
                                                    "a subscription started. If not set, the duration is indefinite.")
     duration_interval = models.CharField(null=True, blank=True, max_length=16, choices=DURATION_INTERVALS.choices)
+    meta = models.JSONField(blank=True, null=True, default=dict, encoder=DjangoJSONEncoder)
 
     class Meta:
         verbose_name_plural = "bonuses"
@@ -125,22 +127,31 @@ class Bonus(AutoCleanModelMixin, models.Model):
     @classmethod
     def for_customer(cls, customer: "silver.models.Customer"):
         plans = Plan.objects.filter(subscription__customer=customer).select_related("product_code")
+        metered_features = MeteredFeature.objects.filter(plan__in=plans).select_related("product_code")
+        product_codes = set(plan.product_code for plan in plans).union(
+            set(metered_feature.product_code for metered_feature in metered_features)
+        )
 
         return Bonus.objects.filter(
             Q(filter_customers=customer) | Q(filter_customers=None),
             Q(filter_subscriptions__customer=customer) | Q(filter_subscriptions=None),
             Q(filter_plans__in=plans) | Q(filter_plans=None) | Q(filter_plans__private=False),
-            Q(filter_product_codes__in=[plan.product_code for plan in plans]) | Q(filter_product_codes=None),
-        ).annotate(_filtered_product_codes=F("filter_product_codes"))
+            Q(filter_product_codes__in=product_codes) | Q(filter_product_codes=None),
+        )
 
     @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):
+        metered_features = MeteredFeature.objects.filter(plan=subscription.plan).select_related("product_code")
+        product_codes = set(metered_feature.product_code for metered_feature in metered_features)
+        # Does adding the plan product code even make sens for Bonuses!? Probably not...
+        product_codes.add(subscription.plan.product_code)
+
         return Bonus.objects.filter(
             Q(filter_customers=subscription.customer) | Q(filter_customers=None),
             Q(filter_subscriptions=subscription) | Q(filter_subscriptions=None),
             Q(filter_plans=subscription.plan) | Q(filter_plans=None),
-            Q(filter_product_codes=subscription.plan.product_code) | Q(filter_product_codes=None),
-        ).annotate(_filtered_product_codes=F("filter_product_codes"))
+            Q(filter_product_codes__in=product_codes) | Q(filter_product_codes=None),
+        )
 
     def is_active_for_subscription(self, subscription):
         if not subscription.state == subscription.STATES.ACTIVE:
@@ -216,9 +227,10 @@ class Bonus(AutoCleanModelMixin, models.Model):
         return subscriptions
 
     def matches_metered_feature_units(self, metered_feature, annotations) -> bool:
-        if hasattr(self, "_filtered_product_codes"):
-            if self._filtered_product_codes and metered_feature.product_code not in self._filtered_product_codes:
-                return False
+        filtered_product_codes = self.filter_product_codes.all()
+
+        if filtered_product_codes and metered_feature.product_code not in filtered_product_codes:
+            return False
 
         if self.filter_annotations:
             if not set(self.filter_annotations).intersection(set(annotations)):

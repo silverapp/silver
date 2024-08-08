@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from decimal import Decimal
 from fractions import Fraction
-from typing import Tuple, Dict, List, Union
+from typing import Tuple, Dict, List, Union, Optional
 
 from django.utils import timezone
 
@@ -213,11 +213,17 @@ class DocumentsGenerator(object):
                     if entry_info.subscription not in discount.matching_subscriptions:
                         continue
 
+                    if not discount.matches_product_code(entry_info.product_code):
+                        continue
+
                     discount_to_entries[discount].append(entry_info)
                     entry_to_discounts[entry_info].append(discount)
             elif entry_info.origin_type == OriginType.MeteredFeature:
                 for discount in discounts_affecting_metered_features:
                     if entry_info.subscription not in discount.matching_subscriptions:
+                        continue
+
+                    if not discount.matches_product_code(entry_info.product_code):
                         continue
 
                     discount_to_entries[discount].append(entry_info)
@@ -313,8 +319,8 @@ class DocumentsGenerator(object):
         cumulative_discounts_amount = additive_discounts_amount + multiplicative_discounts_amount
 
         if (
-                max_noncumulative_discount_per_document and
-                max_noncumulative_discount_per_document > cumulative_discounts_amount
+            max_noncumulative_discount_per_document and
+            max_noncumulative_discount_per_document > cumulative_discounts_amount
         ):
             extra_context['subscriptions'] = set(
                 entry.subscription
@@ -507,7 +513,7 @@ class DocumentsGenerator(object):
             skip_billing_mfs = still_billing_plan and metered_features_now_billed_up_to > plan_now_billed_up_to
 
             if still_billing_mfs and not skip_billing_mfs:
-                billed_up_to, entry_info = self._add_mf_cycle(
+                billed_up_to, mfs_entries_info = self._add_mf_cycle(
                     billing_date, metered_features_now_billed_up_to, subscription, proforma=proforma, invoice=invoice
                 )
 
@@ -516,9 +522,9 @@ class DocumentsGenerator(object):
                 else:
                     metered_features_now_billed_up_to = billed_up_to
                     still_billing_mfs = subscription.should_mfs_be_billed(billing_date, billed_up_to=billed_up_to)
-                    if entry_info:
-                        metered_features_amount += entry_info.amount
-                        entries_info.append(entry_info)
+                    if mfs_entries_info:
+                        metered_features_amount += sum(entry_info.amount for entry_info in mfs_entries_info)
+                        entries_info += mfs_entries_info
 
             if metered_features_now_billed_up_to == subscription.cancel_date:
                 break
@@ -590,12 +596,15 @@ class DocumentsGenerator(object):
                 end_date=relative_end_date,
                 origin_type=OriginType.Plan,
                 subscription=subscription,
-                amount=amount
+                product_code=subscription.plan.product_code,
+                amount=amount,
             )
 
         return relative_end_date, entry_info
 
-    def _add_mf_cycle(self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None):
+    def _add_mf_cycle(
+            self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None
+    ) -> (Optional[dt.datetime], list[EntryInfo]):
         relative_start_date = metered_features_billed_up_to + ONE_DAY
 
         relative_end_date = subscription.bucket_end_date(
@@ -606,11 +615,11 @@ class DocumentsGenerator(object):
                                                           reference_date=billing_date)
 
         if not (relative_start_date <= last_cycle_end_date):
-            return None, None
+            return None, []
 
         if not relative_end_date:
             # There was no cycle for the given billing date
-            return None, None
+            return None, []
 
         # This is here in order to separate the trial entries from the paid ones
         if (subscription.trial_end and
@@ -627,7 +636,7 @@ class DocumentsGenerator(object):
         should_bill_metered_features = relative_end_date < billing_date
 
         if not should_bill_metered_features:
-            return None, None
+            return None, []
 
         bonuses = Bonus.for_subscription(subscription)
 
@@ -637,23 +646,28 @@ class DocumentsGenerator(object):
                 invoice=invoice, proforma=proforma, bonuses=bonuses
             )
 
-            # Should return an entry info for trial as well, but need to filter it out from discounts
-            entry_info = None
+            # Should return entries info for trial as well, but need to filter it out from discounts
+            entries_info = []
         else:
-            amount_before_tax, _ = subscription._add_mfs_entries(
-                start_date=relative_start_date, end_date=relative_end_date,
-                proforma=proforma, invoice=invoice, bonuses=bonuses
-            )
+            entries_info = []
 
-            entry_info = EntryInfo(
-                start_date=relative_start_date,
-                end_date=relative_end_date,
-                origin_type=OriginType.MeteredFeature,
-                subscription=subscription,
-                amount=amount_before_tax
-            )
+            for metered_feature in subscription.plan.metered_features.all():
+                amount_before_tax, _ = subscription._add_mfs_entries(
+                    metered_feature=metered_feature,
+                    start_date=relative_start_date, end_date=relative_end_date,
+                    proforma=proforma, invoice=invoice, bonuses=bonuses
+                )
 
-        return relative_end_date, entry_info
+                entries_info.append(EntryInfo(
+                    start_date=relative_start_date,
+                    end_date=relative_end_date,
+                    origin_type=OriginType.MeteredFeature,
+                    subscription=subscription,
+                    product_code=metered_feature.product_code,
+                    amount=amount_before_tax
+                ))
+
+        return relative_end_date, entries_info
 
     def _create_document(self, subscription, billing_date) -> Union[Invoice, Proforma]:
         provider = subscription.provider

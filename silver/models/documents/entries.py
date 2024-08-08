@@ -175,4 +175,5 @@ class EntryInfo:
     end_date: dt.date
     origin_type: OriginType
     subscription: "silver.models.Subscription"
+    product_code: "silver.models.ProductCode"
     amount: Decimal
