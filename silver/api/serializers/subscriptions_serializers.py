@@ -70,6 +70,7 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     url = SubscriptionUrl(view_name='subscription-detail', source='*',
                           queryset=Subscription.objects.all(), required=False)
     updateable_buckets = serializers.ReadOnlyField()
+    current_billing_cycle = serializers.ReadOnlyField()
     meta = JSONField(required=False, encoder=DjangoJSONEncoder)
     discounts = SerializerMethodField()
     bonuses = SerializerMethodField()
@@ -77,8 +78,8 @@ class SubscriptionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Subscription
         fields = ('id', 'url', 'plan', 'customer', 'trial_end', 'start_date', 'cancel_date',
-                  'ended_at', 'state', 'reference', 'updateable_buckets', 'meta', 'description', 'discounts',
-                  'bonuses',)
+                  'ended_at', 'state', 'reference', 'current_billing_cycle', 'updateable_buckets', 'meta',
+                  'description', 'discounts', 'bonuses',)
         read_only_fields = ('state', 'updateable_buckets')
         extra_kwargs = {'customer': {'lookup_url_kwarg': 'customer_pk'}}
 

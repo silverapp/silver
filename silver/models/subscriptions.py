@@ -475,7 +475,7 @@ class Subscription(models.Model):
     def updateable_buckets(self):
         buckets = []
 
-        if self.state in ['ended', 'inactive']:
+        if self.state in [self.STATES.ENDED, self.STATES.INACTIVE]:
             return buckets
 
         start_date = self.bucket_start_date(origin_type=OriginType.MeteredFeature)
@@ -503,6 +503,23 @@ class Subscription(models.Model):
             buckets.append({'start_date': start_date, 'end_date': end_date})
 
         return buckets
+
+    def current_billing_cycle(self):
+        if self.state in [self.STATES.ENDED, self.STATES.INACTIVE]:
+            return {}
+
+        today = timezone.now().date()
+
+        return {
+            "plan": {
+                'start_date': self.cycle_start_date(today, OriginType.Plan),
+                'end_date': self.cycle_end_date(today, OriginType.Plan),
+            },
+            "metered_features": {
+                'start_date': self.cycle_start_date(today, OriginType.MeteredFeature),
+                'end_date': self.cycle_end_date(today, OriginType.MeteredFeature),
+            }
+        }
 
     @property
     def is_on_trial(self):

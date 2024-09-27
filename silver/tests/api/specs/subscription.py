@@ -36,6 +36,7 @@ def spec_subscription(subscription, detail=False):
         "ended_at": str(subscription.ended_at) if subscription.ended_at else None,
         "state": subscription.state,
         "reference": subscription.reference,
+        "current_billing_cycle": subscription.current_billing_cycle(),
         "updateable_buckets": subscription.updateable_buckets(),
         "meta": subscription.meta,
         "description": subscription.description,
