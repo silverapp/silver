@@ -141,7 +141,7 @@ class Bonus(AutoCleanModelMixin, models.Model):
 
     @classmethod
     def for_subscription(cls, subscription: "silver.models.Subscription"):
-        metered_features = MeteredFeature.objects.filter(plan=subscription.plan).select_related("product_code")
+        metered_features = subscription.plan.metered_features.all()
         product_codes = set(metered_feature.product_code for metered_feature in metered_features)
         # Does adding the plan product code even make sens for Bonuses!? Probably not...
         product_codes.add(subscription.plan.product_code)

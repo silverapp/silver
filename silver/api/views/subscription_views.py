@@ -90,8 +90,17 @@ class SubscriptionDetail(generics.RetrieveUpdateAPIView):
     def get_object(self):
         customer_pk = self.kwargs.get('customer_pk', None)
         subscription_pk = self.kwargs.get('subscription_pk', None)
-        return get_object_or_404(Subscription, customer__id=customer_pk,
-                                 pk=subscription_pk)
+        return get_object_or_404(
+            Subscription.objects.all()
+            .select_related(
+                "plan__product_code",
+            )
+            .prefetch_related(
+                "plan__metered_features__product_code",
+            ),
+            customer__id=customer_pk,
+            pk=subscription_pk,
+        )
 
     def put(self, request, *args, **kwargs):
         return Response({'detail': 'Method "PUT" not allowed.'},
