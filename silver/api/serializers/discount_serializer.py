@@ -58,7 +58,7 @@ class CustomerDiscountSerializer(AutoCleanSerializerMixin,
             reverse("subscription-detail",
                     kwargs={'customer_pk': customer_id, "subscription_pk": subscription.pk},
                     request=self.context["request"])
-            for subscription in discount.subscriptions.filter(customer_id=customer_id)
+            for subscription in discount.filter_subscriptions.filter(customer_id=customer_id)
         ]
 
     def get_only_for_plans(self, discount):
@@ -66,7 +66,7 @@ class CustomerDiscountSerializer(AutoCleanSerializerMixin,
 
         return [
             reverse("plan-detail", args=[plan.pk], request=self.context["request"])
-            for plan in discount.plans.filter(Q(private=False) | Q(subscription__customer_id=customer_id))
+            for plan in discount.filter_plans.filter(Q(private=False) | Q(subscription__customer_id=customer_id))
         ]
 
 
