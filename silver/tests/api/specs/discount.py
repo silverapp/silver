@@ -5,6 +5,7 @@ def spec_discount(discount, subscription=None):
         'product_code': discount.product_code.value if discount.product_code else None,
         'percentage': str(discount.percentage),
         'applies_to': discount.applies_to,
+        'only_for_product_codes': [product_code.value for product_code in discount.filter_product_codes.all()],
         'document_entry_behavior': discount.document_entry_behavior,
         'discount_stacking_type': discount.discount_stacking_type,
         'enabled': discount.enabled,

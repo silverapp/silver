@@ -6,6 +6,8 @@ def spec_bonus(bonus, subscription=None):
         'amount': str(bonus.amount) if bonus.amount else None,
         'amount_percentage': str(bonus.amount_percentage) if bonus.amount_percentage else None,
         'applies_to': bonus.applies_to,
+        'only_for_product_codes': [product_code.value for product_code in bonus.filter_product_codes.all()],
+        'only_for_annotations': bonus.filter_annotations,
         'enabled': bonus.enabled,
         'start_date': bonus.start_date,
         'end_date': bonus.end_date,
