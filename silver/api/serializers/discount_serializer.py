@@ -31,6 +31,7 @@ class CustomerDiscountSerializer(AutoCleanSerializerMixin,
 
     only_for_subscriptions = SerializerMethodField()
     only_for_plans = SerializerMethodField()
+    only_for_product_codes = SerializerMethodField()
 
     class Meta:
         model = Discount
@@ -49,6 +50,7 @@ class CustomerDiscountSerializer(AutoCleanSerializerMixin,
             "duration_interval",
             "only_for_subscriptions",
             "only_for_plans",
+            "only_for_product_codes",
         ]
 
     def get_only_for_subscriptions(self, discount):
@@ -69,6 +71,12 @@ class CustomerDiscountSerializer(AutoCleanSerializerMixin,
             for plan in discount.filter_plans.filter(Q(private=False) | Q(subscription__customer_id=customer_id))
         ]
 
+    def get_only_for_product_codes(self, discount):
+        return [
+            product_code.value
+            for product_code in discount.filter_product_codes.all()
+        ]
+
 
 class SubscriptionDiscountSerializer(AutoCleanSerializerMixin,
                                      HyperlinkedModelSerializer):
@@ -79,6 +87,7 @@ class SubscriptionDiscountSerializer(AutoCleanSerializerMixin,
 
     period_applied_to_subscription = SerializerMethodField()
     is_active_for_subscription = SerializerMethodField()
+    only_for_product_codes = SerializerMethodField()
 
     class Meta:
         model = Discount
@@ -88,6 +97,7 @@ class SubscriptionDiscountSerializer(AutoCleanSerializerMixin,
             "product_code",
             "percentage",
             "applies_to",
+            "only_for_product_codes",
             "document_entry_behavior",
             "discount_stacking_type",
             "enabled",
@@ -114,3 +124,9 @@ class SubscriptionDiscountSerializer(AutoCleanSerializerMixin,
             return None
 
         return discount.is_active_for_subscription(subscription)
+
+    def get_only_for_product_codes(self, discount):
+        return [
+            product_code.value
+            for product_code in discount.filter_product_codes.all()
+        ]

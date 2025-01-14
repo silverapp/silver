@@ -31,6 +31,8 @@ class CustomerBonusSerializer(AutoCleanSerializerMixin,
 
     only_for_subscriptions = SerializerMethodField()
     only_for_plans = SerializerMethodField()
+    only_for_product_codes = SerializerMethodField()
+    only_for_annotations = SerializerMethodField()
 
     class Meta:
         model = Bonus
@@ -48,6 +50,8 @@ class CustomerBonusSerializer(AutoCleanSerializerMixin,
             "duration_interval",
             "only_for_subscriptions",
             "only_for_plans",
+            "only_for_product_codes",
+            "only_for_annotations",
         ]
 
     def get_only_for_subscriptions(self, bonus):
@@ -70,6 +74,15 @@ class CustomerBonusSerializer(AutoCleanSerializerMixin,
             ).distinct()
         ]
 
+    def get_only_for_product_codes(self, bonus):
+        return [
+            product_code.value
+            for product_code in bonus.filter_product_codes.all()
+        ]
+
+    def get_only_for_annotations(self, bonus):
+        return bonus.filter_annotations
+
 
 class SubscriptionBonusSerializer(AutoCleanSerializerMixin,
                                   HyperlinkedModelSerializer):
@@ -80,6 +93,8 @@ class SubscriptionBonusSerializer(AutoCleanSerializerMixin,
 
     period_applied_to_subscription = SerializerMethodField()
     is_active_for_subscription = SerializerMethodField()
+    only_for_product_codes = SerializerMethodField()
+    only_for_annotations = SerializerMethodField()
 
     class Meta:
         model = Bonus
@@ -90,6 +105,8 @@ class SubscriptionBonusSerializer(AutoCleanSerializerMixin,
             "amount",
             "amount_percentage",
             "applies_to",
+            "only_for_product_codes",
+            "only_for_annotations",
             "enabled",
             "start_date",
             "end_date",
@@ -114,3 +131,12 @@ class SubscriptionBonusSerializer(AutoCleanSerializerMixin,
             return None
 
         return bonus.is_active_for_subscription(subscription)
+
+    def get_only_for_product_codes(self, bonus):
+        return [
+            product_code.value
+            for product_code in bonus.filter_product_codes.all()
+        ]
+
+    def get_only_for_annotations(self, bonus):
+        return bonus.filter_annotations
