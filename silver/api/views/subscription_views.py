@@ -137,32 +137,28 @@ class SubscriptionActivate(APIView):
             return Response({"error": message},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
-            if request.POST.get('_content', None):
-                start_date = request.data.get('start_date', None)
-                trial_end = request.data.get('trial_end_date', None)
-                if start_date:
-                    try:
-                        start_date = datetime.datetime.strptime(
-                            start_date, '%Y-%m-%d').date()
-                    except TypeError:
-                        return Response(
-                            {'detail': 'Invalid start_date date format. Please '
-                                       'use the ISO 8601 date format.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-                if trial_end:
-                    try:
-                        trial_end = datetime.datetime.strptime(
-                            trial_end, '%Y-%m-%d').date()
-                    except TypeError:
-                        return Response(
-                            {'detail': 'Invalid trial_end date format. Please '
-                                       'use the ISO 8601 date format.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-                sub.activate(start_date=start_date, trial_end_date=trial_end)
-                sub.save()
-            else:
-                sub.activate()
-                sub.save()
+            start_date = request.data.get('start_date', None)
+            trial_end = request.data.get('trial_end_date', None)
+            if start_date:
+                try:
+                    start_date = datetime.datetime.strptime(
+                        start_date, '%Y-%m-%d').date()
+                except TypeError:
+                    return Response(
+                        {'detail': 'Invalid start_date date format. Please '
+                                   'use the ISO 8601 date format.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+            if trial_end:
+                try:
+                    trial_end = datetime.datetime.strptime(
+                        trial_end, '%Y-%m-%d').date()
+                except TypeError:
+                    return Response(
+                        {'detail': 'Invalid trial_end date format. Please '
+                                   'use the ISO 8601 date format.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+            sub.activate(start_date=start_date, trial_end_date=trial_end)
+            sub.save()
 
             logger.debug('Activated subscription: %s', {
                 'subscription': sub.id,

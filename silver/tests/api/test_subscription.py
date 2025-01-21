@@ -131,6 +131,20 @@ class TestSubscriptionEndpoint(APITestCase):
         assert response.status_code == status.HTTP_200_OK, response.data
         assert response.data == {'state': 'active'}
 
+    def test_activate_subscription_with_start_date(self):
+        subscription = SubscriptionFactory.create()
+        url = reverse('sub-activate',
+                      kwargs={'subscription_pk': subscription.pk,
+                              'customer_pk': subscription.customer.pk})
+
+        response = self.client.post(url, json.dumps({"start_date": "2025-01-20"}), content_type='application/json')
+
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data == {'state': 'active'}
+
+        subscription.refresh_from_db()
+        assert subscription.start_date == datetime.date(2025, 1, 20)
+
     def test_activate_subscription_from_terminal_state(self):
         subscription = SubscriptionFactory.create()
         subscription.activate()
