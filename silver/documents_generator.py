@@ -46,7 +46,7 @@ class DiscountInfo:
 
 class DocumentsGenerator(object):
     def generate(self, subscription=None, billing_date=None, customers=None,
-                 force_generate=False):
+                 only_entry_type:Optional[OriginType]=None, force_generate=False, generate_datetime=None):
         """
         The `public` method called when one wants to generate the billing documents.
 
@@ -55,31 +55,53 @@ class DocumentsGenerator(object):
         :param billing_date: the date used as billing date
         :param customers: the customers for which one wants to generate the
             proformas/invoices.
+        :param only_entry_type: can be specified to target only Metered Features or Plan
         :param force_generate: if True, invoices are generated at the date
             indicated by `billing_date` instead of after the normal end of billing
             cycle.
+        :param generate_datetime: alternative way to force_generate, to set a different datetime
+            for when the generator believes it is generating the docs.
 
         :note
                 If `subscription` is passed, only the documents for that subscription are
             generated.
-                If the `customers` parameter is passed, only the docments for those customers are
+                If the `customers` parameter is passed, only the documents for those customers are
             generated.
                 Only one of the `customers` and `subscription` parameters may be passed at a time.
                 If neither the `subscription` nor the `customers` parameters are passed, the
                 documents for all the customers will be generated.
         """
 
+        if force_generate and generate_datetime:
+            raise ValueError("Cannot use both `force_generate` and `generate_datetime` params at the same time.")
+
+        if not generate_datetime:
+            generate_datetime = timezone.now()
+
+        if billing_date:
+            if force_generate:
+                generate_datetime = dt.datetime.combine(
+                    billing_date,
+                    dt.datetime.max.time(),
+                    tzinfo=timezone.utc,
+                ).replace(microsecond=0)
+        else:
+            billing_date = generate_datetime.date()
+
         if not subscription:
             customers = customers or Customer.objects.all()
             self._generate_all(billing_date=billing_date,
                                customers=customers,
-                               force_generate=force_generate)
+                               only_entry_type=only_entry_type,
+                               generate_datetime=generate_datetime)
         else:
             self._generate_for_single_subscription(subscription=subscription,
                                                    billing_date=billing_date,
-                                                   force_generate=force_generate)
+                                                   only_entry_type=only_entry_type,
+                                                   generate_datetime=generate_datetime)
 
-    def _generate_all(self, billing_date=None, customers=None, force_generate=False):
+    def _generate_all(self, billing_date=None, customers=None, only_entry_type=None,
+                      generate_datetime=None):
         """
         Generates the invoices/proformas for all the subscriptions that should
         be billed.
@@ -91,30 +113,36 @@ class DocumentsGenerator(object):
         for customer in customers:
             if customer.consolidated_billing:
                 self._generate_for_user_with_consolidated_billing(
-                    customer, billing_date, force_generate
+                    customer, billing_date,
+                    generate_datetime=generate_datetime,
+                    only_entry_type=only_entry_type
                 )
             else:
                 self._generate_for_user_without_consolidated_billing(
-                    customer, billing_date, force_generate
+                    customer, billing_date,
+                    generate_datetime=generate_datetime,
+                    only_entry_type=only_entry_type
                 )
 
-    def _log_subscription_billing(self, document, subscription):
+    def _log_subscription_billing(self, document, subscription, generate_datetime, only_entry_type):
         logger.debug('Billing subscription: %s', {
             'subscription': subscription.id,
             'state': subscription.state,
             'doc_type': document.provider.flow,
             'number': document.number,
             'provider': document.provider.id,
-            'customer': document.customer.id
+            'customer': document.customer.id,
+            'generate_datetime': generate_datetime,
+            'only_entry_type': only_entry_type,
         })
 
-    def get_subscriptions_prepared_for_billing(self, customer, billing_date, force_generate):
+    def get_subscriptions_prepared_for_billing(self, customer, billing_date, generate_datetime):
         # Select all the active or canceled subscriptions
         subs_to_bill = []
         criteria = {'state__in': [Subscription.STATES.ACTIVE,
                                   Subscription.STATES.CANCELED]}
         for subscription in customer.subscriptions.filter(**criteria):
-            to_bill = subscription.should_be_billed(billing_date) or force_generate
+            to_bill = subscription.should_be_billed(billing_date, generate_datetime)
 
             if not to_bill and subscription.cancel_date:
                 billing_up_to_dates = subscription.billed_up_to_dates
@@ -128,12 +156,16 @@ class DocumentsGenerator(object):
 
         return subs_to_bill
 
-    def _bill_subscription_into_document(self, subscription, billing_date, document=None) \
-            -> Tuple[Union[Invoice, Proforma], List[EntryInfo]]:
+    def _bill_subscription_into_document(
+        self, subscription, billing_date, generate_datetime=None, only_entry_type=None, document=None
+    ) -> Tuple[Union[Invoice, Proforma], List[EntryInfo]]:
+        if not generate_datetime:
+            generate_datetime = timezone.now()
+
         if not document:
             document = self._create_document(subscription, billing_date)
 
-        self._log_subscription_billing(document, subscription)
+        self._log_subscription_billing(document, subscription, generate_datetime, only_entry_type)
 
         kwargs = subscription.billed_up_to_dates
 
@@ -141,6 +173,8 @@ class DocumentsGenerator(object):
             'billing_date': billing_date,
             'subscription': subscription,
             subscription.provider.flow: document,
+            'only_entry_type': only_entry_type,
+            'generate_datetime': generate_datetime,
         })
 
         billing_log, entries_info = self.add_subscription_cycles_to_document(**kwargs)
@@ -365,7 +399,9 @@ class DocumentsGenerator(object):
 
         return entries
 
-    def _generate_for_user_with_consolidated_billing(self, customer, billing_date, force_generate):
+    def _generate_for_user_with_consolidated_billing(
+        self, customer, billing_date, generate_datetime=None, only_entry_type=None
+    ):
         """
         Generates the billing documents for all the subscriptions of a customer
         who uses consolidated billing.
@@ -378,14 +414,13 @@ class DocumentsGenerator(object):
         existing_provider_documents = {}
         merged_entries_per_provider = defaultdict(lambda: [])
 
-        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date,
-                                                                        force_generate):
+        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date, generate_datetime):
             provider = subscription.plan.provider
 
             existing_document = existing_provider_documents.get(provider)
 
             existing_provider_documents[provider], entries_info = self._bill_subscription_into_document(
-                subscription, billing_date, document=existing_document
+                subscription, billing_date, generate_datetime, only_entry_type=only_entry_type, document=existing_document,
             )
 
             merged_entries_per_provider[provider] += entries_info
@@ -405,20 +440,22 @@ class DocumentsGenerator(object):
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
-    def _generate_for_user_without_consolidated_billing(self, customer, billing_date,
-                                                        force_generate):
+    def _generate_for_user_without_consolidated_billing(
+        self, customer, billing_date, generate_datetime=None, only_entry_type=None
+    ):
         """
         Generates the billing documents for all the subscriptions of a customer
         who does not use consolidated billing.
         """
 
         # The user does not use consolidated_billing => add each subscription to a separate document
-        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date,
-                                                                        force_generate):
+        for subscription in self.get_subscriptions_prepared_for_billing(customer, billing_date, generate_datetime):
             provider = subscription.plan.provider
 
             document, discount_amounts = self._bill_subscription_into_document(subscription,
-                                                                               billing_date)
+                                                                               billing_date,
+                                                                               generate_datetime,
+                                                                               only_entry_type)
 
             kwargs = {'entries_info': discount_amounts,
                       provider.flow: document}
@@ -434,18 +471,17 @@ class DocumentsGenerator(object):
             if provider.default_document_state == Provider.DEFAULT_DOC_STATE.ISSUED:
                 document.issue()
 
-    def _generate_for_single_subscription(self, subscription=None, billing_date=None,
-                                          force_generate=False):
+    def _generate_for_single_subscription(
+        self, subscription, billing_date, generate_datetime=None,only_entry_type=None
+    ):
         """
         Generates the billing documents corresponding to a single subscription.
         Usually used when a subscription is ended with `when`=`now`.
         """
 
-        billing_date = billing_date or timezone.now().date()
-
         provider = subscription.provider
 
-        to_bill = subscription.should_be_billed(billing_date) or force_generate
+        to_bill = subscription.should_be_billed(billing_date, generate_datetime)
 
         if not to_bill and subscription.cancel_date:
             billing_up_to_dates = subscription.billed_up_to_dates
@@ -457,7 +493,9 @@ class DocumentsGenerator(object):
         if not to_bill:
             return
 
-        document, discount_amounts = self._bill_subscription_into_document(subscription, billing_date)
+        document, discount_amounts = self._bill_subscription_into_document(
+            subscription, billing_date, generate_datetime, only_entry_type=only_entry_type
+        )
 
         kwargs = {'entries_info': discount_amounts,
                   provider.flow: document}
@@ -474,8 +512,8 @@ class DocumentsGenerator(object):
             document.issue()
 
     def add_subscription_cycles_to_document(
-            self, billing_date, metered_features_billed_up_to, plan_billed_up_to, subscription,
-            proforma=None, invoice=None
+        self, billing_date, metered_features_billed_up_to, plan_billed_up_to, subscription, generate_datetime=None,
+        only_entry_type=None, proforma=None, invoice=None
     ) -> Tuple[BillingLog, List[EntryInfo]]:
         entries_info: List[EntryInfo] = []
 
@@ -490,8 +528,14 @@ class DocumentsGenerator(object):
 
         # relative_start_date and relative_end_date define the cycle that is billed within the
         # loop's iteration (referred throughout the comments as the cycle)
-        still_billing_plan = subscription.should_plan_be_billed(billing_date)
-        still_billing_mfs = subscription.should_mfs_be_billed(billing_date)
+        still_billing_plan = subscription.should_plan_be_billed(billing_date,
+                                                                generate_documents_datetime=generate_datetime)
+        still_billing_mfs = subscription.should_mfs_be_billed(billing_date,
+                                                              generate_documents_datetime=generate_datetime)
+        if only_entry_type == OriginType.Plan:
+            still_billing_mfs = False
+        elif only_entry_type == OriginType.MeteredFeature:
+            still_billing_plan = False
 
         while still_billing_mfs or still_billing_plan:
             # skip billing the plan during this loop if metered features have to catch up
@@ -510,6 +554,7 @@ class DocumentsGenerator(object):
                         plan_amount += entry_info.amount
                         entries_info.append(entry_info)
 
+            # skip billing the metered features during this loop if plan has to catch up
             skip_billing_mfs = still_billing_plan and metered_features_now_billed_up_to > plan_now_billed_up_to
 
             if still_billing_mfs and not skip_billing_mfs:
@@ -521,7 +566,10 @@ class DocumentsGenerator(object):
                     still_billing_mfs = False
                 else:
                     metered_features_now_billed_up_to = billed_up_to
-                    still_billing_mfs = subscription.should_mfs_be_billed(billing_date, billed_up_to=billed_up_to)
+                    still_billing_mfs = subscription.should_mfs_be_billed(
+                        billing_date, generate_documents_datetime=generate_datetime, billed_up_to=billed_up_to
+
+                    )
                     if mfs_entries_info:
                         metered_features_amount += sum(entry_info.amount for entry_info in mfs_entries_info)
                         entries_info += mfs_entries_info
@@ -603,7 +651,7 @@ class DocumentsGenerator(object):
         return relative_end_date, entry_info
 
     def _add_mf_cycle(
-            self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None
+        self, billing_date, metered_features_billed_up_to, subscription, proforma=None, invoice=None
     ) -> (Optional[dt.datetime], list[EntryInfo]):
         relative_start_date = metered_features_billed_up_to + ONE_DAY
 

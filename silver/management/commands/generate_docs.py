@@ -24,7 +24,7 @@ from django.utils import translation
 
 from silver.documents_generator import DocumentsGenerator
 from silver.models import Subscription
-
+from silver.models.documents.entries import OriginType
 
 logger = logging.getLogger(__name__)
 
@@ -51,32 +51,52 @@ class Command(BaseCommand):
         parser.add_argument('--force',
                             action='store', dest='force_generate', type=bool,
                             help='Bill subscriptions even in situations when they would be skipped.')
+        parser.add_argument('--only_entry_type',
+                            action='store', dest='only_entry_type', type=str,
+                            help='Specify entry origin type to only bill those type of entries. (e.g.: "mfs" or "plan")')
 
     def handle(self, *args, **options):
         translation.activate('en-us')
 
         billing_date = options['billing_date']
         force_generate = options.get('force_generate', False)
+        only_entry_type = (options.get('only_entry_type') or "").lower()
+
+        if only_entry_type in ["mf", "mfs", "metered_feature", "metered_features"]:
+            only_entry_type = OriginType.MeteredFeature
+        elif only_entry_type in ["plan", "plans", "amount", "base", "base_amount"]:
+            only_entry_type = OriginType.Plan
+        else:
+            only_entry_type = None
+
 
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
             try:
                 subscription_id = options['subscription_id']
                 logger.info('Generating for subscription with id=%s; '
-                            'billing_date=%s; force_generate=%s.', subscription_id,
-                            billing_date, force_generate)
+                            'billing_date=%s; force_generate=%s; only_entry_type=%s.',
+                            subscription_id, billing_date, force_generate, only_entry_type)
 
                 subscription = Subscription.objects.get(id=subscription_id)
-                docs_generator.generate(subscription=subscription,
-                                        billing_date=billing_date,
-                                        force_generate=force_generate)
+                docs_generator.generate(
+                    subscription=subscription,
+                    billing_date=billing_date,
+                    force_generate=force_generate,
+                    only_entry_type=only_entry_type,
+                )
                 self.stdout.write('Done. You can have a Club-Mate now. :)')
             except Subscription.DoesNotExist:
                 msg = 'The subscription with the provided id does not exist.'
                 self.stdout.write(msg)
         else:
             logger.info('Generating for all the available subscriptions; '
-                        'billing_date=%s; force_generate=%s.', billing_date, force_generate)
+                        'billing_date=%s; force_generate=%s; only_entry_type=%s.',
+                        billing_date, force_generate, only_entry_type)
 
-            docs_generator.generate(billing_date=billing_date, force_generate=force_generate)
+            docs_generator.generate(
+                billing_date=billing_date,
+                force_generate=force_generate,
+                only_entry_type=only_entry_type,
+            )
             self.stdout.write('Done. You can have a Club-Mate now. :)')

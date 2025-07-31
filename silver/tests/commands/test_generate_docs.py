@@ -1105,6 +1105,155 @@ class TestInvoiceGenerationCommand(TestCase):
         consumed_mfs_value = (consumed_units - included_units) * mf_price
         assert proforma.total == plan.amount + consumed_mfs_value
 
+    def test_full_month_with_consumed_units_only_entry_type_mfs(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, only_entry_type="mfs", stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 1
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units) * mf_price
+        assert proforma.total == consumed_mfs_value
+
+        billing_log = BillingLog.objects.filter(subscription=subscription).first()  # first is most recent
+        assert billing_log.metered_features_billed_up_to == dt.date(2015, 6, 30)
+        assert billing_log.plan_billed_up_to == dt.date(2015, 6, 30)
+
+    def test_full_month_with_consumed_units_only_entry_type_mfs_force_generate(self):
+        # This test assumes we're not past 2035-07-01. Try increasing the date if that's the case, thanks!
+        assert dt.datetime.now().date() < dt.date(2035,7,1)
+
+        billing_date = generate_docs_date('2035-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        included_units = Decimal('20.00')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2035, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2035, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2035, 5, 31),
+                                  plan_billed_up_to=dt.date(2035, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2035, 6, 1), end_datetime=dt.date(2035, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs',
+                     date=billing_date, only_entry_type="mfs", force_generate=True, stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 1
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        consumed_mfs_value = (consumed_units - included_units) * mf_price
+        assert proforma.total == consumed_mfs_value
+
+        billing_log = BillingLog.objects.filter(subscription=subscription).first()  # first is most recent
+        assert billing_log.metered_features_billed_up_to == dt.date(2035, 6, 30)
+        assert billing_log.plan_billed_up_to == dt.date(2035, 6, 30)
+
+    def test_full_month_with_consumed_units_only_entry_type_plan(self):
+        billing_date = generate_docs_date('2015-07-01')
+
+        customer = CustomerFactory.create(sales_tax_percent=Decimal('0.00'))
+
+        mf_price = Decimal('2.5')
+        metered_feature = MeteredFeatureFactory(
+            price_per_unit=mf_price, included_units=Decimal('20.00'))
+        provider = ProviderFactory.create()
+        plan = PlanFactory.create(interval='month', interval_count=1,
+                                  generate_after=120, enabled=True,
+                                  amount=Decimal('200.00'),
+                                  provider=provider,
+                                  metered_features=[metered_feature])
+        start_date = dt.date(2015, 2, 14)
+
+        subscription = SubscriptionFactory.create(
+            plan=plan, start_date=start_date, customer=customer)
+        subscription.activate()
+        subscription.save()
+
+        BillingLog.objects.create(subscription=subscription,
+                                  billing_date=dt.date(2015, 6, 1),
+                                  metered_features_billed_up_to=dt.date(2015, 5, 31),
+                                  plan_billed_up_to=dt.date(2015, 6, 30))
+
+        consumed_units = Decimal('40.0000')
+        MeteredFeatureUnitsLogFactory.create(
+            subscription=subscription, metered_feature=metered_feature,
+            start_datetime=dt.date(2015, 6, 1), end_datetime=dt.date(2015, 6, 30),
+            consumed_units=consumed_units)
+
+        call_command('generate_docs', date=billing_date, only_entry_type="plan", stdout=self.output)
+
+        assert Proforma.objects.all().count() == 1
+        assert Invoice.objects.all().count() == 0
+
+        proforma = Proforma.objects.all()[0]
+        assert proforma.proforma_entries.all().count() == 1
+        assert all([not entry.prorated
+                    for entry in proforma.proforma_entries.all()])
+        assert proforma.total == plan.amount
+
+        billing_log = BillingLog.objects.filter(subscription=subscription).first()  # first is most recent
+        assert billing_log.metered_features_billed_up_to == dt.date(2015, 5, 31)
+        assert billing_log.plan_billed_up_to == dt.date(2015, 7, 31)
+
     def test_full_month_with_consumed_units_with_annotations_and_multiple_mfuls(self):
         billing_date = generate_docs_date('2015-07-01')
 
