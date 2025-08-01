@@ -89,7 +89,7 @@ class Proforma(BillingDocumentBase):
             self.related_document.issue()
             self.related_document.save()
 
-    def create_invoice(self):
+    def create_invoice(self, use_proforma_issue_date=False):
         if self.state != BillingDocumentBase.STATES.ISSUED:
             raise ValueError("You can't create an invoice from a %s proforma, "
                              "only from an issued one" % self.state)
@@ -99,7 +99,7 @@ class Proforma(BillingDocumentBase):
                              % self.related_document)
 
         self.related_document = self._new_invoice()
-        self.related_document.issue()
+        self.related_document.issue(issue_date=self.issue_date if use_proforma_issue_date else None)
 
         self.save()
 
