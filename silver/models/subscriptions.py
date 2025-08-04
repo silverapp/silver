@@ -701,16 +701,15 @@ class Subscription(models.Model):
 
     @property
     def last_billing_log(self):
-        return self.billing_logs.order_by('billing_date').last()
+        return self.billing_logs.order_by('billing_date', 'created_at').last()
 
     @property
     def last_billing_date(self):
-        # ToDo: Improve this when dropping Django 1.8 support
-        try:
-            return self.billing_logs.all()[0].billing_date
-        except (BillingLog.DoesNotExist, IndexError):
-            # It should never get here.
+        last_billing_log = self.last_billing_log
+        if not last_billing_log:
             return None
+
+        return last_billing_log.billing_date
 
     def _should_activate_with_free_trial(self):
         return Subscription.objects.filter(
