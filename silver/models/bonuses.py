@@ -116,7 +116,7 @@ class Bonus(AutoCleanModelMixin, models.Model):
         if self.start_date and self.start_date > start_date:
             start_date = self.start_date
 
-        if end_date and self.end_date and self.end_date < end_date:
+        if not end_date or (self.end_date and self.end_date < end_date):
             end_date = self.end_date
 
         return {
