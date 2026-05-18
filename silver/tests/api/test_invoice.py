@@ -36,7 +36,7 @@ from silver.tests.api.specs.document_entry import spec_document_entry, document_
 from silver.tests.api.specs.invoice import spec_invoice, invoice_definition
 from silver.fixtures.factories import (
     CustomerFactory, ProviderFactory, InvoiceFactory,
-    SubscriptionFactory, TransactionFactory, PaymentMethodFactory
+    SubscriptionFactory, TransactionFactory, PaymentMethodFactory, DocumentEntryFactory
 )
 from silver.tests.utils import build_absolute_test_url
 
@@ -195,6 +195,8 @@ def test_delete_invoice(authenticated_api_client):
 
 
 def test_add_single_invoice_entry(authenticated_api_client, invoice):
+    invoice.entries.delete()
+
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
         "description": "Page views",
@@ -234,8 +236,10 @@ def test_add_multiple_invoice_entries(authenticated_api_client, invoice):
         "quantity": '20.0',
     }
 
-    entries_count = 10
-    for cnt in range(entries_count):
+    preexisting_entries_count = len(invoice.entries)
+
+    new_entries_count = 10
+    for cnt in range(new_entries_count):
         response = authenticated_api_client.post(url, data=json.dumps(request_data),
                                                  content_type='application/json')
 
@@ -247,22 +251,13 @@ def test_add_multiple_invoice_entries(authenticated_api_client, invoice):
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
     response = authenticated_api_client.get(url)
     invoice_entries = response.data.get('invoice_entries', None)
-    assert len(invoice_entries) == entries_count
+    assert len(invoice_entries) == new_entries_count + preexisting_entries_count
 
 
 def test_delete_invoice_entry(authenticated_api_client):
-    invoice = InvoiceFactory.create()
-
-    url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
-    request_data = {
-        "description": "Page views",
-        "unit_price": 10.0,
-        "quantity": 20
-    }
     entries_count = 10
-    for cnt in range(entries_count):
-        authenticated_api_client.post(url, data=json.dumps(request_data),
-                                      content_type='application/json')
+
+    invoice = InvoiceFactory.create(invoice_entries=DocumentEntryFactory.create_batch(entries_count))
 
     url = reverse('invoice-entry-update', kwargs={'document_pk': invoice.pk,
                                                   'entry_pk': list(invoice._entries)[0].pk})
@@ -278,6 +273,9 @@ def test_delete_invoice_entry(authenticated_api_client):
 def test_add_invoice_entry_in_issued_state(authenticated_api_client):
     invoice = InvoiceFactory.create()
     invoice.issue()
+
+    invoice_entries_count = len(invoice.entries)
+    assert invoice_entries_count == 1
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
@@ -295,13 +293,17 @@ def test_add_invoice_entry_in_issued_state(authenticated_api_client):
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
     response = authenticated_api_client.get(url)
     invoice_entries = response.data['invoice_entries']
-    assert invoice_entries == []
+    invoice_entries = response.data.get('invoice_entries', None)
+    assert len(invoice_entries) == invoice_entries_count
 
 
 def test_add_invoice_entry_in_canceled_state(authenticated_api_client):
     invoice = InvoiceFactory.create()
     invoice.issue()
     invoice.cancel()
+
+    invoice_entries_count = len(invoice.entries)
+    assert invoice_entries_count == 1
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {
@@ -319,13 +321,14 @@ def test_add_invoice_entry_in_canceled_state(authenticated_api_client):
     url = reverse('invoice-detail', kwargs={'pk': invoice.pk})
     response = authenticated_api_client.get(url)
     invoice_entries = response.data.get('invoice_entries', None)
-    assert len(invoice_entries) == 0
+    assert len(invoice_entries) == invoice_entries_count
 
 
 def test_add_invoice_entry_in_paid_state(authenticated_api_client):
-    invoice = InvoiceFactory.create()
+    invoice = InvoiceFactory.create(invoice_entries=[])
     invoice.issue()
-    invoice.pay()
+
+    assert invoice.state == Invoice.STATES.PAID
 
     url = reverse('invoice-entry-create', kwargs={'document_pk': invoice.pk})
     request_data = {

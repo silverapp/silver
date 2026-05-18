@@ -69,7 +69,6 @@ class Command(BaseCommand):
         else:
             only_entry_type = None
 
-
         docs_generator = DocumentsGenerator()
         if options['subscription_id']:
             try:

@@ -105,12 +105,11 @@ class TestProforma(TransactionTestCase):
         assert Invoice.objects.filter(related_document=proforma).count() == 1
 
     def test_clone_proforma_into_draft(self):
-        proforma = ProformaFactory.create()
+        entries = DocumentEntryFactory.create_batch(3)
+
+        proforma = ProformaFactory.create(proforma_entries=entries)
         proforma.issue()
         proforma.pay()
-
-        entries = DocumentEntryFactory.create_batch(3)
-        proforma.proforma_entries.add(*entries)
 
         clone = proforma.clone_into_draft()
 

@@ -30,6 +30,7 @@ from silver.fixtures.factories import (ProformaFactory, AdminUserFactory,
                                        InvoiceFactory, TransactionFactory,
                                        PaymentMethodFactory, DocumentEntryFactory)
 from silver.fixtures.test_fixtures import PAYMENT_PROCESSORS
+from silver.tests.api.utils.client import JSONApiClient
 from silver.tests.utils import build_absolute_test_url
 
 
@@ -39,6 +40,8 @@ FREEZED_TIME = '2017-01-24T12:46:07Z'
 @override_settings(PAYMENT_PROCESSORS=PAYMENT_PROCESSORS)
 @freeze_time(FREEZED_TIME)
 class TestDocumentEndpoints(APITestCase):
+    client_class = JSONApiClient
+
     def setUp(self):
         admin_user = AdminUserFactory.create()
         self.client.force_authenticate(user=admin_user)
@@ -93,11 +96,11 @@ class TestDocumentEndpoints(APITestCase):
             u'currency': document.currency,
             u'transaction_currency': document.transaction_currency,
             u'state': document.state,
-            u'total': document.total,
+            u'total': '%.2f' % document.total,
             u'pdf_url': build_absolute_test_url(document.pdf.url) if (document.pdf and
                                                                       document.pdf.url) else None,
             u'transactions': transactions,
-            u'total_in_transaction_currency': document.total_in_transaction_currency
+            u'total_in_transaction_currency': '%.2f' % document.total_in_transaction_currency
         }
 
     def _jwt_token(self, *args, **kwargs):

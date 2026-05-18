@@ -31,7 +31,7 @@ from django.utils import timezone
 from silver.models import Invoice, Proforma, PDF
 from silver.fixtures.factories import (AdminUserFactory, CustomerFactory,
                                        ProviderFactory, ProformaFactory,
-                                       SubscriptionFactory)
+                                       SubscriptionFactory, DocumentEntryFactory)
 from silver.tests.api.specs.document_entry import document_entry_definition
 from silver.tests.utils import build_absolute_test_url
 
@@ -141,7 +141,7 @@ class TestProformaEndpoints(APITestCase):
     def test_get_proforma(self, mocked_settings):
         ProformaFactory.reset_sequence(1)
 
-        proforma = ProformaFactory.create()
+        proforma = ProformaFactory.create(proforma_entries=[])
         proforma.pdf = PDF.objects.create(upload_path=proforma.get_pdf_upload_path())
         proforma.generate_pdf()
         proforma.save()
@@ -184,8 +184,8 @@ class TestProformaEndpoints(APITestCase):
                 "state": "draft",
                 "invoice": None,
                 "proforma_entries": [],
-                "total": 0,
-                "total_in_transaction_currency": 0,
+                "total": proforma.total,
+                "total_in_transaction_currency": proforma.total_in_transaction_currency,
                 "transactions": []
             })
 
@@ -197,7 +197,7 @@ class TestProformaEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "DELETE" not allowed.'}
 
     def test_add_single_proforma_entry(self):
-        proforma = ProformaFactory.create()
+        proforma = ProformaFactory.create(proforma_entries=[])
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         request_data = {
@@ -229,7 +229,7 @@ class TestProformaEndpoints(APITestCase):
         assert response.data == {"detail": 'Method "GET" not allowed.'}
 
     def test_add_multiple_proforma_entries(self):
-        proforma = ProformaFactory.create()
+        proforma = ProformaFactory.create(proforma_entries=[])
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         request_data = {
@@ -255,18 +255,9 @@ class TestProformaEndpoints(APITestCase):
         assert len(proforma_entries) == entries_count
 
     def test_delete_proforma_entry(self):
-        proforma = ProformaFactory.create()
-
-        url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
-        entry_data = {
-            "description": "Page views",
-            "unit_price": 10.0,
-            "quantity": 20
-        }
         entries_count = 10
-        for cnt in range(entries_count):
-            self.client.post(url, data=json.dumps(entry_data),
-                             content_type='application/json')
+
+        proforma = ProformaFactory.create(proforma_entries=DocumentEntryFactory.create_batch(entries_count))
 
         url = reverse('proforma-entry-update', kwargs={'document_pk': proforma.pk,
                                                        'entry_pk': list(proforma._entries)[0].pk})
@@ -282,6 +273,9 @@ class TestProformaEndpoints(APITestCase):
         proforma = ProformaFactory.create()
         proforma.issue()
 
+        proforma_entries_count = len(proforma.entries)
+        assert proforma_entries_count == 1
+
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
@@ -297,14 +291,17 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
-        invoice_entries = response.data.get('proforma_entries', None)
-        assert len(invoice_entries) == 0
+        proforma_entries = response.data.get('proforma_entries', None)
+        assert len(proforma_entries) == proforma_entries_count
 
     def test_add_proforma_entry_in_canceled_state(self):
         proforma = ProformaFactory.create()
         proforma.issue()
         proforma.cancel()
 
+        proforma_entries_count = len(proforma.entries)
+        assert proforma_entries_count == 1
+
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {
             "description": "Page views",
@@ -320,13 +317,14 @@ class TestProformaEndpoints(APITestCase):
 
         url = reverse('proforma-detail', kwargs={'pk': proforma.pk})
         response = self.client.get(url)
-        invoice_entries = response.data.get('proforma_entries', None)
-        assert len(invoice_entries) == 0
+        proforma_entries = response.data.get('proforma_entries', None)
+        assert len(proforma_entries) == proforma_entries_count
 
     def test_add_proforma_entry_in_paid_state(self):
-        proforma = ProformaFactory.create()
+        proforma = ProformaFactory.create(proforma_entries=[])
         proforma.issue()
-        proforma.pay()
+
+        assert proforma.state == Proforma.STATES.PAID
 
         url = reverse('proforma-entry-create', kwargs={'document_pk': proforma.pk})
         entry_data = {

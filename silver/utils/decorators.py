@@ -14,6 +14,8 @@
 
 from __future__ import absolute_import
 
+from decimal import Decimal
+
 import jwt
 from uuid import UUID
 
@@ -46,11 +48,22 @@ def get_transaction_from_token(view):
     return decorator
 
 
-def require_transaction_currency_and_xe_rate(f):
+def require_transaction_xe_rate(f):
     def _check(self, *args, **kwargs):
-        if self.transaction_currency == self.currency:
-            return f(self, *args, **kwargs)
-        if not (self.transaction_currency and self.transaction_xe_rate):
+        if not self.transaction_xe_rate:
+            # This is a smelly hack :)
+            if self.transaction_currency == self.currency:
+                old_transaction_xe_rate = self.transaction_xe_rate
+
+                self.transaction_xe_rate = Decimal(1)
+
+                result = f(self, *args, **kwargs)
+
+                self.transaction_xe_rate = old_transaction_xe_rate
+
+                return result
+
             return None
+
         return f(self, *args, **kwargs)
     return _check

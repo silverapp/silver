@@ -40,12 +40,11 @@ class TestInvoice(TestCase):
         assert proforma.state == Proforma.STATES.PAID
 
     def test_clone_invoice_into_draft(self):
-        invoice = InvoiceFactory.create()
+        entries = DocumentEntryFactory.create_batch(3)
+
+        invoice = InvoiceFactory.create(invoice_entries=entries)
         invoice.issue()
         invoice.pay()
-
-        entries = DocumentEntryFactory.create_batch(3)
-        invoice.invoice_entries.add(*entries)
 
         clone = invoice.clone_into_draft()
 

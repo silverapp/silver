@@ -198,6 +198,13 @@ class InvoiceFactory(factory.django.DjangoModelFactory):
         lambda invoice: timezone.now().date() if invoice.state == Invoice.STATES.CANCELED else None
     )
 
+    @classmethod
+    def create(cls, **kwargs):
+        if "invoice_entries" not in kwargs:
+            kwargs["invoice_entries"] = [DocumentEntryFactory.create()]
+
+        return super().create(**kwargs)
+
     @factory.post_generation
     def invoice_entries(self, create, extracted, **kwargs):
         if not create:
@@ -241,6 +248,13 @@ class ProformaFactory(factory.django.DjangoModelFactory):
                           if proforma.state == Invoice.STATES.CANCELED else None)
     )
 
+    @classmethod
+    def create(cls, **kwargs):
+        if "proforma_entries" not in kwargs:
+            kwargs["proforma_entries"] = [DocumentEntryFactory.create()]
+
+        return super().create(**kwargs)
+
     @factory.post_generation
     def subscriptions(self, create, extracted, **kwargs):
         if not create:
@@ -261,10 +275,10 @@ class ProformaFactory(factory.django.DjangoModelFactory):
                 self.proforma_entries.add(proforma_entry)
 
         if self.state != Proforma.STATES.DRAFT:
-            self._total = self.compute_total()
-            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
             self.archived_customer = self.customer.get_archivable_field_values()
             self.archived_provider = self.provider.get_archivable_field_values()
+            self._total = self.compute_total()
+            self._total_in_transaction_currency = self.compute_total_in_transaction_currency()
 
             # avoid triggering a validation error
             self.saved_state = self.current_state

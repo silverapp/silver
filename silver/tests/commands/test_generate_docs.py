@@ -1156,7 +1156,7 @@ class TestInvoiceGenerationCommand(TestCase):
 
     def test_full_month_with_consumed_units_only_entry_type_mfs_force_generate(self):
         # This test assumes we're not past 2035-07-01. Try increasing the date if that's the case, thanks!
-        assert dt.datetime.now().date() < dt.date(2035,7,1)
+        assert dt.datetime.now().date() < dt.date(2035, 7, 1)
 
         billing_date = generate_docs_date('2035-07-01')
 

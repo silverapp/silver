@@ -45,7 +45,7 @@ from silver.currencies import CurrencyConverter, RateNotFound
 from silver.models.billing_entities import Customer, Provider
 from silver.models.documents.entries import DocumentEntry
 from silver.models.documents.pdf import PDF
-from silver.utils.decorators import require_transaction_currency_and_xe_rate
+from silver.utils.decorators import require_transaction_xe_rate
 from silver.utils.international import currencies
 from silver.utils.models import AutoCleanModelMixin
 from silver.utils.transition import locking_atomic_transition
@@ -215,7 +215,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
     def mark_for_generation(self):
         self.pdf.mark_as_dirty()
 
-    def _set_transaction_xe_if_missing(self):
+    def _set_transaction_xe_rate_if_missing(self, raise_transition_not_allowed=True):
         if not self.transaction_xe_rate:
 
             if self.currency == self.transaction_currency:
@@ -231,8 +231,11 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
                                                     self.transaction_currency,
                                                     self.transaction_xe_date)
             except RateNotFound:
-                raise TransitionNotAllowed('Couldn\'t automatically obtain an '
-                                           'exchange rate.')
+                if raise_transition_not_allowed:
+                    raise TransitionNotAllowed('Couldn\'t automatically obtain an '
+                                               'exchange rate.')
+                else:
+                    raise
 
             self.transaction_xe_rate = xe_rate
 
@@ -245,7 +248,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
         elif not self.issue_date and not issue_date:
             self.issue_date = timezone.now().date()
 
-        self._set_transaction_xe_if_missing()
+        self._set_transaction_xe_rate_if_missing()
 
         if not self.is_storno:
             if due_date:
@@ -388,7 +391,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
 
     def save(self, *args, **kwargs):
         if self.state == self.STATES.ISSUED:
-            self._set_transaction_xe_if_missing()
+            self._set_transaction_xe_rate_if_missing()
 
         with db_transaction.atomic():
             # Create pdf object
@@ -581,7 +584,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
         return sum([entry.tax_value for entry in self.entries])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def total_in_transaction_currency(self):
         if self._total_in_transaction_currency is not None:
             return self._total_in_transaction_currency
@@ -590,19 +593,19 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
                     for entry in self.entries])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def total_before_tax_in_transaction_currency(self):
         return sum([entry.total_before_tax_in_transaction_currency
                     for entry in self.entries])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def tax_value_in_transaction_currency(self):
         return sum([entry.tax_value_in_transaction_currency
                     for entry in self.entries])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def amount_paid_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 
@@ -610,7 +613,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
                     for transaction in self.transactions.filter(state=Transaction.States.Settled)])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def amount_pending_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 
@@ -618,7 +621,7 @@ class BillingDocumentBase(AutoCleanModelMixin, models.Model):
                     for transaction in self.transactions.filter(state=Transaction.States.Pending)])
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def amount_to_be_charged_in_transaction_currency(self):
         Transaction = apps.get_model('silver.Transaction')
 
@@ -667,18 +670,22 @@ def post_document_save(sender, instance, created=False, **kwargs):
     document.sync_related_document_state()
 
     # Create a transaction if the document was recently issued
-    if (document.state == BillingDocumentBase.STATES.ISSUED and
-            settings.SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS):
-        # But only if there is no pending transaction
-        Transaction = apps.get_model('silver', 'Transaction')
+    if (document.state == BillingDocumentBase.STATES.ISSUED):
+        if document.total_in_transaction_currency == Decimal(0):
+            if getattr(settings, "SILVER_AUTOMATICALLY_PAY_ZERO_TOTAL_DOCUMENTS_ON_ISSUE", True):
+                document.pay()
 
-        # The related document might have the only reference to an existing transaction
-        if not (document.related_document or document).transactions.filter(
-            state__in=[Transaction.States.Pending,
-                       Transaction.States.Initial,
-                       Transaction.States.Settled]
-        ):
-            create_transaction_for_document(document)
+        elif getattr(settings, "SILVER_AUTOMATICALLY_CREATE_TRANSACTIONS", True):
+            # But only if there is no pending transaction
+            Transaction = apps.get_model('silver', 'Transaction')
+
+            # The related document might have the only reference to an existing transaction
+            if not (document.related_document or document).transactions.filter(
+                state__in=[Transaction.States.Pending,
+                           Transaction.States.Initial,
+                           Transaction.States.Settled]
+            ):
+                create_transaction_for_document(document)
 
     # Generate a PDF
     document.mark_for_generation()

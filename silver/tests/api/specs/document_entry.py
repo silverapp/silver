@@ -2,8 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 
-from silver.tests.api.specs.utils import ResourceDefinition
-
+from silver.tests.api.specs.utils import ResourceDefinition, date_to_str
 
 unaltered = lambda input_value: input_value
 # required is True by default, (a default must be specified otherwise)
@@ -45,12 +44,12 @@ document_entry_definition = ResourceDefinition("document_entry", {
     'start_date': {
         'required': False,
         'expected_input_types': date,
-        'output': lambda entry: entry.start_date,
+        'output': lambda entry: date_to_str(entry.start_date) if entry.start_date else None,
     },
     'end_date': {
         'required': False,
         'expected_input_types': date,
-        'output': lambda entry: entry.end_date,
+        'output': lambda entry: date_to_str(entry.end_date) if entry.end_date else None,
     },
     'prorated': {
         'required': False,
@@ -60,7 +59,7 @@ document_entry_definition = ResourceDefinition("document_entry", {
     'product_code': {
         'required': False,
         'expected_input_types': str,
-        'output': lambda entry: entry.product_code,
+        'output': lambda entry: str(entry.product_code) if entry.product_code else None,
     }
 })
 

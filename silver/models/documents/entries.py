@@ -24,7 +24,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from silver.utils.decorators import require_transaction_currency_and_xe_rate
+from silver.utils.decorators import require_transaction_xe_rate
 from silver.utils.models import AutoCleanModelMixin
 
 
@@ -71,7 +71,7 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
 
     @property
     def total_before_tax(self):
-        result = Decimal(self.quantity * self.unit_price)
+        result = Decimal(self.quantity) * Decimal(self.unit_price)
         return result.quantize(Decimal('0.00'))
 
     @property
@@ -90,7 +90,7 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
         return result.quantize(Decimal('0.00'))
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def total_in_transaction_currency(self):
         return (self.total_before_tax_in_transaction_currency +
                 self.tax_value_in_transaction_currency)
@@ -100,18 +100,19 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
         return int(getattr(settings, 'SILVER_DEFAULT_UNIT_PRICE_DECIMALS', 4))
 
     @property
+    @require_transaction_xe_rate
     def unit_price_in_transaction_currency(self):
         result = Decimal(self.unit_price) * self.transaction_xe_rate
         return result.quantize(Decimal(f".{'0'*self.unit_price_decimals}"))
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def total_before_tax_in_transaction_currency(self):
         result = Decimal(self.quantity) * self.unit_price_in_transaction_currency
         return result.quantize(Decimal('0.00'))
 
     @property
-    @require_transaction_currency_and_xe_rate
+    @require_transaction_xe_rate
     def tax_value_in_transaction_currency(self):
         if self.invoice:
             sales_tax_percent = self.invoice.sales_tax_percent
