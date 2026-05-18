@@ -51,12 +51,12 @@ class DocumentEntry(AutoCleanModelMixin, models.Model):
     def full_clean(self, *args, **kwargs):
         quantized_unit_price = Decimal(self.unit_price).quantize(Decimal(f".{'0'*self.unit_price_decimals}"))
 
-        if self.unit_price == quantized_unit_price:
+        if self.unit_price != quantized_unit_price:
             self.unit_price = quantized_unit_price
 
         quantized_quantity = Decimal(self.quantity).quantize(Decimal('0.0000'))
 
-        if self.quantity == quantized_quantity:
+        if self.quantity != quantized_quantity:
             self.quantity = quantized_quantity
 
         super().full_clean(*args, **kwargs)
